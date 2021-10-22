@@ -24,7 +24,7 @@ module.exports = {
         gray: colors.trueGray,
       },
       typography: (theme) => ({
-        light: {
+        DEFAULT: {
           css: {
             color: theme('colors.gray.700'),
             a: {
@@ -89,7 +89,7 @@ module.exports = {
             },
           },
         },
-        DEFAULT: {
+        dark: {
           css: {
             color: theme('colors.gray.300'),
             a: {
