@@ -1,7 +1,7 @@
 const siteMetadata = {
   title: 'Sociedad de Astronomia del Caribe',
   author: 'SAC',
-  headerTitle: 'Sociedad de Astronomia del Caribe',
+  headerTitle: 'SAC',
   description:
     'Una organización sin fines de lucro compuesta por profesionales, estudiantes y personas de la comunidad que comparten el interés y la pasión por la Astronomía.',
   language: 'es-pr',
