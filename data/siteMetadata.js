@@ -5,8 +5,8 @@ const siteMetadata = {
   description:
     'Una organización sin fines de lucro compuesta por profesionales, estudiantes y personas de la comunidad que comparten el interés y la pasión por la Astronomía.',
   language: 'es-pr',
-  siteUrl: 'https://tailwind-nextjs-starter-blog.vercel.app',
-  siteRepo: 'https://github.com/timlrx/tailwind-nextjs-starter-blog',
+  siteUrl: 'https://sac-website.vercel.app/',
+  siteRepo: 'https://github.com/abdielou/sac-website',
   siteLogo: '/static/images/logo_sac.png',
   image: '/static/images/avatar.png',
   socialBanner: '/static/images/twitter-card.png',
