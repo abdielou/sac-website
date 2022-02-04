@@ -19,6 +19,7 @@ const MobileNav = () => {
 
   return (
     <div className="sm:hidden">
+      {/* Tailwind is mobile first, therefore the sm: break looks at bigger than sm */}
       <button
         type="button"
         className="w-8 h-8 ml-1 mr-1 rounded"
