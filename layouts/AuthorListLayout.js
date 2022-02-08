@@ -13,7 +13,7 @@ export default function AuthorListLayout({ about, authors }) {
             Junta de Directores
           </h1>
         </div>
-        <div className="pt-8 items-start space-y-2 px-4 xl:grid xl:grid-cols-1 xl:gap-x-8 xl:space-y-0">
+        <div className="pt-8 items-start">
           {authors.map(({ frontMatter }) => ProfileCard(frontMatter))}
         </div>
       </div>
