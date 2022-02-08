@@ -7,16 +7,17 @@ const AUTHORS = ['janethsi', 'nelson', 'hector', 'rafael', 'eddie', 'victor']
 export async function getStaticProps() {
   return {
     props: {
+      about: await getFileBySlug('authors', ['default']),
       authors: await Promise.all(AUTHORS.map((slug) => getFileBySlug('authors', [slug]))),
     },
   }
 }
 
-export default function About({ authors }) {
+export default function About({ about, authors }) {
   return (
     <>
       <PageSEO title={`Quiénes Somos`} description={`Quiénes Somos`} />
-      <AuthorListLayout authors={authors} />
+      <AuthorListLayout about={about} authors={authors} />
     </>
   )
 }
