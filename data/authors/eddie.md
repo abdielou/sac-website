@@ -1,7 +1,7 @@
 ---
 name: Eddie Irizarry
-avatar: /static/images/eddie.png
-occupation: Vice Presidente SAC
+avatar: /static/images/eddie_2.jpg
+occupation: Presidente Comité Divulgación Científica
 ---
 
 El Sr. Eddie Irizarry es el Vice-presidente de la Sociedad de Astronomía del Caribe, una organización dedicada a promover el conocimiento sobre el espacio entre el público general.
@@ -13,4 +13,3 @@ Desde el año 2004 participa de talleres y entrenamientos relacionado a Astronom
 Eddie ha brindado numerosas conferencias sobre Astronomía en varias universidades, en el Observatorio de Arecibo y participa con frecuencia de charlas en el Planetario y Observatorio del RUM.
 
 Le apasiona la observación del cielo nocturno y redactar artículos sobre Astronomía, los cuales han sido publicados en diversos medios en Puerto Rico y República Dominicana. Además de la astronomía, Eddie es un buzo muy experimentado y disfruta mucho de la fotografía.
-

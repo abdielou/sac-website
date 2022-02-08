@@ -1,21 +1,22 @@
-import { MDXLayoutRenderer } from '@/components/MDXComponents'
 import { getFileBySlug } from '@/lib/mdx'
+import { PageSEO } from '@/components/SEO'
+import AuthorListLayout from '@/layouts/AuthorListLayout'
 
-const DEFAULT_LAYOUT = 'AuthorLayout'
+const AUTHORS = ['janethsi', 'nelson', 'hector', 'rafael', 'eddie', 'victor']
 
 export async function getStaticProps() {
-  const authorDetails = await getFileBySlug('authors', ['default'])
-  return { props: { authorDetails } }
+  return {
+    props: {
+      authors: await Promise.all(AUTHORS.map((slug) => getFileBySlug('authors', [slug]))),
+    },
+  }
 }
 
-export default function About({ authorDetails }) {
-  const { mdxSource, frontMatter } = authorDetails
-
+export default function About({ authors }) {
   return (
-    <MDXLayoutRenderer
-      layout={frontMatter.layout || DEFAULT_LAYOUT}
-      mdxSource={mdxSource}
-      frontMatter={frontMatter}
-    />
+    <>
+      <PageSEO title={`Quiénes Somos`} description={`Quiénes Somos`} />
+      <AuthorListLayout authors={authors} />
+    </>
   )
 }

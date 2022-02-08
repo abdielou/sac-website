@@ -1,16 +1,14 @@
 ---
-name: Eddie Irizarry
-avatar: /static/images/eddie.png
-occupation: Vice Presidente SAC
+name: SAC
+avatar: /static/images/logo_sac.png
 ---
 
-El Sr. Eddie Irizarry es el Vice-presidente de la Sociedad de Astronomía del Caribe, una organización dedicada a promover el conocimiento sobre el espacio entre el público general.
+Somos una organización sin fines de lucro compuesta por profesionales, estudiantes y personas de la comunidad que comparten el interés y la pasión por la Astronomía. Nuestra misión es difundir conocimientos y fomentar el interés en este campo de la ciencia. 
 
-Eddie es egresado del Recinto Universitario de Mayaguez de la Universidad de Puerto Rico con un grado de Ingeniería Eléctrica, con especialidad en Electrónica.
+Algunos de nuestros miembros han sido seleccionados por el programa NASA Ambassadors y reciben entrenamiento de NASA/JPL con el propósito de difundir los más recientes descubrimientos a los medios locales y a la comunidad a través de Conferencias en varias Universidades y escuelas. 
 
-Desde el año 2004 participa de talleres y entrenamientos relacionado a Astronomía como parte del programa "Solar System Ambassadors" de la NASA/JPL, mediante el cuál está capacitado para servir como educador y diseminador de información pertinente al espacio y las misiones de la NASA.
+Nuestra organización cuenta con los recursos para satisfacer las necesidades de conocimientos de nuestros miembros así como el de la comunidad en general.
 
-Eddie ha brindado numerosas conferencias sobre Astronomía en varias universidades, en el Observatorio de Arecibo y participa con frecuencia de charlas en el Planetario y Observatorio del RUM.
+Ofrecemos conferencias, talleres y actividades de observación con telescopios para brindar la oportunidad de apreciar y entender las maravillas del cielo nocturno. Le invitamos a asistir a nuestras Charlas y Noches de Observación para aprender y disfrutar del interesante campo de la Astronomía. Estas actividades son libre de costo.
 
-Le apasiona la observación del cielo nocturno y redactar artículos sobre Astronomía, los cuales han sido publicados en diversos medios en Puerto Rico y República Dominicana. Además de la astronomía, Eddie es un buzo muy experimentado y disfruta mucho de la fotografía.
-
+La Sociedad de Astronomía del Caribe (SAC) es la entidad astronómica más consultada en la Isla por los medios noticiosos, y la que mayor cantidad de seguidores tiene según demuestran las redes. 
