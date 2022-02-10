@@ -155,7 +155,7 @@ module.exports = {
         '2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
         '3xl': '0 35px 60px -15px rgba(0, 0, 0, 0.3)',
         inner: 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.06)',
-        dark: '0 10px 15px -3px rgba(110, 43, 75, 0.5), 0 4px 6px -2px rgba(110, 43, 75, 0.2)',
+        dark: '0 10px 15px -3px rgba(0, 128, 128, 0.5), 0 4px 6px -2px rgba(0, 128, 128, 0.2)',
         none: 'none',
       },
     },
