@@ -9,7 +9,7 @@ const siteMetadata = {
   siteRepo: 'https://github.com/abdielou/sac-website',
   siteLogo: '/static/images/logo_sac.png',
   image: '/static/images/avatar.png',
-  socialBanner: '/static/images/twitter-card.png',
+  socialBanner: '/static/images/logo_sac_card.png',
   email: 'address@yoursite.com',
   twitter: 'https://twitter.com/Twitter',
   facebook: 'https://facebook.com',
