@@ -16,7 +16,6 @@ export default function Projects() {
         <div className="container py-12">
           <div className="grid grid-cols-1 -m-4">
             {weatherData.map((d) => {
-              console.log(d.width, d.height)
               const adjustedSize = _getAdjustedSize(d.width, d.height)
               return (
                 <Card
@@ -39,8 +38,8 @@ export default function Projects() {
 
 function _getAdjustedSize(width, height) {
   return {
-    width: _sizeMultiplier(width) * width,
-    height: _sizeMultiplier(width) * height,
+    width: width / _sizeMultiplier(width),
+    height: height / _sizeMultiplier(width),
   }
 }
 function _sizeMultiplier(width) {
