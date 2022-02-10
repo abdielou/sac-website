@@ -2,6 +2,7 @@
 name: Eddie Irizarry
 avatar: /static/images/eddie_2.jpg
 occupation: Presidente Comité Divulgación Científica
+bio: Eddie Irizarry es egresado del Recinto Universitario de Mayaguez de la Universidad de Puerto Rico con un grado de Ingeniería Eléctrica, con especialidad en Electrónica. NASA Ambassador desde el año 2004. Escritor de Astronomía en EarthSky, una reconocida página de ciencia en Estados Unidos.
 ---
 
 El Sr. Eddie Irizarry es el Vice-presidente de la Sociedad de Astronomía del Caribe, una organización dedicada a promover el conocimiento sobre el espacio entre el público general.
