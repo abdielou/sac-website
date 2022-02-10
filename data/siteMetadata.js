@@ -7,7 +7,7 @@ const siteMetadata = {
   language: 'es-pr',
   siteUrl: 'https://sac-website.vercel.app/',
   siteRepo: 'https://github.com/abdielou/sac-website',
-  siteLogo: '/static/images/logo_sac.png',
+  siteLogo: '/static/images/logo_sac_card.png',
   image: '/static/images/avatar.png',
   socialBanner: '/static/images/logo_sac_card.png',
   email: 'address@yoursite.com',

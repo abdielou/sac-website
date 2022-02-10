@@ -18,7 +18,7 @@ const MobileNav = () => {
   }
 
   return (
-    <div className="sm:hidden">
+    <div className="sm:hidden h-[32px]">
       {/* Tailwind is mobile first, therefore the sm: break looks at bigger than sm */}
       <button
         type="button"
