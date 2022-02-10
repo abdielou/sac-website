@@ -38,4 +38,13 @@ module.exports = withBundleAnalyzer({
 
     return config
   },
+  images: {
+    domains: [
+      'tropic.ssec.wisc.edu',
+      'cdn.star.nesdis.noaa.gov',
+      'sirocco.accuweather.com',
+      'www.nhc.noaa.gov',
+      'services.swpc.noaa.gov',
+    ],
+  },
 })
