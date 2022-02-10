@@ -10,11 +10,11 @@ const siteMetadata = {
   siteLogo: '/static/images/logo_sac_card.png',
   image: '/static/images/avatar.png',
   socialBanner: '/static/images/logo_sac_card.png',
-  email: 'address@yoursite.com',
-  twitter: 'https://twitter.com/Twitter',
-  facebook: 'https://facebook.com',
-  youtube: 'https://youtube.com',
-  linkedin: 'https://www.linkedin.com',
+  email: 'sociedadastronomia@gmail.com',
+  // twitter: 'https://twitter.com/Twitter',
+  facebook: 'https://www.facebook.com/sociedad.astronomia',
+  // youtube: 'https://youtube.com',
+  // linkedin: 'https://www.linkedin.com',
   locale: 'es-PR',
   analytics: {
     // supports plausible, simpleAnalytics or googleAnalytics
@@ -25,7 +25,7 @@ const siteMetadata = {
   newsletter: {
     // supports mailchimp, buttondown, convertkit
     // Please add your .env file and modify it according to your selection
-    provider: 'buttondown',
+    // provider: 'buttondown',
   },
   comment: {
     // Select a provider and use the environment variables associated to it
