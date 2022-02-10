@@ -2,6 +2,5 @@
 name: Héctor Santini 
 avatar: /static/images/hector.jpg
 occupation: Tesorero Interino
+bio: Programador, “Computer Service Engineer” en los años de 1968… en NCR. Especialista en dar servicio al primer Computador Transistorizado comercial en el mercado. Vicepresidente de Infomedika. Aficionado a la astrofotografia.
 ---
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.

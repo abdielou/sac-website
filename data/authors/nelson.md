@@ -2,6 +2,5 @@
 name: Nelson Ortega
 avatar: /static/images/nelson.jpg
 occupation: Vicepresidente
+bio: Bachillerato en Sistema de Información y Mercadeo. Coordinador de Campañas en SER de P.R Astrónomo y Astrofotografo aficionado desde el año 2011. Ganador del premio APOD de NASA en noviembre del 2018 y APOD GraG de Italia. Miembro de la SAC desde el 2011.
 ---
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.

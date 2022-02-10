@@ -2,6 +2,5 @@
 name: Victor Rivera
 avatar: /static/images/victor.jpg
 occupation: Presidente Comité Informática y Tecnología
+bio: Aficionado de la aviación, fotografía y recientemente a la astrofotografia, pasión que lo llevó a unirse a la SAC en el año 2016. Por el día trabaja como programador para la industria de espacio y defensa. Mientras que por las noches disfruta la captura de objetos astronómicos.
 ---
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.

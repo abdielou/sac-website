@@ -38,7 +38,7 @@ function ProfileCard({ name, avatar, occupation, bio, company, email, linkedin, 
           {name}
         </h3>
         <div className="text-gray-800 mb-2">{occupation}</div>
-        <div className="text-gray-500">{bio}</div>
+        <div className="text-gray-500 mr-4">{bio}</div>
         <div className="text-gray-500">{company}</div>
         <div className="flex pt-6 space-x-3">
           <SocialIcon kind="mail" href={`mailto:${email}`} />
