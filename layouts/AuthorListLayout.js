@@ -27,7 +27,7 @@ function AboutCard({ mdxSource, frontMatter }) {
   )
 }
 
-function ProfileCard({ name, avatar, occupation, bio, company, email, github, linkedin, twitter }) {
+function ProfileCard({ name, avatar, occupation, bio, company, email, linkedin, twitter }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 pl-4 pt-4 m-4 bg-gray-50 dark:bg-gray-100 rounded shadow-lg dark:shadow-dark">
       <div className="md:col-span-1">
@@ -42,7 +42,6 @@ function ProfileCard({ name, avatar, occupation, bio, company, email, github, li
         <div className="text-gray-500">{company}</div>
         <div className="flex pt-6 space-x-3">
           <SocialIcon kind="mail" href={`mailto:${email}`} />
-          <SocialIcon kind="github" href={github} />
           <SocialIcon kind="linkedin" href={linkedin} />
           <SocialIcon kind="twitter" href={twitter} />
         </div>
