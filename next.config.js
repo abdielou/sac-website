@@ -45,6 +45,7 @@ module.exports = withBundleAnalyzer({
       'sirocco.accuweather.com',
       'www.nhc.noaa.gov',
       'services.swpc.noaa.gov',
+      'sdo.gsfc.nasa.gov',
     ],
   },
 })

@@ -1,11 +1,12 @@
 import Link from '@/components/Link'
 import { PageSEO } from '@/components/SEO'
 import Tag from '@/components/Tag'
-import siteMetadata from '@/data/siteMetadata'
+import NewsletterForm from '@/components/NewsletterForm'
+import Image from '@/components/Image'
 import { getAllFilesFrontMatter } from '@/lib/mdx'
 import formatDate from '@/lib/utils/formatDate'
-
-import NewsletterForm from '@/components/NewsletterForm'
+import siteMetadata from '@/data/siteMetadata'
+import widgetsData from '@/data/widgetsData'
 
 const MAX_DISPLAY = 5
 
@@ -20,22 +21,42 @@ export default function Home({ posts }) {
     <>
       <PageSEO title={siteMetadata.title} description={siteMetadata.description} />
       <div className="divide-y divide-gray-200 dark:divide-gray-700">
+        {/* Site Description */}
         <div className="pt-6 pb-8 space-y-2 md:space-y-5">
           <p className="text-lg leading-7 text-gray-500 dark:text-gray-400">
             {siteMetadata.description}
           </p>
         </div>
-        <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-          {!posts.length && 'No posts found.'}
-          {posts.slice(0, MAX_DISPLAY).map((frontMatter) => {
-            return (
-              <li key={frontMatter.slug} className="py-12">
-                <ArticleItem {...frontMatter} />
-              </li>
-            )
-          })}
-        </ul>
+
+        {/* Blog list */}
+        <div className="flex flex-wrap">
+          <ul className="w-full md:w-2/3 xl:w-3/4 divide-y divide-gray-200 dark:divide-gray-700">
+            {!posts.length && 'No posts found.'}
+            {posts.slice(0, MAX_DISPLAY).map((frontMatter) => {
+              return (
+                <li key={frontMatter.slug} className="py-12">
+                  <ArticleItem {...frontMatter} />
+                </li>
+              )
+            })}
+          </ul>
+          <div className="flex flex-col items-center md:items-end w-full md:w-1/3 xl:w-1/4 mt-2">
+            {widgetsData.map((widget, idx) => (
+              <div key={idx} className="bg-black flex flex-col items-center w-48 mb-2 rounded">
+                <Image
+                  alt={widget.name}
+                  src={widget.imgSrc}
+                  width={widget.width}
+                  height={widget.height}
+                />
+                <h1 className="my-2">{widget.name}</h1>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
+
+      {/* Pagination */}
       {posts.length > MAX_DISPLAY && (
         <div className="flex justify-end text-base font-medium leading-6">
           <Link
@@ -47,6 +68,8 @@ export default function Home({ posts }) {
           </Link>
         </div>
       )}
+
+      {/* Newsletter Form */}
       {siteMetadata.newsletter.provider && (
         <div className="flex items-center justify-center pt-4">
           <NewsletterForm />
@@ -55,6 +78,7 @@ export default function Home({ posts }) {
     </>
   )
 }
+
 function ArticleItem({ date, slug, title, tags, summary }) {
   return (
     <article>
