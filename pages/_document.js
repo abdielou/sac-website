@@ -35,6 +35,17 @@ class MyDocument extends Document {
           />
         </Head>
         <body className="antialiased text-black bg-white dark:bg-gray-900 dark:text-white">
+          {/* FB SDK */}
+          <div id="fb-root"></div>
+          <script
+            async
+            defer
+            crossOrigin="anonymous"
+            src="https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v13.0&appId=1950980198549372&autoLogAppEvents=1"
+            nonce="jgHhYzTR"
+          ></script>
+
+          {/* Page */}
           <Main />
           <NextScript />
         </body>
