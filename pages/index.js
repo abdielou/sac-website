@@ -61,7 +61,6 @@ export default function Home({ posts }) {
                 width="2048"
                 height="2048"
               />
-              {apod && !apodError && <ApodWidget name="APOD" {...apod} />}
               <ImageWidget
                 name="Fase Lunar"
                 imgSrc="https://www.moonmodule.com/cs/dm/vn.gif"
@@ -69,6 +68,7 @@ export default function Home({ posts }) {
                 width="192"
                 height="294"
               />
+              {apod && !apodError && <ApodWidget name="APOD" {...apod} />}
             </div>
           </div>
         </div>
