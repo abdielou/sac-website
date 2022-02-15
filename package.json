@@ -23,6 +23,7 @@
     "mdx-bundler": "^6.0.1",
     "next": "^12.0.10",
     "next-themes": "^0.0.14",
+    "node-cache": "^5.1.2",
     "postcss": "^8.3.5",
     "preact": "^10.5.13",
     "react": "17.0.2",
@@ -35,8 +36,10 @@
     "remark-footnotes": "^4.0.0",
     "remark-gfm": "^2.0.0",
     "remark-math": "^5.0.0",
+    "rss-to-json": "^2.0.2",
     "sharp": "^0.28.3",
     "smoothscroll-polyfill": "^0.4.4",
+    "swr": "^1.2.1",
     "tailwindcss": "^2.2.2",
     "unist-util-visit": "^4.0.0"
   },

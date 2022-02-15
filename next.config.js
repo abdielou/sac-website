@@ -46,6 +46,8 @@ module.exports = withBundleAnalyzer({
       'www.nhc.noaa.gov',
       'services.swpc.noaa.gov',
       'sdo.gsfc.nasa.gov',
+      'www.moonmodule.com',
+      'apod.nasa.gov',
     ],
   },
 })
