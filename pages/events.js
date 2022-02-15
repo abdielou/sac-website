@@ -28,7 +28,7 @@ export default function Contact() {
             <span className="inline-block ml-2">
               <SocialIcon kind="facebook" href={siteMetadata.facebook} size="6" />
             </span>
-            . Si deseas solicitar una actividad para tu grupo o entidad, puedes acerlo con el
+            . Si deseas solicitar una actividad para tu grupo o entidad, puedes hacerlo con el
             siguiente enlace.
           </div>
           <button
