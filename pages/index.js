@@ -141,7 +141,7 @@ function ArticleItem({ date, slug, title, tags, summary }) {
 function ImageWidget({ name, imgSrc, href, width, height }) {
   return (
     <div className="flex flex-col items-center w-48 mb-2 rounded overflow-hidden bg-black">
-      <h1 className="my-2">{name}</h1>
+      <h1 className="my-2 text-gray-200">{name}</h1>
       <div>
         {href ? (
           <a href={href} target="_blank" rel="noopener noreferrer">
@@ -158,7 +158,7 @@ function ImageWidget({ name, imgSrc, href, width, height }) {
 function ApodWidget({ name, title, imgSrc, href, alt }) {
   return (
     <div className="flex flex-col items-center w-48 mb-2 rounded overflow-hidden bg-black">
-      <h1 className="my-2">{name}</h1>
+      <h1 className="my-2 text-gray-200">{name}</h1>
       <div className="flex flex-col items-center">
         <div className="w-26">
           {href ? (
