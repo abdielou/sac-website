@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import ReactPlayer from 'react-player'
 import { getMDXComponent } from 'mdx-bundler/client'
 import Image from './Image'
+import ImageCaption from './ImageCaption'
 import CustomLink from './Link'
 import TOCInline from './TOCInline'
 import Pre from './Pre'
@@ -16,6 +17,7 @@ const ResponsiveReactPlayer = ({ url }) => (
 
 export const MDXComponents = {
   Image,
+  ImageCaption,
   TOCInline,
   a: CustomLink,
   pre: Pre,
