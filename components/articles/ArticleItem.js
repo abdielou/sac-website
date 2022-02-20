@@ -8,13 +8,15 @@ const ArticleItem = ({ date, slug, title, tags, summary, images, imgWidth, imgHe
     <div className="grid sm:grid-cols-3">
       <div className="">
         {images && images.length > 0 && imgWidth && imgHeight && (
-          <Image
-            className="rounded-t-sm"
-            src={`/${images[0]}`}
-            alt={title}
-            width={imgWidth}
-            height={imgHeight}
-          />
+          <Link href={`/blog/${slug}`}>
+            <Image
+              className="rounded-t-sm"
+              src={`/${images[0]}`}
+              alt={title}
+              width={imgWidth}
+              height={imgHeight}
+            />
+          </Link>
         )}
         <dl>
           <dt className="sr-only">Publicado en</dt>
