@@ -72,19 +72,29 @@ const projectsData = [
     width: '900',
     height: '540',
   },
+  {
+    title: 'Red Sísmica de Puerto Rico',
+    imgSrc: '/static/images/rspr.png',
+    href: 'http://redsismica.uprm.edu/Spanish/',
+    width: '900',
+    height: '540',
+  },
+  {
+    title: 'Servicio Geológico de E.U.',
+    imgSrc: '/static/images/usgspr.png',
+    href:
+      'https://earthquake.usgs.gov/earthquakes/map/?extent=15.89794,-69.4281&extent=20.40127,-64.15466&listOnlyShown=true',
+    width: '900',
+    height: '540',
+  },
+  {
+    title: 'Enlace 2  Servicio Geológico',
+    imgSrc: '/static/images/usgsusa.png',
+    href:
+      'https://earthquake.usgs.gov/earthquakes/map/?extent=3.68886,-137.19727&extent=61.98027,-52.82227',
+    width: '900',
+    height: '540',
+  },
 ]
 
 export default projectsData
-
-////////////////////
-// EXAMPLE
-////////////////////
-// {
-//   title: 'The Time Machine',
-//   description: `Imagine being able to travel back in time or to the future. Simple turn the knob
-//   to the desired date and press "Go". No more worrying about lost keys or
-//   forgotten handphones with this simple yet affordable solution.`,
-//   imgSrc: '/static/images/time-machine.jpg',
-//   href: '/blog/the-time-machine',
-// },
-////////////////////
