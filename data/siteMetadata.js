@@ -21,10 +21,7 @@ const siteMetadata = {
     event: 'https://my.forms.app/form/6205262c015f7839d8439ca9',
   },
   analytics: {
-    // supports plausible, simpleAnalytics or googleAnalytics
-    plausibleDataDomain: '', // e.g. tailwind-nextjs-starter-blog.vercel.app
-    simpleAnalytics: false, // true or false
-    googleAnalyticsId: '', // e.g. UA-000000-2 or G-XXXXXXX
+    googleAnalyticsId: 'G-8D0KS7FXMR',
   },
   newsletter: {
     // supports mailchimp, buttondown, convertkit
