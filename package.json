@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node ./scripts/next-remote-watch.js ./data",
     "dev": "next dev",
-    "build": "next build && node ./scripts/generate-sitemap",
+    "build": "node ./scripts/cleanup-prose-mdx && next build && node ./scripts/generate-sitemap",
     "serve": "next start",
     "analyze": "cross-env ANALYZE=true next build",
     "lint": "next lint --fix --dir pages --dir components --dir lib --dir layouts --dir scripts",
