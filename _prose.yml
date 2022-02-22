@@ -82,6 +82,6 @@ prose:
       - name: "imgHeight"
         field:
           element: "number"
-          label: "Preview Image Width"
-          help: "Preview Image Width in pixes. eg: 400"
+          label: "Preview Image Height"
+          help: "Preview Image Height in pixes. eg: 400"
           value: 400
