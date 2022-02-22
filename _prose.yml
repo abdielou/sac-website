@@ -3,9 +3,6 @@ permalink: pretty
 markdown: kramdown
 prose:
   rooturl: 'data/blog'
-  siteurl: 'https://sac-website.vercel.app'
-  baseurl: 'https://sac-website.vercel.app'
-  relativeLinks: 'https://raw.githubusercontent.com/abdielou/sac-website/master/links.jsonp'
   media: 'public/static/images/blog'
   metadata:
     data/blog:
