@@ -38,7 +38,7 @@
     "remark-gfm": "^2.0.0",
     "remark-math": "^5.0.0",
     "rss-to-json": "^2.0.2",
-    "sharp": "^0.28.3",
+    "sharp": "^0.30.7",
     "smoothscroll-polyfill": "^0.4.4",
     "swr": "^1.2.1",
     "tailwindcss": "^2.2.2",
@@ -46,7 +46,7 @@
   },
   "devDependencies": {
     "@next/bundle-analyzer": "12.0.1",
-    "@svgr/webpack": "^5.5.0",
+    "@svgr/webpack": "^6.2.1",
     "cross-env": "^7.0.3",
     "dedent": "^0.7.0",
     "eslint": "^7.29.0",
