@@ -31,12 +31,23 @@ export default function Contact() {
             . Si deseas solicitar una actividad para tu grupo o entidad, puedes hacerlo con el
             siguiente enlace.
           </div>
+          <h2 className="text-sm tracking-tight leading-5 text-gray-800 dark:text-gray-200 sm:text-lg sm:leading-6 md:text-xl md:leading-8">
+            <span className="font-bold">Atención:</span> Esta sección ha sido deshabilitada por el
+            momento ya que nuestra agenda de actividades se encuentra llena. ¡Agradecemos por su
+            comprensión!
+          </h2>
           <button
-            className="inline px-4 py-2 text-sm font-medium leading-5 text-white transition-colors duration-150 bg-blue-600 border border-transparent rounded-lg shadow focus:outline-none focus:shadow-outline-blue hover:bg-blue-700 dark:hover:bg-blue-500"
-            onClick={() => window.open(siteMetadata.forms.event, '_blank')}
+            className="inline px-4 py-2 text-sm font-medium leading-5 text-white bg-blue-600 border border-transparent rounded-lg shadow focus:outline-none focus:shadow-outline-blue cursor-not-allowed opacity-25 line-through"
+            onClick={() => {}}
           >
             Solicitud de Actividad
           </button>
+          {/* <button
+            className="inline px-4 py-2 text-sm font-medium leading-5 text-white transition-colors duration-150 bg-blue-600 border border-transparent rounded-lg shadow focus:outline-none focus:shadow-outline-blue hover:bg-blue-700 dark:hover:bg-blue-500 disabled disabled:opacity-25 cursor-not-allowed"
+            onClick={() => window.open(siteMetadata.forms.event, '_blank')}
+          >
+            Solicitud de Actividad
+          </button> */}
         </div>
       </div>
     </>
