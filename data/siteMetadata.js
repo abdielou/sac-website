@@ -21,6 +21,12 @@ const siteMetadata = {
     membership: 'https://my.forms.app/form/61f089d6ed8dd6152822310f',
     event: 'https://my.forms.app/form/6205262c015f7839d8439ca9',
   },
+  payments: {
+    donatePaypal: 'https://www.paypal.com/donate/?hosted_button_id=XTV76Q6ESKNE4',
+    payAthMovil:
+      'https://athmovil.blob.core.windows.net/athmovildeeplinking/Deep-Linking/deep.html?133d0fe53fe0aee5f76f045eeebc2197b24c3664a213db7aa9d909ed1883b872',
+    payAthMovilQR: '/static/images/athmovil_sac.png',
+  },
   analytics: {
     googleAnalyticsId: 'G-8D0KS7FXMR',
   },
