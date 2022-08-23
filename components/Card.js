@@ -1,7 +1,18 @@
 import Image from './Image'
 import Link from './Link'
 
-const Card = ({ title, description, imgSrc, href, width = 1088, height = 612 }) => (
+const OptimizedImage = ({ imageOptimize, ...rest }) =>
+  imageOptimize ? <Image {...rest} /> : <img {...rest} />
+
+const Card = ({
+  title,
+  description,
+  imgSrc,
+  href,
+  width = 1088,
+  height = 612,
+  imageOptimize = true,
+}) => (
   <div className="p-4">
     <div className="h-full overflow-hidden border-2 border-gray-200 rounded-md border-opacity-60 dark:border-gray-700">
       <div className="p-6">
@@ -18,21 +29,23 @@ const Card = ({ title, description, imgSrc, href, width = 1088, height = 612 }) 
       </div>
       {href ? (
         <Link href={href} aria-label={`Link to ${title}`}>
-          <Image
+          <OptimizedImage
             alt={title}
             src={imgSrc}
             className="object-cover object-center"
             width={width}
             height={height}
+            imageOptimize={imageOptimize}
           />
         </Link>
       ) : (
-        <Image
+        <OptimizedImage
           alt={title}
           src={imgSrc}
           className="object-cover object-center"
           width={width}
           height={height}
+          imageOptimize={imageOptimize}
         />
       )}
     </div>

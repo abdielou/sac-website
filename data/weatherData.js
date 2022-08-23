@@ -12,6 +12,7 @@ const projectsData = [
     href: 'https://cdn.star.nesdis.noaa.gov/GOES16/ABI/SECTOR/taw/GEOCOLOR/1800x1080.jpg',
     width: '1800',
     height: '1080',
+    imageOptimize: false,
   },
   {
     title: 'Caribe',
@@ -20,6 +21,7 @@ const projectsData = [
     href: 'https://cdn.star.nesdis.noaa.gov//GOES16/ABI/SECTOR/CAR/13/GOES16-CAR-13-1000x1000.gif',
     width: '1000',
     height: '1000',
+    imageOptimize: false,
   },
   {
     title: 'Radar Doppler',
@@ -71,6 +73,7 @@ const projectsData = [
       'https://cdn.star.nesdis.noaa.gov//GOES16/ABI/SECTOR/TAW/GEOCOLOR/GOES16-TAW-GEOCOLOR-900x540.gif',
     width: '900',
     height: '540',
+    imageOptimize: false,
   },
   {
     title: 'Red Sísmica de Puerto Rico',
