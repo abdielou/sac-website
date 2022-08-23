@@ -26,6 +26,7 @@ export default function Projects() {
                   href={d.href}
                   width={adjustedSize.width}
                   height={adjustedSize.height}
+                  imageOptimize={d.imageOptimize}
                 />
               )
             })}
