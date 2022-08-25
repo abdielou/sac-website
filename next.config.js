@@ -39,6 +39,7 @@ module.exports = withBundleAnalyzer({
     return config
   },
   images: {
+    minimumCacheTTL: 21600,
     domains: [
       'tropic.ssec.wisc.edu',
       'cdn.star.nesdis.noaa.gov',
