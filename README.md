@@ -8,7 +8,7 @@
 
 ## Adding Articles
 
-Articles are created with either Markdown or MDX. These can be add directly in code or through Prose.io at https://prose.io/#abdielou/sac-website.
+Articles are created with either Markdown or MDX. These can be added directly in code or through Prose.io at https://prose.io/#abdielou/sac-website.
 
 The default editor at Prose.io does not support MDX, but in theory MDX can be created equally. There are various important points to be noted out when creating an article through Prose.io.
 
