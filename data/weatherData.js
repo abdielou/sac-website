@@ -5,6 +5,7 @@ const projectsData = [
     href: 'https://tropic.ssec.wisc.edu/real-time/mosaic/images/moseir.jpg',
     width: '1200',
     height: '592',
+    imageOptimize: false,
   },
   {
     title: 'Atlántico',
@@ -29,6 +30,7 @@ const projectsData = [
     href: 'http://sirocco.accuweather.com/nxssa_r1_640x480d/r1/inxr1TJUAa.gif',
     width: '640',
     height: '480',
+    imageOptimize: false,
   },
   {
     title: 'Nubosidad y lluvia',
@@ -36,6 +38,7 @@ const projectsData = [
     href: 'http://sirocco.accuweather.com/sat_mosaic_640x480_public/rs/isarpr_.gif',
     width: '640',
     height: '480',
+    imageOptimize: false,
   },
   {
     title: 'Vigilancia Costera/Advertencias y cono de pronóstico para el centro de la tormenta',
@@ -45,6 +48,7 @@ const projectsData = [
       'https://www.nhc.noaa.gov/storm_graphics/AT07/refresh/AL072022_5day_cone_no_line_and_wind+png/',
     width: '897',
     height: '736',
+    imageOptimize: false,
   },
   {
     title: 'Probabilidad de desarrollo ciclónico',
@@ -52,6 +56,7 @@ const projectsData = [
     href: 'https://www.nhc.noaa.gov/xgtwo/two_atl_2d0.png',
     width: '900',
     height: '665',
+    imageOptimize: false,
   },
   {
     title: 'Posible Trayectoria de sistema ciclónico',
@@ -59,6 +64,7 @@ const projectsData = [
     href: 'https://www.nhc.noaa.gov/xgtwo/two_atl_5d0.png',
     width: '900',
     height: '665',
+    imageOptimize: false,
   },
   {
     title: 'Pronóstico de posibles Auroras Boreales por Actividad en el Sol',
@@ -66,6 +72,7 @@ const projectsData = [
     href: 'https://services.swpc.noaa.gov/images/animations/ovation/north/latest.jpg',
     width: '800',
     height: '800',
+    imageOptimize: false,
   },
   {
     title: 'Polvo del Sahara / Aerosoles / Bruma',
@@ -73,6 +80,7 @@ const projectsData = [
     href: 'http://tropic.ssec.wisc.edu/real-time/sal/splitE.jpg',
     width: '1062',
     height: '407',
+    imageOptimize: false,
   },
   {
     title: 'GOES East',
