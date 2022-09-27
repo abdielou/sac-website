@@ -41,16 +41,6 @@ const projectsData = [
     imageOptimize: false,
   },
   {
-    title: 'Vigilancia Costera/Advertencias y cono de pronóstico para el centro de la tormenta',
-    imgSrc:
-      'https://www.nhc.noaa.gov/storm_graphics/AT07/refresh/AL072022_5day_cone_no_line_and_wind+png/',
-    href:
-      'https://www.nhc.noaa.gov/storm_graphics/AT07/refresh/AL072022_5day_cone_no_line_and_wind+png/',
-    width: '897',
-    height: '736',
-    imageOptimize: false,
-  },
-  {
     title: 'Probabilidad de desarrollo ciclónico',
     imgSrc: 'https://www.nhc.noaa.gov/xgtwo/two_atl_2d0.png',
     href: 'https://www.nhc.noaa.gov/xgtwo/two_atl_2d0.png',
