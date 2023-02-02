@@ -18,7 +18,7 @@ const siteMetadata = {
   // linkedin: 'https://www.linkedin.com',
   locale: 'es-PR',
   forms: {
-    membership: 'https://my.forms.app/form/61f089d6ed8dd6152822310f',
+    membership: 'https://forms.gle/JMURhc6PaC1hgQg18',
     event: 'https://my.forms.app/form/6205262c015f7839d8439ca9',
   },
   payments: {
