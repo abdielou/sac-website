@@ -32,7 +32,7 @@ const PhoneIcon = () => (
     />
   </svg>
 )
-const EMAIL = 'sociedadastronomia@gmail.com'
+const EMAIL = 'info@sociedadastronomia.com'
 export default function Contact() {
   return (
     <>
