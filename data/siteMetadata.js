@@ -11,7 +11,7 @@ const siteMetadata = {
   siteLogo: '/static/images/logo_sac_card.png',
   image: '/static/images/avatar.png',
   socialBanner: '/static/images/logo_sac_card.png',
-  email: 'sociedadastronomia@gmail.com',
+  email: 'info@sociedadastronomia.com',
   twitter: 'https://twitter.com/soc_astrocaribe',
   facebook: 'https://www.facebook.com/sociedad.astronomia',
   // youtube: 'https://youtube.com',
