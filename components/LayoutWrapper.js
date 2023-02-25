@@ -18,7 +18,7 @@ const LayoutWrapper = ({ children }) => {
                 <Link href="/" aria-label={siteMetadata.title}>
                   <div className="flex items-center justify-between">
                     <div className="mr-3">
-                      <Image src={siteMetadata.siteLogo} alt="SAC Logo" width={150} height={75} />
+                      <Image src={siteMetadata.siteLogo} alt="SAC Logo" width={200} height={75} />
                     </div>
                     <div className="hidden h-10 text-3xl font-semibold italic sm:block tracking-tight xl:tracking-normal ">
                       {siteMetadata.headerTitle}
