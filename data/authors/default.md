@@ -1,6 +1,6 @@
 ---
 name: SAC
-avatar: /static/images/logo_sac_card.png
+avatar: /static/images/sac-white-logo_resampled.png.png
 ---
 
 Somos una organización sin fines de lucro compuesta por profesionales, estudiantes y personas de la comunidad que comparten el interés y la pasión por la Astronomía. Nuestra misión es difundir conocimientos y fomentar el interés en este campo de la ciencia.
