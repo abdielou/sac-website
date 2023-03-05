@@ -69,12 +69,6 @@ export default function Contact() {
                   <div className="flex flex-wrap space-x-6">
                     <a
                       className="underline text-blue-600 hover:text-blue-800 visited:text-purple-600"
-                      href="tel:+17873785660"
-                    >
-                      1 (787) 378-5660
-                    </a>
-                    <a
-                      className="underline text-blue-600 hover:text-blue-800 visited:text-purple-600"
                       href="tel:18634144741"
                     >
                       1 (863) 414-4741
