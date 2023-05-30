@@ -37,6 +37,7 @@ const genFrontMatter = (answers) => {
   date: '${date}'
   tags: [${answers.tags ? tags : ''}]
   draft: ${answers.draft === 'yes' ? true : false}
+  archived: ${answers.archived === 'yes' ? true : false}
   summary: ${answers.summary ? answers.summary : ' '}
   images: []
   layout: ${answers.layout}
@@ -78,6 +79,12 @@ inquirer
     {
       name: 'draft',
       message: 'Set post as draft?',
+      type: 'list',
+      choices: ['yes', 'no'],
+    },
+    {
+      name: 'archived',
+      message: 'Set post as archived?',
       type: 'list',
       choices: ['yes', 'no'],
     },
