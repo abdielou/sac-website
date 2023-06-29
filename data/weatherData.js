@@ -50,8 +50,8 @@ const projectsData = [
   },
   {
     title: 'Posible Trayectoria de sistema ciclónico',
-    imgSrc: 'https://www.nhc.noaa.gov/xgtwo/two_atl_5d0.png',
-    href: 'https://www.nhc.noaa.gov/xgtwo/two_atl_5d0.png',
+    imgSrc: 'https://www.nhc.noaa.gov/xgtwo/two_atl_7d0.png',
+    href: 'https://www.nhc.noaa.gov/gtwo.php?basin=atlc&fdays=7',
     width: '900',
     height: '665',
     imageOptimize: false,
