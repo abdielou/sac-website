@@ -6,8 +6,10 @@ import SectionContainer from './SectionContainer'
 import Footer from './Footer'
 import MobileNav from './MobileNav'
 import ThemeSwitch from './ThemeSwitch'
+import { useTheme } from 'next-themes'
 
 const LayoutWrapper = ({ children }) => {
+  const { theme } = useTheme()
   return (
     <SectionContainer>
       <div className="flex flex-col justify-between h-screen">
@@ -18,9 +20,21 @@ const LayoutWrapper = ({ children }) => {
                 <Link href="/" aria-label={siteMetadata.title}>
                   <div className="flex items-center justify-between">
                     <div className="mr-3">
-                      <Image src={siteMetadata.siteLogo} alt="SAC Logo" width={200} height={75} />
+                      <Image
+                        src={
+                          theme == 'dark' ? siteMetadata.siteLogoDark : siteMetadata.siteLogoLight
+                        }
+                        alt="SAC Logo"
+                        width={200}
+                        height={75}
+                      />
                     </div>
-                    <div className="hidden h-10 text-3xl font-semibold italic sm:block tracking-tight xl:tracking-normal ">
+                    <div
+                      className={
+                        (theme == 'dark' ? '' : 'text-sac-primary-blue') +
+                        ' hidden h-10 text-3xl font-semibold italic sm:block tracking-tight xl:tracking-normal'
+                      }
+                    >
                       {siteMetadata.headerTitle}
                     </div>
                   </div>
