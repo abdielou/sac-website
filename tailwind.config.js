@@ -22,6 +22,10 @@ module.exports = {
       colors: {
         primary: colors.teal,
         gray: colors.trueGray,
+        'sac-primary-violet': '#560647',
+        'sac-primary-blue': '#1B1751',
+        'sac-secondary': '#C8ABDB',
+        'sac-terciary': '#EDB898',
       },
       typography: (theme) => ({
         DEFAULT: {
