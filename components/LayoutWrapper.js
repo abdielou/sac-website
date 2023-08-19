@@ -31,7 +31,7 @@ const LayoutWrapper = ({ children }) => {
                     </div>
                     <div
                       className={
-                        (theme == 'dark' ? '' : 'text-sac-primary-blue') +
+                        (theme == 'light' ? 'text-sac-primary-blue' : '') +
                         ' hidden h-10 text-3xl font-semibold italic sm:block tracking-tight xl:tracking-normal'
                       }
                     >
