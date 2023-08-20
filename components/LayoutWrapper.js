@@ -22,9 +22,9 @@ const LayoutWrapper = ({ children }) => {
                     <div className="mr-3 hidden sm:block">
                       <Image
                         src={
-                          theme == 'light'
-                            ? siteMetadata.siteLogoShortLight
-                            : siteMetadata.siteLogoShortDark
+                          theme == 'dark'
+                            ? siteMetadata.siteLogoShortDark
+                            : siteMetadata.siteLogoShortLight
                         }
                         alt="SAC Logo"
                         width={200}
@@ -34,7 +34,7 @@ const LayoutWrapper = ({ children }) => {
                     <div className="mr-3 block sm:hidden">
                       <Image
                         src={
-                          theme == 'light' ? siteMetadata.siteLogoLight : siteMetadata.siteLogoDark
+                          theme == 'dark' ? siteMetadata.siteLogoDark : siteMetadata.siteLogoLight
                         }
                         alt="SAC Logo"
                         width={200}
