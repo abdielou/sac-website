@@ -9,7 +9,7 @@ import ThemeSwitch from './ThemeSwitch'
 import { useTheme } from 'next-themes'
 
 const LayoutWrapper = ({ children }) => {
-  const { theme } = useTheme()
+  const { theme } = useTheme('dark')
   return (
     <SectionContainer>
       <div className="flex flex-col justify-between h-screen">
