@@ -45,7 +45,7 @@ const LayoutWrapper = ({ children }) => {
                       <div
                         className={
                           titleColor +
-                          ' hidden sm:block xl:pl-10 md:pl-4 h-10 xl:text-3xl lg:text-2xl md:text-2xl font-semibold italic tracking-tight xl:tracking-normal'
+                          ' hidden sm:block xl:pl-10 md:pl-4 h-10 xl:text-3xl md:text-2xl sm:text-xl font-semibold italic tracking-tight xl:tracking-normal'
                         }
                       >
                         {siteMetadata.headerTitle}
