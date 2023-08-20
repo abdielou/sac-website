@@ -9,7 +9,7 @@ import ThemeSwitch from './ThemeSwitch'
 import { useTheme } from 'next-themes'
 
 const LayoutWrapper = ({ children }) => {
-  const { theme } = useTheme('dark')
+  const { theme, resolvedTheme } = useTheme('dark')
   return (
     <SectionContainer>
       <div className="flex flex-col justify-between h-screen">
@@ -22,7 +22,7 @@ const LayoutWrapper = ({ children }) => {
                     <div className="mr-3 hidden sm:block">
                       <Image
                         src={
-                          theme == 'dark'
+                          theme === 'dark' || resolvedTheme === 'dark'
                             ? siteMetadata.siteLogoShortDark
                             : siteMetadata.siteLogoShortLight
                         }
@@ -34,7 +34,9 @@ const LayoutWrapper = ({ children }) => {
                     <div className="mr-3 block sm:hidden">
                       <Image
                         src={
-                          theme == 'dark' ? siteMetadata.siteLogoDark : siteMetadata.siteLogoLight
+                          theme === 'dark' || resolvedTheme === 'dark'
+                            ? siteMetadata.siteLogoDark
+                            : siteMetadata.siteLogoLight
                         }
                         alt="SAC Logo"
                         width={200}
@@ -43,7 +45,9 @@ const LayoutWrapper = ({ children }) => {
                     </div>
                     <div
                       className={
-                        (theme == 'light' ? 'text-sac-primary-blue' : '') +
+                        (theme === 'light' || resolvedTheme === 'light'
+                          ? 'text-sac-primary-blue'
+                          : '') +
                         ' hidden sm:block xl:pl-10 md:pl-4 h-10 xl:text-3xl lg:text-2xl md:text-2xl font-semibold italic tracking-tight xl:tracking-normal'
                       }
                     >
