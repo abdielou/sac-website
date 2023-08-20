@@ -19,20 +19,32 @@ const LayoutWrapper = ({ children }) => {
               <div>
                 <Link href="/" aria-label={siteMetadata.title}>
                   <div className="flex items-center justify-between">
-                    <div className="mr-3">
+                    <div className="mr-3 hidden sm:block">
                       <Image
                         src={
-                          theme == 'dark' ? siteMetadata.siteLogoDark : siteMetadata.siteLogoLight
+                          theme == 'light'
+                            ? siteMetadata.siteLogoShortLight
+                            : siteMetadata.siteLogoShortDark
                         }
                         alt="SAC Logo"
                         width={200}
-                        height={75}
+                        height={47}
+                      />
+                    </div>
+                    <div className="mr-3 block sm:hidden">
+                      <Image
+                        src={
+                          theme == 'light' ? siteMetadata.siteLogoLight : siteMetadata.siteLogoDark
+                        }
+                        alt="SAC Logo"
+                        width={200}
+                        height={70}
                       />
                     </div>
                     <div
                       className={
                         (theme == 'light' ? 'text-sac-primary-blue' : '') +
-                        ' hidden h-10 text-3xl font-semibold italic sm:block tracking-tight xl:tracking-normal'
+                        ' hidden sm:block xl:pl-10 md:pl-4 h-10 xl:text-3xl lg:text-2xl md:text-2xl font-semibold italic tracking-tight xl:tracking-normal'
                       }
                     >
                       {siteMetadata.headerTitle}
