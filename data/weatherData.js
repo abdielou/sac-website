@@ -49,11 +49,20 @@ const projectsData = [
     imageOptimize: false,
   },
   {
-    title: 'Posible Trayectoria de sistema ciclónico',
+    title: 'Posible zona de desarrollo ciclónico',
     imgSrc: 'https://www.nhc.noaa.gov/xgtwo/two_atl_7d0.png',
     href: 'https://www.nhc.noaa.gov/gtwo.php?basin=atlc&fdays=7',
     width: '900',
     height: '665',
+    imageOptimize: false,
+  },
+  {
+    title: 'Trayectoria sistema ciclónico',
+    imgSrc:
+      'https://www.nhc.noaa.gov/storm_graphics/AT05/refresh/AL052024_5day_cone_no_line_and_wind+png/175058_5day_cone_no_line_and_wind.png',
+    href: 'https://www.nhc.noaa.gov/refresh/graphics_at5+shtml/175058.shtml?cone#contents',
+    width: '897',
+    height: '736',
     imageOptimize: false,
   },
   {
