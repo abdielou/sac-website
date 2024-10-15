@@ -56,15 +56,15 @@ const projectsData = [
     height: '665',
     imageOptimize: false,
   },
-  {
-    title: 'Trayectoria sistema ciclónico',
-    imgSrc:
-      'https://www.nhc.noaa.gov/storm_graphics/AT14/refresh/AL142024_5day_cone_no_line_and_wind+png/092140.png',
-    href: 'https://www.nhc.noaa.gov/refresh/graphics_at4+shtml/152937.shtml?cone#contents',
-    width: '897',
-    height: '736',
-    imageOptimize: false,
-  },
+  // {
+  //   title: 'Trayectoria sistema ciclónico',
+  //   imgSrc:
+  //     'https://www.nhc.noaa.gov/storm_graphics/AT14/refresh/AL142024_5day_cone_no_line_and_wind+png/092140.png',
+  //   href: 'https://www.nhc.noaa.gov/refresh/graphics_at4+shtml/152937.shtml?cone#contents',
+  //   width: '897',
+  //   height: '736',
+  //   imageOptimize: false,
+  // },
   {
     title: 'Pronóstico de posibles Auroras Boreales por Actividad en el Sol',
     imgSrc: 'https://services.swpc.noaa.gov/images/animations/ovation/north/latest.jpg',
