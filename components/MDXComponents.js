@@ -8,6 +8,7 @@ import CustomLink from './Link'
 import TOCInline from './TOCInline'
 import Pre from './Pre'
 import { BlogNewsletterForm } from './NewsletterForm'
+import TwitterEmbed from './TwitterEmbed'
 
 const ResponsiveReactPlayer = ({ url }) => (
   <div className="relative p-[56.25%]">
@@ -27,6 +28,7 @@ export const MDXComponents = {
     return <Layout {...rest} />
   },
   ResponsiveReactPlayer,
+  TwitterEmbed,
 }
 
 export const MDXLayoutRenderer = ({ layout, mdxSource, ...rest }) => {
