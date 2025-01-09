@@ -2,17 +2,20 @@ import SocialIcon from '@/components/social-icons'
 import Image from '@/components/Image'
 import { MDXLayoutRenderer } from '@/components/MDXComponents'
 
-export default function AuthorListLayout({ about, authors }) {
+export function AuthorListTitle({ title }) {
+  return (
+    <div className="mt-10 pt-6 pb-8 space-y-2 md:space-y-5">
+      <h1 className="text-xl font-extrabold leading-9 tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl sm:leading-10 md:text-6xl md:leading-14 md:px-6">
+        {title}
+      </h1>
+    </div>
+  )
+}
+
+export function AuthorListLayout({ authors }) {
   return (
     <div className="grid md:grid-cols-1">
-      <AboutCard {...about} />
-
       <div className="divide-y">
-        <div className="mt-10 pt-6 pb-8 space-y-2 md:space-y-5">
-          <h1 className="text-xl font-extrabold leading-9 tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl sm:leading-10 md:text-6xl md:leading-14 md:px-6">
-            Junta de Directores
-          </h1>
-        </div>
         <div className="pt-8 items-start">
           {authors.map(({ frontMatter }) => ProfileCard(frontMatter))}
         </div>
@@ -21,7 +24,7 @@ export default function AuthorListLayout({ about, authors }) {
   )
 }
 
-function AboutCard({ mdxSource, frontMatter }) {
+export function AboutCard({ mdxSource, frontMatter }) {
   return (
     <MDXLayoutRenderer layout={'AboutCardLayout'} mdxSource={mdxSource} frontMatter={frontMatter} />
   )
