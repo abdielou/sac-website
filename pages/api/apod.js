@@ -38,9 +38,9 @@ async function getLatestImage() {
 }
 
 function extractAlt(string) {
-  const altRegex = /alt="(.+)" border/
-  const alt = string.match(altRegex)[1]
-  return alt
+  const altRegex = /alt="([^"]*)" border/
+  const match = string.match(altRegex)
+  return match ? match[1] : ''
 }
 
 function extractImgSrc(string) {
