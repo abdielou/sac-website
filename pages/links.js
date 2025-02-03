@@ -63,7 +63,6 @@ const socialLinks = [
     label: 'Visita nuestra página web',
     username: 'sociedadastronomia.com',
     url: '/',
-    target: '_self',
   },
   {
     platform: 'Email',
@@ -88,7 +87,6 @@ const socialLinks = [
     label: 'Guía de Recomendaciones de Telescopios',
     username: undefined,
     url: '/blog/telescopios',
-    target: '_self',
   },
 ]
 
@@ -124,7 +122,7 @@ export default function Links() {
                 <a
                   key={link.platform}
                   href={link.url}
-                  target={link.target || '_blank'}
+                  target="_self"
                   rel="noopener noreferrer"
                   className={`${
                     theme === 'dark'
