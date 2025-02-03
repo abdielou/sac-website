@@ -96,8 +96,8 @@ const socialLinks = [
       height: 512,
       sizeAdjust: 1,
     },
-    label: 'Guía de Recomendaciones de Telescopios',
-    username: undefined,
+    label: 'Telescopios Recomendados',
+    username: 'Guía',
     url: '/blog/telescopios',
   },
 ]
