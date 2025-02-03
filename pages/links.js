@@ -5,6 +5,18 @@ import { useEffect, useMemo } from 'react'
 
 const socialLinks = [
   {
+    platform: 'Donate',
+    image: {
+      src: '/static/images/donate_color.png',
+      width: 512,
+      height: 512,
+      sizeAdjust: 1.3,
+    },
+    label: 'Se parte de nuestro esfuerzo',
+    username: '¡Dona Yá!',
+    url: '/donate',
+  },
+  {
     platform: 'Facebook',
     image: {
       src: '/static/images/facebook_color.png',
@@ -151,9 +163,9 @@ export default function Links() {
                         className="object-contain"
                       />
                     </div>
-                    <div className="flex-grow">
-                      <div className="font-medium text-gray-900">{link.label}</div>
-                      <div className="text-sm text-blue-600">{link.username}</div>
+                    <div className="flex-grow space-y-1">
+                      <div className="text-sm text-gray-900">{link.label}</div>
+                      <div className="text-xs text-blue-600">{link.username}</div>
                     </div>
                     <svg
                       className="w-6 h-6 text-gray-400"
