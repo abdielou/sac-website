@@ -12,8 +12,8 @@ const socialLinks = [
       height: 512,
       sizeAdjust: 1.3,
     },
-    label: 'Se parte de nuestro esfuerzo',
-    username: '¡Dona Yá!',
+    label: 'Sé parte de nuestro esfuerzo',
+    username: '¡Dona Ya!',
     url: '/donate',
   },
   {
