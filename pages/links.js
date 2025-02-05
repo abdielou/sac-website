@@ -12,8 +12,8 @@ const socialLinks = [
       height: 512,
       sizeAdjust: 1.3,
     },
-    label: 'Sé parte de nuestro esfuerzo',
-    username: '¡Dona Ya!',
+    label: 'Donativos',
+    username: 'ATH Móvil y PayPal',
     url: '/donate',
   },
   {
