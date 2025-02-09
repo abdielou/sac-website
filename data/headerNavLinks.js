@@ -6,6 +6,7 @@ const headerNavLinks = [
   { href: '/membership', title: 'Membresía' },
   { href: '/events', title: 'Actividades' },
   { href: '/blog', title: 'Blog' },
+  { href: '/blog/telescopios', title: 'Guía de Telescopios' },
 ]
 
 export default headerNavLinks

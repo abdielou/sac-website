@@ -57,7 +57,7 @@ const LayoutWrapper = ({ children }) => {
               <ThemeSwitch />
               <MobileNav />
             </div>
-            <div className="hidden md:flex justify-between">
+            <div className="hidden xl:flex justify-between">
               <NavigationLinks />
             </div>
           </div>
@@ -73,7 +73,7 @@ export default LayoutWrapper
 
 const NavigationLinks = () => {
   return (
-    <>
+    <div className="flex flex-wrap justify-center gap-2">
       {headerNavLinks.map((link) => (
         <Link
           key={link.title}
@@ -83,6 +83,6 @@ const NavigationLinks = () => {
           {link.title}
         </Link>
       ))}
-    </>
+    </div>
   )
 }
