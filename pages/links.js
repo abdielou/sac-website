@@ -89,6 +89,18 @@ const socialLinks = [
     url: '/',
   },
   {
+    platform: 'Telescope Guide',
+    image: {
+      src: '/static/images/telescope_color.png',
+      width: 512,
+      height: 512,
+      sizeAdjust: 1,
+    },
+    label: 'Telescopios Recomendados',
+    username: 'Guía',
+    url: '/blog/telescopios',
+  },
+  {
     platform: 'Email',
     image: {
       src: '/static/images/gmail_color.png',
@@ -100,18 +112,6 @@ const socialLinks = [
     username: 'info@sociedadastronomia.com',
     url: 'mailto:info@sociedadastronomia.com',
   },
-  // {
-  //   platform: 'Telescope Guide',
-  //   image: {
-  //     src: '/static/images/telescope_color.png',
-  //     width: 512,
-  //     height: 512,
-  //     sizeAdjust: 1,
-  //   },
-  //   label: 'Telescopios Recomendados',
-  //   username: 'Guía',
-  //   url: '/blog/telescopios',
-  // },
 ]
 
 export default function Links() {
