@@ -17,6 +17,18 @@ const socialLinks = [
     url: '/donate',
   },
   {
+    platform: 'Membership',
+    image: {
+      src: '/static/images/membership_color.png',
+      width: 512,
+      height: 512,
+      sizeAdjust: 1,
+    },
+    label: 'Únete a nuestro equipo',
+    username: 'Membresía',
+    url: '/membership',
+  },
+  {
     platform: 'Facebook',
     image: {
       src: '/static/images/facebook_color.png',
