@@ -8,8 +8,7 @@
     "build": "node ./scripts/cleanup-prose-mdx && next build && node ./scripts/generate-sitemap",
     "serve": "next start",
     "analyze": "cross-env ANALYZE=true next build",
-    "lint": "next lint --fix --dir pages --dir components --dir lib --dir layouts --dir scripts",
-    "prepare": "husky install"
+    "lint": "next lint --fix --dir pages --dir components --dir lib --dir layouts --dir scripts"
   },
   "dependencies": {
     "@mailchimp/mailchimp_marketing": "^3.0.58",
@@ -58,7 +57,6 @@
     "eslint-plugin-prettier": "^3.3.1",
     "file-loader": "^6.0.0",
     "globby": "11.0.3",
-    "husky": "^6.0.0",
     "inquirer": "^8.1.1",
     "lint-staged": "^11.0.0",
     "next-remote-watch": "^1.0.0",
