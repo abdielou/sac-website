@@ -18,11 +18,11 @@ flowchart TD
     START --> PAY1(["fa:fa-credit-card Realizar Pago (Candidato)"])
 
     %% Form branch
-    FORM1 --> FORM2{{"fa:fa-file-text Notificación de Formulario"}}
+    FORM1 --> FORM2{{"fa:fa-file-text Formulario Membresía"}}
     FORM2 --> FORM3{{"fa:fa-check-circle Validación de Información"}}
     FORM3 --> FORM4{¿Datos Correctos?}
     FORM4 -->|No| FORM5{{"fa:fa-envelope Validation Error Email"}}
-    FORM5 --> FORM6(["fa:fa-phone Contactar Candidato"])
+    FORM5 --> FORM6(["fa:fa-hand Contactar Candidato"])
     FORM6 --> FORM3
     FORM4 -->|Sí| FORM7[Datos Correctos]
     FORM7 --> ACTIVATE{{"fa:fa-cogs Proceso de Activación"}}
@@ -33,7 +33,7 @@ flowchart TD
     PAY3 --> PAY4{{"fa:fa-check-circle Validación de Pago"}}
     PAY4 --> PAY5{¿Pago Correcto?}
     PAY5 -->|No| PAY6{{"fa:fa-envelope Validation Error Email"}}
-    PAY6 --> PAY7(["fa:fa-phone Contactar Candidato"])
+    PAY6 --> PAY7(["fa:fa-hand Contactar Candidato"])
     PAY7 --> PAY4
     PAY5 -->|Sí| PAY8[Pago Correcto]
     PAY8 --> ACTIVATE
@@ -41,14 +41,14 @@ flowchart TD
     %% Activation processes
     ACTIVATE --> ACT1{{"fa:fa-certificate Certificado de Membresía"}}
     ACTIVATE --> ACT2{{"fa:fa-file-text Carta de Bienvenida"}}
-    ACTIVATE --> ACT4{{"fa:fa-google Crear Cuenta Google"}}
-    ACTIVATE --> ACT5(["fa:fa-whatsapp Añadir a WhatsApp"])
+    ACTIVATE --> ACT4{{"fa:fa-user-plus Crear Cuenta Google"}}
+    ACTIVATE --> ACT5(["fa:fa-comments Añadir a WhatsApp"])
 
     ACT1 --> ACT3{{"fa:fa-envelope Email Bienvenida"}}
     ACT2 --> ACT3
     ACT3 --> END[Proceso Completado]
     ACT4 --> END
-    ACT5 --> ACT7(["fa:fa-users Añadir a SAC Social"])
+    ACT5 --> ACT7(["fa:fa-comments Añadir a SAC Social"])
     ACT7 --> ACT8(["fa:fa-comments Dar Bienvenida en WhatsApp"])
     ACT8 --> END
 
