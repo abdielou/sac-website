@@ -5,30 +5,6 @@ import { useEffect, useMemo } from 'react'
 
 const socialLinks = [
   {
-    platform: 'Donate',
-    image: {
-      src: '/static/images/donate_color.png',
-      width: 512,
-      height: 512,
-      sizeAdjust: 1.3,
-    },
-    label: 'Donativos',
-    username: 'ATH Móvil y PayPal',
-    url: '/donate',
-  },
-  {
-    platform: 'Membership',
-    image: {
-      src: '/static/images/membership_color.png',
-      width: 512,
-      height: 512,
-      sizeAdjust: 1,
-    },
-    label: 'Únete a nuestro equipo',
-    username: 'Membresía',
-    url: '/membership',
-  },
-  {
     platform: 'Facebook',
     image: {
       src: '/static/images/facebook_color.png',
@@ -77,9 +53,33 @@ const socialLinks = [
     url: 'https://www.youtube.com/@sociedadastronomia',
   },
   {
+    platform: 'Donate',
+    image: {
+      src: '/static/images/donate.jpeg',
+      width: 512,
+      height: 512,
+      sizeAdjust: 1.3,
+    },
+    label: 'Donativos',
+    username: 'ATH Móvil y PayPal',
+    url: '/donate',
+  },
+  {
+    platform: 'Membership',
+    image: {
+      src: '/static/images/membership.jpeg',
+      width: 512,
+      height: 512,
+      sizeAdjust: 1,
+    },
+    label: 'Únete a nuestro equipo',
+    username: 'Membresía',
+    url: '/membership',
+  },
+  {
     platform: 'Web',
     image: {
-      src: '/static/images/web_color.png',
+      src: '/static/images/sac-Asset 28.png',
       width: 512,
       height: 512,
       sizeAdjust: 1,
@@ -91,7 +91,7 @@ const socialLinks = [
   {
     platform: 'Telescope Guide',
     image: {
-      src: '/static/images/telescope_color.png',
+      src: '/static/images/sac-Asset 20.png',
       width: 512,
       height: 512,
       sizeAdjust: 1,
@@ -103,7 +103,7 @@ const socialLinks = [
   {
     platform: 'Email',
     image: {
-      src: '/static/images/gmail_color.png',
+      src: '/static/images/email.png',
       width: 512,
       height: 512,
       sizeAdjust: 1,
@@ -177,7 +177,7 @@ export default function Links() {
                     </div>
                     <div className="flex-grow space-y-1">
                       <div className="text-sm text-gray-900">{link.label}</div>
-                      <div className="text-xs text-blue-600">{link.username}</div>
+                      <div className="text-xs text-sac-primary-blue">{link.username}</div>
                     </div>
                     <svg
                       className="w-6 h-6 text-gray-400"
