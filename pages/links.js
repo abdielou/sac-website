@@ -7,7 +7,7 @@ const socialLinks = [
   {
     platform: 'Donate',
     image: {
-      src: '/static/images/donate_color.png',
+      src: '/static/images/donate.jpeg',
       width: 512,
       height: 512,
       sizeAdjust: 1.3,
@@ -19,7 +19,7 @@ const socialLinks = [
   {
     platform: 'Membership',
     image: {
-      src: '/static/images/membership_color.png',
+      src: '/static/images/membership.jpeg',
       width: 512,
       height: 512,
       sizeAdjust: 1,
@@ -31,9 +31,9 @@ const socialLinks = [
   {
     platform: 'Facebook',
     image: {
-      src: '/static/images/facebook_color.png',
-      width: 2084,
-      height: 2084,
+      src: '/static/images/facebook.svg',
+      width: 800,
+      height: 800,
       sizeAdjust: 1,
     },
     label: 'Síguenos en Facebook',
@@ -43,9 +43,9 @@ const socialLinks = [
   {
     platform: 'Instagram',
     image: {
-      src: '/static/images/instagram_color.png',
-      width: 5000,
-      height: 5000,
+      src: '/static/images/instagram.svg',
+      width: 132,
+      height: 132,
       sizeAdjust: 1,
     },
     label: 'Síguenos en Instagram',
@@ -55,10 +55,10 @@ const socialLinks = [
   {
     platform: 'X',
     image: {
-      src: '/static/images/x_color.png',
-      width: 2400,
-      height: 2453,
-      sizeAdjust: 0.9,
+      src: '/static/images/x.svg',
+      width: 300,
+      height: 300,
+      sizeAdjust: 1,
     },
     label: 'Síguenos en X',
     username: '@Soc_AstroCaribe',
@@ -67,10 +67,10 @@ const socialLinks = [
   {
     platform: 'YouTube',
     image: {
-      src: '/static/images/youtube_color.png',
-      width: 734,
-      height: 518,
-      sizeAdjust: 0.8,
+      src: '/static/images/youtube.svg',
+      width: 512,
+      height: 512,
+      sizeAdjust: 1,
     },
     label: 'Suscríbete a nuestro canal',
     username: '@sociedadastronomia',
@@ -79,7 +79,7 @@ const socialLinks = [
   {
     platform: 'Web',
     image: {
-      src: '/static/images/web_color.png',
+      src: '/static/images/sac-Asset 28.png',
       width: 512,
       height: 512,
       sizeAdjust: 1,
@@ -91,7 +91,7 @@ const socialLinks = [
   {
     platform: 'Telescope Guide',
     image: {
-      src: '/static/images/telescope_color.png',
+      src: '/static/images/sac-Asset 20.png',
       width: 512,
       height: 512,
       sizeAdjust: 1,
@@ -103,7 +103,7 @@ const socialLinks = [
   {
     platform: 'Email',
     image: {
-      src: '/static/images/gmail_color.png',
+      src: '/static/images/email.png',
       width: 512,
       height: 512,
       sizeAdjust: 1,
@@ -177,7 +177,7 @@ export default function Links() {
                     </div>
                     <div className="flex-grow space-y-1">
                       <div className="text-sm text-gray-900">{link.label}</div>
-                      <div className="text-xs text-blue-600">{link.username}</div>
+                      <div className="text-xs text-sac-primary-blue">{link.username}</div>
                     </div>
                     <svg
                       className="w-6 h-6 text-gray-400"
