@@ -5,54 +5,6 @@ import { useEffect, useMemo } from 'react'
 
 const socialLinks = [
   {
-    platform: 'Facebook',
-    image: {
-      src: '/static/images/facebook_color.png',
-      width: 2084,
-      height: 2084,
-      sizeAdjust: 1,
-    },
-    label: 'Síguenos en Facebook',
-    username: '@sociedad.astronomia',
-    url: 'https://www.facebook.com/sociedad.astronomia',
-  },
-  {
-    platform: 'Instagram',
-    image: {
-      src: '/static/images/instagram_color.png',
-      width: 5000,
-      height: 5000,
-      sizeAdjust: 1,
-    },
-    label: 'Síguenos en Instagram',
-    username: '@socastronomiacaribe',
-    url: 'https://www.instagram.com/socastronomiacaribe/',
-  },
-  {
-    platform: 'X',
-    image: {
-      src: '/static/images/x_color.png',
-      width: 2400,
-      height: 2453,
-      sizeAdjust: 0.9,
-    },
-    label: 'Síguenos en X',
-    username: '@Soc_AstroCaribe',
-    url: 'https://x.com/Soc_AstroCaribe',
-  },
-  {
-    platform: 'YouTube',
-    image: {
-      src: '/static/images/youtube_color.png',
-      width: 734,
-      height: 518,
-      sizeAdjust: 0.8,
-    },
-    label: 'Suscríbete a nuestro canal',
-    username: '@sociedadastronomia',
-    url: 'https://www.youtube.com/@sociedadastronomia',
-  },
-  {
     platform: 'Donate',
     image: {
       src: '/static/images/donate.jpeg',
@@ -75,6 +27,54 @@ const socialLinks = [
     label: 'Únete a nuestro equipo',
     username: 'Membresía',
     url: '/membership',
+  },
+  {
+    platform: 'Facebook',
+    image: {
+      src: '/static/images/facebook.svg',
+      width: 800,
+      height: 800,
+      sizeAdjust: 1,
+    },
+    label: 'Síguenos en Facebook',
+    username: '@sociedad.astronomia',
+    url: 'https://www.facebook.com/sociedad.astronomia',
+  },
+  {
+    platform: 'Instagram',
+    image: {
+      src: '/static/images/instagram.svg',
+      width: 132,
+      height: 132,
+      sizeAdjust: 1,
+    },
+    label: 'Síguenos en Instagram',
+    username: '@socastronomiacaribe',
+    url: 'https://www.instagram.com/socastronomiacaribe/',
+  },
+  {
+    platform: 'X',
+    image: {
+      src: '/static/images/x.svg',
+      width: 300,
+      height: 300,
+      sizeAdjust: 1,
+    },
+    label: 'Síguenos en X',
+    username: '@Soc_AstroCaribe',
+    url: 'https://x.com/Soc_AstroCaribe',
+  },
+  {
+    platform: 'YouTube',
+    image: {
+      src: '/static/images/youtube.svg',
+      width: 512,
+      height: 512,
+      sizeAdjust: 1,
+    },
+    label: 'Suscríbete a nuestro canal',
+    username: '@sociedadastronomia',
+    url: 'https://www.youtube.com/@sociedadastronomia',
   },
   {
     platform: 'Web',
