@@ -26,26 +26,26 @@ flowchart TD
     FORM3 --> FORM4{Is Data Correct?}
     FORM4 -->|No| FORM5{{"fa:fa-envelope Validation Error Email"}}
     FORM5 --> FORM6(["fa:fa-hand Contact Candidate"])
-    FORM6 --> FORM3
     FORM4 -->|Yes| FORM7{{"fa:fa-arrow-right Upsert CLEAN [new]"}}
     FORM7 --> CLEAN(["fa:fa-database Membership Form CLEAN"])
     FORM7 --> PAYMENT_CHECK{{"fa:fa-money Verify Existing Payment"}}
     PAYMENT_CHECK --> PAYMENT_DECISION{Payment Confirmed?}
-    PAYMENT_DECISION -->|No| WAIT[Wait for Payment]
     PAYMENT_DECISION -->|Yes| ACTIVATE{{"fa:fa-cogs Activation Process"}}
+    PAYMENT_DECISION -->|No| WAIT[Wait for Payment]
 
-    %% Payment branch
+    %% Payment branch - Moved to right side
     PAY1 --> PAY2(["fa:fa-money ATHMovil/PayPal"])
     PAY2 --> PAY3(["fa:fa-file-text Payment Notification"])
     PAY3 --> PAY4{{"fa:fa-check-circle Payment Validation"}}
     PAY4 --> PAY5{Is Payment Correct?}
-    PAY5 -->|No| PAY6{{"fa:fa-envelope Validation Error Email"}}
-    PAY6 --> PAY7(["fa:fa-hand Contact Candidate"])
-    PAY7 --> PAY4
-    PAY5 -->|Yes| PAY8[Payment Correct]
-    PAY8 --> PAYMENT_UPDATE{{"fa:fa-refresh Update CLEAN [paid]"}}
+
+    %% Rearranged to minimize crossing
+    PAY5 -->|Yes| PAYMENT_UPDATE{{"fa:fa-refresh Update CLEAN [paid]"}}
     PAYMENT_UPDATE --> CLEAN
     PAYMENT_UPDATE --> PAYMENT_CHECK
+
+    PAY5 -->|No| PAY6{{"fa:fa-envelope Validation Error Email"}}
+    PAY6 --> PAY7(["fa:fa-hand Contact Candidate"])
 
     %% Activation processes
     ACTIVATE --> ACT1{{"fa:fa-certificate Membership Certificate"}}
@@ -84,7 +84,6 @@ flowchart TD
     style END2 fill:#FFFFFF,stroke:#1976D2,color:#1976D2
     style END3 fill:#FFFFFF,stroke:#1976D2,color:#1976D2
     style FINAL fill:#FFFFFF,stroke:#1976D2,color:#1976D2
-    style PAY8 fill:#FFFFFF,stroke:#1976D2,color:#1976D2
 
     %% Manual processes (light orange)
     style FORM1 fill:#FFE0B2,stroke:#FB8C00,color:#000000
