@@ -1,5 +1,11 @@
 const TestScenarios = {
   CLEAN_ENTRY: 'A2:F2',
+  MISSING_EMAIL_W_PHONE: 'A3:F3',
+  MISSING_PHONE_W_EMAIL: 'A4:F4',
+  MISSING_BOTH: 'A5:F5',
+  BAD_EMAIL: 'A6:F6',
+  BAD_PHONE: 'A7:F7',
+  BAD_NAME: 'A8:F8',
 }
 
 function testOnEdit() {
@@ -11,7 +17,7 @@ function testOnEdit() {
     source: {
       getActiveSheet: () => sheet,
     },
-    range: sheet.getRange(TestScenarios.CLEAN_ENTRY),
+    range: sheet.getRange(TestScenarios.BAD_PHONE),
   }
   const mockUser = {
     primaryEmail: 'test@example.com',
@@ -89,6 +95,7 @@ let workspaceDirectory
 let gmailApp
 let driveApp
 let utilities
+let NOTIFICATION_EMAIL = 'junta@sociedadastronomia.com'
 
 function onEdit(e) {
   handleOnEdit(e, {
@@ -108,32 +115,22 @@ function setupServices(services = {}) {
 }
 
 function handleOnEdit(e, services = null) {
-  // Set up services either from params or defaults
   setupServices(services)
 
   try {
     const userData = extractUserData(e)
 
-    if (!validateUserData(userData)) {
-      logger.log('Required fields missing')
+    // Get validation result
+    const validationResult = validateUserData(userData)
+
+    if (!validationResult.valid) {
+      logger.log('Validation errors: ' + validationResult.errors.join(', '))
+      userData.validationErrors = validationResult.errors
+      sendTemplatedEmail('USER_DATA_VALIDATION_FAILURE', userData)
       return
     }
 
-    const accountData = createUserAccount(userData)
-    if (!accountData.success) {
-      logger.log(`User ${accountData.email} creation failed: ${accountData.error}`)
-      return
-    }
-
-    const groupResult = addUserToGroup(accountData.email)
-    if (!groupResult.success) {
-      logger.log(`Group assignment failed: ${groupResult.error}`)
-    }
-
-    const emailResult = sendWelcomeEmail(accountData)
-    if (!emailResult.success) {
-      logger.log(`Email sending failed: ${emailResult.error}`)
-    }
+    logger.log('User data validated successfully')
   } catch (error) {
     logger.log(`Error in handleOnEdit: ${error.message}`)
   }
@@ -143,28 +140,203 @@ function extractUserData(e) {
   const sheet = e.source.getActiveSheet()
   const row = e.range.getRow()
 
+  const purpose = sheet.getRange(row, 2).getValue()
   const firstName = sheet.getRange(row, 3).getValue()
   const initial = sheet.getRange(row, 4).getValue()
   const fullLastName = sheet.getRange(row, 5).getValue() // Single column for last name
 
-  // Split the last name on space or hyphen
-  const [lastName, slastName = ''] = fullLastName.split(/[\s-]/)
+  // Validate the full last name first
+  let lastName = ''
+  let slastName = ''
+
+  if (fullLastName) {
+    // Only split if there's something to split
+    const nameParts = fullLastName.split(/[\s-]/)
+    lastName = nameParts[0] || ''
+    slastName = nameParts[1] || ''
+  }
 
   const email = sheet.getRange(row, 6).getValue()
   const phone = sheet.getRange(row, 7).getValue()
 
   return {
+    purpose,
     firstName,
     initial,
     lastName,
     slastName,
+    fullLastName, // Add the original full last name
     email,
     phone,
   }
 }
 
+/**
+ * Validates the purpose of the form
+ * @param {string} purpose - The purpose of the form
+ * @returns {string|null} Error message or null if valid
+ */
+function validatePurpose(purpose) {
+  if (purpose !== 'Nueva Membresía') {
+    return `Invalid form purpose: can only handle new memberships ${purpose}`
+  }
+  return null
+}
+
+/**
+ * Validates a person's name
+ * @param {string} name - The name to validate
+ * @param {string} fieldName - Field name for error messages
+ * @returns {string|null} Error message or null if valid
+ */
+function validateName(name, fieldName) {
+  if (!name) {
+    return `${fieldName} is missing`
+  }
+
+  if (name.length < 2) {
+    return `${fieldName} is too short (minimum 2 characters)`
+  }
+
+  if (!/^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]+$/.test(name)) {
+    return `${fieldName} contains invalid characters`
+  }
+
+  return null
+}
+
+/**
+ * Validates a name initial
+ * @param {string} initial - The initial to validate
+ * @returns {string|null} Error message or null if valid
+ */
+function validateInitial(initial) {
+  if (!initial) {
+    return null // Initial is optional
+  }
+
+  if (!/^[A-Za-z]$/.test(initial)) {
+    return 'Initial should be a single letter'
+  }
+
+  return null
+}
+
+/**
+ * Validates an email address
+ * @param {string} email - The email to validate
+ * @returns {string|null} Error message or null if valid
+ */
+function validateEmail(email) {
+  if (!email) {
+    return 'Email is missing'
+  }
+
+  // RFC 5322 compliant email regex
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
+
+  if (!emailRegex.test(email)) {
+    return 'Email format is invalid'
+  }
+
+  if (email.length > 320) {
+    // Max email length per spec
+    return 'Email is too long (maximum 320 characters)'
+  }
+
+  return null
+}
+
+/**
+ * Validates a phone number
+ * @param {string|number} phone - The phone number to validate
+ * @returns {string|null} Error message or null if valid
+ */
+function validatePhone(phone) {
+  // Check if phone is undefined, null, or empty string
+  if (phone === undefined || phone === null || phone === '') {
+    return 'Phone number is missing'
+  }
+
+  // Convert to string (handles number types from spreadsheet)
+  const phoneStr = String(phone)
+
+  // Check if it's just whitespace
+  if (phoneStr.trim() === '') {
+    return 'Phone number is missing'
+  }
+
+  // Remove all non-numeric characters for validation
+  const numericPhone = phoneStr.replace(/\D/g, '')
+
+  // Check for reasonable phone number length
+  if (numericPhone.length < 7) {
+    return `Phone number is too short (minimum 7 digits) ${numericPhone}`
+  }
+
+  if (numericPhone.length > 15) {
+    // Max length per ITU-T E.164
+    return `Phone number is too long (maximum 15 digits) ${numericPhone}`
+  }
+
+  // Check only for potentially harmful characters, not format
+  if (/[^0-9\s()+\-.]/.test(phoneStr)) {
+    return `Phone number contains invalid characters ${phoneStr}`
+  }
+
+  return null
+}
+
+/**
+ * Main validation function for user data
+ * @param {Object} userData - User data to validate
+ * @returns {Object} Validation result with structure: {valid: boolean, errors: string[]}
+ */
 function validateUserData(userData) {
-  return Boolean(userData.firstName && userData.lastName && userData.email && userData.phone)
+  // Array to collect validation errors
+  const errors = []
+
+  // Validate form purpose
+  const purposeError = validatePurpose(userData.purpose)
+  if (purposeError) errors.push(purposeError)
+
+  // Name validations
+  const firstNameError = validateName(userData.firstName, 'First name')
+  if (firstNameError) errors.push(firstNameError)
+
+  // Check full last name first
+  const fullLastNameError = validateName(userData.fullLastName, 'Last name')
+  if (fullLastNameError) {
+    errors.push(fullLastNameError)
+  } else {
+    // Only validate the split parts if the full last name passed validation
+    const lastNameError = validateName(userData.lastName, 'Last name (first part)')
+    if (lastNameError) errors.push(lastNameError)
+
+    // Only validate second last name if it exists
+    if (userData.slastName) {
+      const slastNameError = validateName(userData.slastName, 'Last name (second part)')
+      if (slastNameError) errors.push(slastNameError)
+    }
+  }
+
+  // Initial validation
+  const initialError = validateInitial(userData.initial)
+  if (initialError) errors.push(initialError)
+
+  // Email validation
+  const emailError = validateEmail(userData.email)
+  if (emailError) errors.push(emailError)
+
+  // Phone validation
+  const phoneError = validatePhone(userData.phone)
+  if (phoneError) errors.push(phoneError)
+
+  // Return validation result with any errors
+  return {
+    valid: errors.length === 0,
+    errors: errors,
+  }
 }
 
 function createUserAccount(userData) {
@@ -176,11 +348,7 @@ function createUserAccount(userData) {
       userData.slastName
     )
 
-    if (!sacEmail) {
-      // Handle admin notification here
-      notifyAdminsForManualReview(userData)
-      return { success: false, error: 'No available email combinations' }
-    }
+    if (!sacEmail) throw new Error('Email creation failed: No available combinations')
 
     const passwordData = generatePassword()
 
@@ -348,11 +516,11 @@ function checkUserExists(sacEmail) {
   }
 }
 
-function addUserToGroup(sacEmail) {
+function addUserToGroup(accountData) {
   const group = 'miembros@sociedadastronomia.com'
 
   var member = {
-    email: sacEmail,
+    email: accountData.email,
     role: 'MEMBER',
   }
 
@@ -364,32 +532,86 @@ function addUserToGroup(sacEmail) {
     return { success: true }
   } catch (e) {
     if (e.message.includes('Member already exists')) {
-      logger.log(`User ${sacEmail} is already a member of group ${group}.`)
+      logger.log(`User ${accountData.email} is already a member of group ${group}.`)
       return { success: true }
     } else {
-      logger.log(`Error adding user ${sacEmail} to group ${group}: ${e.message}`)
+      logger.log(`Error adding user ${accountData.email} to group ${group}: ${e.message}`)
       return { success: false, error: e.message }
     }
   }
 }
 
-function notifyAdminsForManualReview(userData) {
-  const adminEmail = 'admin@sociedadastronomia.com' // TODO: Replace with actual admin email
-  const subject = 'Manual Review Required - Email Creation'
-  const body = `
-        Manual review needed for new user email creation:
-        Name: ${userData.firstName} ${userData.initial} ${userData.lastName} ${userData.slastName}
-        Personal Email: ${userData.email}
-        Phone: ${userData.phone}
-        
-        All standard email combinations are already in use.
-        Please review and create a custom email for this user.
-      `
+// Email templates repository
+const EMAIL_TEMPLATES = {
+  EMAIL_CREATION_FAILURE: {
+    to: NOTIFICATION_EMAIL,
+    subject: 'Manual Review Required - Email Creation',
+    bodyGenerator: (userData) => `
+      Manual review needed for new user email creation:
+      Name: ${userData.firstName} ${userData.initial || ''} ${userData.lastName} ${
+      userData.slastName || ''
+    }
+      Personal Email: ${userData.email || 'Not provided'}
+      Phone: ${userData.phone || 'Not provided'}
+      
+      All standard email combinations are already in use.
+      Please review and create a custom email for this user.
+    `,
+  },
+  USER_DATA_VALIDATION_FAILURE: {
+    to: NOTIFICATION_EMAIL,
+    subject: 'User Data Validation Failed',
+    bodyGenerator: (userData) => {
+      let errorDetails = ''
+      if (userData.validationErrors && userData.validationErrors.length > 0) {
+        errorDetails = 'Validation errors: "' + userData.validationErrors.join('", "') + '"'
+      }
 
+      return `
+        User data validation failed for spreadsheet entry:
+        
+        ${errorDetails}
+        
+        Provided data:
+        Name: ${userData.firstName || '[MISSING]'} ${userData.initial || ''} ${
+        userData.lastName || '[MISSING]'
+      } ${userData.slastName || ''}
+        Personal Email: ${userData.email || '[MISSING]'}
+        Phone: ${userData.phone || '[MISSING]'}
+        
+        Please review the spreadsheet entry and ensure all data meets validation requirements.
+      `
+    },
+  },
+}
+
+/**
+ * Generic function to send emails using templates
+ * @param {string} templateId - The ID of the template to use
+ * @param {Object} data - Data to populate the template
+ * @param {Object} options - Additional email options (optional)
+ * @returns {Object} Result of the email operation
+ */
+function sendTemplatedEmail(templateId, data, options = {}) {
   try {
-    gmailApp.sendEmail(adminEmail, subject, body)
-    logger.log('Admin notification sent successfully')
+    const template = EMAIL_TEMPLATES[templateId]
+
+    if (!template) {
+      logger.log(`Email template "${templateId}" not found`)
+      return { success: false, error: 'Template not found' }
+    }
+
+    const recipient = options.to || template.to
+    const subject = options.subject || template.subject
+    const body = template.bodyGenerator(data)
+    const emailOptions = options.emailOptions || {}
+
+    gmailApp.sendEmail(recipient, subject, body, emailOptions)
+    logger.log(`Template email "${templateId}" sent successfully to ${recipient}`)
+
+    return { success: true }
   } catch (error) {
-    logger.log(`Failed to send admin notification: ${error.message}`)
+    logger.log(`Failed to send template email "${templateId}": ${error.message}`)
+    return { success: false, error: error.message }
   }
 }
