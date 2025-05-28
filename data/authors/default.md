@@ -12,3 +12,25 @@ Nuestra organización cuenta con los recursos para satisfacer las necesidades de
 Ofrecemos conferencias, talleres y actividades de observación con telescopios para brindar la oportunidad de apreciar y entender las maravillas del cielo nocturno. Le invitamos a asistir a nuestras Charlas y Noches de Observación para aprender y disfrutar del interesante campo de la Astronomía. Estas actividades son libre de costo.
 
 La Sociedad de Astronomía del Caribe (SAC) es la entidad astronómica más consultada en la Isla por los medios noticiosos, y la que mayor cantidad de seguidores tiene según demuestran las redes.
+
+<br/><br/>
+
+# Misión, Visión y Valores Sociedad de Astronomía del Caribe Inc.
+
+## Misión
+
+Educar, informar, inspirar y motivar al público en general sobre la astronomía.
+
+## Visión
+
+Promover la creación de una comunidad global que estudie y comparta las maravillas del universo para hacer la Astronomía más accesible y visible al público.
+
+## Valores
+
+- Ética
+- Excelencia
+- Inclusión
+- Innovación
+- Respeto
+- Trabajo en equipo
+- Veracidad
