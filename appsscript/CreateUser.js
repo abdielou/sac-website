@@ -150,15 +150,23 @@ function handleOnEdit(e, services = null) {
 // #endregion
 
 // #region Payment Recorded
+const MEMBERSHIP_FEE = 25;
 function handlePaymentRecorded(e) {
   // 1. Retrieve and validate payment from event
   const sheet = e.source.getActiveSheet();
   const cleanSheet = e.source.getSheetByName('CLEAN');
   const row = e.range.getRow();
-
   const senderEmail = sheet.getRange(row, 5).getValue();
   const sentAmount = sheet.getRange(row, 2).getValue();
-  // Find matching user in CLEAN sheet by email and extract name and phone
+  if (!senderEmail || !sentAmount || sentAmount < MEMBERSHIP_FEE) {
+    logger.log(
+      `Invalid payment record at row ${row}: senderEmail=${senderEmail}, sentAmount=${sentAmount}`
+    );
+    // TODO send email to admin
+    return;
+  }
+
+  // 2. Find user from payment by email
   const emailToMatch = String(senderEmail || '')
     .trim()
     .toLowerCase();
@@ -181,7 +189,6 @@ function handlePaymentRecorded(e) {
 
   logger.log(`Processing payment for ${name} ${senderEmail} ${phone} ${sentAmount}`);
 
-  // 2. Find user from payment by email & or phone
   // 3. Create user account account
   // 4. Add user to group
   // 5. Send welcome email
