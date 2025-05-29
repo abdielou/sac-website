@@ -162,7 +162,10 @@ function handlePaymentRecorded(e) {
     logger.log(
       `Invalid payment record at row ${row}: senderEmail=${senderEmail}, sentAmount=${sentAmount}`
     );
-    // TODO send email to admin
+    const emailResult = sendTemplatedEmail('PAYMENT_INVALID', { row, senderEmail, sentAmount, membershipFee: MEMBERSHIP_FEE });
+    if (!emailResult.success) {
+      logger.log(`Failed to send invalid payment email: ${emailResult.error}`);
+    }
     return;
   }
 
@@ -602,73 +605,6 @@ function validatePhone(phone) {
   return null;
 }
 
-function sendTemplatedEmail(templateId, data, options = {}) {
-  try {
-    const template = EMAIL_TEMPLATES[templateId];
-
-    if (!template) {
-      logger.log(`Email template "${templateId}" not found`);
-      return { success: false, error: 'Template not found' };
-    }
-
-    const recipient = options.to || template.to;
-    const subject = options.subject || template.subject;
-    const body = template.bodyGenerator(data);
-    const emailOptions = options.emailOptions || {};
-
-    gmailApp.sendEmail(recipient, subject, body, emailOptions);
-    logger.log(`Template email "${templateId}" sent successfully to ${recipient}`);
-
-    return { success: true };
-  } catch (error) {
-    logger.log(`Failed to send template email "${templateId}": ${error.message}`);
-    return { success: false, error: error.message };
-  }
-}
-
-const EMAIL_TEMPLATES = {
-  EMAIL_CREATION_FAILURE: {
-    to: NOTIFICATION_EMAIL,
-    subject: 'Manual Review Required - Email Creation',
-    bodyGenerator: (userData) => `
-      Manual review needed for new user email creation:
-      Name: ${userData.firstName} ${userData.initial || ''} ${userData.lastName} ${
-      userData.slastName || ''
-    }
-      Personal Email: ${userData.email || 'Not provided'}
-      Phone: ${userData.phone || 'Not provided'}
-      
-      All standard email combinations are already in use.
-      Please review and create a custom email for this user.
-    `,
-  },
-  USER_DATA_VALIDATION_FAILURE: {
-    to: NOTIFICATION_EMAIL,
-    subject: 'User Data Validation Failed',
-    bodyGenerator: (userData) => {
-      let errorDetails = '';
-      if (userData.validationErrors && userData.validationErrors.length > 0) {
-        errorDetails = 'Validation errors: "' + userData.validationErrors.join('", "') + '"';
-      }
-
-      return `
-        User data validation failed for spreadsheet entry:
-        
-        ${errorDetails}
-        
-        Provided data:
-        Name: ${userData.firstName || '[MISSING]'} ${userData.initial || ''} ${
-        userData.lastName || '[MISSING]'
-      } ${userData.slastName || ''}
-        Personal Email: ${userData.email || '[MISSING]'}
-        Phone: ${userData.phone || '[MISSING]'}
-        
-        Please review the spreadsheet entry and ensure all data meets validation requirements.
-      `;
-    },
-  },
-};
-
 function upsertToCleanSheet(spreadsheet, sourceSheet, sourceRow) {
   try {
     const cleanSheet = spreadsheet.getSheetByName('CLEAN');
@@ -772,4 +708,86 @@ function mergeRowData(targetSheet, targetRow, targetHeaders, sourceData, sourceH
   targetSheet.getRange(targetRow, 1, 1, mergedData.length).setValues([mergedData]);
 }
 
+// #endregion
+
+// #region Emails
+function sendTemplatedEmail(templateId, data, options = {}) {
+  try {
+    const template = EMAIL_TEMPLATES[templateId];
+
+    if (!template) {
+      logger.log(`Email template "${templateId}" not found`);
+      return { success: false, error: 'Template not found' };
+    }
+
+    const recipient = options.to || template.to;
+    const subject = options.subject || template.subject;
+    const body = template.bodyGenerator(data);
+    const emailOptions = options.emailOptions || {};
+
+    gmailApp.sendEmail(recipient, subject, body, emailOptions);
+    logger.log(`Template email "${templateId}" sent successfully to ${recipient}`);
+
+    return { success: true };
+  } catch (error) {
+    logger.log(`Failed to send template email "${templateId}": ${error.message}`);
+    return { success: false, error: error.message };
+  }
+}
+
+const EMAIL_TEMPLATES = {
+  EMAIL_CREATION_FAILURE: {
+    to: NOTIFICATION_EMAIL,
+    subject: 'Manual Review Required - Email Creation',
+    bodyGenerator: (userData) => `
+      Manual review needed for new user email creation:
+      Name: ${userData.firstName} ${userData.initial || ''} ${userData.lastName} ${
+      userData.slastName || ''
+    }
+      Personal Email: ${userData.email || 'Not provided'}
+      Phone: ${userData.phone || 'Not provided'}
+      
+      All standard email combinations are already in use.
+      Please review and create a custom email for this user.
+    `,
+  },
+  USER_DATA_VALIDATION_FAILURE: {
+    to: NOTIFICATION_EMAIL,
+    subject: 'User Data Validation Failed',
+    bodyGenerator: (userData) => {
+      let errorDetails = '';
+      if (userData.validationErrors && userData.validationErrors.length > 0) {
+        errorDetails = 'Validation errors: "' + userData.validationErrors.join('", "') + '"';
+      }
+
+      return `
+        User data validation failed for spreadsheet entry:
+        
+        ${errorDetails}
+        
+        Provided data:
+        Name: ${userData.firstName || '[MISSING]'} ${userData.initial || ''} ${
+        userData.lastName || '[MISSING]'
+      } ${userData.slastName || ''}
+        Personal Email: ${userData.email || '[MISSING]'}
+        Phone: ${userData.phone || '[MISSING]'}
+        
+        Please review the spreadsheet entry and ensure all data meets validation requirements.
+      `;
+    },
+  },
+  PAYMENT_INVALID: {
+    to: NOTIFICATION_EMAIL,
+    subject: 'Invalid membership payment detected',
+    bodyGenerator: (data) => `
+      An invalid membership payment was detected in the PAYMENTS sheet.
+      Row: ${data.row}
+      Sender Email: ${data.senderEmail || '[missing]'}
+      Amount Sent: ${data.sentAmount}
+      Required Fee: ${data.membershipFee}
+
+      Please review this entry for potential issues.
+    `,
+  },
+};
 // #endregion
