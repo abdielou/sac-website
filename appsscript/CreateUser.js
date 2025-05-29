@@ -29,11 +29,13 @@ function testFormSubmission() {
 function testPaymentRecorded() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName('PAYMENTS');
+  let cleanSheet = ss.getSheetByName('CLEAN');
 
   // Updated mock with proper spreadsheet methods
   const mockEvent = {
     source: {
       getActiveSheet: () => sheet,
+      getSheetByName: () => cleanSheet,
     },
     range: sheet.getRange('A2:R2'),
   };
@@ -151,11 +153,33 @@ function handleOnEdit(e, services = null) {
 function handlePaymentRecorded(e) {
   // 1. Retrieve and validate payment from event
   const sheet = e.source.getActiveSheet();
+  const cleanSheet = e.source.getSheetByName('CLEAN');
   const row = e.range.getRow();
-  const lastCol = sheet.getLastColumn();
 
-  const rowArray = sheet.getRange(row, 1, 1, lastCol).getValues()[0];
-  logger.log('[' + sheet.getName() + ']' + 'Raw row data: ' + rowArray);
+  const senderEmail = sheet.getRange(row, 5).getValue();
+  const sentAmount = sheet.getRange(row, 2).getValue();
+  // Find matching user in CLEAN sheet by email and extract name and phone
+  const emailToMatch = String(senderEmail || '')
+    .trim()
+    .toLowerCase();
+  const cleanHeaders = cleanSheet.getRange(1, 1, 1, cleanSheet.getLastColumn()).getValues()[0];
+  const emailColIndex = cleanHeaders.indexOf('E-mail');
+  if (emailColIndex === -1) {
+    logger.log('E-mail column not found in CLEAN sheet');
+    return;
+  }
+  const matchedRow = findMatchingEmailRow(cleanSheet, emailColIndex, emailToMatch);
+  if (matchedRow === -1) {
+    logger.log(`User with email ${senderEmail} not found in CLEAN sheet`);
+    return;
+  }
+  const rowValues = cleanSheet.getRange(matchedRow, 1, 1, cleanHeaders.length).getValues()[0];
+  const firstName = rowValues[2];
+  const fullLastName = rowValues[4];
+  const name = `${firstName} ${fullLastName}`.trim();
+  const phone = rowValues[6];
+
+  logger.log(`Processing payment for ${name} ${senderEmail} ${phone} ${sentAmount}`);
 
   // 2. Find user from payment by email & or phone
   // 3. Create user account account
