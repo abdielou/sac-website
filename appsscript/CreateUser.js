@@ -149,7 +149,19 @@ function handleOnEdit(e, services = null) {
 
 // #region Payment Recorded
 function handlePaymentRecorded(e) {
-  logger.log('Payment received ' + e.source.getActiveSheet().getName());
+  // 1. Retrieve and validate payment from event
+  const sheet = e.source.getActiveSheet();
+  const row = e.range.getRow();
+  const lastCol = sheet.getLastColumn();
+
+  const rowArray = sheet.getRange(row, 1, 1, lastCol).getValues()[0];
+  logger.log('[' + sheet.getName() + ']' + 'Raw row data: ' + rowArray);
+
+  // 2. Find user from payment by email & or phone
+  // 3. Create user account account
+  // 4. Add user to group
+  // 5. Send welcome email
+  // 6. Notify admin of new user account creation
 }
 
 function createUserAccount(userData) {
@@ -181,6 +193,76 @@ function createUserAccount(userData) {
   }
 }
 
+function createEmail(firstName, initial, lastName, slastName) {
+  const domain = '@sociedadastronomia.com';
+
+  // Try different email combinations in order of preference
+  const emailCombinations = [
+    `${firstName}.${lastName}`.toLowerCase(),
+    slastName && `${firstName}.${lastName}.${slastName}`.toLowerCase(),
+    initial && `${firstName}.${initial}.${lastName}`.toLowerCase(),
+    initial && slastName && `${firstName}.${initial}.${lastName}.${slastName}`.toLowerCase(),
+  ].filter(Boolean); // Remove any undefined/null combinations
+
+  for (const username of emailCombinations) {
+    const sacEmail = `${username}${domain}`;
+    if (!checkUserExists(sacEmail)) {
+      logger.log(`Unique email created: ${sacEmail}`);
+      return sacEmail;
+    }
+    logger.log(`User ${sacEmail} already exists. Trying next combination.`);
+  }
+
+  // No available combinations found
+  logger.log('All email combinations exist. Manual review needed.');
+  return null;
+}
+
+function checkUserExists(sacEmail) {
+  try {
+    const user = workspaceDirectory.Users.get(sacEmail);
+    if (!user || !user.primaryEmail) {
+      throw new Error('Resource Not Found');
+    }
+    logger.log(`User ${user.primaryEmail} exists.`);
+    return true;
+  } catch (e) {
+    if (e.message.includes('Resource Not Found')) {
+      logger.log(`User ${sacEmail} does not exist.`);
+      return false;
+    } else {
+      logger.log(`Error checking user existence: ${e.message}`);
+      throw e;
+    }
+  }
+}
+
+function generatePassword() {
+  const length = 12;
+  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+  let password = '';
+
+  // Generate random password
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * charset.length);
+    password += charset[randomIndex];
+  }
+
+  // Hash the password using SHA-1
+  const hashedPassword = utilities.computeDigest(utilities.DigestAlgorithm.SHA_1, password);
+
+  // Convert byte array to hex string
+  const hexPassword = hashedPassword
+    .map((byte) => ('0' + (byte & 0xff).toString(16)).slice(-2))
+    .join('');
+
+  return {
+    password: hexPassword,
+    hashFunction: 'SHA-1',
+    plainPassword: password, // We'll need this for the welcome email
+  };
+}
+
 function createWorkspaceUser(userData, primaryEmail, passwordData) {
   try {
     const familyName = `${userData.lastName} ${userData.slastName}`.trim();
@@ -209,30 +291,29 @@ function createWorkspaceUser(userData, primaryEmail, passwordData) {
   }
 }
 
-function generatePassword() {
-  const length = 12;
-  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
-  let password = '';
+function addUserToGroup(accountData) {
+  const group = 'miembros@sociedadastronomia.com';
 
-  // Generate random password
-  for (let i = 0; i < length; i++) {
-    const randomIndex = Math.floor(Math.random() * charset.length);
-    password += charset[randomIndex];
-  }
-
-  // Hash the password using SHA-1
-  const hashedPassword = utilities.computeDigest(utilities.DigestAlgorithm.SHA_1, password);
-
-  // Convert byte array to hex string
-  const hexPassword = hashedPassword
-    .map((byte) => ('0' + (byte & 0xff).toString(16)).slice(-2))
-    .join('');
-
-  return {
-    password: hexPassword,
-    hashFunction: 'SHA-1',
-    plainPassword: password, // We'll need this for the welcome email
+  var member = {
+    email: accountData.email,
+    role: 'MEMBER',
   };
+
+  try {
+    // Attempt to add the user to the group
+    var addedMember = workspaceDirectory.Members.insert(member, group);
+
+    logger.log(`User ${addedMember.primaryEmail} successfully added to group ${group}.`);
+    return { success: true };
+  } catch (e) {
+    if (e.message.includes('Member already exists')) {
+      logger.log(`User ${accountData.email} is already a member of group ${group}.`);
+      return { success: true };
+    } else {
+      logger.log(`Error adding user ${accountData.email} to group ${group}: ${e.message}`);
+      return { success: false, error: e.message };
+    }
+  }
 }
 
 function sendWelcomeEmail(accountData) {
@@ -284,76 +365,6 @@ function generateEmailBody(firstName, sacEmail, password) {
 
   return Object.values(template).join('');
 }
-
-function createEmail(firstName, initial, lastName, slastName) {
-  const domain = '@sociedadastronomia.com';
-
-  // Try different email combinations in order of preference
-  const emailCombinations = [
-    `${firstName}.${lastName}`.toLowerCase(),
-    slastName && `${firstName}.${lastName}.${slastName}`.toLowerCase(),
-    initial && `${firstName}.${initial}.${lastName}`.toLowerCase(),
-    initial && slastName && `${firstName}.${initial}.${lastName}.${slastName}`.toLowerCase(),
-  ].filter(Boolean); // Remove any undefined/null combinations
-
-  for (const username of emailCombinations) {
-    const sacEmail = `${username}${domain}`;
-    if (!checkUserExists(sacEmail)) {
-      logger.log(`Unique email created: ${sacEmail}`);
-      return sacEmail;
-    }
-    logger.log(`User ${sacEmail} already exists. Trying next combination.`);
-  }
-
-  // No available combinations found
-  logger.log('All email combinations exist. Manual review needed.');
-  return null;
-}
-
-function checkUserExists(sacEmail) {
-  try {
-    const user = workspaceDirectory.Users.get(sacEmail);
-    if (!user || !user.primaryEmail) {
-      throw new Error('Resource Not Found');
-    }
-    logger.log(`User ${user.primaryEmail} exists.`);
-    return true;
-  } catch (e) {
-    if (e.message.includes('Resource Not Found')) {
-      logger.log(`User ${sacEmail} does not exist.`);
-      return false;
-    } else {
-      logger.log(`Error checking user existence: ${e.message}`);
-      throw e;
-    }
-  }
-}
-
-function addUserToGroup(accountData) {
-  const group = 'miembros@sociedadastronomia.com';
-
-  var member = {
-    email: accountData.email,
-    role: 'MEMBER',
-  };
-
-  try {
-    // Attempt to add the user to the group
-    var addedMember = workspaceDirectory.Members.insert(member, group);
-
-    logger.log(`User ${addedMember.primaryEmail} successfully added to group ${group}.`);
-    return { success: true };
-  } catch (e) {
-    if (e.message.includes('Member already exists')) {
-      logger.log(`User ${accountData.email} is already a member of group ${group}.`);
-      return { success: true };
-    } else {
-      logger.log(`Error adding user ${accountData.email} to group ${group}: ${e.message}`);
-      return { success: false, error: e.message };
-    }
-  }
-}
-
 // #endregion
 
 // #region Form Submission
