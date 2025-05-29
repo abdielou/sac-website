@@ -45,11 +45,19 @@ function testPaymentRecorded() {
 }
 
 function getMockServices() {
+  const mockUser = {
+    primaryEmail: 'test@example.com',
+    name: { familyName: 'Doe', givenName: 'John' },
+    emails: [{ address: 'test@example.com', type: 'home' }],
+    phones: [{ value: '1234567890', type: 'mobile', primary: true }],
+    recoveryEmail: 'test@example.com',
+    password: 'password123',
+  }
   return {
     workspaceDirectory: {
       Users: {
         insert: (user) => {
-          Logger.log('Inserted user', user);
+          logger.log(`Inserted user ${user.primaryEmail}`);
           return {
             ...mockUser,
             primaryEmail: user.primaryEmail,
@@ -67,7 +75,7 @@ function getMockServices() {
       },
       Members: {
         insert: (member) => {
-          Logger.log('Inserted member', member);
+          logger.log(`Inserted member ${member.email}`);
           return {
             ...mockUser,
             email: member.email,
@@ -77,7 +85,7 @@ function getMockServices() {
     },
     gmailApp: {
       sendEmail: (email, subject, body, options) =>
-        Logger.log('Sent email', email, subject, body, options),
+        logger.log(`Sent email: ${email} ${subject} ${body}`),
     },
     driveApp: {
       getFilesByName: (name) => {
@@ -142,7 +150,7 @@ function handleOnEdit(e, services = null) {
       handlePaymentRecorded(e);
       break;
     default:
-      logger.log('Unmanaged sheet event: ' + e.source.getActiveSheet().getName());
+      logger.log(`Unmanaged sheet event: ${e.source.getActiveSheet().getName()}`);
       break;
   }
 }
@@ -176,7 +184,7 @@ function handlePaymentRecorded(e) {
   const cleanHeaders = cleanSheet.getRange(1, 1, 1, cleanSheet.getLastColumn()).getValues()[0];
   const emailColIndex = cleanHeaders.indexOf('E-mail');
   if (emailColIndex === -1) {
-    logger.log('E-mail column not found in CLEAN sheet');
+    logger.log(`E-mail column not found in CLEAN sheet`);
     return;
   }
   const matchedRow = findMatchingEmailRow(cleanSheet, emailColIndex, emailToMatch);
@@ -193,9 +201,45 @@ function handlePaymentRecorded(e) {
   logger.log(`Processing payment for ${name} ${senderEmail} ${phone} ${sentAmount}`);
 
   // 3. Create user account account
+  const initial = rowValues[3];
+  let lastName = '';
+  let slastName = '';
+  if (fullLastName) {
+    const nameParts = fullLastName.split(/[\s-]/);
+    lastName = nameParts[0] || '';
+    slastName = nameParts[1] || '';
+  }
+  const userData = { firstName, initial, lastName, slastName, email: senderEmail, phone };
+  const accountResult = createUserAccount(userData);
+  if (!accountResult.success) {
+    logger.log(`User creation failed: ${accountResult.error}`);
+    const emailFailureResult = sendTemplatedEmail('EMAIL_CREATION_FAILURE', userData);
+    if (!emailFailureResult.success) {
+      logger.log(`Failed to send email creation failure notification: ${emailFailureResult.error}`);
+    }
+    return;
+  }
+
   // 4. Add user to group
+  const groupResult = addUserToGroup(accountResult);
+  if (!groupResult.success) {
+    logger.log(`Failed to add user to group: ${groupResult.error}`);
+  }
+
   // 5. Send welcome email
+  const welcomeResult = sendWelcomeEmail(accountResult);
+  if (!welcomeResult.success) {
+    logger.log(`Failed to send welcome email: ${welcomeResult.error}`);
+  }
+
   // 6. Notify admin of new user account creation
+  const adminSubject = `New user account created: ${accountResult.email}`;
+  const adminBody =
+    `A new user account has been created for ${firstName} ${fullLastName}.\n` +
+    `Account Email: ${accountResult.email}\n` +
+    `Personal Email: ${senderEmail}\n` +
+    `Phone: ${phone}`;
+  gmailApp.sendEmail(NOTIFICATION_EMAIL, adminSubject, adminBody);
 }
 
 function createUserAccount(userData) {
@@ -248,7 +292,7 @@ function createEmail(firstName, initial, lastName, slastName) {
   }
 
   // No available combinations found
-  logger.log('All email combinations exist. Manual review needed.');
+  logger.log(`All email combinations exist. Manual review needed.`);
   return null;
 }
 
@@ -373,10 +417,10 @@ function sendWelcomeEmail(accountData) {
       if (!pdfFiles.hasNext()) {
         emailOptions.attachments = [welcomePdf.getAs(MimeType.PDF)];
       } else {
-        logger.log('Warning: Multiple welcome PDFs found, skipping attachment');
+        logger.log(`Warning: Multiple welcome PDFs found, skipping attachment`);
       }
     } else {
-      logger.log('Warning: Welcome PDF not found, sending email without attachment');
+      logger.log(`Warning: Welcome PDF not found, sending email without attachment`);
     }
 
     gmailApp.sendEmail(accountData.userData.email, subject, emailBody, emailOptions);
@@ -410,13 +454,13 @@ function handleFormSubmission(e) {
     const validationResult = validateUserData(userData);
 
     if (!validationResult.valid) {
-      logger.log('Validation errors: ' + validationResult.errors.join(', '));
+      logger.log(`Validation errors: ${validationResult.errors.join(', ')}`);
       userData.validationErrors = validationResult.errors;
       sendTemplatedEmail('USER_DATA_VALIDATION_FAILURE', userData);
       return;
     }
 
-    logger.log('User data validated successfully');
+    logger.log(`User data validated successfully`);
 
     // Fix: Pass the proper spreadsheet object, source sheet, and row
     const spreadsheet = e.source; // This is the SpreadsheetApp object
