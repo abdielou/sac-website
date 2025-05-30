@@ -37,7 +37,7 @@ function testPaymentRecorded() {
       getActiveSheet: () => sheet,
       getSheetByName: () => cleanSheet,
     },
-    range: sheet.getRange('A2:R2'),
+    range: sheet.getRange('A3:R3'),
   };
 
   // Call handleOnEdit with mock services
@@ -88,24 +88,20 @@ function getMockServices() {
         logger.log(`Sent email: ${email} ${subject} ${body}`),
     },
     driveApp: {
-      getFilesByName: (name) => {
-        // Return an iterator-like object
-        let hasBeenCalled = false;
+      getFileById: (id) => {
         return {
-          hasNext: () => !hasBeenCalled,
-          next: () => {
-            if (!hasBeenCalled) {
-              hasBeenCalled = true;
+          getAs: (mimeType) => ({
+            setName: (name) => name,
+            name: 'Test welcome pdf.pdf',
+            mimeType: mimeType,
+            content: 'mock pdf content',
+          }),
+          makeCopy: () => {
               return {
-                getAs: (mimeType) => ({
-                  name: 'Test welcome pdf.pdf',
-                  mimeType: mimeType,
-                  content: 'mock pdf content',
-                }),
+                getId: () => id,
+                setTrashed: () => true,
               };
             }
-            throw new Error('No more files');
-          },
         };
       },
     },
@@ -119,7 +115,8 @@ let gmailApp;
 let driveApp;
 let utilities;
 let NOTIFICATION_EMAIL = 'abdiel.aviles@sociedadastronomia.com';
-
+const MEMBERSHIP_CERTIFICATE_TEMPLATE_ID = '1-BWRXol0zVmM7U9j2OwBO1YJjw6nOV0JZzhpOUlXz4E';
+const WELCOME_LETTER_TEMPLATE_ID = '1quQ4I-s5fNjANXuUO_TGEg7Y5NHertKNWMwlJlieANo';
 // #endregion
 
 // #region Event Handling
@@ -154,7 +151,6 @@ function handleOnEdit(e, services = null) {
       break;
   }
 }
-
 // #endregion
 
 // #region Payment Recorded
@@ -316,8 +312,9 @@ function checkUserExists(sacEmail) {
 }
 
 function generatePassword() {
-  const length = 12;
-  const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+  const length = 16;
+  // Exclude ambiguous characters: 0,O,1,l,I and avoid punctuation for readability
+  const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
   let password = '';
 
   // Generate random password
@@ -396,34 +393,27 @@ function addUserToGroup(accountData) {
 
 function sendWelcomeEmail(accountData) {
   try {
-    const subject = '¡Bienvenido a la Sociedad de Astronomia del Caribe!';
-    const emailBody = generateEmailBody(
-      accountData.userData.firstName,
-      accountData.email,
-      accountData.password
+    // Derive full name from firstName, lastName, slastName
+    const { firstName, lastName, slastName } = accountData.userData;
+    const fullName = [firstName, lastName, slastName].filter(Boolean).join(' ');
+    const emailBody = generateEmailBody(fullName);
+
+    // Build membership certificate PDF with both last names
+    const { firstName: nombre, initial: inicial, lastName: apellido1, slastName: apellido2 } = accountData.userData;
+    const certificatePdf = buildMembershipCertificatePdfBlob(nombre, inicial, apellido1, apellido2);
+    // Build personalized welcome letter PDF
+    const welcomeLetterPdf = buildWelcomeLetterPdfBlob(
+      nombre,
+      inicial,
+      apellido1,
+      apellido2,
+      accountData.userData.email
     );
 
-    // Get welcome PDF files
-    const pdfFiles = driveApp.getFilesByName('Test welcome pdf.pdf');
+    // Set up email options with both attachments
+    const emailOptions = { attachments: [certificatePdf, welcomeLetterPdf] };
 
-    // Set up email options
-    const emailOptions = {};
-
-    // Only add attachment if exactly one PDF is found
-    if (pdfFiles.hasNext()) {
-      const welcomePdf = pdfFiles.next();
-
-      // Check there isn't more than one file (which would be unexpected)
-      if (!pdfFiles.hasNext()) {
-        emailOptions.attachments = [welcomePdf.getAs(MimeType.PDF)];
-      } else {
-        logger.log(`Warning: Multiple welcome PDFs found, skipping attachment`);
-      }
-    } else {
-      logger.log(`Warning: Welcome PDF not found, sending email without attachment`);
-    }
-
-    gmailApp.sendEmail(accountData.userData.email, subject, emailBody, emailOptions);
+    gmailApp.sendEmail(accountData.userData.email, '¡Bienvenido/a a la Sociedad de Astronomía del Caribe!', emailBody, emailOptions);
 
     return { success: true };
   } catch (error) {
@@ -431,17 +421,53 @@ function sendWelcomeEmail(accountData) {
   }
 }
 
-function generateEmailBody(firstName, sacEmail, password) {
-  const template = {
-    greeting: `Saludos, ${firstName}`,
-    intro:
-      '\n\nSu nueva cuenta ha sido creada. Revise en la linea inferior para los detalles. Adjunto se encuentra la carta de bienvenida',
-    email: `\n\nSu dirección de correo electrónico: ${sacEmail}`,
-    password: `\nSu contraseña: ${password}`,
-    signature: '\nCordialmente,\nSociedad De Astronomia del Caribe',
-  };
+function generateEmailBody(fullName) {
+  return `Estimado/a ${fullName},\n\n` +
+    `¡Bienvenido/a a la Sociedad de Astronomía del Caribe!\n` +
+    `Adjunto encontrarás tu carta de bienvenida y tu certificado de membresía.\n\n` +
+    `Saludos,\n\n` +
+    `Rafael Emmanuelli Jiménez\n` +
+    `Presidente, Sociedad de Astronomía del Caribe`;
+}
 
-  return Object.values(template).join('');
+function buildMembershipCertificatePdfBlob(nombre, inicial, apellido1, apellido2) {
+  const tempFile = driveApp.getFileById(MEMBERSHIP_CERTIFICATE_TEMPLATE_ID)
+    .makeCopy(`MembershipCert-${nombre}-${Date.now()}`);
+  const tempId = tempFile.getId();
+  const doc = DocumentApp.openById(tempId);
+  const body = doc.getBody();
+  body.replaceText('{{Nombre}}', nombre);
+  body.replaceText('{{Inicial}}', inicial || '');
+  const fullApellidos = [apellido1, apellido2].filter(Boolean).join(' ');
+  body.replaceText('{{Apellidos}}', fullApellidos);
+  doc.saveAndClose();
+  const pdfBlob = driveApp.getFileById(tempId)
+    .getAs(MimeType.PDF)
+    .setName(`Certificado-${nombre}.pdf`);
+  tempFile.setTrashed(true);
+  return pdfBlob;
+}
+
+function buildWelcomeLetterPdfBlob(nombre, inicial, apellido1, apellido2, email) {
+  const tempFile = driveApp.getFileById(WELCOME_LETTER_TEMPLATE_ID)
+    .makeCopy(`WelcomeLetter-${nombre}-${Date.now()}`);
+  const tempId = tempFile.getId();
+  const doc = DocumentApp.openById(tempId);
+  const body = doc.getBody();
+  const fecha = utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy');
+  body.replaceText('{{fecha}}', fecha);
+  body.replaceText('{{Nombre}}', nombre);
+  body.replaceText('{{Inicial}}', inicial || '');
+  const fullApellidos = [apellido1, apellido2].filter(Boolean).join(' ');
+  body.replaceText('{{Apellidos}}', fullApellidos);
+  body.replaceText('{{E-mail}}', email);
+  // Any additional {{Nombre}} placeholders are covered by the single replace
+  doc.saveAndClose();
+  const pdfBlob = driveApp.getFileById(tempId)
+    .getAs(MimeType.PDF)
+    .setName(`CartaBienvenida-${nombre}.pdf`);
+  tempFile.setTrashed(true);
+  return pdfBlob;
 }
 // #endregion
 
