@@ -188,6 +188,15 @@ function handlePaymentRecorded(e) {
     logger.log(`User with email ${senderEmail} not found in CLEAN sheet`);
     return;
   }
+  // 2.5 Skip if user was already created
+  const caIndex = cleanHeaders.indexOf('created_at');
+  if (caIndex !== -1) {
+    const existingTimestamp = cleanSheet.getRange(matchedRow, caIndex + 1).getValue();
+    if (existingTimestamp) {
+      logger.log(`User with email ${senderEmail} already created at ${existingTimestamp}`);
+      return;
+    }
+  }
   const rowValues = cleanSheet.getRange(matchedRow, 1, 1, cleanHeaders.length).getValues()[0];
   const firstName = rowValues[2];
   const fullLastName = rowValues[4];
@@ -236,6 +245,14 @@ function handlePaymentRecorded(e) {
     `Personal Email: ${senderEmail}\n` +
     `Phone: ${phone}`;
   gmailApp.sendEmail(NOTIFICATION_EMAIL, adminSubject, adminBody);
+
+  // 7. Mark user as created in CLEAN sheet
+  const createdAtIndex = cleanHeaders.indexOf('created_at');
+  if (createdAtIndex !== -1) {
+    cleanSheet.getRange(matchedRow, createdAtIndex + 1).setValue(new Date());
+  } else {
+    logger.log('created_at column not found in CLEAN sheet');
+  }
 }
 
 function createUserAccount(userData) {
