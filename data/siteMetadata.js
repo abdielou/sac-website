@@ -30,8 +30,7 @@ const siteMetadata = {
   },
   payments: {
     donatePaypal: 'https://www.paypal.com/donate/?hosted_button_id=XTV76Q6ESKNE4',
-    payAthMovil:
-      'https://athmovil.blob.core.windows.net/athmovildeeplinking/Deep-Linking/deep.html?133d0fe53fe0aee5f76f045eeebc2197b24c3664a213db7aa9d909ed1883b872',
+    payAthMovil: 'https://athmovil.com/pay/787-306-3664',
     payAthMovilQR: '/static/images/athmovil_sac.png',
   },
   analytics: {
