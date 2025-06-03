@@ -1,8 +1,24 @@
 import Image from '@/components/Image'
 import { PageSEO } from '@/components/SEO'
 import siteMetadata from '@/data/siteMetadata'
+import { useState, useEffect } from 'react'
 
 export default function Contact() {
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const checkByAspectRatio = () => {
+        const aspectRatio = window.innerWidth / window.innerHeight;
+        setIsMobile(aspectRatio < 0.8);
+      };
+  
+      checkByAspectRatio(); 
+      window.addEventListener('resize', checkByAspectRatio);
+      return () => window.removeEventListener('resize', checkByAspectRatio);
+    }
+  }, []);
+
   return (
     <>
       <PageSEO
@@ -25,14 +41,6 @@ export default function Contact() {
             diversas partes de la isla, libre de costo. Con tu donativo ayudas a la SAC a cumplir
             sus misión de difundir la ciencia de la astronomía en Puerto Rico, el Caribe y el mundo.
           </div>
-          <div>
-            <button
-              className="inline px-4 py-2 text-sm font-medium leading-5 text-white transition-colors duration-150 bg-blue-600 border border-transparent rounded-lg shadow focus:outline-none focus:shadow-outline-blue hover:bg-blue-700 dark:hover:bg-blue-500"
-              onClick={() => window.open(siteMetadata.payments.donatePaypal, '_blank')}
-            >
-              Donativo con PayPal
-            </button>
-          </div>
           <div className="visible md:invisible">
             <button
               className="inline px-4 py-2 text-sm font-medium leading-5 text-white transition-colors duration-150 bg-blue-600 border border-transparent rounded-lg shadow focus:outline-none focus:shadow-outline-blue hover:bg-blue-700 dark:hover:bg-blue-500"
@@ -41,16 +49,26 @@ export default function Contact() {
               Donativo con AthMovil
             </button>
           </div>
-          <div className="invisible md:visible">
-            <div className="pt-4 pb-4 prose dark:prose-dark max-w-none">
-              También puedes hacer tu donativo con ATH Movil desde tu celular.
+          {!isMobile && (
+            <div>
+              <div className="pt-4 pb-4 prose dark:prose-dark max-w-none">
+                También puedes hacer tu donativo con ATH Movil desde tu celular.
+              </div>
+              <Image
+                src={siteMetadata.payments.payAthMovilQR}
+                alt="SAC ATH Movil"
+                width={400}
+                height={452}
+              />
             </div>
-            <Image
-              src={siteMetadata.payments.payAthMovilQR}
-              alt="SAC ATH Movil"
-              width={400}
-              height={452}
-            />
+          )}
+          <div>
+            <button
+              className="inline px-4 py-2 text-sm font-medium leading-5 text-white transition-colors duration-150 bg-blue-600 border border-transparent rounded-lg shadow focus:outline-none focus:shadow-outline-blue hover:bg-blue-700 dark:hover:bg-blue-500"
+              onClick={() => window.open(siteMetadata.payments.donatePaypal, '_blank')}
+            >
+              Donativo con PayPal
+            </button>
           </div>
         </div>
       </div>
