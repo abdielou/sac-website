@@ -25,6 +25,7 @@ export default function Contact() {
             diversas partes de la isla, libre de costo. Con tu donativo ayudas a la SAC a cumplir
             sus misión de difundir la ciencia de la astronomía en Puerto Rico, el Caribe y el mundo.
           </div>
+          {/* PayPal Button */}
           <div>
             <button
               className="inline px-4 py-2 text-sm font-medium leading-5 text-white transition-colors duration-150 bg-blue-600 border border-transparent rounded-lg shadow focus:outline-none focus:shadow-outline-blue hover:bg-blue-700 dark:hover:bg-blue-500"
@@ -33,6 +34,7 @@ export default function Contact() {
               Donativo con PayPal
             </button>
           </div>
+          {/* ATH Movil QR */}
           <div className="visible md:invisible">
             <button
               className="inline px-4 py-2 text-sm font-medium leading-5 text-white transition-colors duration-150 bg-blue-600 border border-transparent rounded-lg shadow focus:outline-none focus:shadow-outline-blue hover:bg-blue-700 dark:hover:bg-blue-500"
@@ -41,6 +43,7 @@ export default function Contact() {
               Donativo con AthMovil
             </button>
           </div>
+          {/* ATH Movil Button */}
           <div className="invisible md:visible">
             <div className="pt-4 pb-4 prose dark:prose-dark max-w-none">
               También puedes hacer tu donativo con ATH Movil desde tu celular.
