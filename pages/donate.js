@@ -9,15 +9,15 @@ export default function Contact() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const checkByAspectRatio = () => {
-        const aspectRatio = window.innerWidth / window.innerHeight;
-        setIsMobile(aspectRatio < 0.8);
-      };
-  
-      checkByAspectRatio(); 
-      window.addEventListener('resize', checkByAspectRatio);
-      return () => window.removeEventListener('resize', checkByAspectRatio);
+        const aspectRatio = window.innerWidth / window.innerHeight
+        setIsMobile(aspectRatio < 0.8)
+      }
+
+      checkByAspectRatio()
+      window.addEventListener('resize', checkByAspectRatio)
+      return () => window.removeEventListener('resize', checkByAspectRatio)
     }
-  }, []);
+  }, [])
 
   return (
     <>
