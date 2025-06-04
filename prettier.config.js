@@ -6,4 +6,12 @@ module.exports = {
   useTabs: false,
   trailingComma: 'es5',
   bracketSpacing: true,
+  overrides: [
+    {
+      files: '*.gs',
+      options: {
+        parser: 'babel',
+      },
+    },
+  ],
 }
