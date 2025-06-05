@@ -1,8 +1,9 @@
 import Image from './Image'
 import Link from './Link'
 
-const OptimizedImage = ({ imageOptimize, ...rest }) =>
-  imageOptimize ? <Image {...rest} /> : <img {...rest} />
+const OptimizedImage = ({ alt, imageOptimize, ...rest }) =>
+  /* eslint-disable-next-line @next/next/no-img-element */
+  imageOptimize ? <Image alt={alt} {...rest} /> : <img alt={alt} {...rest} />
 
 const Card = ({
   title,
