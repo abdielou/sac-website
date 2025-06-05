@@ -22,8 +22,8 @@ export default function Contact() {
           <div className="pt-4 pb-2 prose dark:prose-dark max-w-none">
             La Sociedad de Astronomía del Caribe es una organización sin fines de lucro 501(c)(3)
             que ofrece varias actividades educativas y de observación astronómica durante el año en
-            diversas partes de la isla, libre de costo. Con tu donativo ayudas a la SAC a cumplir
-            sus misión de difundir la ciencia de la astronomía en Puerto Rico, el Caribe y el mundo.
+            diversas partes de la isla, libre de costo. Con tu donativo ayudas a la SAC a cumplir su
+            misión de difundir la ciencia de la astronomía en Puerto Rico, el Caribe y el mundo.
           </div>
           {/* ATH Movil */}
           <div className="block md:hidden">
