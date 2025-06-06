@@ -44,6 +44,92 @@ function testPaymentRecorded() {
   handleOnEdit(mockEvent, getMockServices())
 }
 
+function testFindPayments() {
+  setupServices(getMockServices())
+  const query = `from:${EMAIL_FILTER_SENDER} to:${EMAIL_FILTER_RECEIVER} subject:${EMAIL_FILTER_SUBJECT_CONTAINS} newer_than:${EMAIL_SEARCH_WINDOW_DAYS}d`
+  const threads = gmailApp.search(query)
+  threads.forEach((thread) => {
+    const messages = thread.getMessages()
+    messages.forEach((msg) => {
+      logger.log(
+        `Email from ${msg.getFrom()} to ${msg.getTo()} subject: ${msg.getSubject()} date: ${msg.getDate()}`
+      )
+      logger.log(`ID: ${msg.getId()}`)
+      logger.log(`Data: ${JSON.stringify(extractPaymentData(msg), null, 2)}`)
+    })
+  })
+}
+
+function extractPaymentData(msg) {
+  // Pull raw parts
+  const message_id = msg.getId()
+  const body = msg.getBody()
+  const raw = msg.getRawContent()
+  // amount
+  const amountMatch = body.match(/<b>Amount:<\/b>\s*\$([0-9.,]+)/i)
+  const amount = amountMatch ? amountMatch[1] : ''
+  // sender name & phone
+  const fromMatch = body.match(/<b>From:<\/b>\s*([^<\-]+)-\s*([^<]+)/i)
+  const sender_name = fromMatch ? fromMatch[1].trim() : ''
+  const sender_phone = fromMatch ? fromMatch[2].trim() : ''
+  // sender email
+  const emailMatch = body.match(/<b>Email:<\/b>\s*([^<]+)/i)
+  const sender_email = emailMatch ? emailMatch[1].trim() : ''
+  // date & time
+  const dateMatch = body.match(/<b>Date:<\/b>\s*([^<]+)/i)
+  let payment_date = '',
+    payment_time = '',
+    payment_datetime = null
+  if (dateMatch) {
+    const dateStr = dateMatch[1].trim()
+    const parts = dateStr.split(',')
+    payment_date = parts[0].trim()
+    payment_time = parts[1] ? parts[1].trim() : ''
+    payment_datetime = new Date(dateStr)
+  }
+  // message body
+  const messageMatch = body.match(/<b>Message:<\/b>\s*([^<]*)/i)
+  const payment_message = messageMatch ? messageMatch[1].trim() : ''
+  // recipient sign-off
+  const recipientMatch = body.match(/<b>([^<]+)<\/b>\s*<br\s*\/>/i)
+  const recipient_name = recipientMatch ? recipientMatch[1] : ''
+  // email headers
+  const email_subject = msg.getSubject()
+  const email_date = msg.getDate()
+  const email_from = msg.getFrom()
+  const email_to = msg.getTo()
+  // original sender & return-path from raw headers
+  const originalMatch = raw.match(/Original-Sender:\s*([^\r\n]+)/i)
+  const original_sender = originalMatch ? originalMatch[1].trim() : ''
+  const returnMatch = raw.match(/Return-Path:\s*<([^>]+)>/i)
+  const return_path = returnMatch ? returnMatch[1] : ''
+  // service info
+  const payment_service = recipient_name
+  const providerMatch = body.match(/Copyright[\s\S]*?©\s*\d{4}\s*([^.<]+)/i)
+  const service_provider = providerMatch ? providerMatch[1].trim() : ''
+
+  return {
+    message_id,
+    amount,
+    sender_name,
+    sender_phone,
+    sender_email,
+    payment_date,
+    payment_time,
+    payment_datetime,
+    payment_message,
+    recipient_name,
+    email_subject,
+    email_date,
+    email_from,
+    email_to,
+    original_sender,
+    return_path,
+    payment_service,
+    service_provider,
+  }
+}
+
 function getMockServices() {
   const mockUser = {
     primaryEmail: 'test@example.com',
@@ -53,6 +139,17 @@ function getMockServices() {
     recoveryEmail: 'test@example.com',
     password: 'password123',
   }
+  const mockBody = `
+  <div>
+    <p><b>Amount:</b> $25.00</p>
+    <p><b>From:</b> John Doe-(123) 456-7890</p>
+    <p><b>Email:</b> john.doe@example.com</p>
+    <p><b>Date:</b> May/25/2025, 01:47:24 PM</p>
+    <p><b>Message:</b> Thank you for your payment!</p>
+    <b>Mock Business Team</b><br />
+    Copyright © 2025 Mock Provider, LLC. All rights reserved
+  </div>`
+
   return {
     workspaceDirectory: {
       Users: {
@@ -86,6 +183,24 @@ function getMockServices() {
     gmailApp: {
       sendEmail: (email, subject, body, options) =>
         logger.log(`Sent email: ${email} ${subject} ${body}`),
+      search: (query) => {
+        logger.log(`Mock search called with query: ${query}`)
+        const mockThread = {
+          getMessages: () => [
+            {
+              getFrom: () => EMAIL_FILTER_SENDER,
+              getTo: () => EMAIL_FILTER_RECEIVER,
+              getSubject: () => 'Mock Subject paid',
+              getDate: () => new Date(),
+              getId: () => 'mock-msg-1',
+              getBody: () => mockBody,
+              getRawContent: () =>
+                `Original-Sender: mock-original@example.com\r\nReturn-Path: <mock-return@example.com>`,
+            },
+          ],
+        }
+        return [mockThread]
+      },
     },
     driveApp: {
       getFileById: (id) => {
@@ -127,6 +242,11 @@ let documentApp
 let NOTIFICATION_EMAIL = 'abdiel.aviles@sociedadastronomia.com'
 const MEMBERSHIP_CERTIFICATE_TEMPLATE_ID = '15c_hbWVzQB5g-k93JRTQqhmJy3d3kz6r-g0fCN_OR14'
 const WELCOME_LETTER_TEMPLATE_ID = '1A8kQTpqcDC7YyU7C3Cr9UNE-4wED5RBGSMxQD4C5tYA'
+// Add constants for email search filter
+const EMAIL_FILTER_SENDER = 'finance@sociedadastronomia.com'
+const EMAIL_FILTER_RECEIVER = 'finance@sociedadastronomia.com'
+const EMAIL_SEARCH_WINDOW_DAYS = 14
+const EMAIL_FILTER_SUBJECT_CONTAINS = 'paid'
 // #endregion
 
 // #region Event Handling
