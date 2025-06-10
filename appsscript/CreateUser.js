@@ -595,6 +595,16 @@ function generateEmailBody(fullName) {
   )
 }
 
+function validateTemplatePlaceholders(doc, placeholders) {
+  const body = doc.getBody()
+  const templateName = doc.getName()
+  placeholders.forEach((ph) => {
+    if (!body.findText(ph)) {
+      throw new Error(`Template placeholder ${ph} not found in ${templateName} template`)
+    }
+  })
+}
+
 function buildMembershipCertificatePdfBlob(nombre, inicial, apellido1, apellido2) {
   // 1. grab the real template
   const templateFile = driveApp.getFileById(MEMBERSHIP_CERTIFICATE_TEMPLATE_ID)
@@ -606,6 +616,9 @@ function buildMembershipCertificatePdfBlob(nombre, inicial, apellido1, apellido2
   const tempId = tempFile.getId()
   const doc = documentApp.openById(tempId)
   const body = doc.getBody()
+
+  // Validate placeholders in membership certificate template
+  validateTemplatePlaceholders(doc, ['{{Nombre}}', '{{Inicial}}', '{{Apellidos}}'])
 
   // 4. do your replacements on the copy
   body.replaceText('{{Nombre}}', nombre)
@@ -636,6 +649,15 @@ function buildWelcomeLetterPdfBlob(nombre, inicial, apellido1, apellido2, email)
   const tempId = tempFile.getId()
   const doc = documentApp.openById(tempId)
   const body = doc.getBody()
+
+  // Validate placeholders in welcome letter template
+  validateTemplatePlaceholders(doc, [
+    '{{fecha}}',
+    '{{Nombre}}',
+    '{{Inicial}}',
+    '{{Apellidos}}',
+    '{{E-mail}}',
+  ])
 
   // 4. do your replacements on the copy
   const fecha = utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy')
