@@ -61,7 +61,7 @@ function getMockServices() {
   <div>
     <p><b>Amount:</b> $25.00</p>
     <p><b>From:</b> John Doe-(123) 456-7890</p>
-    <p><b>Email:</b> john.doe@example.com</p>
+    <p><b>Email:</b> john.a.doe@example.com</p>
     <p><b>Date:</b> May/25/2025, 01:47:24 PM</p>
     <p><b>Message:</b> Thank you for your payment!</p>
     <b>Mock Business Team</b><br />
@@ -144,6 +144,7 @@ function getMockServices() {
           replaceText: (search, replacement) =>
             logger.log(`Mock replace ${search} -> ${replacement}`),
         }),
+        getName: () => 'Test welcome letter.docx',
         saveAndClose: () => logger.log(`Mock saveAndClose for doc ${id}`),
       }),
     },
@@ -161,7 +162,7 @@ let documentApp
 let NOTIFICATION_EMAIL = 'abdiel.aviles@sociedadastronomia.com'
 const MEMBERSHIP_CERTIFICATE_TEMPLATE_ID = '15c_hbWVzQB5g-k93JRTQqhmJy3d3kz6r-g0fCN_OR14'
 const WELCOME_LETTER_TEMPLATE_ID = '1A8kQTpqcDC7YyU7C3Cr9UNE-4wED5RBGSMxQD4C5tYA'
-// Add constants for email search filter
+const SPREADSHEET_ID = '1-wdja5GQP5q5IQPloxjDTgJO1w2gS_spQK_IfFc5NNQ'
 const EMAIL_FILTER_SENDER = 'finance@sociedadastronomia.com'
 const EMAIL_FILTER_RECEIVER = 'finance@sociedadastronomia.com'
 const EMAIL_SEARCH_WINDOW_DAYS = 14
@@ -169,7 +170,7 @@ const EMAIL_FILTER_SUBJECT_CONTAINS = 'paid'
 // #endregion
 
 // #region Event Handlers
-function setupServices(services = {}) {
+function setupServices(services) {
   logger = services.logger || Logger
   workspaceDirectory = services.workspaceDirectory || WorkspaceDirectory
   gmailApp = services.gmailApp || GmailApp
@@ -180,16 +181,16 @@ function setupServices(services = {}) {
 
 // Form Events
 function onEdit(e) {
-  handleOnEdit(e, null)
+  handleOnEdit(e, {})
 }
-function handleOnEdit(e, services = null) {
+function handleOnEdit(e, services) {
   setupServices(services)
   switch (e.source.getActiveSheet().getName()) {
     case 'RAW':
       handleFormSubmission(e)
       break
     case 'PAYMENTS':
-      handlePaymentRecorded(e)
+      logger.log('Skipping manual sheet event: PAYMENTS')
       break
     default:
       logger.log(`Unmanaged sheet event: ${e.source.getActiveSheet().getName()}`)
@@ -199,28 +200,217 @@ function handleOnEdit(e, services = null) {
 
 // Schedule Events
 function onNewMemberships(e) {
-  handleOnNewMemberships(e, null)
+  handleOnNewMemberships(e, {})
 }
-function handleOnNewMemberships(e, services = null) {
+function handleOnNewMemberships(e, services) {
   setupServices(services)
   handleNewMemberships(e)
 }
 // #endregion
 
-// #region Process New Membership
+// #region Process Payment Emails
 function handleNewMemberships(e) {
   const query = `from:${EMAIL_FILTER_SENDER} to:${EMAIL_FILTER_RECEIVER} subject:${EMAIL_FILTER_SUBJECT_CONTAINS} newer_than:${EMAIL_SEARCH_WINDOW_DAYS}d`
   const threads = gmailApp.search(query)
   threads.forEach((thread) => {
     const messages = thread.getMessages()
-    messages.forEach((msg) => {
-      logger.log(
-        `Email from ${msg.getFrom()} to ${msg.getTo()} subject: ${msg.getSubject()} date: ${msg.getDate()}`
-      )
-      logger.log(`ID: ${msg.getId()}`)
-      logger.log(`Data: ${JSON.stringify(extractPaymentData(msg), null, 2)}`)
-    })
+    messages.forEach(processPaymentEmail)
   })
+}
+
+function processPaymentEmail(msg) {
+  // 1. Extract payment data
+  const paymentData = extractPaymentData(msg)
+
+  // 2. Check if we already registered this payment in PAYMENTS sheet
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID)
+  const paymentsSheet = spreadsheet.getSheetByName('PAYMENTS')
+
+  if (!paymentsSheet) {
+    logger.log('PAYMENTS sheet not found')
+    return
+  }
+
+  // Check if payment already exists by message_id
+  const existingPayment = findExistingPayment(paymentsSheet, paymentData.message_id)
+
+  // 3. If we already registered this payment, skip
+  if (existingPayment) {
+    logger.log(`Payment already registered for message_id: ${paymentData.message_id}`)
+    return
+  }
+
+  // 4. Find matching user in CLEAN sheet
+  const cleanSheet = spreadsheet.getSheetByName('CLEAN')
+  if (!cleanSheet) {
+    logger.log('CLEAN sheet not found')
+    return
+  }
+
+  // Get email column index in CLEAN sheet
+  const cleanHeaders = cleanSheet.getRange(1, 1, 1, cleanSheet.getLastColumn()).getValues()[0]
+  const emailColIndex = cleanHeaders.indexOf('E-mail')
+
+  if (emailColIndex === -1) {
+    logger.log('E-mail column not found in CLEAN sheet')
+    return
+  }
+
+  // Try to find user by payment sender email
+  const emailToMatch = String(paymentData.sender_email || '')
+    .trim()
+    .toLowerCase()
+  const matchedRow = findMatchingEmailRow(cleanSheet, emailColIndex, emailToMatch)
+
+  // 5. If we don't have a matching user, skip and notify admin
+  if (matchedRow === -1) {
+    logger.log(`No matching user found for email: ${paymentData.sender_email}`)
+    const emailResult = sendTemplatedEmail('PAYMENT_NO_USER', paymentData)
+    if (!emailResult.success) {
+      logger.log(`Failed to send payment no user notification: ${emailResult.error}`)
+    }
+    return
+  }
+
+  // 6. If we have a matching user, insert into PAYMENTS sheet
+  insertPaymentRecord(paymentsSheet, paymentData)
+  logger.log(`Payment registered for ${paymentData.sender_email} - Amount: $${paymentData.amount}`)
+
+  // 7. Handle Payment Recorded
+  const row = paymentsSheet.getLastRow()
+  handlePaymentRecorded(paymentsSheet, cleanSheet, row)
+}
+
+function findExistingPayment(paymentsSheet, messageId) {
+  // Get all data from payments sheet
+  const data = paymentsSheet.getDataRange().getValues()
+
+  // Find message_id column (or use a predefined column index)
+  // Assuming message_id is stored in a column, find which one
+  const headers = data[0]
+  let messageIdColIndex = headers.indexOf('message_id')
+
+  if (messageIdColIndex === -1) {
+    // If no message_id column exists, we can't check for duplicates
+    logger.log('No message_id column found in PAYMENTS sheet')
+    return false
+  }
+
+  // Check each row for matching message_id
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][messageIdColIndex] === messageId) {
+      return true
+    }
+  }
+
+  return false
+}
+
+function insertPaymentRecord(paymentsSheet, paymentData) {
+  // Get headers to know the column order
+  const headers = paymentsSheet.getRange(1, 1, 1, paymentsSheet.getLastColumn()).getValues()[0]
+
+  // Create a new row array matching the headers
+  const newRow = []
+
+  // Map payment data to columns based on headers
+  headers.forEach((header) => {
+    switch (header.toLowerCase()) {
+      case 'timestamp':
+      case 'fecha':
+        newRow.push(new Date())
+        break
+      case 'amount':
+      case 'monto':
+      case 'cantidad':
+        newRow.push(paymentData.amount)
+        break
+      case 'sender name':
+      case 'sender_name':
+      case 'nombre':
+        newRow.push(paymentData.sender_name)
+        break
+      case 'sender phone':
+      case 'sender_phone':
+      case 'teléfono':
+      case 'telefono':
+        newRow.push(paymentData.sender_phone)
+        break
+      case 'sender email':
+      case 'sender_email':
+      case 'e-mail':
+      case 'email':
+        newRow.push(paymentData.sender_email)
+        break
+      case 'payment date':
+      case 'payment_date':
+      case 'fecha de pago':
+        newRow.push(paymentData.payment_date)
+        break
+      case 'payment time':
+      case 'payment_time':
+      case 'hora':
+        newRow.push(paymentData.payment_time)
+        break
+      case 'payment datetime':
+      case 'payment_datetime':
+        newRow.push(paymentData.payment_datetime)
+        break
+      case 'message':
+      case 'payment_message':
+      case 'mensaje':
+        newRow.push(paymentData.payment_message)
+        break
+      case 'recipient':
+      case 'recipient_name':
+        newRow.push(paymentData.recipient_name)
+        break
+      case 'email subject':
+      case 'email_subject':
+        newRow.push(paymentData.email_subject)
+        break
+      case 'email date':
+      case 'email_date':
+        newRow.push(paymentData.email_date)
+        break
+      case 'email from':
+      case 'email_from':
+        newRow.push(paymentData.email_from)
+        break
+      case 'email to':
+      case 'email_to':
+        newRow.push(paymentData.email_to)
+        break
+      case 'original sender':
+      case 'original_sender':
+        newRow.push(paymentData.original_sender)
+        break
+      case 'return path':
+      case 'return_path':
+        newRow.push(paymentData.return_path)
+        break
+      case 'payment service':
+      case 'payment_service':
+      case 'servicio':
+        newRow.push(paymentData.payment_service)
+        break
+      case 'service provider':
+      case 'service_provider':
+      case 'proveedor':
+        newRow.push(paymentData.service_provider)
+        break
+      case 'message id':
+      case 'message_id':
+        newRow.push(paymentData.message_id)
+        break
+      default:
+        // For any unmatched columns, add empty value
+        newRow.push('')
+    }
+  })
+
+  // Append the new row to the sheet
+  paymentsSheet.appendRow(newRow)
 }
 
 function extractPaymentData(msg) {
@@ -296,13 +486,10 @@ function extractPaymentData(msg) {
 
 // #region Payment Recorded
 const MEMBERSHIP_FEE = 25
-function handlePaymentRecorded(e) {
+function handlePaymentRecorded(paymentsSheet, cleanSheet, row) {
   // 1. Retrieve and validate payment from event
-  const sheet = e.source.getActiveSheet()
-  const cleanSheet = e.source.getSheetByName('CLEAN')
-  const row = e.range.getRow()
-  const senderEmail = sheet.getRange(row, 5).getValue()
-  const sentAmount = sheet.getRange(row, 2).getValue()
+  const senderEmail = paymentsSheet.getRange(row, 5).getValue()
+  const sentAmount = paymentsSheet.getRange(row, 2).getValue()
   if (!senderEmail || !sentAmount || sentAmount < MEMBERSHIP_FEE) {
     logger.log(
       `Invalid payment record at row ${row}: senderEmail=${senderEmail}, sentAmount=${sentAmount}`
@@ -1077,6 +1264,42 @@ const EMAIL_TEMPLATES = {
       Required Fee: ${data.membershipFee}
 
       Please review this entry for potential issues.
+    `,
+  },
+  PAYMENT_NO_USER: {
+    to: NOTIFICATION_EMAIL,
+    subject: 'Payment received from unregistered user',
+    bodyGenerator: (paymentData) => `
+      A payment was received from an email address not found in the CLEAN sheet.
+      
+      Payment Details:
+      Sender Email: ${paymentData.sender_email}
+      Sender Name: ${paymentData.sender_name}
+      Sender Phone: ${paymentData.sender_phone}
+      Amount: $${paymentData.amount}
+      Date: ${paymentData.payment_date} ${paymentData.payment_time}
+      Message: ${paymentData.payment_message || 'N/A'}
+      
+      Email Details:
+      Subject: ${paymentData.email_subject}
+      From: ${paymentData.email_from}
+      To: ${paymentData.email_to}
+      Message ID: ${paymentData.message_id}
+      
+      Action Required: Please add this user to the system manually or investigate the payment.
+    `,
+  },
+  RENEWAL_PAYMENT_INVALID: {
+    to: NOTIFICATION_EMAIL,
+    subject: 'Invalid renewal payment amount',
+    bodyGenerator: (data) => `
+      An invalid renewal payment amount was received.
+      
+      Member Email: ${data.email}
+      Amount Sent: $${data.sentAmount}
+      Required Fee: $${data.membershipFee}
+      
+      Please review this payment and contact the member if necessary.
     `,
   },
 }
