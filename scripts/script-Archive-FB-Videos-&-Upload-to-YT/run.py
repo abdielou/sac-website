@@ -1,4 +1,3 @@
-# Import required libraries
 import os
 import google_auth_oauthlib
 from googleapiclient import discovery
@@ -6,11 +5,11 @@ import googleapiclient.errors
 import googleapiclient.http
 import json
 
-# Define the required permissions for YouTube API
+# Define the required permissions for youtube API
 SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
 TOKEN_FILE = 'token.json'
-CLIENT_SECRETS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'client.json')
 DEFAULT_TITLE = "Live video-Sociedad de Astronomia del Caribe"
+CLIENT_SECRETS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'client.json')
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SAMPLE_DIR = os.path.join(SCRIPT_DIR, 'facebook-sociedadastronomia')
 JSON_FILE = os.path.join(
@@ -22,7 +21,6 @@ JSON_FILE = os.path.join(
 
 # Returns an authenticated YouTube API client
 def authenticate_youtube():
-    # Allow OAuth2 over HTTP (not recommended for production)
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
     # Remove existing token file if it exists to force new authentication
@@ -44,72 +42,74 @@ def authenticate_youtube():
 
     return youtube
 
-def upload_video(youtube):
-    # Build a map of local filenames to titles using JSON metadata
-    base_dir = SAMPLE_DIR
-    json_file = JSON_FILE
+# Extract metadata to build mapping of filenames to titles from the JSON file
+def build_title_map(json_file):
     with open(json_file, 'r', encoding='utf-8') as f:
-        video_entries = json.load(f)
+        entries = json.load(f)
     title_map = {}
-    for entry in video_entries:
+    for entry in entries:
         video_lv = next((lv for lv in entry.get('label_values', []) if lv.get('label') == 'Video'), None)
-        # skip entries without video media
         if not video_lv or not video_lv.get('media'):
             continue
         uri = video_lv['media'][0].get('uri')
         if not uri:
             continue
         filename = uri.split('/')[-1]
-        # try to get title, otherwise use default
         title = next((lv.get('value') for lv in entry.get('label_values', []) if lv.get('label') == 'Title'), None)
         if not title:
             title = DEFAULT_TITLE
         title_map[filename] = title
+    return title_map
 
-    # Load or initialize registry of uploaded files
-    registry_file, uploaded_list = initialize_registry(base_dir)
-    max_per_run = 6
-
-    # Build pending upload list
-    videos_dir = os.path.join(base_dir, 'your_facebook_activity', 'live_videos')
-    all_files = sorted(os.listdir(videos_dir))
+# Determine which videos need uploading
+def get_pending_videos(videos_dir, uploaded_list, title_map):
     pending = []
-    for filename in all_files:
-        if not filename.lower().endswith('.mp4') or filename in uploaded_list:
+    for filename in sorted(os.listdir(videos_dir)):
+        if not filename.lower().endswith('.mp4'):
+            continue
+        if filename in uploaded_list:
             continue
         if filename not in title_map:
             print(f"Skipping {filename}: no title found in JSON metadata")
             continue
         pending.append(filename)
+    return pending
 
-    # Upload up to max_per_run videos and update registry
+# Upload a single video and print progress
+def make_upload_request(youtube, media_file, title):
+    body = {
+        "snippet": {"categoryId": "22", "title": title},
+        "status": {"privacyStatus": "public"}
+    }
+    media_body = googleapiclient.http.MediaFileUpload(media_file, chunksize=-1, resumable=True)
+    return youtube.videos().insert(part="snippet,status", body=body, media_body=media_body)
+
+def perform_resumable_upload(request, title):
+    response = None
+    while response is None:
+        status, response = request.next_chunk()
+        if status:
+            print(f"Uploading '{title}': {int(status.progress() * 100)}%")
+    return response
+
+def upload_single_video(youtube, media_file, title):
+    request = make_upload_request(youtube, media_file, title)
+    response = perform_resumable_upload(request, title)
+    print(f"Uploaded '{title}' with ID: {response['id']}")
+
+# Upload multiple videos up to a maximum limit
+def upload_videos(youtube, base_dir, pending, title_map, uploaded_list, max_per_run=6):
+    videos_dir = os.path.join(base_dir, 'your_facebook_activity', 'live_videos')
     for filename in pending[:max_per_run]:
         media_file = os.path.join(videos_dir, filename)
         title = title_map[filename]
-        request_body = {
-            "snippet": {
-                "categoryId": "22",
-                "title": title
-            },
-            "status": {
-                "privacyStatus": "public"  # change to private if needed
-            }
-        }
-        request = youtube.videos().insert(
-            part="snippet,status",
-            body=request_body,
-            media_body=googleapiclient.http.MediaFileUpload(media_file, chunksize=-1, resumable=True)
-        )
-        response = None
-        while response is None:
-            status, response = request.next_chunk()
-            if status:
-                print(f"Uploading '{title}': {int(status.progress() * 100)}%")
-        print(f"Uploaded '{title}' with ID: {response['id']}")
+        upload_single_video(youtube, media_file, title)
         uploaded_list.append(filename)
 
-    # Save registry of uploaded files
-    save_registry(registry_file, uploaded_list)
+# Main function orchestrating the upload process
+def upload_video(youtube):
+    # Orchestration is handled in the __main__ block; this function is now a no-op.
+    pass
 
 # Loads or initializes the registry file and returns its path and the list of uploaded files.
 def initialize_registry(base_dir):
@@ -126,9 +126,24 @@ def save_registry(registry_file, uploaded_list):
     with open(registry_file, 'w', encoding='utf-8') as rf:
         json.dump(uploaded_list, rf, indent=2)
 
+
 if __name__ == "__main__":
-    # authenticate with YouTube
+    # Authenticate with YouTube
     youtube = authenticate_youtube()
-    # upload the video
-    upload_video(youtube)
+
+    # Build title map from metadata
+    title_map = build_title_map(JSON_FILE)
+
+    # Initialize or load the registry of uploaded videos
+    registry_file, uploaded_list = initialize_registry(SAMPLE_DIR)
+
+    # Determine which videos are pending
+    videos_dir = os.path.join(SAMPLE_DIR, 'your_facebook_activity', 'live_videos')
+    pending = get_pending_videos(videos_dir, uploaded_list, title_map)
+
+    # Upload pending videos and update the uploaded list
+    upload_videos(youtube, SAMPLE_DIR, pending, title_map, uploaded_list)
+
+    # Save the updated registry
+    save_registry(registry_file, uploaded_list)
 
