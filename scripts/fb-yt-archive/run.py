@@ -5,6 +5,15 @@ import googleapiclient.errors
 import googleapiclient.http
 import json
 from dotenv import load_dotenv
+import pickle
+from google.auth.transport.requests import Request
+import socket
+
+# Force IPv4 for all socket connections (FIXED VERSION)
+orig_getaddrinfo = socket.getaddrinfo
+def ipv4_getaddrinfo(host, port, family=0, socktype=0, proto=0, flags=0):
+    return orig_getaddrinfo(host, port, socket.AF_INET, socktype, proto, flags)
+socket.getaddrinfo = ipv4_getaddrinfo
 
 # load environment variables
 load_dotenv()
@@ -58,23 +67,62 @@ def create_oauth_flow(client_secrets_file, scopes):
 
 # Build youtube API client
 def build_youtube_client(credentials):
-    youtube = discovery.build("youtube", youtube_api_version, credentials=credentials)
+    import httplib2
+    from google_auth_httplib2 import AuthorizedHttp
+    
+    # Create HTTP client with longer timeout and authorize it with credentials
+    http = httplib2.Http(timeout=300)  # 5 minutes timeout
+    authorized_http = AuthorizedHttp(credentials, http=http)
+    
+    youtube = discovery.build(
+        "youtube", 
+        youtube_api_version, 
+        http=authorized_http,
+        cache_discovery=False
+    )
     return youtube
 
-# Returns an authenticated YouTube API client
-# Calls clear_existing_token, create_oauth_flow, build_youtube_client
+# Save credentials to token file
+def save_credentials(credentials, token_file):
+    with open(token_file, 'wb') as token:
+        pickle.dump(credentials, token)
+
+# Load existing credentials from token file
+def load_credentials(token_file):
+    if os.path.exists(token_file):
+        with open(token_file, 'rb') as token:
+            return pickle.load(token)
+    return None
+
+# Check if credentials are valid and refresh if needed
+def refresh_credentials_if_needed(credentials):
+    if credentials and credentials.expired and credentials.refresh_token:
+        credentials.refresh(Request())
+    return credentials
+
+# Returns an authenticated YouTube API client with persistent token storage
 def authenticate_youtube():
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = enable_oauth_insecure_transport
-    clear_existing_token(token_file)
     
-    credentials = create_oauth_flow(client_secrets_file, scopes)
+    # Try to load existing credentials
+    credentials = load_credentials(token_file)
+    
+    # Refresh credentials if they exist but are expired
+    if credentials:
+        credentials = refresh_credentials_if_needed(credentials)
+    
+    # If no valid credentials exist, run OAuth flow
+    if not credentials or not credentials.valid:
+        print("No valid credentials found. Starting OAuth flow...")
+        credentials = create_oauth_flow(client_secrets_file, scopes)
+        # Save credentials for future use
+        save_credentials(credentials, token_file)
+        print("Credentials saved for future use.")
+    else:
+        print("Using existing credentials.")
+    
     youtube = build_youtube_client(credentials)
-    
     return youtube
-
-# Open and parse the JSON file
-def parse_json_file(json_file):
-    return read_json_file(json_file)
 
 # Extract the video filename from an entry
 def extract_video_filename(entry):
@@ -97,7 +145,7 @@ def extract_video_title(entry):
 # Extract metadata to build mapping of filenames to titles from the JSON file
 def build_title_map(json_file):
     # Open and parse the JSON file
-    entries = parse_json_file(json_file)
+    entries = read_json_file(json_file)
     # Build mapping
     title_map = {}
     
@@ -136,32 +184,58 @@ def make_upload_request(youtube, media_file, title):
         "snippet": {"categoryId": youtube_category_id, "title": title},
         "status": {"privacyStatus": youtube_privacy_status}
     }
-    media_body = googleapiclient.http.MediaFileUpload(media_file, chunksize=upload_chunk_size, resumable=True)
+    
+    # Use non-resumable upload to avoid redirect issues
+    media_body = googleapiclient.http.MediaFileUpload(
+        media_file, 
+        resumable=False
+    )
     return youtube.videos().insert(part="snippet,status", body=body, media_body=media_body)
 
-def perform_resumable_upload(request, title):
-    response = None
-    while response is None:
-        status, response = request.next_chunk()
-        if status:
-            print(f"Uploading '{title}': {int(status.progress() * 100)}%")
-    return response
-
 def upload_single_video(youtube, media_file, title):
-    request = make_upload_request(youtube, media_file, title)
-    response = perform_resumable_upload(request, title)
-    print(f"Uploaded '{title}' with ID: {response['id']}")
+    try:
+        request = make_upload_request(youtube, media_file, title)
+        response = request.execute()
+        
+        if response and 'id' in response:
+            print(f"✅ Uploaded '{title}' with ID: {response['id']}")
+            return True
+    except Exception as e:
+        print(f"⚠️  Upload failed: {str(e)[:100]}...")
+
+    return False
 
 # Upload multiple videos up to a limit
 def upload_videos(youtube, base_dir, pending, title_map, uploaded_list, max_per_run=None):
     if max_per_run is None:
         max_per_run = max_videos_per_run
     videos_dir = get_videos_directory(base_dir)
+    
+    successful_uploads = 0
+    failed_uploads = 0
+    
     for filename in pending[:max_per_run]:
         media_file = os.path.join(videos_dir, filename)
         title = title_map[filename]
-        upload_single_video(youtube, media_file, title)
-        uploaded_list.append(filename)
+        
+        print(f"\n📹 Attempting to upload: {title}")
+        success = upload_single_video(youtube, media_file, title)
+        
+        if success:
+            uploaded_list.append(filename)
+            successful_uploads += 1
+        else:
+            failed_uploads += 1
+            
+        print(f"   Progress: {successful_uploads} successful, {failed_uploads} failed")
+    
+    print(f"\n📊 Upload Summary:")
+    print(f"   ✅ Successful: {successful_uploads}")
+    print(f"   ❌ Failed: {failed_uploads}")
+    
+    if failed_uploads > 0:
+        print(f"\n⚠️  {failed_uploads} video(s) could not be uploaded due to network issues.")
+        print("Failed videos will remain in queue for next run.")
 
 # Loads the registry file and returns its path and the list of uploaded files.
 def initialize_registry(base_dir):
@@ -179,14 +253,13 @@ def save_registry(registry_file, uploaded_list):
 
 # Handle video upload process
 def handle_video_upload_process(youtube, facebook_data_dir, pending, title_map, uploaded_list, videos_dir):
-
     if not pending:
         print("No videos to upload - All videos have already been uploaded or no new videos found.")
         print(f"Videos directory: {videos_dir}")
         print(f"Total videos in registry: {len(uploaded_list)}")
         print(f"Total videos with metadata: {len(title_map)}")
     else:
-        print(f"Found {len(pending)} video to upload")
+        print(f"Found {len(pending)} video(s) to upload")
         # Upload pending videos and update the uploaded list
         upload_videos(youtube, facebook_data_dir, pending, title_map, uploaded_list)
         print(f"Upload process completed")

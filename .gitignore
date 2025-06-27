@@ -46,3 +46,7 @@ virtualenv/
 ENV/
 *.pyc
 __pycache__/
+
+# creds
+client.json
+token.json
