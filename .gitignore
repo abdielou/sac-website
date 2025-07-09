@@ -38,6 +38,8 @@ yarn-error.log*
 .vscode/settings.json
 
 # Python
+venv310/
+.venv310/
 venv/
 env/
 .venv/
@@ -50,3 +52,6 @@ __pycache__/
 # creds
 client.json
 token.json
+
+# Ignore local gallery photos test data
+gallery-photos/
