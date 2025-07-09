@@ -49,6 +49,7 @@ module.exports = withBundleAnalyzer({
       'sdo.gsfc.nasa.gov',
       'www.moonmodule.com',
       'apod.nasa.gov',
+      'localhost',
     ],
   },
 })
