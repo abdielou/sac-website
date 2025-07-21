@@ -2,7 +2,6 @@ import React from 'react'
 import Image from 'next/image'
 
 export default function ImageModal({ image, monthNames, onClose }) {
-  // If no image is selected, don't render anything
   if (!image) return null
 
   // Clicking on the backdrop closes the modal

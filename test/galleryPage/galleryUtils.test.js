@@ -9,9 +9,7 @@ describe('GalleryUtils Functions', () => {
     // Test: Basic functionality
     test('should return available years from metadata', () => {
       const metadata = [{ year: 2021 }, { year: 2022 }, { year: 2023 }]
-      const currentYear = 2023
-
-      const result = getAvailableYears(metadata, currentYear)
+      const result = getAvailableYears(metadata)
       expect(Array.isArray(result)).toBe(true)
       expect(result).toContain(2021)
       expect(result).toContain(2022)
@@ -21,9 +19,7 @@ describe('GalleryUtils Functions', () => {
     // Test: Empty input
     test('should handle empty metadata array', () => {
       const metadata = []
-      const currentYear = 2023
-
-      const result = getAvailableYears(metadata, currentYear)
+      const result = getAvailableYears(metadata)
       expect(Array.isArray(result)).toBe(true)
       expect(result).toHaveLength(0)
     })
@@ -31,9 +27,7 @@ describe('GalleryUtils Functions', () => {
     // Test: String years
     test('should handle metadata with string years', () => {
       const metadata = [{ year: '2021' }, { year: '2022' }]
-      const currentYear = 2023
-
-      const result = getAvailableYears(metadata, currentYear)
+      const result = getAvailableYears(metadata)
       expect(result).toContain(2021)
       expect(result).toContain(2022)
       expect(typeof result[0]).toBe('number')
@@ -42,9 +36,7 @@ describe('GalleryUtils Functions', () => {
     // Test: Invalid data
     test('should handle metadata with null/invalid years', () => {
       const metadata = [{ year: null }, { year: 'invalid' }, { year: 2022 }]
-      const currentYear = 2023
-
-      const result = getAvailableYears(metadata, currentYear)
+      const result = getAvailableYears(metadata)
       expect(result).toContain(2022)
       expect(result.length).toBeGreaterThan(0)
     })

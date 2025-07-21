@@ -20,7 +20,6 @@ export default function GalleryGrid({ images, onSelect }) {
         >
           <Card
             title={img.title}
-            description={img.description}
             imgSrc={img.imgSrc}
             width={img.width}
             height={img.height}

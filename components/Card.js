@@ -5,15 +5,7 @@ const OptimizedImage = ({ alt, imageOptimize, ...rest }) =>
   /* eslint-disable-next-line @next/next/no-img-element */
   imageOptimize ? <Image alt={alt} {...rest} /> : <img alt={alt} {...rest} />
 
-const Card = ({
-  title,
-  description,
-  imgSrc,
-  href,
-  width = 1088,
-  height = 612,
-  imageOptimize = true,
-}) => {
+const Card = ({ title, imgSrc, href, width = 1088, height = 612, imageOptimize = true }) => {
   const displayTitle = title
   return (
     <div className="p-2">
