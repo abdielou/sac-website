@@ -109,7 +109,7 @@ export default function MemberIdCard({ memberData, formData, photo }) {
         <div className="absolute top-2 right-2">
           <div className="w-6 h-6 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full opacity-80"></div>
         </div>
-        
+
         <div className="absolute bottom-2 left-2">
           <div className="w-4 h-4 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full opacity-60"></div>
         </div>
