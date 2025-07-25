@@ -12,7 +12,6 @@ venv310/
 
 # dotenv files
 .env
-.env.*
 
 # LocalStack volume data
 /volume/

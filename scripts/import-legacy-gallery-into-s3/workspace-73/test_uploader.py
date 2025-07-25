@@ -65,9 +65,9 @@ class TestUploader(unittest.TestCase):
         # Arrange
         dt_obj = datetime(1970, 1, 1)
         # Act
-        key = uploader.make_key(dt_obj)
+        key = uploader.make_key(dt_obj, 'photo.jpg')
         # Assert
-        self.assertEqual(key, '0')
+        self.assertEqual(key, '1970/01/01/0.jpg')
 
     def test_make_metadata(self):
         # Arrange
@@ -203,7 +203,7 @@ class TestUploader(unittest.TestCase):
         # Assert
         mock_get_file_path.assert_called_once_with(entry)
         mock_get_datetime.assert_called_once_with(entry, 'file')
-        mock_make_key.assert_called_once_with(mock_get_datetime.return_value)
+        mock_make_key.assert_called_once_with(mock_get_datetime.return_value, 'file')
         mock_make_metadata.assert_called_once_with(entry)
         mock_read_data.assert_called_once_with('file')
         mock_upload_obj.assert_called_once_with(mock_s3, 'bucket', '1234', b'data', {'title':'t','description':'d'}, 'file')

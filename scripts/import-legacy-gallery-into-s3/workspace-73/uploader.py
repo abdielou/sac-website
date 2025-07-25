@@ -4,7 +4,7 @@ load_dotenv()
 import os
 import json
 import boto3
-from datetime import datetime
+from datetime import datetime, timezone
 import unicodedata
 
 IMAGES_DIR = os.getenv('IMAGES_DIR')
@@ -56,13 +56,15 @@ def get_datetime(entry, file_path):
         return None
 
 # Converts a datetime object into a Unix timestamp string for use as S3 key
-from datetime import timezone
-
-def make_key(dt_obj):
+def make_key(dt_obj, file_path):
     if dt_obj.tzinfo is None:
         dt_obj = dt_obj.replace(tzinfo=timezone.utc)
-    return str(int(dt_obj.timestamp()))
-
+    timestamp = str(int(dt_obj.timestamp()))
+    year = dt_obj.strftime('%Y')
+    month = dt_obj.strftime('%m')
+    day = dt_obj.strftime('%d')
+    ext = os.path.splitext(file_path)[1]
+    return f'{year}/{month}/{day}/{timestamp}{ext}'
 
 # Normalizes title and description fields to ASCII-only and returns a metadata dictionary
 def make_metadata(entry):
@@ -98,7 +100,7 @@ def upload_entry(s3, bucket, entry):
     dt_obj = get_datetime(entry, file_path)
     if not dt_obj:
         return
-    key = make_key(dt_obj)
+    key = make_key(dt_obj, file_path)
     metadata = make_metadata(entry)
     data = read_data(file_path)
     upload_object(s3, bucket, key, data, metadata, file_path)
