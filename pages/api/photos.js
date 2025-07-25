@@ -8,14 +8,28 @@ const s3 = new AWS.S3({
 
 export default async function handler(req, res) {
   try {
-    // 1) List all objects in the bucket
+    // Determine target prefix (year)
+    const year = req.query?.year
+    let prefix = ''
+    if (year) {
+      prefix = `${year}/`
+    } else {
+      // Find the latest year folder
+      const topLevel = await s3
+        .listObjectsV2({ Bucket: process.env.S3_BUCKET_NAME, Delimiter: '/' })
+        .promise()
+      const prefixes = (topLevel.CommonPrefixes || []).map((p) => p.Prefix.replace(/\/$/, ''))
+      const years = prefixes.map((p) => parseInt(p, 10)).filter((y) => !isNaN(y))
+      const latestYear = years.sort((a, b) => b - a)[0]
+      prefix = latestYear ? `${latestYear}/` : ''
+    }
+
+    // List all objects under the target prefix
     const { Contents = [] } = await s3
-      .listObjectsV2({
-        Bucket: process.env.S3_BUCKET_NAME,
-      })
+      .listObjectsV2({ Bucket: process.env.S3_BUCKET_NAME, Prefix: prefix })
       .promise()
 
-    // 2) Filter out any directory placeholders
+    // Filter out any directory placeholders
     const keys = Contents.map((o) => o.Key).filter((key) => key && !key.endsWith('/'))
 
     // 3) Build gallery array by fetching per-object metadata, signed URL, and trueDate flag

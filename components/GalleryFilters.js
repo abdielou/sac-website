@@ -31,22 +31,12 @@ export default function GalleryFilters({
           <option value="" disabled hidden>
             Año
           </option>
-          <option value="all">All</option>
           {years.map((yr) => (
             <option key={yr} value={yr.toString()}>
               {yr}
             </option>
           ))}
         </select>
-        {year && (
-          <button
-            onClick={() => setYear('')}
-            className="ml-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            aria-label="Clear year filter"
-          >
-            &times;
-          </button>
-        )}
       </div>
       <div className="flex items-center">
         {/* eslint-disable-next-line jsx-a11y/no-onchange */}

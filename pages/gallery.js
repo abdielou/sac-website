@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { PageSEO } from '@/components/SEO'
 import GalleryFilters from '@/components/GalleryFilters'
 import GalleryGrid from '@/components/GalleryGrid'
-import { getAvailableYears, getMonthNames } from '@/lib/utils/galleryUtils'
+import { getMonthNames } from '@/lib/utils/galleryUtils'
 
 export default function Gallery() {
   const [images, setImages] = useState([])
@@ -15,48 +15,69 @@ export default function Gallery() {
   const [imageWidth, setImageWidth] = useState(null)
   const [imageHeight, setImageHeight] = useState(null)
   const [zoom, setZoom] = useState(1)
+  const [yearOptions, setYearOptions] = useState([])
   const ZOOM_SCALE = 0.8
-  const years = useMemo(() => getAvailableYears(images), [images])
   const monthNames = useMemo(() => getMonthNames('es'), [])
+
+  // Fetch available years for the filter dropdown
+  useEffect(() => {
+    async function fetchYears() {
+      try {
+        const res = await fetch('/api/get-years')
+        if (!res.ok) throw new Error(await res.text())
+        const data = await res.json()
+        // Sort years descending so newest appears first
+        const sortedYears = data.slice().sort((a, b) => parseInt(b, 10) - parseInt(a, 10))
+        setYearOptions(sortedYears)
+      } catch (err) {
+        console.error('Failed to fetch year list:', err)
+      }
+    }
+    fetchYears()
+  }, [])
 
   useEffect(() => {
     async function fetchGallery() {
       try {
-        const res = await fetch('/api/photos')
+        const url = year ? `/api/photos?year=${year}` : '/api/photos'
+        const res = await fetch(url)
         if (!res.ok) throw new Error(await res.text())
         const data = await res.json()
-        setImages(
-          data.map((item) => {
-            // Extract UNIX timestamp from the S3 key (assumes a sequence of digits in the key)
-            const match = item.key.match(/(\d{10,})/)
-            let year = null
-            let month = null
-            if (match) {
-              const timestampMs = parseInt(match[1], 10) * 1000
-              const d = new Date(timestampMs)
-              year = d.getFullYear()
-              month = d.getMonth() + 1
-            }
-            return {
-              title: item.title,
-              description: item.description,
-              imgSrc: item.url,
-              href: item.url,
-              width: item.width,
-              height: item.height,
-              year,
-              month,
-              trueDate: item.trueDate,
-              imageOptimize: false,
-            }
-          })
-        )
+        const imgs = data.map((item) => {
+          // Extract year and month from the S3 key prefix (YYYY/MM/DD)
+          const parts = item.key.split('/')
+          let year = null
+          let month = null
+          if (parts.length >= 3) {
+            const y = parseInt(parts[0], 10)
+            const m = parseInt(parts[1], 10)
+            year = Number.isInteger(y) ? y : null
+            month = Number.isInteger(m) ? m : null
+          }
+          return {
+            title: item.title,
+            description: item.description,
+            imgSrc: item.url,
+            href: item.url,
+            width: item.width,
+            height: item.height,
+            year,
+            month,
+            trueDate: item.trueDate,
+            imageOptimize: false,
+          }
+        })
+        setImages(imgs)
+        // Default the year filter to the loaded year on initial load
+        if (!year && imgs.length > 0 && imgs[0].year) {
+          setYear(imgs[0].year.toString())
+        }
       } catch (err) {
         setError(err.message)
       }
     }
     fetchGallery()
-  }, [])
+  }, [year])
 
   // Filtering logic
   const filteredImages = images.filter((img) => {
@@ -216,7 +237,7 @@ export default function Gallery() {
                 setMonth={setMonth}
                 searchTerm={searchTerm}
                 setSearchTerm={setSearchTerm}
-                years={years}
+                years={yearOptions}
                 monthNames={monthNames}
               />
               <GalleryGrid images={filteredImages} onSelect={setSelectedImage} />
