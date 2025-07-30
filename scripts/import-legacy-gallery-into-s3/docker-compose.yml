@@ -1,0 +1,19 @@
+#This is a docker-compose file for LocalStack, a local AWS environment for testing and development.
+#It is used to test the uploader.py script.
+#It is not used to deploy the application to AWS.
+#It is not used to deploy the application to AWS.
+
+services:
+  localstack:
+    container_name: "my-localstack"
+    image: localstack/localstack
+    ports:
+      - "127.0.0.1:4566:4566"            # LocalStack Gateway
+      - "127.0.0.1:4510-4559:4510-4559"  # external services port range
+    environment:
+      # LocalStack configuration
+      - DEBUG=${DEBUG:-0}
+      - SERVICES=s3
+    volumes:
+      - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock" 
