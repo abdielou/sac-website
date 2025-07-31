@@ -239,10 +239,10 @@ export default function MemberIdBuilder() {
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-              Generador de Identificación
+              SAC ID
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Crea tu identificación oficial de miembro para eventos y actividades
+              Diseña tu identificación oficial del miembro
             </p>
           </div>
 
@@ -250,16 +250,9 @@ export default function MemberIdBuilder() {
             <div className="grid lg:grid-cols-2 gap-8">
               {/* Form Section */}
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 border border-gray-200 dark:border-gray-700">
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-                  Información del Miembro
-                </h3>
-
                 <div className="space-y-6">
                   {/* Personal Information */}
                   <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                      Información Personal
-                    </h4>
                     <div className="grid md:grid-cols-2 gap-4">
                       <div>
                         <label
@@ -275,7 +268,7 @@ export default function MemberIdBuilder() {
                           value={formData.firstName}
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                          placeholder="Nombre"
+                          placeholder=""
                         />
                       </div>
                       <div>
@@ -283,7 +276,7 @@ export default function MemberIdBuilder() {
                           htmlFor="lastName"
                           className="block text-gray-700 dark:text-gray-300 font-medium mb-2"
                         >
-                          Apellido
+                          Apellidos
                         </label>
                         <input
                           type="text"
@@ -292,7 +285,7 @@ export default function MemberIdBuilder() {
                           value={formData.lastName}
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                          placeholder="Apellido"
+                          placeholder=""
                         />
                       </div>
                     </div>
@@ -304,40 +297,30 @@ export default function MemberIdBuilder() {
                       <span role="img" aria-label="camera guidelines">
                         📸
                       </span>{' '}
-                      Guías para la Fotografía
+                      Guía para la Foto
                     </h4>
                     <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
                       <div className="flex items-start space-x-3">
                         <span className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
-                        <span>Use buena iluminación natural o artificial</span>
+                        <span>Use buena iluminación</span>
                       </div>
                       <div className="flex items-start space-x-3">
                         <span className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
-                        <span>Mantenga la cámara estable y alineada horizontalmente</span>
+                        <span>Mantenga la cámara estable y alineada</span>
                       </div>
                       <div className="flex items-start space-x-3">
                         <span className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
-                        <span>Evite sombras y reflejos en la identificación</span>
+                        <span>Evite sombras y reflejos</span>
                       </div>
                       <div className="flex items-start space-x-3">
                         <span className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
-                        <span>Asegúrese de que todo el texto sea legible</span>
-                      </div>
-                      <div className="flex items-start space-x-3">
-                        <span className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
-                        <span>Use un fondo liso y sin distracciones</span>
+                        <span>Use un fondo sólido y sin distracciones</span>
                       </div>
                     </div>
                   </div>
 
                   {/* Photo Upload Section (moved below instructions) */}
                   <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                      <span role="img" aria-label="camera">
-                        📷
-                      </span>{' '}
-                      Foto del Miembro
-                    </h4>
                     <div className="space-y-4">
                       <div className="flex gap-4">
                         <button
@@ -388,11 +371,6 @@ export default function MemberIdBuilder() {
                           </div>
                         </div>
                       )}
-                      <div className="text-sm text-gray-600 dark:text-gray-300">
-                        <p>• La foto debe ser clara y mostrar el rostro completo</p>
-                        <p>• Formato recomendado: JPG o PNG</p>
-                        <p>• Tamaño máximo: 5MB</p>
-                      </div>
                     </div>
                   </div>
 
