@@ -15,6 +15,8 @@ export default function Gallery() {
   const [imageHeight, setImageHeight] = useState(null)
   const [zoom, setZoom] = useState(1)
   const [yearOptions, setYearOptions] = useState([])
+  const [loadedYears, setLoadedYears] = useState([])
+  const [loadingMore, setLoadingMore] = useState(false)
   const ZOOM_SCALE = 0.8
 
   // Fetch available years for the filter dropdown
@@ -77,9 +79,21 @@ export default function Gallery() {
     fetchGallery()
   }, [year])
 
+  useEffect(() => {
+    if (year && loadedYears.length === 0) {
+      setLoadedYears([year])
+    }
+  }, [year, loadedYears])
+
   // Filtering logic
   const filteredImages = images.filter((img) => {
-    const matchesYear = year === 'all' || year === '' || (img.year && img.year.toString() === year)
+    // If we have loaded multiple years, show all loaded years
+    const matchesYear =
+      year === 'all' ||
+      year === '' ||
+      (loadedYears.length > 1
+        ? loadedYears.includes(img.year?.toString())
+        : img.year && img.year.toString() === year)
     const matchesSearch =
       !searchTerm ||
       (img.title && img.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -105,6 +119,47 @@ export default function Gallery() {
     const idx = images.findIndex((img) => img.imgSrc === selectedImage.imgSrc)
     if (idx < images.length - 1) {
       setSelectedImage(images[idx + 1])
+    }
+  }
+
+  const loadMore = async () => {
+    if (loadingMore || loadedYears.length >= yearOptions.length) return
+    setLoadingMore(true)
+    try {
+      const nextIdx = loadedYears.length
+      const nextYear = yearOptions[nextIdx]
+      const res = await fetch(`/api/photos?year=${nextYear}`)
+      if (!res.ok) throw new Error(await res.text())
+      const data = await res.json()
+      const newImgs = data.map((item) => {
+        const parts = item.key.split('/')
+        let y = null
+        let m = null
+        if (parts.length >= 3) {
+          const py = parseInt(parts[0], 10)
+          const pm = parseInt(parts[1], 10)
+          y = Number.isInteger(py) ? py : null
+          m = Number.isInteger(pm) ? pm : null
+        }
+        return {
+          title: item.title,
+          description: item.description,
+          imgSrc: item.url,
+          href: item.url,
+          width: item.width,
+          height: item.height,
+          year: y,
+          month: m,
+          trueDate: item.trueDate,
+          imageOptimize: false,
+        }
+      })
+      setImages((prev) => [...prev, ...newImgs])
+      setLoadedYears((prev) => [...prev, nextYear])
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoadingMore(false)
     }
   }
 
@@ -244,6 +299,18 @@ export default function Gallery() {
                 years={yearOptions}
               />
               <GalleryGrid images={filteredImages} onSelect={setSelectedImage} />
+              <button
+                type="button"
+                onClick={loadMore}
+                disabled={loadingMore || loadedYears.length >= yearOptions.length}
+                className="mt-6 px-4 py-2 border rounded mx-auto block disabled:opacity-50"
+              >
+                {loadingMore
+                  ? 'Loading...'
+                  : loadedYears.length >= yearOptions.length
+                  ? 'No more images'
+                  : 'Load more'}
+              </button>
             </>
           )}
         </div>
