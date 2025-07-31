@@ -23,7 +23,10 @@ export default function MemberIdCard({ memberData, formData, photo }) {
             }}
           ></div>
         </div>
-
+        {/* Watermark overlay */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+          <span className="text-white opacity-20 text-[130px] transform rotate-45">DRAFT</span>
+        </div>
         {/* Content overlay */}
         <div className="relative z-10 p-6 text-center text-white">
           {/* SAC Logo - Official logo */}
