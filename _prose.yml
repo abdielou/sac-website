@@ -6,82 +6,82 @@ prose:
   media: 'public/static/images/blog'
   metadata:
     data/blog:
-      - name: 'draft'
+      - name: "draft"
         field:
-          element: 'checkbox'
-          label: 'Is Draft'
-          help: 'Remove to publish the article'
+          element: "checkbox"
+          label: "Is Draft"
+          help: "Remove to publish the article"
           value: true
-      - name: 'summary'
+      - name: "summary"
         field:
-          element: 'textarea'
-          label: 'Summary'
-          value: ''
-      - name: 'tags'
+          element: "textarea"
+          label: "Summary"
+          value: ""
+      - name: "tags"
         field:
-          element: 'multiselect'
-          label: 'Add Tags'
-          placeholder: 'Choose Tags'
+          element: "multiselect"
+          label: "Add Tags"
+          placeholder: "Choose Tags"
           alterable: true
           options:
-            - name: 'cometa'
-              value: 'cometa'
-            - name: 'asteroide'
-              value: 'asteroide'
-            - name: 'meteoro'
-              value: 'meteoro'
-            - name: 'jwst'
-              value: 'jwst'
-            - name: 'telescopio'
-              value: 'telescopio'
-            - name: 'satelite'
-              value: 'satelite'
-      - name: 'authors'
+            - name: "cometa"
+              value: "cometa"
+            - name: "asteroide"
+              value: "asteroide"
+            - name: "meteoro"
+              value: "meteoro"
+            - name: "jwst"
+              value: "jwst"
+            - name: "telescopio"
+              value: "telescopio"
+            - name: "satelite"
+              value: "satelite"
+      - name: "authors"
         field:
-          element: 'multiselect'
-          label: 'Authors'
-          placeholder: 'Choose Authors'
+          element: "multiselect"
+          label: "Authors"
+          placeholder: "Choose Authors"
           alterable: false
           options:
-            - name: 'Eddie'
-              value: 'eddie'
-            - name: 'SAC'
-              value: 'default'
-            - name: 'Nelson'
-              value: 'nelson'
-            - name: 'Victor'
-              value: 'victor'
-            - name: 'Janethsi'
-              value: 'janethsi'
-            - name: 'Hector'
-              value: 'hector'
-            - name: 'Rafael'
-              value: 'rafael'
-      - name: 'date'
+            - name: "Eddie"
+              value: "eddie"
+            - name: "SAC"
+              value: "default"
+            - name: "Nelson"
+              value: "nelson"
+            - name: "Victor"
+              value: "victor"
+            - name: "Janethsi"
+              value: "janethsi"
+            - name: "Hector"
+              value: "hector"
+            - name: "Rafael"
+              value: "rafael"
+      - name: "date"
         field:
-          element: 'text'
-          label: 'Published date'
+          element: "text"
+          label: "Published date"
           value: CURRENT_DATETIME
-      - name: 'images'
+      - name: "images"
         field:
-          element: 'multiselect'
-          label: 'Preview Image'
-          placeholder: 'Choose image'
+          element: "multiselect"
+          label: "Preview Image"
+          placeholder: "Choose image"
           alterable: true
           value:
-            - 'static/images/logo_sac_card.png'
+            - "static/images/logo_sac_card.png"
           options:
-            - name: 'SAC'
-              value: 'static/images/logo_sac_card.png'
-      - name: 'imgWidth'
+            - name: "SAC"
+              value: "static/images/logo_sac_card.png"
+      - name: "imgWidth"
         field:
-          element: 'number'
-          label: 'Preview Image Width'
-          help: 'Preview Image Width in pixes. eg: 640'
+          element: "number"
+          label: "Preview Image Width"
+          help: "Preview Image Width in pixes. eg: 640"
           value: 640
-      - name: 'imgHeight'
+      - name: "imgHeight"
         field:
-          element: 'number'
-          label: 'Preview Image Height'
-          help: 'Preview Image Height in pixes. eg: 400'
+          element: "number"
+          label: "Preview Image Height"
+          help: "Preview Image Height in pixes. eg: 400"
           value: 400
