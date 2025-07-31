@@ -261,12 +261,24 @@ export default function Gallery() {
             {zoom === 1 && (
               <div
                 className="mt-4 text-center text-white"
-                style={imageWidth ? { maxWidth: imageWidth } : {}}
+                style={
+                  imageWidth
+                    ? {
+                        maxWidth: imageWidth,
+                        width: imageWidth,
+                        minWidth: 0,
+                        wordWrap: 'break-word',
+                        overflowWrap: 'break-word',
+                      }
+                    : {}
+                }
               >
-                <h2 className="text-2xl font-bold">{selectedImage.title}</h2>
-                {selectedImage.description && <p className="mt-2">{selectedImage.description}</p>}
+                <h2 className="text-2xl font-bold break-words">{selectedImage.title}</h2>
+                {selectedImage.description && (
+                  <p className="mt-2 break-words">{selectedImage.description}</p>
+                )}
                 {selectedImage.year && (
-                  <p className="mt-1 text-sm text-gray-300">
+                  <p className="mt-1 text-sm text-gray-300 break-words">
                     {selectedImage.trueDate === false && 'Aproximadamente: '}
                     {selectedImage.year}
                   </p>
