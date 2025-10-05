@@ -1187,11 +1187,11 @@ function extractUserData(e) {
   const sheet = e.source.getActiveSheet()
   const row = e.range.getRow()
 
-  const purpose = sheet.getRange(row, 2).getValue()
-  const firstName = sheet.getRange(row, 3).getValue()
+  const purpose = sheet.getRange(row, 2).getValue()?.toString().trim()
+  const firstName = sheet.getRange(row, 3).getValue()?.toString().trim()
   const initialRaw = sheet.getRange(row, 4).getValue()?.toString().trim()
   const initial = initialRaw ? initialRaw.charAt(0).toUpperCase() : '' // Extract first letter and capitalize
-  const fullLastName = sheet.getRange(row, 5).getValue()
+  const fullLastName = sheet.getRange(row, 5).getValue()?.toString().trim()
 
   let lastName = ''
   let slastName = ''
@@ -1536,11 +1536,15 @@ function mergeRowData(targetSheet, targetRow, targetHeaders, sourceData, sourceH
       const headerKey = String(header || '')
         .trim()
         .toLowerCase()
-      const rawValue = sourceData[sourceIndex]
-      mergedData[i] =
-        headerKey === 'inicial' || headerKey === 'initial'
-          ? normalizeInitialValue(rawValue)
-          : rawValue
+      let rawValue = sourceData[sourceIndex]
+      if (typeof rawValue === 'string') rawValue = rawValue.trim()
+      if (headerKey === 'inicial' || headerKey === 'initial') {
+        mergedData[i] = normalizeInitialValue(rawValue)
+      } else if (headerKey === 'e-mail' || headerKey === 'email') {
+        mergedData[i] = typeof rawValue === 'string' ? rawValue.toLowerCase() : rawValue
+      } else {
+        mergedData[i] = rawValue
+      }
     } else {
       // Otherwise keep existing value
       mergedData[i] = existingData[i]
