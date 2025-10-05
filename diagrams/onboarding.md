@@ -4,6 +4,17 @@
 
 This document describes the process for onboarding new members to the Caribbean Astronomy Society (SAC).
 
+| Real Event                                                          | Test                     | Description                                                                                        |
+| ------------------------------------------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------- |
+| `onFormSubmit` → `handle_formIsSubmitted`                           | `test_formIsSubmitted`   | Google Form adds a row to `RAW`; validates submission and upserts into `CLEAN`.                    |
+| `onEdit` (sheet `RAW`) → `handle_onEditRAW`                         | `test_userEditsRAW`      | Human edits/pastes data in `RAW`; reruns validation and updates/inserts in `CLEAN`.                |
+| `onEdit` (sheet `CLEAN`) → `handle_onEditCLEAN`                     | `test_userEditsCLEAN`    | Human edits `CLEAN`; change is logged only.                                                        |
+| `onEdit` (sheet `PAYMENTS`) → `handle_onEditPAYMENTS`               | `test_userEditsPAYMENTS` | Human edits `PAYMENTS`; logged and ignored to prevent manual cascades.                             |
+| `onChange` (remove row `RAW`) → `handle_sheetStructureChanged`      | –                        | Logs that a RAW row was deleted and by whom.                                                       |
+| `onChange` (remove row `CLEAN`) → `handle_sheetStructureChanged`    | –                        | Logs that a CLEAN row was deleted and by whom.                                                     |
+| `onChange` (remove row `PAYMENTS`) → `handle_sheetStructureChanged` | –                        | Logs that a PAYMENTS row was deleted and by whom.                                                  |
+| `onNewMemberships` → `handle_scheduledPaymentScan`                  | `test_paymentScanRuns`   | Time-driven scan pulls payment emails, appends to `PAYMENTS`, and launches the onboarding cascade. |
+
 | Symbol                                                                                                                   | Description       |
 | ------------------------------------------------------------------------------------------------------------------------ | ----------------- |
 | <svg width="40" height="40"><rect x="5" y="10" width="30" height="30" rx="0" fill="#FFFFFF" stroke="#1976D2"/></svg>     | State or Entity   |

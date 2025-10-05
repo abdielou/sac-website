@@ -1,51 +1,53 @@
-// #region Testing
-function testFormSubmission() {
-  const TestScenarios = {
-    CLEAN_ENTRY: 'A2:F2',
-    MISSING_EMAIL_W_PHONE: 'A3:F3',
-    MISSING_PHONE_W_EMAIL: 'A4:F4',
-    MISSING_BOTH: 'A5:F5',
-    BAD_EMAIL: 'A6:F6',
-    BAD_PHONE: 'A7:F7',
-    BAD_NAME: 'A8:F8',
-  }
-  const ss = SpreadsheetApp.getActiveSpreadsheet()
-  const sheet = ss.getActiveSheet()
-  let cleanSheet = ss.getSheetByName('CLEAN')
-
-  // Updated mock with proper spreadsheet methods
-  const mockEvent = {
-    source: {
-      getActiveSheet: () => sheet,
-      getSheetByName: () => cleanSheet,
-    },
-    range: sheet.getRange(TestScenarios.CLEAN_ENTRY),
-  }
-
-  // Call handleOnEdit with mock services
-  handleOnEdit(mockEvent, getMockServices())
+// #region Testing Entry Points
+const TEST_ENTRY_ROWS = {
+  RAW: 2,
+  CLEAN: 2,
+  PAYMENTS: 3,
 }
 
-function testPaymentRecorded() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet()
-  const sheet = ss.getSheetByName('PAYMENTS')
-  let cleanSheet = ss.getSheetByName('CLEAN')
+function buildMockEventForRow(sheetName, row) {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet()
+  const sheet = spreadsheet.getSheetByName(sheetName)
 
-  // Updated mock with proper spreadsheet methods
-  const mockEvent = {
-    source: {
-      getActiveSheet: () => sheet,
-      getSheetByName: () => cleanSheet,
-    },
-    range: sheet.getRange('A3:R3'),
+  if (!sheet) {
+    throw new Error(`Test sheet ${sheetName} not found`)
   }
 
-  // Call handleOnEdit with mock services
-  handleOnEdit(mockEvent, getMockServices())
+  const lastColumn = Math.max(1, sheet.getLastColumn())
+  const range = sheet.getRange(row, 1, 1, lastColumn)
+
+  return {
+    spreadsheet,
+    sheet,
+    event: {
+      source: spreadsheet,
+      range,
+    },
+  }
 }
 
-function testFindPayments() {
-  handleOnNewMemberships(null, getMockServices())
+function test_formIsSubmitted() {
+  const { event } = buildMockEventForRow('RAW', TEST_ENTRY_ROWS.RAW)
+  handle_formIsSubmitted(event, getMockServices())
+}
+
+function test_userEditsRAW() {
+  const { event } = buildMockEventForRow('RAW', TEST_ENTRY_ROWS.RAW)
+  handle_sheetIsEdited(event, getMockServices())
+}
+
+function test_userEditsCLEAN() {
+  const { event } = buildMockEventForRow('CLEAN', TEST_ENTRY_ROWS.CLEAN)
+  handle_sheetIsEdited(event, getMockServices())
+}
+
+function test_userEditsPAYMENTS() {
+  const { event } = buildMockEventForRow('PAYMENTS', TEST_ENTRY_ROWS.PAYMENTS)
+  handle_sheetIsEdited(event, getMockServices())
+}
+
+function test_paymentScanRuns() {
+  handle_scheduledPaymentScan(null, getMockServices())
 }
 
 function getMockServices() {
@@ -99,6 +101,10 @@ function getMockServices() {
       },
     },
     gmailApp: {
+      // sendEmail: (email, subject, body, options) => {
+      //   // Use real Gmail service for sending emails
+      //   return GmailApp.sendEmail(email, subject, body, options)
+      // },
       sendEmail: (email, subject, body, options) =>
         logger.log(`Sent email: ${email} ${subject} ${body}`),
       search: (query) => {
@@ -143,6 +149,7 @@ function getMockServices() {
         getBody: () => ({
           replaceText: (search, replacement) =>
             logger.log(`Mock replace ${search} -> ${replacement}`),
+          findText: (search) => ({ getMatch: () => search }),
         }),
         getName: () => 'Test welcome letter.docx',
         saveAndClose: () => logger.log(`Mock saveAndClose for doc ${id}`),
@@ -160,6 +167,7 @@ let driveApp
 let utilities
 let documentApp
 let NOTIFICATION_EMAIL = 'abdiel.aviles@sociedadastronomia.com'
+let CC_EMAIL = ''
 const MEMBERSHIP_CERTIFICATE_TEMPLATE_ID = '15c_hbWVzQB5g-k93JRTQqhmJy3d3kz6r-g0fCN_OR14'
 const WELCOME_LETTER_TEMPLATE_ID = '1A8kQTpqcDC7YyU7C3Cr9UNE-4wED5RBGSMxQD4C5tYA'
 const SPREADSHEET_ID = '1-wdja5GQP5q5IQPloxjDTgJO1w2gS_spQK_IfFc5NNQ'
@@ -169,7 +177,7 @@ const EMAIL_SEARCH_WINDOW_DAYS = 14
 const EMAIL_FILTER_SUBJECT_CONTAINS = 'paid'
 // #endregion
 
-// #region Event Handlers
+// #region Entry Points - Real
 function setupServices(services) {
   logger = services.logger || Logger
   workspaceDirectory = services.workspaceDirectory || WorkspaceDirectory
@@ -177,34 +185,110 @@ function setupServices(services) {
   driveApp = services.driveApp || DriveApp
   utilities = services.utilities || Utilities
   documentApp = services.documentApp || DocumentApp
+  if (typeof services.NOTIFICATION_EMAIL === 'string') {
+    NOTIFICATION_EMAIL = services.NOTIFICATION_EMAIL
+  }
+  if (typeof services.CC_EMAIL === 'string') {
+    CC_EMAIL = services.CC_EMAIL
+  }
 }
 
-// Form Events
-function onEdit(e) {
-  handleOnEdit(e, {})
+function onFormSubmit(e) {
+  handle_formIsSubmitted(e, {})
 }
-function handleOnEdit(e, services) {
-  setupServices(services)
-  switch (e.source.getActiveSheet().getName()) {
+
+function onEdit(e) {
+  handle_sheetIsEdited(e, {})
+}
+
+function onNewMemberships(e) {
+  handle_scheduledPaymentScan(e, {})
+}
+
+function onChange(e) {
+  handle_sheetStructureChanged(e, {})
+}
+
+function handle_formIsSubmitted(e, services) {
+  setupServices(services || {})
+  return handleFormSubmission(e)
+}
+
+function handle_sheetIsEdited(e, services) {
+  setupServices(services || {})
+  return routeOnEdit(e)
+}
+
+function handle_onEditRAW(e, services) {
+  if (services) setupServices(services)
+  return handleFormSubmission(e)
+}
+
+function handle_onEditCLEAN(e, services) {
+  if (services) setupServices(services)
+  logger.log('Manual edit in CLEAN ignored by design')
+}
+
+function handle_onEditPAYMENTS(e, services) {
+  if (services) setupServices(services)
+  logger.log('Manual edit in PAYMENTS ignored by design')
+}
+
+function handle_scheduledPaymentScan(e, services) {
+  setupServices(services || {})
+  handleNewMemberships(e)
+}
+
+function routeOnEdit(e) {
+  const sheet = e.range.getSheet()
+  const sheetName = sheet.getName()
+
+  switch (sheetName) {
     case 'RAW':
-      handleFormSubmission(e)
-      break
+      return handle_onEditRAW(e)
     case 'PAYMENTS':
-      logger.log('Skipping manual sheet event: PAYMENTS')
+      return handle_onEditPAYMENTS(e)
+    case 'CLEAN':
+      return handle_onEditCLEAN(e)
+    default:
+      logger.log(`Unmanaged sheet event: ${sheetName}`)
+      return
+  }
+}
+
+function handle_sheetStructureChanged(e, services) {
+  setupServices(services || {})
+  if (!e || !e.changeType) {
+    logger.log('Change event without changeType received')
+    return
+  }
+
+  switch (e.changeType) {
+    case 'REMOVE_ROW':
+      handle_rowsRemoved(e)
       break
     default:
-      logger.log(`Unmanaged sheet event: ${e.source.getActiveSheet().getName()}`)
+      logger.log(`Unmanaged change event type: ${e.changeType}`)
       break
   }
 }
 
-// Schedule Events
-function onNewMemberships(e) {
-  handleOnNewMemberships(e, {})
-}
-function handleOnNewMemberships(e, services) {
-  setupServices(services)
-  handleNewMemberships(e)
+function handle_rowsRemoved(e) {
+  const range = e.range
+  if (!range) {
+    logger.log('Row removal event received without range information')
+    return
+  }
+
+  const sheet = range.getSheet()
+  const sheetName = sheet.getName()
+  if (!['RAW', 'CLEAN', 'PAYMENTS'].includes(sheetName)) {
+    logger.log(`Row removal ignored on sheet: ${sheetName}`)
+    return
+  }
+
+  const actor = getActiveUserEmail() || '[unknown]'
+  logger.log(`${sheetName} row(s) deleted by ${actor}`)
 }
 // #endregion
 
@@ -250,31 +334,41 @@ function processPaymentEmail(msg) {
   // Get email column index in CLEAN sheet
   const cleanHeaders = cleanSheet.getRange(1, 1, 1, cleanSheet.getLastColumn()).getValues()[0]
   const emailColIndex = cleanHeaders.indexOf('E-mail')
+  const phoneColIndex = findPhoneColumnIndex(cleanHeaders)
 
-  if (emailColIndex === -1) {
-    logger.log('E-mail column not found in CLEAN sheet')
+  if (emailColIndex === -1 && phoneColIndex === -1) {
+    logger.log('Neither E-mail nor phone column found in CLEAN sheet')
     return
   }
 
-  // Try to find user by payment sender email
-  const emailToMatch = String(paymentData.sender_email || '')
-    .trim()
-    .toLowerCase()
-  const matchedRow = findMatchingEmailRow(cleanSheet, emailColIndex, emailToMatch)
+  let matchedRow = -1
+  const emailToMatch = normalizeEmail(paymentData.sender_email)
+  if (emailColIndex !== -1 && emailToMatch) {
+    matchedRow = findMatchingEmailRow(cleanSheet, emailColIndex, emailToMatch)
+  }
 
-  // 5. If we don't have a matching user, skip and notify admin
+  if (matchedRow === -1 && phoneColIndex !== -1) {
+    const phoneToMatch = normalizePhone(paymentData.sender_phone)
+    if (phoneToMatch) {
+      matchedRow = findMatchingPhoneRow(cleanSheet, phoneColIndex, phoneToMatch)
+    }
+  }
+
+  paymentData.match_status = matchedRow !== -1 ? 'MATCHED' : 'UNMATCHED_NO_USER'
+
+  insertPaymentRecord(paymentsSheet, paymentData)
+  logger.log(`Payment registered for ${paymentData.sender_email} - Amount: $${paymentData.amount}`)
+
   if (matchedRow === -1) {
-    logger.log(`No matching user found for email: ${paymentData.sender_email}`)
+    // TODO: Handle scenario where a user is added after an unmatched payment was recorded.
+    const phoneDetails = paymentData.sender_phone ? ` or phone ${paymentData.sender_phone}` : ''
+    logger.log(`No matching user found for email ${paymentData.sender_email}${phoneDetails}`)
     const emailResult = sendTemplatedEmail('PAYMENT_NO_USER', paymentData)
     if (!emailResult.success) {
       logger.log(`Failed to send payment no user notification: ${emailResult.error}`)
     }
     return
   }
-
-  // 6. If we have a matching user, insert into PAYMENTS sheet
-  insertPaymentRecord(paymentsSheet, paymentData)
-  logger.log(`Payment registered for ${paymentData.sender_email} - Amount: $${paymentData.amount}`)
 
   // 7. Handle Payment Recorded
   const row = paymentsSheet.getLastRow()
@@ -399,6 +493,11 @@ function insertPaymentRecord(paymentsSheet, paymentData) {
       case 'proveedor':
         newRow.push(paymentData.service_provider)
         break
+      case 'match status':
+      case 'match_status':
+      case 'status':
+        newRow.push(paymentData.match_status || '')
+        break
       case 'message id':
       case 'message_id':
         newRow.push(paymentData.message_id)
@@ -507,18 +606,37 @@ function handlePaymentRecorded(paymentsSheet, cleanSheet, row) {
   }
 
   // 2. Find user from payment by email
-  const emailToMatch = String(senderEmail || '')
-    .trim()
-    .toLowerCase()
+  const emailToMatch = normalizeEmail(senderEmail)
   const cleanHeaders = cleanSheet.getRange(1, 1, 1, cleanSheet.getLastColumn()).getValues()[0]
   const emailColIndex = cleanHeaders.indexOf('E-mail')
-  if (emailColIndex === -1) {
-    logger.log(`E-mail column not found in CLEAN sheet`)
+  const phoneColIndex = findPhoneColumnIndex(cleanHeaders)
+
+  if (emailColIndex === -1 && phoneColIndex === -1) {
+    logger.log(`Neither E-mail nor phone column found in CLEAN sheet`)
     return
   }
-  const matchedRow = findMatchingEmailRow(cleanSheet, emailColIndex, emailToMatch)
+
+  let matchedRow = -1
+  if (emailColIndex !== -1) {
+    matchedRow = findMatchingEmailRow(cleanSheet, emailColIndex, emailToMatch)
+  }
+
+  let matchedPhone = ''
+  if (matchedRow === -1 && phoneColIndex !== -1) {
+    const paymentPhone = getPhoneFromSheetRow(paymentsSheet, row)
+    const phoneToMatch = normalizePhone(paymentPhone)
+    if (phoneToMatch) {
+      matchedRow = findMatchingPhoneRow(cleanSheet, phoneColIndex, phoneToMatch)
+      matchedPhone = paymentPhone || phoneToMatch
+    }
+  }
+
   if (matchedRow === -1) {
-    logger.log(`User with email ${senderEmail} not found in CLEAN sheet`)
+    logger.log(
+      `User with email ${senderEmail}${
+        matchedPhone ? ` or phone ${matchedPhone}` : ''
+      } not found in CLEAN sheet`
+    )
     return
   }
   // 2.5 Skip if user was already created
@@ -767,6 +885,9 @@ function sendWelcomeEmail(accountData) {
 
     // Set up email options with both attachments
     const emailOptions = { attachments: [certificatePdf, welcomeLetterPdf] }
+    if (CC_EMAIL) {
+      emailOptions.cc = CC_EMAIL
+    }
 
     gmailApp.sendEmail(
       accountData.userData.email,
@@ -896,8 +1017,8 @@ function handleFormSubmission(e) {
     logger.log(`User data validated successfully`)
 
     // Fix: Pass the proper spreadsheet object, source sheet, and row
-    const spreadsheet = e.source // This is the SpreadsheetApp object
-    const sourceSheet = spreadsheet.getActiveSheet()
+    const spreadsheet = e.source
+    const sourceSheet = e.range.getSheet()
     const sourceRow = e.range.getRow()
 
     // Upsert validated data to CLEAN sheet
@@ -909,7 +1030,7 @@ function handleFormSubmission(e) {
       logger.log(`Error during upsert: ${upsertResult.error}`)
     }
   } catch (error) {
-    logger.log(`Error in handleOnEdit: ${error.message}`)
+    logger.log(`Error in handleFormSubmission: ${error.message}`)
   }
 }
 
@@ -949,10 +1070,6 @@ function validateUserData(userData) {
   // Array to collect validation errors
   const errors = []
 
-  // Validate form purpose
-  const purposeError = validatePurpose(userData.purpose)
-  if (purposeError) errors.push(purposeError)
-
   // Name validations
   const firstNameError = validateName(userData.firstName, 'First name')
   if (firstNameError) errors.push(firstNameError)
@@ -990,13 +1107,6 @@ function validateUserData(userData) {
     valid: errors.length === 0,
     errors: errors,
   }
-}
-
-function validatePurpose(purpose) {
-  if (purpose !== 'Nueva Membresía') {
-    return `Invalid form purpose: can only handle new memberships ${purpose}`
-  }
-  return null
 }
 
 function validateName(name, fieldName) {
@@ -1121,20 +1231,22 @@ function upsertToCleanSheet(spreadsheet, sourceSheet, sourceRow) {
       // Row found (skip header row)
       // Merge data with existing row
       mergeRowData(cleanSheet, matchingRow, cleanHeaders, rowData, sourceHeaders)
+      const message = `Updated existing record in CLEAN sheet at row ${matchingRow}`
       return {
         success: true,
-        message: `Updated existing record in CLEAN sheet at row ${matchingRow}`,
+        message,
         action: 'updated',
         row: matchingRow,
       }
     } else {
       // No match found, insert new row
       cleanSheet.appendRow(rowData)
+      const newRow = cleanSheet.getLastRow()
       return {
         success: true,
-        message: `Added new record to CLEAN sheet at row ${cleanSheet.getLastRow()}`,
+        message: `Added new record to CLEAN sheet at row ${newRow}`,
         action: 'inserted',
-        row: cleanSheet.getLastRow(),
+        row: newRow,
       }
     }
   } catch (error) {
@@ -1159,6 +1271,55 @@ function findMatchingEmailRow(sheet, emailColIndex, emailToMatch) {
   }
 
   return -1 // No match found
+}
+
+function findMatchingPhoneRow(sheet, phoneColIndex, phoneToMatch) {
+  if (!phoneToMatch) return -1
+
+  const data = sheet.getDataRange().getValues()
+
+  for (let i = 1; i < data.length; i++) {
+    const rowPhone = normalizePhone(data[i][phoneColIndex])
+    if (rowPhone && rowPhone === phoneToMatch) {
+      return i + 1
+    }
+  }
+
+  return -1
+}
+
+function getPhoneFromSheetRow(sheet, row) {
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+  const phoneColIndex = findPhoneColumnIndex(headers)
+  if (phoneColIndex === -1) return null
+  return sheet.getRange(row, phoneColIndex + 1).getValue()
+}
+
+function findPhoneColumnIndex(headers) {
+  const normalizedHeaders = headers.map((header) =>
+    String(header || '')
+      .trim()
+      .toLowerCase()
+  )
+  const candidates = ['phone', 'phone number', 'telefono', 'teléfono', 'tel', 'celular', 'whatsapp']
+
+  for (let i = 0; i < normalizedHeaders.length; i++) {
+    if (candidates.includes(normalizedHeaders[i])) {
+      return i
+    }
+  }
+
+  return -1
+}
+
+function normalizeEmail(email) {
+  if (!email) return ''
+  return String(email).trim().toLowerCase()
+}
+
+function normalizePhone(phone) {
+  if (!phone) return ''
+  return String(phone).replace(/\D/g, '').replace(/^0+/, '')
 }
 
 function mergeRowData(targetSheet, targetRow, targetHeaders, sourceData, sourceHeaders) {
