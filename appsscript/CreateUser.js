@@ -1392,7 +1392,15 @@ function upsertToCleanSheet(spreadsheet, sourceSheet, sourceRow) {
       // No match found, insert new row mapped to CLEAN headers only
       const mappedRow = cleanHeaders.map((header) => {
         const sourceIndex = sourceHeaders.indexOf(header)
-        return sourceIndex !== -1 ? rowData[sourceIndex] : ''
+        if (sourceIndex === -1) return ''
+        const headerKey = String(header || '')
+          .trim()
+          .toLowerCase()
+        const rawValue = rowData[sourceIndex]
+        if (headerKey === 'inicial' || headerKey === 'initial') {
+          return normalizeInitialValue(rawValue)
+        }
+        return rawValue
       })
       cleanSheet.appendRow(mappedRow)
       const newRow = cleanSheet.getLastRow()
@@ -1406,6 +1414,13 @@ function upsertToCleanSheet(spreadsheet, sourceSheet, sourceRow) {
   } catch (error) {
     return { success: false, error: error.message }
   }
+}
+
+function normalizeInitialValue(value) {
+  if (value === null || value === undefined) return ''
+  const text = String(value).trim()
+  if (!text) return ''
+  return text.charAt(0).toUpperCase()
 }
 
 function ensureCleanStatusColumn(spreadsheet) {
@@ -1518,7 +1533,14 @@ function mergeRowData(targetSheet, targetRow, targetHeaders, sourceData, sourceH
 
     // If header exists in source and has a non-empty value, use source value
     if (sourceIndex !== -1 && sourceData[sourceIndex] !== null && sourceData[sourceIndex] !== '') {
-      mergedData[i] = sourceData[sourceIndex]
+      const headerKey = String(header || '')
+        .trim()
+        .toLowerCase()
+      const rawValue = sourceData[sourceIndex]
+      mergedData[i] =
+        headerKey === 'inicial' || headerKey === 'initial'
+          ? normalizeInitialValue(rawValue)
+          : rawValue
     } else {
       // Otherwise keep existing value
       mergedData[i] = existingData[i]
