@@ -728,14 +728,14 @@ function handlePaymentRecorded(paymentsSheet, cleanSheet, row) {
     return
   }
 
-  // 2.25 If user exists but CLEAN.data_status is not CLEAN, mark payment as UNMATCHED_USER_DIRTY and stop
+  // 2.25 If user exists but CLEAN.data_status is not VALID, mark payment as UNMATCHED_USER_DIRTY and stop
   const dataStatusIndex = cleanHeaders.indexOf('data_status')
   if (dataStatusIndex !== -1) {
     const rawStatus = cleanSheet.getRange(matchedRow, dataStatusIndex + 1).getValue()
     const normalizedStatus = String(rawStatus || '')
       .trim()
       .toUpperCase()
-    if (normalizedStatus && normalizedStatus !== 'CLEAN') {
+    if (normalizedStatus && normalizedStatus !== 'VALID') {
       const paymentsHeaders = paymentsSheet
         .getRange(1, 1, 1, paymentsSheet.getLastColumn())
         .getValues()[0]
@@ -1172,8 +1172,8 @@ function handleFormSubmission(e) {
 
     if (upsertResult.success) {
       logger.log(upsertResult.message)
-      if (hasSoftErrors && upsertResult.row) {
-        setCleanDataStatus(spreadsheet, upsertResult.row, 'INVALID_DATA')
+      if (upsertResult.row) {
+        setCleanDataStatus(spreadsheet, upsertResult.row, hasSoftErrors ? 'INVALID_DATA' : 'VALID')
       }
     } else {
       logger.log(`Error during upsert: ${upsertResult.error}`)
@@ -1389,8 +1389,12 @@ function upsertToCleanSheet(spreadsheet, sourceSheet, sourceRow) {
         row: matchingRow,
       }
     } else {
-      // No match found, insert new row
-      cleanSheet.appendRow(rowData)
+      // No match found, insert new row mapped to CLEAN headers only
+      const mappedRow = cleanHeaders.map((header) => {
+        const sourceIndex = sourceHeaders.indexOf(header)
+        return sourceIndex !== -1 ? rowData[sourceIndex] : ''
+      })
+      cleanSheet.appendRow(mappedRow)
       const newRow = cleanSheet.getLastRow()
       return {
         success: true,
