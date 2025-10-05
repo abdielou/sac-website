@@ -1173,7 +1173,13 @@ function handleFormSubmission(e) {
     if (upsertResult.success) {
       logger.log(upsertResult.message)
       if (upsertResult.row) {
-        setCleanDataStatus(spreadsheet, upsertResult.row, hasSoftErrors ? 'INVALID_DATA' : 'VALID')
+        const status = hasSoftErrors ? 'INVALID_DATA' : 'VALID'
+        setCleanDataStatus(spreadsheet, upsertResult.row, status)
+        if (status === 'INVALID_DATA') {
+          // Send notification mirroring original behaviour
+          userData.validationErrors = softErrors
+          sendTemplatedEmail('USER_DATA_VALIDATION_FAILURE', userData)
+        }
       }
     } else {
       logger.log(`Error during upsert: ${upsertResult.error}`)
