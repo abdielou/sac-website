@@ -159,6 +159,76 @@ function getMockServices() {
 }
 // #endregion
 
+// #region Manual Overrides
+let MANUAL_OVERRIDE_RANGE = '' // Manual override range, e.g. '5-15'
+
+function manual_reprocessRawSheet() {
+  setupServices({})
+
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID)
+  const rawSheet = spreadsheet.getSheetByName('RAW')
+
+  if (!rawSheet) {
+    logger.log('RAW sheet not found for manual reprocessing')
+    return
+  }
+
+  const lastRow = rawSheet.getLastRow()
+  if (lastRow <= 1) {
+    logger.log('RAW sheet has no data rows to process')
+    return
+  }
+
+  let startRow = 2
+  let endRow = lastRow
+  if (MANUAL_OVERRIDE_RANGE) {
+    const parts = MANUAL_OVERRIDE_RANGE.split('-')
+      .map((part) => part.trim())
+      .filter(Boolean)
+    if (parts.length > 0) {
+      const parsedStart = parseInt(parts[0], 10)
+      if (!isNaN(parsedStart)) {
+        startRow = Math.max(2, parsedStart)
+      }
+    }
+    if (parts.length > 1) {
+      const parsedEnd = parseInt(parts[1], 10)
+      if (!isNaN(parsedEnd)) {
+        endRow = Math.min(lastRow, parsedEnd)
+      }
+    }
+  }
+
+  if (endRow < startRow) {
+    logger.log(`Manual reprocess aborted: invalid range ${startRow}-${endRow}`)
+    return
+  }
+
+  const rowsToProcess = endRow - startRow + 1
+  logger.log(
+    `Manual reprocess starting: processing ${rowsToProcess} row(s) from RAW (range ${startRow}-${endRow})`
+  )
+
+  let processed = 0
+  for (let row = startRow; row <= endRow; row++) {
+    const range = rawSheet.getRange(row, 1, 1, rawSheet.getLastColumn())
+    const event = {
+      source: spreadsheet,
+      range,
+    }
+
+    try {
+      handleFormSubmission(event)
+      processed++
+    } catch (error) {
+      logger.log(`Manual reprocess failed at row ${row}: ${error.message}`)
+    }
+  }
+
+  logger.log(`Manual reprocess completed: ${processed} row(s) handled from RAW`)
+}
+// #endregion
+
 // #region Global service variables
 let logger
 let workspaceDirectory
@@ -657,6 +727,40 @@ function handlePaymentRecorded(paymentsSheet, cleanSheet, row) {
     )
     return
   }
+
+  // 2.25 If user exists but CLEAN.data_status is not CLEAN, mark payment as UNMATCHED_USER_DIRTY and stop
+  const dataStatusIndex = cleanHeaders.indexOf('data_status')
+  if (dataStatusIndex !== -1) {
+    const rawStatus = cleanSheet.getRange(matchedRow, dataStatusIndex + 1).getValue()
+    const normalizedStatus = String(rawStatus || '')
+      .trim()
+      .toUpperCase()
+    if (normalizedStatus && normalizedStatus !== 'CLEAN') {
+      const paymentsHeaders = paymentsSheet
+        .getRange(1, 1, 1, paymentsSheet.getLastColumn())
+        .getValues()[0]
+      let matchStatusCol = -1
+      for (let i = 0; i < paymentsHeaders.length; i++) {
+        const h = String(paymentsHeaders[i] || '')
+          .trim()
+          .toLowerCase()
+        if (h === 'match status' || h === 'match_status' || h === 'status') {
+          matchStatusCol = i + 1
+          break
+        }
+      }
+      if (matchStatusCol !== -1) {
+        paymentsSheet.getRange(row, matchStatusCol).setValue('UNMATCHED_USER_DIRTY')
+        logger.log(
+          `Payment at row ${row} flagged as UNMATCHED_USER_DIRTY due to user data_status=${normalizedStatus}`
+        )
+      } else {
+        logger.log(`PAYMENTS match_status column not found; could not flag UNMATCHED_USER_DIRTY`)
+      }
+      return
+    }
+  }
+
   // 2.5 Skip if user was already created
   const caIndex = cleanHeaders.indexOf('created_at')
   if (caIndex !== -1) {
@@ -1022,28 +1126,55 @@ function handleFormSubmission(e) {
   try {
     const userData = extractUserData(e)
 
-    // Get validation result
-    const validationResult = validateUserData(userData)
+    // Hard validations (blockers): only email and phone
+    const emailError = validateEmail(userData.email)
+    const phoneError = validatePhone(userData.phone)
 
-    if (!validationResult.valid) {
-      logger.log(`Validation errors: ${validationResult.errors.join(', ')}`)
-      userData.validationErrors = validationResult.errors
+    if (emailError || phoneError) {
+      const blockingErrors = [emailError, phoneError].filter(Boolean)
+      logger.log(`Validation errors (blocking): ${blockingErrors.join(', ')}`)
+      userData.validationErrors = blockingErrors
       sendTemplatedEmail('USER_DATA_VALIDATION_FAILURE', userData)
       return
     }
 
-    logger.log(`User data validated successfully`)
+    // Soft validations (non-blocking): name, initial, last name(s)
+    const softErrors = []
+    const firstNameError = validateName(userData.firstName, 'First name')
+    if (firstNameError) softErrors.push(firstNameError)
 
-    // Fix: Pass the proper spreadsheet object, source sheet, and row
+    const fullLastNameError = validateName(userData.fullLastName, 'Last name')
+    if (fullLastNameError) {
+      softErrors.push(fullLastNameError)
+    } else {
+      const lastNameError = validateName(userData.lastName, 'Last name (first part)')
+      if (lastNameError) softErrors.push(lastNameError)
+      if (userData.slastName) {
+        const slastNameError = validateName(userData.slastName, 'Last name (second part)')
+        if (slastNameError) softErrors.push(slastNameError)
+      }
+    }
+
+    const initialError = validateInitial(userData.initial)
+    if (initialError) softErrors.push(initialError)
+
+    const hasSoftErrors = softErrors.length > 0
+    if (hasSoftErrors) {
+      logger.log(`Non-blocking validation issues: ${softErrors.join(', ')}`)
+    }
+
+    // Proceed with upsert
     const spreadsheet = e.source
     const sourceSheet = e.range.getSheet()
     const sourceRow = e.range.getRow()
 
-    // Upsert validated data to CLEAN sheet
     const upsertResult = upsertToCleanSheet(spreadsheet, sourceSheet, sourceRow)
 
     if (upsertResult.success) {
       logger.log(upsertResult.message)
+      if (hasSoftErrors && upsertResult.row) {
+        setCleanDataStatus(spreadsheet, upsertResult.row, 'INVALID_DATA')
+      }
     } else {
       logger.log(`Error during upsert: ${upsertResult.error}`)
     }
@@ -1058,7 +1189,8 @@ function extractUserData(e) {
 
   const purpose = sheet.getRange(row, 2).getValue()
   const firstName = sheet.getRange(row, 3).getValue()
-  const initial = sheet.getRange(row, 4).getValue()
+  const initialRaw = sheet.getRange(row, 4).getValue()?.toString().trim()
+  const initial = initialRaw ? initialRaw.charAt(0).toUpperCase() : '' // Extract first letter and capitalize
   const fullLastName = sheet.getRange(row, 5).getValue()
 
   let lastName = ''
@@ -1272,6 +1404,35 @@ function upsertToCleanSheet(spreadsheet, sourceSheet, sourceRow) {
   }
 }
 
+function ensureCleanStatusColumn(spreadsheet) {
+  const cleanSheet = spreadsheet.getSheetByName('CLEAN')
+  if (!cleanSheet) return { sheet: null, colIndex: -1 }
+
+  const lastCol = cleanSheet.getLastColumn()
+  const headers = cleanSheet.getRange(1, 1, 1, lastCol).getValues()[0]
+  let colIndex = headers.indexOf('data_status')
+
+  if (colIndex === -1) {
+    // Append a new header column for data_status
+    cleanSheet.insertColumnAfter(lastCol)
+    const newCol = lastCol + 1
+    cleanSheet.getRange(1, newCol).setValue('data_status')
+    colIndex = newCol - 1 // zero-based for internal usage
+  }
+
+  // Return 0-based index for internal logic and the actual sheet
+  return { sheet: cleanSheet, colIndex }
+}
+
+function setCleanDataStatus(spreadsheet, targetRow, statusValue) {
+  const { sheet, colIndex } = ensureCleanStatusColumn(spreadsheet)
+  if (!sheet || colIndex === -1) return
+
+  // Convert 0-based index to 1-based column for Range API
+  const colNumber = colIndex + 1
+  sheet.getRange(targetRow, colNumber).setValue(statusValue)
+}
+
 function findMatchingEmailRow(sheet, emailColIndex, emailToMatch) {
   if (!emailToMatch) return -1
 
@@ -1481,75 +1642,5 @@ const EMAIL_TEMPLATES = {
       Please review this payment and contact the member if necessary.
     `,
   },
-}
-// #endregion
-
-// #region Manual Overrides
-let MANUAL_OVERRIDE_RANGE = '' // Manual override range, e.g. '5-15'
-
-function manual_reprocessRawSheet() {
-  setupServices({})
-
-  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID)
-  const rawSheet = spreadsheet.getSheetByName('RAW')
-
-  if (!rawSheet) {
-    logger.log('RAW sheet not found for manual reprocessing')
-    return
-  }
-
-  const lastRow = rawSheet.getLastRow()
-  if (lastRow <= 1) {
-    logger.log('RAW sheet has no data rows to process')
-    return
-  }
-
-  let startRow = 2
-  let endRow = lastRow
-  if (MANUAL_OVERRIDE_RANGE) {
-    const parts = MANUAL_OVERRIDE_RANGE.split('-')
-      .map((part) => part.trim())
-      .filter(Boolean)
-    if (parts.length > 0) {
-      const parsedStart = parseInt(parts[0], 10)
-      if (!isNaN(parsedStart)) {
-        startRow = Math.max(2, parsedStart)
-      }
-    }
-    if (parts.length > 1) {
-      const parsedEnd = parseInt(parts[1], 10)
-      if (!isNaN(parsedEnd)) {
-        endRow = Math.min(lastRow, parsedEnd)
-      }
-    }
-  }
-
-  if (endRow < startRow) {
-    logger.log(`Manual reprocess aborted: invalid range ${startRow}-${endRow}`)
-    return
-  }
-
-  const rowsToProcess = endRow - startRow + 1
-  logger.log(
-    `Manual reprocess starting: processing ${rowsToProcess} row(s) from RAW (range ${startRow}-${endRow})`
-  )
-
-  let processed = 0
-  for (let row = startRow; row <= endRow; row++) {
-    const range = rawSheet.getRange(row, 1, 1, rawSheet.getLastColumn())
-    const event = {
-      source: spreadsheet,
-      range,
-    }
-
-    try {
-      handleFormSubmission(event)
-      processed++
-    } catch (error) {
-      logger.log(`Manual reprocess failed at row ${row}: ${error.message}`)
-    }
-  }
-
-  logger.log(`Manual reprocess completed: ${processed} row(s) handled from RAW`)
 }
 // #endregion
