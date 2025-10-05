@@ -2,7 +2,7 @@
 const TEST_ENTRY_ROWS = {
   RAW: 2,
   CLEAN: 2,
-  PAYMENTS: 3,
+  PAYMENTS: 2,
 }
 
 function buildMockEventForRow(sheetName, row) {
@@ -354,7 +354,20 @@ function processPaymentEmail(msg) {
     }
   }
 
-  paymentData.match_status = matchedRow !== -1 ? 'MATCHED' : 'UNMATCHED_NO_USER'
+  let matchStatus = 'UNMATCHED_NO_USER'
+  if (matchedRow !== -1) {
+    const amountNumber = Number(paymentData.amount)
+    const createdAtIndex = cleanHeaders.indexOf('created_at')
+    const createdAtValue =
+      createdAtIndex !== -1 ? cleanSheet.getRange(matchedRow, createdAtIndex + 1).getValue() : ''
+    if (createdAtValue || amountNumber !== MEMBERSHIP_FEE) {
+      matchStatus = 'MATCHED_OTHER_PAYMENT'
+    } else {
+      matchStatus = 'MATCHED_MEMBERSHIP_PAYMENT'
+    }
+  }
+
+  paymentData.match_status = matchStatus
 
   insertPaymentRecord(paymentsSheet, paymentData)
   logger.log(`Payment registered for ${paymentData.sender_email} - Amount: $${paymentData.amount}`)
@@ -367,6 +380,11 @@ function processPaymentEmail(msg) {
     if (!emailResult.success) {
       logger.log(`Failed to send payment no user notification: ${emailResult.error}`)
     }
+    return
+  }
+
+  if (matchStatus === 'MATCHED_OTHER_PAYMENT') {
+    logger.log(`Skipping onboarding for ${paymentData.sender_email}; payment marked as other.`)
     return
   }
 
