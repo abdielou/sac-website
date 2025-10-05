@@ -1,0 +1,6 @@
+boto3>=1.26.0 
+Flask>=2.0.0 
+localstack
+awscli-local
+awscli
+python-dotenv
