@@ -167,7 +167,7 @@ let driveApp
 let utilities
 let documentApp
 let NOTIFICATION_EMAIL = 'abdiel.aviles@sociedadastronomia.com'
-let CC_EMAIL = ''
+let CC_EMAIL = '' //'rafael.emmanuelli@sociedadastronomia.com'
 const MEMBERSHIP_CERTIFICATE_TEMPLATE_ID = '15c_hbWVzQB5g-k93JRTQqhmJy3d3kz6r-g0fCN_OR14'
 const WELCOME_LETTER_TEMPLATE_ID = '1A8kQTpqcDC7YyU7C3Cr9UNE-4wED5RBGSMxQD4C5tYA'
 const SPREADSHEET_ID = '1-wdja5GQP5q5IQPloxjDTgJO1w2gS_spQK_IfFc5NNQ'
@@ -1481,5 +1481,75 @@ const EMAIL_TEMPLATES = {
       Please review this payment and contact the member if necessary.
     `,
   },
+}
+// #endregion
+
+// #region Manual Overrides
+let MANUAL_OVERRIDE_RANGE = '' // Manual override range, e.g. '5-15'
+
+function manual_reprocessRawSheet() {
+  setupServices({})
+
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID)
+  const rawSheet = spreadsheet.getSheetByName('RAW')
+
+  if (!rawSheet) {
+    logger.log('RAW sheet not found for manual reprocessing')
+    return
+  }
+
+  const lastRow = rawSheet.getLastRow()
+  if (lastRow <= 1) {
+    logger.log('RAW sheet has no data rows to process')
+    return
+  }
+
+  let startRow = 2
+  let endRow = lastRow
+  if (MANUAL_OVERRIDE_RANGE) {
+    const parts = MANUAL_OVERRIDE_RANGE.split('-')
+      .map((part) => part.trim())
+      .filter(Boolean)
+    if (parts.length > 0) {
+      const parsedStart = parseInt(parts[0], 10)
+      if (!isNaN(parsedStart)) {
+        startRow = Math.max(2, parsedStart)
+      }
+    }
+    if (parts.length > 1) {
+      const parsedEnd = parseInt(parts[1], 10)
+      if (!isNaN(parsedEnd)) {
+        endRow = Math.min(lastRow, parsedEnd)
+      }
+    }
+  }
+
+  if (endRow < startRow) {
+    logger.log(`Manual reprocess aborted: invalid range ${startRow}-${endRow}`)
+    return
+  }
+
+  const rowsToProcess = endRow - startRow + 1
+  logger.log(
+    `Manual reprocess starting: processing ${rowsToProcess} row(s) from RAW (range ${startRow}-${endRow})`
+  )
+
+  let processed = 0
+  for (let row = startRow; row <= endRow; row++) {
+    const range = rawSheet.getRange(row, 1, 1, rawSheet.getLastColumn())
+    const event = {
+      source: spreadsheet,
+      range,
+    }
+
+    try {
+      handleFormSubmission(event)
+      processed++
+    } catch (error) {
+      logger.log(`Manual reprocess failed at row ${row}: ${error.message}`)
+    }
+  }
+
+  logger.log(`Manual reprocess completed: ${processed} row(s) handled from RAW`)
 }
 // #endregion
