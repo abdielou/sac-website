@@ -826,6 +826,18 @@ function handlePaymentRecorded(paymentsSheet, cleanSheet, row) {
   } else {
     logger.log('created_at column not found in CLEAN sheet')
   }
+
+  // 7.1 Save generated SAC email in CLEAN sheet (column 'sac_email')
+  let sacEmailCol = cleanHeaders.indexOf('sac_email')
+  if (sacEmailCol === -1) {
+    // Add new column at the end with header 'sac_email'
+    const lastCol = cleanSheet.getLastColumn()
+    cleanSheet.insertColumnAfter(lastCol)
+    const newCol = lastCol + 1
+    cleanSheet.getRange(1, newCol).setValue('sac_email')
+    sacEmailCol = newCol - 1
+  }
+  cleanSheet.getRange(matchedRow, sacEmailCol + 1).setValue(accountResult.email)
 }
 
 function createUserAccount(userData) {
