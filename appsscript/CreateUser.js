@@ -232,6 +232,71 @@ function manual_reprocessRawSheet() {
   logger.log(`Manual reprocess completed: ${processed} row(s) handled from RAW`)
 }
 
+function manual_normalizePhonesInClean() {
+  setupServices({})
+
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID)
+  const cleanSheet = spreadsheet.getSheetByName('CLEAN')
+
+  if (!cleanSheet) {
+    logger.log('CLEAN sheet not found for phone normalization')
+    return
+  }
+
+  const lastRow = cleanSheet.getLastRow()
+  if (lastRow <= 1) {
+    logger.log('CLEAN sheet has no data rows to process')
+    return
+  }
+
+  const headers = cleanSheet.getRange(1, 1, 1, cleanSheet.getLastColumn()).getValues()[0]
+  const phoneColIndex = findPhoneColumnIndex(headers)
+  if (phoneColIndex === -1) {
+    logger.log('Phone column not found in CLEAN; aborting normalization')
+    return
+  }
+
+  let startRow = 2
+  let endRow = lastRow
+  if (MANUAL_OVERRIDE_RANGE) {
+    const parts = MANUAL_OVERRIDE_RANGE.split('-')
+      .map((part) => part.trim())
+      .filter(Boolean)
+    if (parts.length > 0) {
+      const parsedStart = parseInt(parts[0], 10)
+      if (!isNaN(parsedStart)) startRow = Math.max(2, parsedStart)
+    }
+    if (parts.length > 1) {
+      const parsedEnd = parseInt(parts[1], 10)
+      if (!isNaN(parsedEnd)) endRow = Math.min(lastRow, parsedEnd)
+    }
+  }
+
+  if (endRow < startRow) {
+    logger.log(`Phone normalization aborted: invalid range ${startRow}-${endRow}`)
+    return
+  }
+
+  let updated = 0
+  for (let row = startRow; row <= endRow; row++) {
+    try {
+      const cell = cleanSheet.getRange(row, phoneColIndex + 1)
+      const value = cell.getValue()
+      const formatted = formatPhoneForSheet(value)
+      if (String(value) !== formatted && formatted) {
+        cell.setValue(formatted)
+        updated++
+      }
+    } catch (e) {
+      logger.log(`Phone normalization failed at row ${row}: ${e.message}`)
+    }
+  }
+
+  logger.log(
+    `Phone normalization completed: updated ${updated} row(s) in CLEAN (${startRow}-${endRow})`
+  )
+}
+
 function manual_reconcileCleanWithWorkspace() {
   setupServices({})
 
@@ -1000,7 +1065,7 @@ function handlePaymentRecorded(paymentsSheet, cleanSheet, row) {
   const firstName = rowValues[2]
   const fullLastName = rowValues[4]
   const name = `${firstName} ${fullLastName}`.trim()
-  const phone = rowValues[6]
+  const phone = normalizePhone(rowValues[6])
 
   logger.log(`Processing payment for ${name} ${senderEmail} ${phone} ${sentAmount}`)
 
@@ -1217,7 +1282,7 @@ function createWorkspaceUser(userData, primaryEmail, passwordData) {
       primaryEmail,
       name: { familyName, givenName },
       emails: [{ address, type: 'home' }],
-      phones: [{ value: phone, type: 'mobile', primary: true }],
+      phones: [{ value: normalizePhone(phone), type: 'mobile', primary: true }],
       recoveryEmail,
       password,
       hashFunction,
@@ -1484,7 +1549,8 @@ function extractUserData(e) {
   }
 
   const email = sheet.getRange(row, 6).getValue()
-  const phone = sheet.getRange(row, 7).getValue()
+  const phoneRaw = sheet.getRange(row, 7).getValue()
+  const phone = normalizePhone(phoneRaw)
 
   return {
     purpose,
@@ -1681,6 +1747,26 @@ function upsertToCleanSheet(spreadsheet, sourceSheet, sourceRow) {
         const rawValue = rowData[sourceIndex]
         if (headerKey === 'inicial' || headerKey === 'initial') {
           return normalizeInitialValue(rawValue)
+        } else if (headerKey === 'e-mail' || headerKey === 'email') {
+          return typeof rawValue === 'string' ? rawValue.trim().toLowerCase() : rawValue
+        } else if (
+          headerKey === 'phone' ||
+          headerKey === 'telefono' ||
+          headerKey === 'teléfono' ||
+          headerKey === 'phone number' ||
+          headerKey === 'tel' ||
+          headerKey === 'celular' ||
+          headerKey === 'whatsapp'
+        ) {
+          return formatPhoneForSheet(rawValue)
+        } else if (
+          headerKey === 'zip' ||
+          headerKey === 'zipcode' ||
+          headerKey === 'postal code' ||
+          headerKey === 'código postal' ||
+          headerKey === 'codigo postal'
+        ) {
+          return formatZipForSheet(rawValue)
         }
         return rawValue
       })
@@ -1808,9 +1894,38 @@ function normalizeEmail(email) {
   return String(email).trim().toLowerCase()
 }
 
-function normalizePhone(phone) {
+function normalizePhoneDigits(phone) {
   if (!phone) return ''
   return String(phone).replace(/\D/g, '').replace(/^0+/, '')
+}
+
+// Backward compatibility for existing calls; use digits-only for logic/matching
+function normalizePhone(phone) {
+  return normalizePhoneDigits(phone)
+}
+
+function formatPhoneForSheet(phoneRaw) {
+  const raw = String(phoneRaw || '')
+  const hasPlus = raw.trim().startsWith('+')
+  const digits = normalizePhoneDigits(raw)
+  const formatted = hasPlus ? `+${digits}` : digits
+  // Wrap in double quotes if starts with '+' to prevent Sheets from treating as formula/number
+  return hasPlus ? '"' + formatted + '"' : formatted
+}
+
+function formatZipForSheet(zipRaw) {
+  const raw = String(zipRaw || '')
+  const digits = raw.replace(/\D/g, '')
+  if (!digits) return ''
+  // Handle ZIP+4 if 9 digits present
+  if (digits.length >= 9) {
+    const zip5 = digits.slice(0, 5).padStart(5, '0')
+    const plus4 = digits.slice(5, 9)
+    return "'" + `${zip5}-${plus4}`
+  }
+  // Pad to 5 digits for standard ZIP
+  const zip5 = digits.slice(-5).padStart(5, '0')
+  return "'" + zip5
 }
 
 function mergeRowData(targetSheet, targetRow, targetHeaders, sourceData, sourceHeaders) {
@@ -1835,6 +1950,24 @@ function mergeRowData(targetSheet, targetRow, targetHeaders, sourceData, sourceH
         mergedData[i] = normalizeInitialValue(rawValue)
       } else if (headerKey === 'e-mail' || headerKey === 'email') {
         mergedData[i] = typeof rawValue === 'string' ? rawValue.toLowerCase() : rawValue
+      } else if (
+        headerKey === 'phone' ||
+        headerKey === 'telefono' ||
+        headerKey === 'teléfono' ||
+        headerKey === 'phone number' ||
+        headerKey === 'tel' ||
+        headerKey === 'celular' ||
+        headerKey === 'whatsapp'
+      ) {
+        mergedData[i] = formatPhoneForSheet(rawValue)
+      } else if (
+        headerKey === 'zip' ||
+        headerKey === 'zipcode' ||
+        headerKey === 'postal code' ||
+        headerKey === 'código postal' ||
+        headerKey === 'codigo postal'
+      ) {
+        mergedData[i] = formatZipForSheet(rawValue)
       } else {
         mergedData[i] = rawValue
       }
