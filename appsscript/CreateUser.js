@@ -1,3 +1,7 @@
+// TODO:
+// - [ ] Try to find workspace emails for existing users when override processing is running and populate if found
+// - [ ] Read membership status from another spreadsheet sheet
+
 // #region Testing Entry Points
 const TEST_ENTRY_ROWS = {
   RAW: 2,
@@ -227,6 +231,227 @@ function manual_reprocessRawSheet() {
 
   logger.log(`Manual reprocess completed: ${processed} row(s) handled from RAW`)
 }
+
+function manual_reconcileCleanWithWorkspace() {
+  setupServices({})
+
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID)
+  const cleanSheet = spreadsheet.getSheetByName('CLEAN')
+
+  if (!cleanSheet) {
+    logger.log('CLEAN sheet not found for manual reconciliation')
+    return
+  }
+
+  const lastRow = cleanSheet.getLastRow()
+  if (lastRow <= 1) {
+    logger.log('CLEAN sheet has no data rows to process')
+    return
+  }
+
+  // Determine range
+  let startRow = 2
+  let endRow = lastRow
+  if (MANUAL_OVERRIDE_RANGE) {
+    const parts = MANUAL_OVERRIDE_RANGE.split('-')
+      .map((part) => part.trim())
+      .filter(Boolean)
+    if (parts.length > 0) {
+      const parsedStart = parseInt(parts[0], 10)
+      if (!isNaN(parsedStart)) {
+        startRow = Math.max(2, parsedStart)
+      }
+    }
+    if (parts.length > 1) {
+      const parsedEnd = parseInt(parts[1], 10)
+      if (!isNaN(parsedEnd)) {
+        endRow = Math.min(lastRow, parsedEnd)
+      }
+    }
+  }
+
+  if (endRow < startRow) {
+    logger.log(`Manual reconcile aborted: invalid range ${startRow}-${endRow}`)
+    return
+  }
+
+  const headers = cleanSheet.getRange(1, 1, 1, cleanSheet.getLastColumn()).getValues()[0]
+  const idx = (candidates) => {
+    const normalized = headers.map((h) =>
+      String(h || '')
+        .trim()
+        .toLowerCase()
+    )
+    for (let i = 0; i < normalized.length; i++) {
+      if (candidates.includes(normalized[i])) return i
+    }
+    return -1
+  }
+
+  const firstNameIdx = idx(['nombre', 'first name', 'first_name'])
+  const initialIdx = idx(['inicial', 'initial'])
+  const fullLastNameIdx = idx(['apellidos', 'last name', 'last_name'])
+  const emailIdx = idx(['e-mail', 'email'])
+  const phoneIdx = findPhoneColumnIndex(headers)
+  let sacEmailIdx = headers.indexOf('sac_email')
+  const createdAtIdx = headers.indexOf('created_at')
+  const dataStatusIdx = headers.indexOf('data_status')
+
+  // Ensure sac_email column exists
+  if (sacEmailIdx === -1) {
+    const lastCol = cleanSheet.getLastColumn()
+    cleanSheet.insertColumnAfter(lastCol)
+    const newCol = lastCol + 1
+    cleanSheet.getRange(1, newCol).setValue('sac_email')
+    sacEmailIdx = newCol - 1
+  }
+
+  const rowsToProcess = endRow - startRow + 1
+  logger.log(
+    `Manual reconcile starting: processing ${rowsToProcess} row(s) from CLEAN (range ${startRow}-${endRow})`
+  )
+
+  let processed = 0
+  let matched = 0
+  let updated = 0
+  for (let row = startRow; row <= endRow; row++) {
+    try {
+      const rowValues = cleanSheet.getRange(row, 1, 1, cleanSheet.getLastColumn()).getValues()[0]
+
+      // Skip if data_status exists and is not VALID (conservative to avoid false positives)
+      if (dataStatusIdx !== -1) {
+        const rawStatus = String(rowValues[dataStatusIdx] || '')
+          .trim()
+          .toUpperCase()
+        if (rawStatus && rawStatus !== 'VALID') {
+          logger.log(`Row ${row} skipped due to data_status=${rawStatus}`)
+          continue
+        }
+      }
+
+      const firstName = firstNameIdx !== -1 ? String(rowValues[firstNameIdx] || '').trim() : ''
+      const initial = initialIdx !== -1 ? String(rowValues[initialIdx] || '').trim() : ''
+      const fullLastName =
+        fullLastNameIdx !== -1 ? String(rowValues[fullLastNameIdx] || '').trim() : ''
+      const personalEmail =
+        emailIdx !== -1
+          ? String(rowValues[emailIdx] || '')
+              .trim()
+              .toLowerCase()
+          : ''
+      const phone = phoneIdx !== -1 ? String(rowValues[phoneIdx] || '') : ''
+      const existingSac =
+        sacEmailIdx !== -1
+          ? String(rowValues[sacEmailIdx] || '')
+              .trim()
+              .toLowerCase()
+          : ''
+
+      // If sac_email already present, skip silently
+      if (existingSac) {
+        processed++
+        continue
+      }
+
+      let lastName = ''
+      let slastName = ''
+      if (fullLastName) {
+        const parts = fullLastName.split(/[\s-]/)
+        lastName = parts[0] || ''
+        slastName = parts[1] || ''
+      }
+
+      // 1) If sac_email exists, verify
+      let confirmedEmail = ''
+      if (existingSac) {
+        try {
+          const u = workspaceDirectory.Users.get(existingSac)
+          if (u && u.primaryEmail) {
+            confirmedEmail = existingSac
+          }
+        } catch (e) {}
+      }
+
+      // 2) If not confirmed, discover by candidate generation
+      if (!confirmedEmail) {
+        const candidates = generateEmailCandidates(
+          { firstName, initial, lastName, slastName },
+          SAC_DOMAIN
+        )
+
+        for (const cand of candidates) {
+          try {
+            const u = workspaceDirectory.Users.get(cand)
+            if (u && u.primaryEmail) {
+              confirmedEmail = cand
+              break
+            }
+          } catch (e) {
+            // ignore and continue on not found or errors
+          }
+        }
+      }
+
+      if (!confirmedEmail) {
+        const displayName = `${firstName || ''} ${fullLastName || ''}`.trim()
+        logger.log(`[WARN] User ${displayName || '[unknown name]'} does not exist in the workspace`)
+        processed++
+        continue
+      }
+
+      matched++
+
+      // Write sac_email immediately
+      cleanSheet.getRange(row, sacEmailIdx + 1).setValue(confirmedEmail)
+
+      // Fetch user to obtain creation date; prefer reusing object from last check if available
+      let userForDate = null
+      try {
+        userForDate = workspaceDirectory.Users.get(confirmedEmail)
+      } catch (e) {
+        // ignore; we'll fallback to now if column is empty
+      }
+      const createdAtFromUser = getUserCreationDate(userForDate)
+
+      // Set created_at: prefer Directory creation date; if none and blank, set now
+      if (createdAtIdx !== -1) {
+        const curr = rowValues[createdAtIdx]
+        if (createdAtFromUser) {
+          cleanSheet.getRange(row, createdAtIdx + 1).setValue(createdAtFromUser)
+          updated++
+        } else if (!curr) {
+          cleanSheet.getRange(row, createdAtIdx + 1).setValue(new Date())
+          updated++
+        }
+      }
+
+      // Single summary log per reconciled user
+      try {
+        const displayName = `${firstName || ''} ${fullLastName || ''}`.trim()
+        const tz = Session.getScriptTimeZone && Session.getScriptTimeZone()
+        const createdValue = createdAtFromUser
+          ? utilities && tz
+            ? utilities.formatDate(createdAtFromUser, tz, 'yyyy-MM-dd HH:mm:ss')
+            : createdAtFromUser.toString()
+          : createdAtIdx !== -1
+          ? String(cleanSheet.getRange(row, createdAtIdx + 1).getValue() || '')
+          : ''
+        logger.log(
+          `Reconciled ${displayName || '[unknown name]'}: sac_email=${confirmedEmail}` +
+            (createdValue ? `, created_at=${createdValue}` : '')
+        )
+      } catch (e) {}
+
+      processed++
+    } catch (error) {
+      logger.log(`Manual reconcile failed at row ${row}: ${error.message}`)
+    }
+  }
+
+  logger.log(
+    `Manual reconcile completed: processed=${processed}, matched=${matched}, updated=${updated}`
+  )
+}
 // #endregion
 
 // #region Global service variables
@@ -245,6 +470,7 @@ const EMAIL_FILTER_SENDER = 'finance@sociedadastronomia.com'
 const EMAIL_FILTER_RECEIVER = 'finance@sociedadastronomia.com'
 const EMAIL_SEARCH_WINDOW_DAYS = 14
 const EMAIL_FILTER_SUBJECT_CONTAINS = 'paid'
+const SAC_DOMAIN = '@sociedadastronomia.com'
 // #endregion
 
 // #region Entry Points - Real
@@ -869,16 +1095,53 @@ function createUserAccount(userData) {
   }
 }
 
-function createEmail(firstName, initial, lastName, slastName) {
-  const domain = '@sociedadastronomia.com'
+function sanitizeNamePartForEmail(text) {
+  if (!text) return ''
+  const lower = String(text).trim().toLowerCase()
+  // Remove diacritics (e.g., á -> a, ñ -> n) and strip non a-z characters
+  const noDiacritics = lower.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  return noDiacritics.replace(/[^a-z]/g, '')
+}
 
-  // Try different email combinations in order of preference
-  const emailCombinations = [
-    `${firstName}.${lastName}`.toLowerCase(),
-    slastName && `${firstName}.${lastName}.${slastName}`.toLowerCase(),
-    initial && `${firstName}.${initial}.${lastName}`.toLowerCase(),
-    initial && slastName && `${firstName}.${initial}.${lastName}.${slastName}`.toLowerCase(),
-  ].filter(Boolean) // Remove any undefined/null combinations
+function getUserCreationDate(user) {
+  try {
+    if (!user) return null
+    const candidates = [user.creationTime, user.createTime, user.creation_date]
+    for (let i = 0; i < candidates.length; i++) {
+      const v = candidates[i]
+      if (!v) continue
+      if (v instanceof Date) return v
+      const asDate = new Date(v)
+      if (!isNaN(asDate.getTime())) return asDate
+    }
+    return null
+  } catch (e) {
+    return null
+  }
+}
+
+function generateEmailCandidates(parts, domain) {
+  const fn = sanitizeNamePartForEmail(parts.firstName)
+  const ini = sanitizeNamePartForEmail(parts.initial).charAt(0)
+  const ln = sanitizeNamePartForEmail(parts.lastName)
+  const sln = sanitizeNamePartForEmail(parts.slastName)
+
+  const usernames = []
+  if (fn && ln) usernames.push(`${fn}.${ln}`)
+  if (fn && ln && sln) usernames.push(`${fn}.${ln}.${sln}`)
+  if (fn && ini && ln) usernames.push(`${fn}.${ini}.${ln}`)
+  if (fn && ini && ln && sln) usernames.push(`${fn}.${ini}.${ln}.${sln}`)
+
+  return usernames.map((u) => `${u}${domain}`)
+}
+
+function createEmail(firstName, initial, lastName, slastName) {
+  const domain = SAC_DOMAIN
+  // Try different email combinations in order of preference using the single generator
+  const emailCombinations = generateEmailCandidates(
+    { firstName, initial, lastName, slastName },
+    domain
+  )
 
   for (const username of emailCombinations) {
     const sacEmail = `${username}${domain}`
