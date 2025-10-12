@@ -1469,7 +1469,8 @@ function extractUserData(e) {
   const row = e.range.getRow()
 
   const purpose = sheet.getRange(row, 2).getValue()?.toString().trim()
-  const firstName = sheet.getRange(row, 3).getValue()?.toString().trim()
+  const firstNameRaw = sheet.getRange(row, 3).getValue()?.toString().trim()
+  const firstName = stripCommonTitles(firstNameRaw)
   const initialRaw = sheet.getRange(row, 4).getValue()?.toString().trim()
   const initial = initialRaw ? initialRaw.charAt(0).toUpperCase() : '' // Extract first letter and capitalize
   const fullLastName = sheet.getRange(row, 5).getValue()?.toString().trim()
@@ -1702,6 +1703,17 @@ function normalizeInitialValue(value) {
   const text = String(value).trim()
   if (!text) return ''
   return text.charAt(0).toUpperCase()
+}
+
+function stripCommonTitles(text) {
+  if (!text) return ''
+  let value = String(text).trim()
+  const titlePattern = /^(?:dr|dra|ing|ingr|lic|sr|sra|prof|arq|msc|phd)\.?\s+/i
+  // Remove repeated titles if present
+  while (titlePattern.test(value)) {
+    value = value.replace(titlePattern, '').trim()
+  }
+  return value
 }
 
 function ensureCleanStatusColumn(spreadsheet) {
