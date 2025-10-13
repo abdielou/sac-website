@@ -1,5 +1,4 @@
 // TODO:
-// - [ ] Try to find workspace emails for existing users when override processing is running and populate if found
 // - [ ] Read membership status from another spreadsheet sheet
 
 // #region Testing Entry Points
@@ -516,6 +515,126 @@ function manual_reconcileCleanWithWorkspace() {
   logger.log(
     `Manual reconcile completed: processed=${processed}, matched=${matched}, updated=${updated}`
   )
+}
+
+function manual_validateNewUsersExists() {
+  setupServices({})
+
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID)
+  const cleanSheet = spreadsheet.getSheetByName('CLEAN')
+  const newMembersSheet = spreadsheet.getSheetByName('NEW_MEMBERS_2025')
+
+  if (!cleanSheet || !newMembersSheet) {
+    logger.log('CLEAN or NEW_MEMBERS_2025 sheet not found')
+    return
+  }
+
+  const newMembersLastRow = newMembersSheet.getLastRow()
+  if (newMembersLastRow <= 1) {
+    logger.log('NEW_MEMBERS_2025 sheet has no data rows to process')
+    return
+  }
+
+  const newMembersHeaders = newMembersSheet
+    .getRange(1, 1, 1, newMembersSheet.getLastColumn())
+    .getValues()[0]
+  const newMembersEmailIdx = newMembersHeaders.indexOf('E-mail')
+  const firstNameIdx =
+    newMembersHeaders.indexOf('Nombre') !== -1
+      ? newMembersHeaders.indexOf('Nombre')
+      : newMembersHeaders.indexOf('first name') !== -1
+      ? newMembersHeaders.indexOf('first name')
+      : -1
+  const lastNameIdx =
+    newMembersHeaders.indexOf('Apellidos') !== -1
+      ? newMembersHeaders.indexOf('Apellidos')
+      : newMembersHeaders.indexOf('last name') !== -1
+      ? newMembersHeaders.indexOf('last name')
+      : -1
+
+  if (newMembersEmailIdx === -1) {
+    logger.log('E-mail column not found in NEW_MEMBERS_2025')
+    return
+  }
+
+  // Determine range for NEW_MEMBERS_2025
+  let startRow = 2
+  let endRow = newMembersLastRow
+  if (MANUAL_OVERRIDE_RANGE) {
+    const parts = MANUAL_OVERRIDE_RANGE.split('-')
+      .map((part) => part.trim())
+      .filter(Boolean)
+    if (parts.length > 0) {
+      const parsedStart = parseInt(parts[0], 10)
+      if (!isNaN(parsedStart)) startRow = Math.max(2, parsedStart)
+    }
+    if (parts.length > 1) {
+      const parsedEnd = parseInt(parts[1], 10)
+      if (!isNaN(parsedEnd)) endRow = Math.min(newMembersLastRow, parsedEnd)
+    }
+  }
+
+  if (endRow < startRow) {
+    logger.log(`User existence validation aborted: invalid range ${startRow}-${endRow}`)
+    return
+  }
+
+  // Get all emails from CLEAN for fast lookup
+  const cleanData = cleanSheet.getDataRange().getValues()
+  const cleanHeaders = cleanData[0]
+  const cleanEmailIdx = cleanHeaders.indexOf('E-mail')
+  if (cleanEmailIdx === -1) {
+    logger.log('E-mail column not found in CLEAN')
+    return
+  }
+
+  const cleanEmails = new Set()
+  for (let i = 1; i < cleanData.length; i++) {
+    const email = String(cleanData[i][cleanEmailIdx] || '')
+      .trim()
+      .toLowerCase()
+    if (email) cleanEmails.add(email)
+  }
+
+  logger.log(`Loaded ${cleanData.length - 1} emails from CLEAN for lookup`)
+
+  // Iterate NEW_MEMBERS_2025 and check existence
+  const foundUsers = []
+  const notFoundUsers = []
+  for (let row = startRow; row <= endRow; row++) {
+    try {
+      const rowValues = newMembersSheet
+        .getRange(row, 1, 1, newMembersSheet.getLastColumn())
+        .getValues()[0]
+      const personalEmail = String(rowValues[newMembersEmailIdx] || '')
+        .trim()
+        .toLowerCase()
+
+      if (!personalEmail) continue
+
+      const firstName = String(rowValues[firstNameIdx] || '').trim()
+      const lastName = String(rowValues[lastNameIdx] || '').trim()
+      const displayName = `${firstName} ${lastName}`.trim() || '[unknown name]'
+
+      if (cleanEmails.has(personalEmail)) {
+        foundUsers.push(`${displayName} (${personalEmail}) [row ${row}]`)
+      } else {
+        notFoundUsers.push(`${displayName} (${personalEmail}) [row ${row}]`)
+      }
+    } catch (e) {
+      logger.log(`Error processing NEW_MEMBERS_2025 row ${row}: ${e.message}`)
+    }
+  }
+
+  // Log summaries
+  logger.log(`USERS FOUND IN CLEAN: ${foundUsers.length}`)
+  logger.log(
+    `USERS NOT FOUND IN CLEAN: ${notFoundUsers.length} ${notFoundUsers.join(', ') || 'none'}`
+  )
+
+  if (notFoundUsers.length > 0) {
+    logger.log('[WARN] Not found users may need to be added to CLEAN manually')
+  }
 }
 // #endregion
 
