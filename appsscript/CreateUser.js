@@ -517,6 +517,74 @@ function manual_reconcileCleanWithWorkspace() {
   )
 }
 
+let MANUAL_PAYMENT_SEARCH_WINDOW_RANGE = '' // e.g. '30' for 0-30 days, '30-60' for 30-60 days
+function manual_reconcilePaymentsFromEmail() {
+  setupServices({})
+
+  // Build time window query: supports 'N' (0..N days) or 'A-B' (A..B days)
+  let queryTime = ''
+  const rangeStr = String(MANUAL_PAYMENT_SEARCH_WINDOW_RANGE || '').trim()
+  if (rangeStr) {
+    const parts = rangeStr
+      .split('-')
+      .map((p) => parseInt(p.trim(), 10))
+      .filter((n) => !isNaN(n) && n > 0)
+    if (parts.length === 1) {
+      queryTime = `newer_than:${parts[0]}d`
+    } else if (parts.length >= 2) {
+      // Gmail doesn't support older_than+newer_than combined on the same query reliably per docs,
+      // but in practice we can AND them together.
+      const a = Math.min(parts[0], parts[1])
+      const b = Math.max(parts[0], parts[1])
+      queryTime = `newer_than:${b}d older_than:${a}d`
+    }
+  }
+  const query = `from:${EMAIL_FILTER_SENDER} to:${EMAIL_FILTER_RECEIVER} subject:${EMAIL_FILTER_SUBJECT_CONTAINS} ${queryTime}`
+
+  let threads = []
+  try {
+    threads = gmailApp.search(query)
+  } catch (e) {
+    logger.log(`[ERROR] manual_reconcilePaymentsFromEmail search failed: ${e.message}`)
+    return
+  }
+
+  let scannedThreads = 0
+  let scannedMessages = 0
+  let inserted = 0
+  let duplicates = 0
+
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID)
+  const paymentsSheet = spreadsheet.getSheetByName('PAYMENTS')
+  if (!paymentsSheet) {
+    throw new Error('PAYMENTS sheet not found in target spreadsheet. This must exist.')
+  }
+
+  threads.forEach((thread) => {
+    scannedThreads++
+    const messages = thread.getMessages()
+    messages.forEach((msg) => {
+      scannedMessages++
+      try {
+        const messageId = msg.getId()
+        if (findExistingPayment(paymentsSheet, messageId)) {
+          duplicates++
+          return
+        }
+        const paymentData = extractPaymentData(msg)
+        insertPaymentRecord(paymentsSheet, paymentData)
+        inserted++
+      } catch (e) {
+        logger.log(`[ERROR] manual_reconcilePaymentsFromEmail failed on message: ${e.message}`)
+      }
+    })
+  })
+
+  logger.log(
+    `manual_reconcilePaymentsFromEmail summary: threads=${scannedThreads}, messages=${scannedMessages}, inserted=${inserted}, duplicates=${duplicates}`
+  )
+}
+
 function manual_validateNewUsersExists() {
   setupServices({})
 
@@ -874,6 +942,10 @@ function processPaymentEmail(msg) {
 }
 
 function findExistingPayment(paymentsSheet, messageId) {
+  // Defensive: ensure sheet is provided (hard fail: this sheet must exist)
+  if (!paymentsSheet || typeof paymentsSheet.getDataRange !== 'function') {
+    throw new Error('findExistingPayment: PAYMENTS sheet is not available')
+  }
   // Get all data from payments sheet
   const data = paymentsSheet.getDataRange().getValues()
 
