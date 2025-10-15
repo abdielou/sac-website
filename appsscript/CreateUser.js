@@ -817,6 +817,7 @@ function manual_validateNewUsersExists() {
     .getRange(1, 1, 1, newMembersSheet.getLastColumn())
     .getValues()[0]
   const newMembersEmailIdx = newMembersHeaders.indexOf('E-mail')
+  const newMembersPhoneIdx = findPhoneColumnIndex(newMembersHeaders)
   const firstNameIdx =
     newMembersHeaders.indexOf('Nombre') !== -1
       ? newMembersHeaders.indexOf('Nombre')
@@ -879,6 +880,9 @@ function manual_validateNewUsersExists() {
   // Iterate NEW_MEMBERS_2025 and check existence
   const foundUsers = []
   const notFoundUsers = []
+  const withValidPayments = []
+  const withoutValidPayments = []
+  const paymentsIndex = buildPaymentsIndex(spreadsheet)
   for (let row = startRow; row <= endRow; row++) {
     try {
       const rowValues = newMembersSheet
@@ -887,6 +891,8 @@ function manual_validateNewUsersExists() {
       const personalEmail = String(rowValues[newMembersEmailIdx] || '')
         .trim()
         .toLowerCase()
+      const phoneRaw = newMembersPhoneIdx !== -1 ? rowValues[newMembersPhoneIdx] : ''
+      const phone = normalizePhone(phoneRaw)
 
       if (!personalEmail) continue
 
@@ -899,6 +905,21 @@ function manual_validateNewUsersExists() {
       } else {
         notFoundUsers.push(`${displayName} (${personalEmail}) [row ${row}]`)
       }
+
+      // Check valid payment status (ACTIVE = valid within rolling year; gifts count)
+      try {
+        const status = getMembershipStatusForMember(
+          { personalEmail, phone },
+          { spreadsheet, paymentsIndex }
+        )
+        if (status && status.status === MEMBERSHIP_STATUS.ACTIVE) {
+          withValidPayments.push(`${displayName} (${personalEmail}) [row ${row}]`)
+        } else {
+          withoutValidPayments.push(`${displayName} (${personalEmail}) [row ${row}]`)
+        }
+      } catch (e) {
+        logger.log(`Payment status check failed for ${personalEmail} at row ${row}: ${e.message}`)
+      }
     } catch (e) {
       logger.log(`Error processing NEW_MEMBERS_2025 row ${row}: ${e.message}`)
     }
@@ -908,6 +929,12 @@ function manual_validateNewUsersExists() {
   logger.log(`USERS FOUND IN CLEAN: ${foundUsers.length}`)
   logger.log(
     `USERS NOT FOUND IN CLEAN: ${notFoundUsers.length} ${notFoundUsers.join(', ') || 'none'}`
+  )
+  logger.log(`USERS WITH VALID PAYMENTS: ${withValidPayments.length}`)
+  logger.log(
+    `USERS WITHOUT VALID PAYMENTS: ${withoutValidPayments.length} ${
+      withoutValidPayments.join(', ') || 'none'
+    }`
   )
 
   if (notFoundUsers.length > 0) {
@@ -1273,6 +1300,7 @@ function manual_reconcileRenewal() {
     `manual_reconcileRenewal summary: processed=${processed}, skipped_missing_clean=${skippedMissingClean}, skipped_with_valid_payment=${skippedWithValidPayment}, manual_updated=${manualUpdated}, manual_inserted=${manualInserted}`
   )
 }
+
 let MANUAL_PAYMENT_SEARCH_WINDOW_RANGE = '' // e.g. '30' for 0-30 days, '30-60' for 30-60 days
 function manual_reconcilePaymentsFromEmail() {
   setupServices({})
