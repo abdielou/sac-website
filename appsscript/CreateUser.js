@@ -1,3 +1,5 @@
+const MAINTENANCE_MODE = true
+
 // TODO:
 // - [ ] Read membership status from another spreadsheet sheet
 
@@ -742,18 +744,34 @@ function setupServices(services) {
 }
 
 function onFormSubmit(e) {
+  if (MAINTENANCE_MODE) {
+    Logger.log('Maintenance mode active: onFormSubmit halted')
+    return
+  }
   handle_formIsSubmitted(e, {})
 }
 
 function onEdit(e) {
+  if (MAINTENANCE_MODE) {
+    Logger.log('Maintenance mode active: onEdit halted')
+    return
+  }
   handle_sheetIsEdited(e, {})
 }
 
 function onNewMemberships(e) {
+  if (MAINTENANCE_MODE) {
+    Logger.log('Maintenance mode active: onNewMemberships halted')
+    return
+  }
   handle_scheduledPaymentScan(e, {})
 }
 
 function onChange(e) {
+  if (MAINTENANCE_MODE) {
+    Logger.log('Maintenance mode active: onChange halted')
+    return
+  }
   handle_sheetStructureChanged(e, {})
 }
 
