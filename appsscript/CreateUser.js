@@ -1067,6 +1067,212 @@ function manual_membershipStatusCheck() {
   )
 }
 
+function manual_reconcileRenewal() {
+  setupServices({})
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID)
+  const renewalsSheet = spreadsheet.getSheetByName(RENEWAL_SHEET_NAME)
+  const cleanSheet = spreadsheet.getSheetByName('CLEAN')
+  const manualSheet =
+    spreadsheet.getSheetByName('MANUAL_PAYMENTS') || spreadsheet.insertSheet('MANUAL_PAYMENTS')
+
+  if (!renewalsSheet || !cleanSheet) {
+    logger.log('RENEWAL_MEMBERS_2025 or CLEAN sheet not found')
+    return
+  }
+
+  // Prepare MANUAL_PAYMENTS headers if first time
+  if (manualSheet.getLastRow() === 0) {
+    manualSheet
+      .getRange(1, 1, 1, 6)
+      .setValues([['E-mail', 'Teléfono', 'amount', 'date', 'payment_type', 'notes']])
+  }
+
+  // Build PAYMENTS index once
+  const paymentsIndex = buildPaymentsIndex(spreadsheet)
+
+  const lastRow = renewalsSheet.getLastRow()
+  if (lastRow <= 1) {
+    logger.log(`${RENEWAL_SHEET_NAME} has no data rows to process`)
+    return
+  }
+
+  // Helpers for headers
+  const renewHeaders = renewalsSheet.getRange(1, 1, 1, renewalsSheet.getLastColumn()).getValues()[0]
+  const normRenew = renewHeaders.map((h) =>
+    String(h || '')
+      .trim()
+      .toLowerCase()
+  )
+  const rcol = (cands) => {
+    for (let i = 0; i < normRenew.length; i++) if (cands.includes(normRenew[i])) return i
+    return -1
+  }
+  const rEmailIdx = rcol(['e-mail', 'email'])
+  const rPhoneIdx = rcol(['teléfono', 'telefono', 'phone', 'tel'])
+
+  const cleanHeaders = cleanSheet.getRange(1, 1, 1, cleanSheet.getLastColumn()).getValues()[0]
+  const cleanEmailIdx = cleanHeaders.indexOf('E-mail')
+  const cleanPhoneIdx = findPhoneColumnIndex(cleanHeaders)
+
+  // Manual payments index for dedupe/update (by email/phone for RENEWAL_YEAR)
+  const mData = manualSheet.getDataRange().getValues()
+  const mHeaders = mData[0] || []
+  const mNorm = mHeaders.map((h) =>
+    String(h || '')
+      .trim()
+      .toLowerCase()
+  )
+  const mcol = (cands) => {
+    for (let i = 0; i < mNorm.length; i++) if (cands.includes(mNorm[i])) return i
+    return -1
+  }
+  const mEmailCol = mcol(['e-mail', 'email'])
+  const mPhoneCol = mcol(['teléfono', 'telefono', 'phone', 'tel'])
+  const mAmountCol = mcol(['amount', 'monto'])
+  const mDateCol = mcol(['date', 'fecha'])
+  const mTypeCol = mcol(['payment_type'])
+  const mNotesCol = mcol(['notes'])
+  const manualRows = mData.slice(1)
+
+  const findManualRowForYear = (email, phone) => {
+    if (!manualRows || manualRows.length === 0) return -1
+    for (let i = 0; i < manualRows.length; i++) {
+      const row = manualRows[i]
+      const emailVal = mEmailCol !== -1 ? normalizeEmail(row[mEmailCol]) : ''
+      const phoneVal = mPhoneCol !== -1 ? normalizePhone(row[mPhoneCol]) : ''
+      const d = mDateCol !== -1 ? row[mDateCol] : null
+      let year = null
+      if (d instanceof Date && !isNaN(d)) year = d.getFullYear()
+      else if (typeof d === 'string' && d) {
+        const parsed = new Date(d)
+        if (!isNaN(parsed)) year = parsed.getFullYear()
+      }
+      if (year !== RENEWAL_YEAR) continue
+      if (
+        (email && emailVal && emailVal === email) ||
+        (!email && phone && phoneVal && phoneVal === phone)
+      ) {
+        return i + 2 // data starts at row 2
+      }
+    }
+    return -1
+  }
+
+  // Counters
+  let processed = 0
+  let skippedMissingClean = 0
+  let skippedWithValidPayment = 0
+  let manualUpdated = 0
+  let manualInserted = 0
+
+  // Determine range per MANUAL_OVERRIDE_RANGE
+  let startRow = 2
+  let endRow = lastRow
+  if (MANUAL_OVERRIDE_RANGE) {
+    const parts = MANUAL_OVERRIDE_RANGE.split('-')
+      .map((p) => p.trim())
+      .filter(Boolean)
+    if (parts.length > 0) {
+      const a = parseInt(parts[0], 10)
+      if (!isNaN(a)) startRow = Math.max(2, a)
+    }
+    if (parts.length > 1) {
+      const b = parseInt(parts[1], 10)
+      if (!isNaN(b)) endRow = Math.min(lastRow, b)
+    }
+  }
+  if (endRow < startRow) {
+    logger.log(`manual_reconcileRenewal aborted: invalid range ${startRow}-${endRow}`)
+    return
+  }
+
+  for (let row = startRow; row <= endRow; row++) {
+    try {
+      const values = renewalsSheet.getRange(row, 1, 1, renewalsSheet.getLastColumn()).getValues()[0]
+      const personalEmail = rEmailIdx !== -1 ? normalizeEmail(values[rEmailIdx]) : ''
+      const phone = rPhoneIdx !== -1 ? normalizePhone(values[rPhoneIdx]) : ''
+      if (!personalEmail && !phone) {
+        skippedMissingClean++
+        continue
+      }
+
+      // Find matching CLEAN row (email preferred, else phone)
+      let cleanRow = -1
+      if (personalEmail && cleanEmailIdx !== -1) {
+        cleanRow = findMatchingEmailRow(cleanSheet, cleanEmailIdx, personalEmail)
+      }
+      if (cleanRow === -1 && phone && cleanPhoneIdx !== -1) {
+        cleanRow = findMatchingPhoneRow(cleanSheet, cleanPhoneIdx, phone)
+      }
+      if (cleanRow === -1) {
+        logger.log(`[WARN] manual_reconcileRenewal: No CLEAN match for ${personalEmail || phone}`)
+        skippedMissingClean++
+        continue
+      }
+
+      // Check valid payment in PAYMENTS for RENEWAL_YEAR
+      let hasValidPayment = false
+      const candidates = []
+      if (personalEmail && paymentsIndex.emailToPayments.has(personalEmail)) {
+        candidates.push.apply(candidates, paymentsIndex.emailToPayments.get(personalEmail))
+      }
+      if (phone && paymentsIndex.phoneToPayments.has(phone)) {
+        candidates.push.apply(candidates, paymentsIndex.phoneToPayments.get(phone))
+      }
+      for (let i = 0; i < candidates.length; i++) {
+        const p = candidates[i]
+        if (!(p.date instanceof Date) || isNaN(p.date)) continue
+        const py = p.date.getFullYear()
+        if (py !== RENEWAL_YEAR) continue
+        const amountOk = typeof p.amount === 'number' && p.amount === MEMBERSHIP_FEE
+        if (amountOk) {
+          hasValidPayment = true
+          break
+        }
+      }
+      if (hasValidPayment) {
+        skippedWithValidPayment++
+        continue
+      }
+
+      // Upsert/update into MANUAL_PAYMENTS for this year
+      const targetEmail = personalEmail || ''
+      const targetPhone = phone || ''
+      const existingRow = findManualRowForYear(targetEmail, targetPhone)
+      const now = new Date()
+      if (existingRow !== -1) {
+        // Update date and notes, keep amount/type
+        if (mDateCol !== -1) manualSheet.getRange(existingRow, mDateCol + 1).setValue(now)
+        if (mNotesCol !== -1) {
+          const prev = String(manualSheet.getRange(existingRow, mNotesCol + 1).getValue() || '')
+          const updated = prev
+            ? prev + '; reconciliation via manual_reconcileRenewal'
+            : 'reconciliation via manual_reconcileRenewal'
+          manualSheet.getRange(existingRow, mNotesCol + 1).setValue(updated)
+        }
+        manualUpdated++
+      } else {
+        const payload = new Array(Math.max(6, manualSheet.getLastColumn())).fill('')
+        if (mEmailCol !== -1) payload[mEmailCol] = targetEmail
+        if (mPhoneCol !== -1) payload[mPhoneCol] = targetPhone
+        if (mAmountCol !== -1) payload[mAmountCol] = MEMBERSHIP_FEE
+        if (mDateCol !== -1) payload[mDateCol] = now
+        if (mTypeCol !== -1) payload[mTypeCol] = 'ADJUSTMENT'
+        if (mNotesCol !== -1) payload[mNotesCol] = 'reconciliation via manual_reconcileRenewal'
+        manualSheet.appendRow(payload)
+        manualInserted++
+      }
+
+      processed++
+    } catch (e) {
+      logger.log(`manual_reconcileRenewal error at row ${row}: ${e.message}`)
+    }
+  }
+
+  logger.log(
+    `manual_reconcileRenewal summary: processed=${processed}, skipped_missing_clean=${skippedMissingClean}, skipped_with_valid_payment=${skippedWithValidPayment}, manual_updated=${manualUpdated}, manual_inserted=${manualInserted}`
+  )
+}
 let MANUAL_PAYMENT_SEARCH_WINDOW_RANGE = '' // e.g. '30' for 0-30 days, '30-60' for 30-60 days
 function manual_reconcilePaymentsFromEmail() {
   setupServices({})
@@ -1153,6 +1359,9 @@ const EMAIL_FILTER_RECEIVER = 'finance@sociedadastronomia.com'
 const EMAIL_SEARCH_WINDOW_DAYS = 14
 const EMAIL_FILTER_SUBJECT_CONTAINS = 'paid'
 const SAC_DOMAIN = '@sociedadastronomia.com'
+// Renewal reconciliation explicit scope
+const RENEWAL_YEAR = 2025
+const RENEWAL_SHEET_NAME = 'RENEWAL_MEMBERS_2025'
 // #endregion
 
 // #region Entry Points - Real
