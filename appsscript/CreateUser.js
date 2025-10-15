@@ -1,8 +1,5 @@
 const MAINTENANCE_MODE = true
 
-// TODO:
-// - [ ] Read membership status from another spreadsheet sheet
-
 // #region Testing Entry Points
 const TEST_ENTRY_ROWS = {
   RAW: 2,
@@ -159,6 +156,288 @@ function getMockServices() {
         getName: () => 'Test welcome letter.docx',
         saveAndClose: () => logger.log(`Mock saveAndClose for doc ${id}`),
       }),
+    },
+  }
+}
+// #endregion
+
+// #region Membership Status
+const MEMBERSHIP_STATUS = {
+  ACTIVE: 'ACTIVE',
+  EXPIRED: 'EXPIRED',
+  NO_PAYMENT: 'NO_PAYMENT',
+}
+
+function buildPaymentsIndex(spreadsheet) {
+  const paymentsSheet = spreadsheet.getSheetByName('PAYMENTS')
+  if (!paymentsSheet) {
+    throw new Error('PAYMENTS sheet not found')
+  }
+  const data = paymentsSheet.getDataRange().getValues()
+  if (!data || data.length < 2) {
+    return { emailToPayments: new Map(), phoneToPayments: new Map() }
+  }
+  const headers = data[0].map((h) =>
+    String(h || '')
+      .trim()
+      .toLowerCase()
+  )
+  const col = (candidates) => {
+    for (let i = 0; i < headers.length; i++) {
+      if (candidates.includes(headers[i])) return i
+    }
+    return -1
+  }
+  const amountCol = col(['amount', 'monto', 'cantidad'])
+  const senderEmailCol = col(['sender email', 'sender_email', 'e-mail', 'email'])
+  const senderPhoneCol = col([
+    'sender phone',
+    'sender_phone',
+    'telefono',
+    'teléfono',
+    'tel',
+    'celular',
+    'whatsapp',
+  ])
+  const paymentDateTimeCol = col(['payment datetime', 'payment_datetime'])
+  const paymentDateCol = col(['payment date', 'payment_date', 'fecha de pago'])
+  const emailDateCol = col(['email date', 'email_date'])
+  const paymentTimeCol = col(['payment time', 'payment_time', 'hora'])
+  const messageIdCol = col(['message id', 'message_id'])
+
+  const emailToPayments = new Map()
+  const phoneToPayments = new Map()
+
+  for (let r = 1; r < data.length; r++) {
+    const row = data[r]
+    const rawAmount = amountCol !== -1 ? row[amountCol] : ''
+    const amount = parseAmountNumber(rawAmount)
+    const email = senderEmailCol !== -1 ? normalizeEmail(row[senderEmailCol]) : ''
+    const phone = senderPhoneCol !== -1 ? normalizePhone(row[senderPhoneCol]) : ''
+    let when = null
+    const dt = paymentDateTimeCol !== -1 ? row[paymentDateTimeCol] : null
+    if (dt instanceof Date && !isNaN(dt)) when = dt
+    if (!when && paymentDateCol !== -1) {
+      const d = row[paymentDateCol]
+      if (d instanceof Date && !isNaN(d)) {
+        when = d
+        if (paymentTimeCol !== -1) {
+          // best effort: if time is a string, Date parsing handles it poorly; ignore to keep logic simple
+        }
+      } else if (typeof d === 'string' && d) {
+        const parsed = new Date(d)
+        if (!isNaN(parsed)) when = parsed
+      }
+    }
+    if (!when && emailDateCol !== -1) {
+      const ed = row[emailDateCol]
+      if (ed instanceof Date && !isNaN(ed)) when = ed
+    }
+    const messageId = messageIdCol !== -1 ? String(row[messageIdCol] || '') : ''
+
+    if (!email && !phone) continue
+    if (!when) continue
+
+    const p = { date: when, amount, messageId, kind: 'AUTO' }
+    if (email) {
+      const arr = emailToPayments.get(email) || []
+      arr.push(p)
+      emailToPayments.set(email, arr)
+    }
+    if (phone) {
+      const arr = phoneToPayments.get(phone) || []
+      arr.push(p)
+      phoneToPayments.set(phone, arr)
+    }
+  }
+
+  // Include MANUAL_PAYMENTS (optional sheet)
+  const manualSheet = spreadsheet.getSheetByName('MANUAL_PAYMENTS')
+  if (manualSheet) {
+    const mData = manualSheet.getDataRange().getValues()
+    if (mData && mData.length > 1) {
+      const mHeaders = mData[0].map((h) =>
+        String(h || '')
+          .trim()
+          .toLowerCase()
+      )
+      const mCol = (cands) => {
+        for (let i = 0; i < mHeaders.length; i++) {
+          if (cands.includes(mHeaders[i])) return i
+        }
+        return -1
+      }
+      const mEmailCol = mCol(['e-mail', 'email'])
+      const mPhoneCol = mCol(['teléfono', 'telefono', 'phone', 'tel'])
+      const mAmountCol = mCol(['amount', 'monto', 'cantidad'])
+      const mDateCol = mCol(['date', 'fecha'])
+      const mTypeCol = mCol(['payment_type'])
+      for (let r = 1; r < mData.length; r++) {
+        const row = mData[r]
+        const email = mEmailCol !== -1 ? normalizeEmail(row[mEmailCol]) : ''
+        const phone = mPhoneCol !== -1 ? normalizePhone(row[mPhoneCol]) : ''
+        let when = null
+        const d = mDateCol !== -1 ? row[mDateCol] : null
+        if (d instanceof Date && !isNaN(d)) when = d
+        else if (typeof d === 'string' && d) {
+          const parsed = new Date(d)
+          if (!isNaN(parsed)) when = parsed
+        }
+        const rawAmount = mAmountCol !== -1 ? row[mAmountCol] : ''
+        const amount = parseAmountNumber(rawAmount)
+        const ptype =
+          mTypeCol !== -1
+            ? String(row[mTypeCol] || '')
+                .trim()
+                .toUpperCase()
+            : ''
+        if (!email && !phone) continue
+        if (!when) continue
+        const p = { date: when, amount, messageId: '', kind: ptype === 'GIFT' ? 'GIFT' : 'MANUAL' }
+        if (email) {
+          const arr = emailToPayments.get(email) || []
+          arr.push(p)
+          emailToPayments.set(email, arr)
+        }
+        if (phone) {
+          const arr = phoneToPayments.get(phone) || []
+          arr.push(p)
+          phoneToPayments.set(phone, arr)
+        }
+      }
+    }
+  }
+
+  return { emailToPayments, phoneToPayments }
+}
+
+function parseAmountNumber(value) {
+  if (value === null || value === undefined) return NaN
+  if (typeof value === 'number') return value
+  const txt = String(value)
+    .replace(/[^0-9.,-]/g, '')
+    .replace(/,/g, '')
+  const num = parseFloat(txt)
+  return isNaN(num) ? NaN : num
+}
+
+function getMembershipStatusForMember(input, options) {
+  // input: { sacEmail?, personalEmail?, phone? }
+  // options: { spreadsheet?, paymentsIndex?, membershipFee? }
+  const membershipFee = options && options.membershipFee ? options.membershipFee : MEMBERSHIP_FEE
+  const spreadsheet =
+    options && options.spreadsheet ? options.spreadsheet : SpreadsheetApp.openById(SPREADSHEET_ID)
+  const paymentsIndex =
+    options && options.paymentsIndex ? options.paymentsIndex : buildPaymentsIndex(spreadsheet)
+  const now = new Date()
+
+  const sac = normalizeEmail(input && input.sacEmail)
+  const personal = normalizeEmail(input && input.personalEmail)
+  const phoneKey = normalizePhone(input && input.phone)
+
+  // Collect candidate payments once, dedup by messageId
+  const candidates = []
+  const seen = new Set()
+
+  const pushPayments = (arr) => {
+    if (!arr) return
+    for (let i = 0; i < arr.length; i++) {
+      const p = arr[i]
+      const id = p.messageId || `${p.date.getTime()}-${p.amount}`
+      if (!seen.has(id)) {
+        candidates.push(p)
+        seen.add(id)
+      }
+    }
+  }
+
+  if (sac && paymentsIndex.emailToPayments.has(sac))
+    pushPayments(paymentsIndex.emailToPayments.get(sac))
+  if (personal && paymentsIndex.emailToPayments.has(personal))
+    pushPayments(paymentsIndex.emailToPayments.get(personal))
+  if (phoneKey && paymentsIndex.phoneToPayments.has(phoneKey))
+    pushPayments(paymentsIndex.phoneToPayments.get(phoneKey))
+
+  if (candidates.length === 0) {
+    return {
+      status: MEMBERSHIP_STATUS.NO_PAYMENT,
+      reason: 'No valid membership payments found',
+      lastValidPayment: null,
+    }
+  }
+
+  // Find latest valid payment across all time
+  let latestValid = null
+  for (let i = 0; i < candidates.length; i++) {
+    const p = candidates[i]
+    const isGift = p.kind === 'GIFT'
+    const amountOk = typeof p.amount === 'number' && p.amount === membershipFee
+    if (isGift || amountOk) {
+      if (!latestValid || p.date > latestValid.date) latestValid = p
+    }
+  }
+
+  if (!latestValid) {
+    return {
+      status: MEMBERSHIP_STATUS.NO_PAYMENT,
+      reason: 'Payments exist but none with required fee',
+      lastValidPayment: null,
+    }
+  }
+
+  // Rolling one-year validity: now < (lastValid + 1 year) => ACTIVE
+  const until = new Date(latestValid.date.getTime())
+  until.setFullYear(until.getFullYear() + 1)
+  const isActive = now < until
+
+  return {
+    status: isActive ? MEMBERSHIP_STATUS.ACTIVE : MEMBERSHIP_STATUS.EXPIRED,
+    reason: '',
+    lastValidPayment: {
+      message_id: latestValid.messageId || '',
+      date: latestValid.date,
+      amount: latestValid.amount,
+    },
+  }
+}
+
+function ensureMembershipStatusSheet(spreadsheet) {
+  let sheet = spreadsheet.getSheetByName('MEMBERSHIP_STATUS')
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet('MEMBERSHIP_STATUS')
+    sheet
+      .getRange(1, 1, 1, 7)
+      .setValues([
+        [
+          'Nombre',
+          'Inicial',
+          'Apellidos',
+          'E-mail',
+          'Teléfono',
+          'membership_status',
+          'last_checked',
+        ],
+      ])
+  }
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+  // Normalize headers map for lookups
+  const norm = headers.map((h) =>
+    String(h || '')
+      .trim()
+      .toLowerCase()
+  )
+  const idx = (name) => norm.indexOf(String(name || '').toLowerCase())
+  return {
+    sheet,
+    headers,
+    columns: {
+      nombre: idx('nombre'),
+      inicial: idx('inicial'),
+      apellidos: idx('apellidos'),
+      email: idx('e-mail'),
+      telefono: idx('teléfono') !== -1 ? idx('teléfono') : idx('telefono'),
+      status: idx('membership_status'),
+      lastChecked: idx('last_checked'),
     },
   }
 }
@@ -519,74 +798,6 @@ function manual_reconcileCleanWithWorkspace() {
   )
 }
 
-let MANUAL_PAYMENT_SEARCH_WINDOW_RANGE = '' // e.g. '30' for 0-30 days, '30-60' for 30-60 days
-function manual_reconcilePaymentsFromEmail() {
-  setupServices({})
-
-  // Build time window query: supports 'N' (0..N days) or 'A-B' (A..B days)
-  let queryTime = ''
-  const rangeStr = String(MANUAL_PAYMENT_SEARCH_WINDOW_RANGE || '').trim()
-  if (rangeStr) {
-    const parts = rangeStr
-      .split('-')
-      .map((p) => parseInt(p.trim(), 10))
-      .filter((n) => !isNaN(n) && n > 0)
-    if (parts.length === 1) {
-      queryTime = `newer_than:${parts[0]}d`
-    } else if (parts.length >= 2) {
-      // Gmail doesn't support older_than+newer_than combined on the same query reliably per docs,
-      // but in practice we can AND them together.
-      const a = Math.min(parts[0], parts[1])
-      const b = Math.max(parts[0], parts[1])
-      queryTime = `newer_than:${b}d older_than:${a}d`
-    }
-  }
-  const query = `from:${EMAIL_FILTER_SENDER} to:${EMAIL_FILTER_RECEIVER} subject:${EMAIL_FILTER_SUBJECT_CONTAINS} ${queryTime}`
-
-  let threads = []
-  try {
-    threads = gmailApp.search(query)
-  } catch (e) {
-    logger.log(`[ERROR] manual_reconcilePaymentsFromEmail search failed: ${e.message}`)
-    return
-  }
-
-  let scannedThreads = 0
-  let scannedMessages = 0
-  let inserted = 0
-  let duplicates = 0
-
-  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID)
-  const paymentsSheet = spreadsheet.getSheetByName('PAYMENTS')
-  if (!paymentsSheet) {
-    throw new Error('PAYMENTS sheet not found in target spreadsheet. This must exist.')
-  }
-
-  threads.forEach((thread) => {
-    scannedThreads++
-    const messages = thread.getMessages()
-    messages.forEach((msg) => {
-      scannedMessages++
-      try {
-        const messageId = msg.getId()
-        if (findExistingPayment(paymentsSheet, messageId)) {
-          duplicates++
-          return
-        }
-        const paymentData = extractPaymentData(msg)
-        insertPaymentRecord(paymentsSheet, paymentData)
-        inserted++
-      } catch (e) {
-        logger.log(`[ERROR] manual_reconcilePaymentsFromEmail failed on message: ${e.message}`)
-      }
-    })
-  })
-
-  logger.log(
-    `manual_reconcilePaymentsFromEmail summary: threads=${scannedThreads}, messages=${scannedMessages}, inserted=${inserted}, duplicates=${duplicates}`
-  )
-}
-
 function manual_validateNewUsersExists() {
   setupServices({})
 
@@ -705,6 +916,226 @@ function manual_validateNewUsersExists() {
   if (notFoundUsers.length > 0) {
     logger.log('[WARN] Not found users may need to be added to CLEAN manually')
   }
+}
+
+function manual_membershipStatusCheck() {
+  setupServices({})
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID)
+  const cleanSheet = spreadsheet.getSheetByName('CLEAN')
+  if (!cleanSheet) {
+    logger.log('CLEAN sheet not found for membership status logging')
+    return
+  }
+  const paymentsIndex = buildPaymentsIndex(spreadsheet)
+  const statusSheetInfo = ensureMembershipStatusSheet(spreadsheet)
+  const statusSheet = statusSheetInfo.sheet
+  const statusHeaders = statusSheetInfo.headers
+  const statusCols = statusSheetInfo.columns
+  const lastRow = cleanSheet.getLastRow()
+  if (lastRow <= 1) {
+    logger.log('CLEAN sheet has no data rows to process')
+    return
+  }
+  const headers = cleanSheet.getRange(1, 1, 1, cleanSheet.getLastColumn()).getValues()[0]
+  const norm = headers.map((h) =>
+    String(h || '')
+      .trim()
+      .toLowerCase()
+  )
+  const col = (cands) => {
+    for (let i = 0; i < norm.length; i++) {
+      if (cands.includes(norm[i])) return i
+    }
+    return -1
+  }
+  const firstNameIdx = col(['nombre', 'first name', 'first_name'])
+  const initialIdx = col(['inicial', 'initial'])
+  const fullLastNameIdx = col(['apellidos', 'last name', 'last_name'])
+  const sacEmailIdx = headers.indexOf('sac_email')
+  const personalEmailIdx = col(['e-mail', 'email'])
+  const phoneIdx = findPhoneColumnIndex(headers)
+
+  let processed = 0
+  let active = 0
+  let expired = 0
+  let noPayment = 0
+  let startRow = 2
+  let endRow = lastRow
+  if (MANUAL_OVERRIDE_RANGE) {
+    const parts = MANUAL_OVERRIDE_RANGE.split('-')
+      .map((part) => part.trim())
+      .filter(Boolean)
+    if (parts.length > 0) {
+      const parsedStart = parseInt(parts[0], 10)
+      if (!isNaN(parsedStart)) startRow = Math.max(2, parsedStart)
+    }
+    if (parts.length > 1) {
+      const parsedEnd = parseInt(parts[1], 10)
+      if (!isNaN(parsedEnd)) endRow = Math.min(lastRow, parsedEnd)
+    }
+  }
+  if (endRow < startRow) {
+    logger.log(`Membership logging aborted: invalid range ${startRow}-${endRow}`)
+    return
+  }
+
+  // Build lookup maps for upsert in MEMBERSHIP_STATUS
+  const statusData = statusSheet.getDataRange().getValues()
+  const emailToRow = new Map()
+  const phoneToRow = new Map()
+  if (statusData && statusData.length > 1) {
+    for (let r = 1; r < statusData.length; r++) {
+      const row = statusData[r]
+      const emailVal =
+        statusCols.email !== -1
+          ? String(row[statusCols.email] || '')
+              .trim()
+              .toLowerCase()
+          : ''
+      const telVal = statusCols.telefono !== -1 ? normalizePhone(row[statusCols.telefono]) : ''
+      if (emailVal) emailToRow.set(emailVal, r + 1) // 1-based row
+      if (telVal) phoneToRow.set(telVal, r + 1)
+    }
+  }
+
+  for (let row = startRow; row <= endRow; row++) {
+    try {
+      const rowValues = cleanSheet.getRange(row, 1, 1, cleanSheet.getLastColumn()).getValues()[0]
+      const firstName = firstNameIdx !== -1 ? String(rowValues[firstNameIdx] || '').trim() : ''
+      const initial = initialIdx !== -1 ? String(rowValues[initialIdx] || '').trim() : ''
+      const fullLastName =
+        fullLastNameIdx !== -1 ? String(rowValues[fullLastNameIdx] || '').trim() : ''
+      const sacEmail =
+        sacEmailIdx !== -1
+          ? String(rowValues[sacEmailIdx] || '')
+              .trim()
+              .toLowerCase()
+          : ''
+      const personalEmail =
+        personalEmailIdx !== -1
+          ? String(rowValues[personalEmailIdx] || '')
+              .trim()
+              .toLowerCase()
+          : ''
+      const phone = phoneIdx !== -1 ? normalizePhone(rowValues[phoneIdx]) : ''
+
+      const displayName = `${firstName || ''} ${fullLastName || ''}`.trim() || '[unknown]'
+      const status = getMembershipStatusForMember(
+        { sacEmail, personalEmail, phone },
+        { spreadsheet, paymentsIndex }
+      )
+
+      if (status && status.status) {
+        if (status.status === MEMBERSHIP_STATUS.ACTIVE) active++
+        else if (status.status === MEMBERSHIP_STATUS.EXPIRED) expired++
+        else if (status.status === MEMBERSHIP_STATUS.NO_PAYMENT) noPayment++
+      }
+
+      // Prepare upsert payload aligned to MEMBERSHIP_STATUS headers
+      const emailForKey = sacEmail || personalEmail || ''
+      const phoneForKey = phone || ''
+      const payload = new Array(statusHeaders.length).fill('')
+      if (statusCols.nombre !== -1) payload[statusCols.nombre] = firstName
+      if (statusCols.inicial !== -1) payload[statusCols.inicial] = initial
+      if (statusCols.apellidos !== -1) payload[statusCols.apellidos] = fullLastName
+      if (statusCols.email !== -1) payload[statusCols.email] = emailForKey
+      if (statusCols.telefono !== -1) payload[statusCols.telefono] = phoneForKey
+      if (statusCols.status !== -1) payload[statusCols.status] = status.status || ''
+      if (statusCols.lastChecked !== -1) payload[statusCols.lastChecked] = new Date()
+
+      // Find existing row by email, else phone
+      let targetRow = null
+      if (emailForKey && emailToRow.has(emailForKey)) {
+        targetRow = emailToRow.get(emailForKey)
+      } else if (!emailForKey && phoneForKey && phoneToRow.has(phoneForKey)) {
+        targetRow = phoneToRow.get(phoneForKey)
+      }
+
+      if (targetRow) {
+        statusSheet.getRange(targetRow, 1, 1, payload.length).setValues([payload])
+      } else {
+        statusSheet.appendRow(payload)
+        const newRowNum = statusSheet.getLastRow()
+        if (emailForKey) emailToRow.set(emailForKey, newRowNum)
+        else if (phoneForKey) phoneToRow.set(phoneForKey, newRowNum)
+      }
+
+      processed++
+    } catch (e) {
+      logger.log(`Error logging membership for CLEAN row ${row}: ${e.message}`)
+    }
+  }
+  logger.log(
+    `Membership status logging completed: processed=${processed}, ACTIVE=${active}, EXPIRED=${expired}, NO_PAYMENT=${noPayment}`
+  )
+}
+
+let MANUAL_PAYMENT_SEARCH_WINDOW_RANGE = '' // e.g. '30' for 0-30 days, '30-60' for 30-60 days
+function manual_reconcilePaymentsFromEmail() {
+  setupServices({})
+
+  // Build time window query: supports 'N' (0..N days) or 'A-B' (A..B days)
+  let queryTime = ''
+  const rangeStr = String(MANUAL_PAYMENT_SEARCH_WINDOW_RANGE || '').trim()
+  if (rangeStr) {
+    const parts = rangeStr
+      .split('-')
+      .map((p) => parseInt(p.trim(), 10))
+      .filter((n) => !isNaN(n) && n > 0)
+    if (parts.length === 1) {
+      queryTime = `newer_than:${parts[0]}d`
+    } else if (parts.length >= 2) {
+      // Gmail doesn't support older_than+newer_than combined on the same query reliably per docs,
+      // but in practice we can AND them together.
+      const a = Math.min(parts[0], parts[1])
+      const b = Math.max(parts[0], parts[1])
+      queryTime = `newer_than:${b}d older_than:${a}d`
+    }
+  }
+  const query = `from:${EMAIL_FILTER_SENDER} to:${EMAIL_FILTER_RECEIVER} subject:${EMAIL_FILTER_SUBJECT_CONTAINS} ${queryTime}`
+
+  let threads = []
+  try {
+    threads = gmailApp.search(query)
+  } catch (e) {
+    logger.log(`[ERROR] manual_reconcilePaymentsFromEmail search failed: ${e.message}`)
+    return
+  }
+
+  let scannedThreads = 0
+  let scannedMessages = 0
+  let inserted = 0
+  let duplicates = 0
+
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID)
+  const paymentsSheet = spreadsheet.getSheetByName('PAYMENTS')
+  if (!paymentsSheet) {
+    throw new Error('PAYMENTS sheet not found in target spreadsheet. This must exist.')
+  }
+
+  threads.forEach((thread) => {
+    scannedThreads++
+    const messages = thread.getMessages()
+    messages.forEach((msg) => {
+      scannedMessages++
+      try {
+        const messageId = msg.getId()
+        if (findExistingPayment(paymentsSheet, messageId)) {
+          duplicates++
+          return
+        }
+        const paymentData = extractPaymentData(msg)
+        insertPaymentRecord(paymentsSheet, paymentData)
+        inserted++
+      } catch (e) {
+        logger.log(`[ERROR] manual_reconcilePaymentsFromEmail failed on message: ${e.message}`)
+      }
+    })
+  })
+
+  logger.log(
+    `manual_reconcilePaymentsFromEmail summary: threads=${scannedThreads}, messages=${scannedMessages}, inserted=${inserted}, duplicates=${duplicates}`
+  )
 }
 // #endregion
 
