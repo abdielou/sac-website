@@ -331,7 +331,6 @@ function getMembershipStatusForMember(input, options) {
     options && options.paymentsIndex ? options.paymentsIndex : buildPaymentsIndex(spreadsheet)
   const now = new Date()
 
-  const sac = normalizeEmail(input && input.sacEmail)
   const personal = normalizeEmail(input && input.personalEmail)
   const phoneKey = normalizePhone(input && input.phone)
 
@@ -351,8 +350,6 @@ function getMembershipStatusForMember(input, options) {
     }
   }
 
-  if (sac && paymentsIndex.emailToPayments.has(sac))
-    pushPayments(paymentsIndex.emailToPayments.get(sac))
   if (personal && paymentsIndex.emailToPayments.has(personal))
     pushPayments(paymentsIndex.emailToPayments.get(personal))
   if (phoneKey && paymentsIndex.phoneToPayments.has(phoneKey))
@@ -1032,13 +1029,13 @@ function manual_membershipStatusCheck() {
       }
 
       // Prepare upsert payload aligned to MEMBERSHIP_STATUS headers
-      const emailForKey = sacEmail || personalEmail || ''
+      const emailForKey = personalEmail || ''
       const phoneForKey = phone || ''
       const payload = new Array(statusHeaders.length).fill('')
       if (statusCols.nombre !== -1) payload[statusCols.nombre] = firstName
       if (statusCols.inicial !== -1) payload[statusCols.inicial] = initial
       if (statusCols.apellidos !== -1) payload[statusCols.apellidos] = fullLastName
-      if (statusCols.email !== -1) payload[statusCols.email] = emailForKey
+      if (statusCols.email !== -1) payload[statusCols.email] = personalEmail || ''
       if (statusCols.telefono !== -1) payload[statusCols.telefono] = phoneForKey
       if (statusCols.status !== -1) payload[statusCols.status] = status.status || ''
       if (statusCols.lastChecked !== -1) payload[statusCols.lastChecked] = new Date()
