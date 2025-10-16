@@ -293,7 +293,12 @@ function buildPaymentsIndex(spreadsheet) {
             : ''
         if (!email && !phone) continue
         if (!when) continue
-        const p = { date: when, amount, messageId: '', kind: ptype === 'GIFT' ? 'GIFT' : 'MANUAL' }
+        const p = {
+          date: when,
+          amount,
+          messageId: '',
+          kind: ptype === MANUAL_PAYMENT_TYPE.GIFT ? 'GIFT' : 'MANUAL',
+        }
         if (email) {
           const arr = emailToPayments.get(email) || []
           arr.push(p)
@@ -367,7 +372,7 @@ function getMembershipStatusForMember(input, options) {
   let latestValid = null
   for (let i = 0; i < candidates.length; i++) {
     const p = candidates[i]
-    const isGift = p.kind === 'GIFT'
+    const isGift = p.kind === MANUAL_PAYMENT_TYPE.GIFT || p.kind === 'GIFT'
     const amountOk = typeof p.amount === 'number' && p.amount === membershipFee
     if (isGift || amountOk) {
       if (!latestValid || p.date > latestValid.date) latestValid = p
@@ -913,9 +918,9 @@ function manual_validateNewUsersExists() {
           { spreadsheet, paymentsIndex }
         )
         if (status && status.status === MEMBERSHIP_STATUS.ACTIVE) {
-          withValidPayments.push(`${displayName} (${personalEmail}) [row ${row}]`)
+          withValidPayments.push({ email: personalEmail, phone })
         } else {
-          withoutValidPayments.push(`${displayName} (${personalEmail}) [row ${row}]`)
+          withoutValidPayments.push({ email: personalEmail, phone })
         }
       } catch (e) {
         logger.log(`Payment status check failed for ${personalEmail} at row ${row}: ${e.message}`)
@@ -931,11 +936,13 @@ function manual_validateNewUsersExists() {
     `USERS NOT FOUND IN CLEAN: ${notFoundUsers.length} ${notFoundUsers.join(', ') || 'none'}`
   )
   logger.log(`USERS WITH VALID PAYMENTS: ${withValidPayments.length}`)
-  logger.log(
-    `USERS WITHOUT VALID PAYMENTS: ${withoutValidPayments.length} ${
-      withoutValidPayments.join(', ') || 'none'
-    }`
-  )
+  logger.log(`USERS WITHOUT VALID PAYMENTS: ${withoutValidPayments.length}`)
+  for (let i = 0; i < withoutValidPayments.length; i++) {
+    const u = withoutValidPayments[i]
+    const emailStr = u.email || ''
+    const phoneStr = u.phone || ''
+    logger.log(`${emailStr}${emailStr && phoneStr ? ' ' : ''}${phoneStr}`)
+  }
 
   if (notFoundUsers.length > 0) {
     logger.log('[WARN] Not found users may need to be added to CLEAN manually')
@@ -1284,7 +1291,7 @@ function manual_reconcileRenewal() {
         if (mPhoneCol !== -1) payload[mPhoneCol] = targetPhone
         if (mAmountCol !== -1) payload[mAmountCol] = MEMBERSHIP_FEE
         if (mDateCol !== -1) payload[mDateCol] = now
-        if (mTypeCol !== -1) payload[mTypeCol] = 'ADJUSTMENT'
+        if (mTypeCol !== -1) payload[mTypeCol] = MANUAL_PAYMENT_TYPE.ADJUSTMENT
         if (mNotesCol !== -1) payload[mNotesCol] = 'reconciliation via manual_reconcileRenewal'
         manualSheet.appendRow(payload)
         manualInserted++
@@ -1390,6 +1397,12 @@ const SAC_DOMAIN = '@sociedadastronomia.com'
 // Renewal reconciliation explicit scope
 const RENEWAL_YEAR = 2025
 const RENEWAL_SHEET_NAME = 'RENEWAL_MEMBERS_2025'
+// Manual payments enum for sheet column payment_type
+const MANUAL_PAYMENT_TYPE = Object.freeze({
+  GIFT: 'GIFT',
+  ADJUSTMENT: 'ADJUSTMENT',
+  INTERNAL: 'INTERNAL',
+})
 // #endregion
 
 // #region Entry Points - Real
