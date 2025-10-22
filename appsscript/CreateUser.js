@@ -219,14 +219,9 @@ function buildPaymentsIndex(spreadsheet) {
     if (dt instanceof Date && !isNaN(dt)) when = dt
     if (!when && paymentDateCol !== -1) {
       const d = row[paymentDateCol]
-      if (d instanceof Date && !isNaN(d)) {
-        when = d
-        if (paymentTimeCol !== -1) {
-          // best effort: if time is a string, Date parsing handles it poorly; ignore to keep logic simple
-        }
-      } else if (typeof d === 'string' && d) {
-        const parsed = new Date(d)
-        if (!isNaN(parsed)) when = parsed
+      if (d instanceof Date && !isNaN(d)) when = d
+      if (paymentTimeCol !== -1) {
+        // best effort: if time is a string, Date parsing handles it poorly; ignore to keep logic simple
       }
     }
     if (!when && emailDateCol !== -1) {
@@ -579,6 +574,7 @@ function manual_normalizePhonesInClean() {
   )
 }
 
+const ENABLE_WORKSPACE_ADDITION = false
 function manual_reconcileCleanWithWorkspace() {
   setupServices({})
 
@@ -661,6 +657,52 @@ function manual_reconcileCleanWithWorkspace() {
   let processed = 0
   let matched = 0
   let updated = 0
+  // New counters
+  let withSacEmails = 0
+  let activeNoSac = 0
+  let noPaymentWithSac = 0
+  let noPaymentNoSac = 0
+
+  // Load MEMBERSHIP_STATUS for lookups (optional)
+  const membershipSheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(
+    'MEMBERSHIP_STATUS'
+  )
+  let msEmailCol = -1,
+    msPhoneCol = -1,
+    msStatusCol = -1,
+    msData = []
+  if (membershipSheet) {
+    const msAll = membershipSheet.getDataRange().getValues()
+    if (msAll && msAll.length > 1) {
+      const msHeaders = msAll[0]
+      const msNorm = msHeaders.map((h) =>
+        String(h || '')
+          .trim()
+          .toLowerCase()
+      )
+      const f = (c) => msNorm.indexOf(c)
+      msEmailCol = f('e-mail')
+      msPhoneCol = f('teléfono') !== -1 ? f('teléfono') : f('telefono')
+      msStatusCol = f('membership_status')
+      msData = msAll
+    }
+  }
+  const getMembershipStatus = (email, phone) => {
+    if (!msData.length || msStatusCol === -1) return ''
+    const lcEmail = normalizeEmail(email)
+    const normPhone = normalizePhone(phone)
+    for (let i = 1; i < msData.length; i++) {
+      const row = msData[i]
+      const e = msEmailCol !== -1 ? normalizeEmail(row[msEmailCol]) : ''
+      const p = msPhoneCol !== -1 ? normalizePhone(row[msPhoneCol]) : ''
+      if ((lcEmail && e && lcEmail === e) || (!lcEmail && normPhone && p && normPhone === p)) {
+        return String(row[msStatusCol] || '')
+          .trim()
+          .toUpperCase()
+      }
+    }
+    return ''
+  }
   for (let row = startRow; row <= endRow; row++) {
     try {
       const rowValues = cleanSheet.getRange(row, 1, 1, cleanSheet.getLastColumn()).getValues()[0]
@@ -694,8 +736,13 @@ function manual_reconcileCleanWithWorkspace() {
               .toLowerCase()
           : ''
 
-      // If sac_email already present, skip silently
+      // If sac_email already present, count and evaluate membership status, then skip
       if (existingSac) {
+        withSacEmails++
+        const ms = getMembershipStatus(personalEmail, phone)
+        if (ms && ms !== 'ACTIVE') {
+          noPaymentWithSac++
+        }
         processed++
         continue
       }
@@ -740,16 +787,92 @@ function manual_reconcileCleanWithWorkspace() {
       }
 
       if (!confirmedEmail) {
-        const displayName = `${firstName || ''} ${fullLastName || ''}`.trim()
-        logger.log(`[WARN] User ${displayName || '[unknown name]'} does not exist in the workspace`)
-        processed++
-        continue
+        const ms = getMembershipStatus(personalEmail, phone)
+        if (ms === 'ACTIVE') {
+          const displayName = `${firstName || ''} ${fullLastName || ''}`.trim()
+          const idStr = personalEmail || phone || '[no id]'
+          if (ENABLE_WORKSPACE_ADDITION) {
+            // Attempt to create Workspace user and assign sac_email
+            let lastName = ''
+            let slastName = ''
+            if (fullLastName) {
+              const parts = fullLastName.split(/[\s-]/)
+              lastName = parts[0] || ''
+              slastName = parts[1] || ''
+            }
+            const userData = {
+              firstName: firstName || '',
+              initial: initial || '',
+              lastName,
+              slastName,
+              email: personalEmail || '',
+              phone: normalizePhone(phone || ''),
+            }
+            const accountResult = createUserAccount(userData)
+            if (accountResult && accountResult.success && accountResult.email) {
+              // Write sac_email and created_at
+              cleanSheet.getRange(row, sacEmailIdx + 1).setValue(accountResult.email)
+              if (createdAtIdx !== -1) {
+                cleanSheet.getRange(row, createdAtIdx + 1).setValue(new Date())
+              }
+              // Send simple credentials email to personal email
+              try {
+                const to = personalEmail || ''
+                if (to) {
+                  const subject = 'Tu cuenta SAC / Your SAC account'
+                  const body =
+                    `Hola ${firstName || ''} ${fullLastName || ''},\n\n` +
+                    `Se ha creado tu cuenta de la Sociedad de Astronomía del Caribe.\n` +
+                    `Correo (SAC): ${accountResult.email}\n` +
+                    `Contraseña temporal: ${accountResult.password}\n\n` +
+                    `Primeros pasos:\n` +
+                    `1) Entra a https://mail.google.com\n` +
+                    `2) Accede con tu correo SAC y la contraseña temporal\n` +
+                    `3) El sistema te pedirá cambiarla en el primer inicio de sesión\n\n` +
+                    `Gracias.\n\n` +
+                    `— SAC`
+                  const options = {}
+                  if (CC_EMAIL) options.cc = CC_EMAIL
+                  gmailApp.sendEmail(to, subject, body, options)
+                }
+              } catch (e) {
+                logger.log(`[WARN] Failed to send simple credentials email: ${e.message}`)
+              }
+              withSacEmails++
+              updated++
+              logger.log(
+                `[INFO] Created sac_email for ACTIVE user ${displayName}: ${accountResult.email} (was ${idStr})`
+              )
+              processed++
+              continue
+            } else {
+              logger.log(
+                `[WARN] Failed to create sac_email for ACTIVE user ${displayName} (${idStr}): ${
+                  (accountResult && accountResult.error) || 'unknown error'
+                }`
+              )
+              activeNoSac++
+              processed++
+              continue
+            }
+          } else {
+            logger.log(`[WARN] ACTIVE user without sac_email: ${displayName} (${idStr})`)
+            activeNoSac++
+            processed++
+            continue
+          }
+        } else {
+          noPaymentNoSac++
+          processed++
+          continue
+        }
       }
 
       matched++
 
       // Write sac_email immediately
       cleanSheet.getRange(row, sacEmailIdx + 1).setValue(confirmedEmail)
+      withSacEmails++
 
       // Fetch user to obtain creation date; prefer reusing object from last check if available
       let userForDate = null
@@ -797,6 +920,9 @@ function manual_reconcileCleanWithWorkspace() {
 
   logger.log(
     `Manual reconcile completed: processed=${processed}, matched=${matched}, updated=${updated}`
+  )
+  logger.log(
+    `Manual reconcile membership summary: with_sac_emails=${withSacEmails}, active_no_sac=${activeNoSac}, no_payment_with_sac=${noPaymentWithSac}, no_payment_no_sac=${noPaymentNoSac}`
   )
 }
 
@@ -1377,6 +1503,14 @@ function manual_reconcilePaymentsFromEmail() {
 }
 // #endregion
 
+// #region Script Properties
+let NOTIFICATION_EMAIL // Notification email address
+let CC_EMAIL // CC email address used when sending welcom email and simple credentials email
+let MEMBERSHIP_CERTIFICATE_TEMPLATE_ID // Membership certificate template ID
+let WELCOME_LETTER_TEMPLATE_ID // Welcome letter template ID
+let SPREADSHEET_ID // Spreadsheet ID
+// #endregion
+
 // #region Global service variables
 let logger
 let workspaceDirectory
@@ -1384,11 +1518,6 @@ let gmailApp
 let driveApp
 let utilities
 let documentApp
-let NOTIFICATION_EMAIL = 'abdiel.aviles@sociedadastronomia.com'
-let CC_EMAIL = '' //'rafael.emmanuelli@sociedadastronomia.com'
-const MEMBERSHIP_CERTIFICATE_TEMPLATE_ID = '15c_hbWVzQB5g-k93JRTQqhmJy3d3kz6r-g0fCN_OR14'
-const WELCOME_LETTER_TEMPLATE_ID = '1A8kQTpqcDC7YyU7C3Cr9UNE-4wED5RBGSMxQD4C5tYA'
-const SPREADSHEET_ID = '1-wdja5GQP5q5IQPloxjDTgJO1w2gS_spQK_IfFc5NNQ'
 const EMAIL_FILTER_SENDER = 'finance@sociedadastronomia.com'
 const EMAIL_FILTER_RECEIVER = 'finance@sociedadastronomia.com'
 const EMAIL_SEARCH_WINDOW_DAYS = 14
@@ -1415,9 +1544,32 @@ function setupServices(services) {
   documentApp = services.documentApp || DocumentApp
   if (typeof services.NOTIFICATION_EMAIL === 'string') {
     NOTIFICATION_EMAIL = services.NOTIFICATION_EMAIL
+  } else {
+    NOTIFICATION_EMAIL =
+      PropertiesService.getScriptProperties().getProperty('NOTIFICATION_EMAIL') || ''
   }
   if (typeof services.CC_EMAIL === 'string') {
     CC_EMAIL = services.CC_EMAIL
+  } else {
+    CC_EMAIL = PropertiesService.getScriptProperties().getProperty('CC_EMAIL') || ''
+  }
+  if (typeof services.MEMBERSHIP_CERTIFICATE_TEMPLATE_ID === 'string') {
+    MEMBERSHIP_CERTIFICATE_TEMPLATE_ID = services.MEMBERSHIP_CERTIFICATE_TEMPLATE_ID
+  } else {
+    MEMBERSHIP_CERTIFICATE_TEMPLATE_ID =
+      PropertiesService.getScriptProperties().getProperty('MEMBERSHIP_CERTIFICATE_TEMPLATE_ID') ||
+      ''
+  }
+  if (typeof services.WELCOME_LETTER_TEMPLATE_ID === 'string') {
+    WELCOME_LETTER_TEMPLATE_ID = services.WELCOME_LETTER_TEMPLATE_ID
+  } else {
+    WELCOME_LETTER_TEMPLATE_ID =
+      PropertiesService.getScriptProperties().getProperty('WELCOME_LETTER_TEMPLATE_ID') || ''
+  }
+  if (typeof services.SPREADSHEET_ID === 'string') {
+    SPREADSHEET_ID = services.SPREADSHEET_ID
+  } else {
+    SPREADSHEET_ID = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID') || ''
   }
 }
 
@@ -2096,7 +2248,7 @@ function createEmail(firstName, initial, lastName, slastName) {
   )
 
   for (const username of emailCombinations) {
-    const sacEmail = `${username}${domain}`
+    const sacEmail = String(username).includes('@') ? username : `${username}${domain}`
     if (!checkUserExists(sacEmail)) {
       logger.log(`Unique email created: ${sacEmail}`)
       return sacEmail
