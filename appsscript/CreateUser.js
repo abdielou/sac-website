@@ -833,6 +833,7 @@ function manual_reconcileCleanWithWorkspace() {
                     `— SAC`
                   const options = {}
                   if (CC_EMAIL) options.cc = CC_EMAIL
+                  if (BCC_EMAIL) options.bcc = BCC_EMAIL
                   gmailApp.sendEmail(to, subject, body, options)
                 }
               } catch (e) {
@@ -1506,6 +1507,7 @@ function manual_reconcilePaymentsFromEmail() {
 // #region Script Properties
 let NOTIFICATION_EMAIL // Notification email address
 let CC_EMAIL // CC email address used when sending welcom email and simple credentials email
+let BCC_EMAIL // BCC email address used when sending welcom email and simple credentials email
 let MEMBERSHIP_CERTIFICATE_TEMPLATE_ID // Membership certificate template ID
 let WELCOME_LETTER_TEMPLATE_ID // Welcome letter template ID
 let SPREADSHEET_ID // Spreadsheet ID
@@ -1552,6 +1554,11 @@ function setupServices(services) {
     CC_EMAIL = services.CC_EMAIL
   } else {
     CC_EMAIL = PropertiesService.getScriptProperties().getProperty('CC_EMAIL') || ''
+  }
+  if (typeof services.BCC_EMAIL === 'string') {
+    BCC_EMAIL = services.BCC_EMAIL
+  } else {
+    BCC_EMAIL = PropertiesService.getScriptProperties().getProperty('BCC_EMAIL') || ''
   }
   if (typeof services.MEMBERSHIP_CERTIFICATE_TEMPLATE_ID === 'string') {
     MEMBERSHIP_CERTIFICATE_TEMPLATE_ID = services.MEMBERSHIP_CERTIFICATE_TEMPLATE_ID
@@ -2388,6 +2395,9 @@ function sendWelcomeEmail(accountData) {
     const emailOptions = { attachments: [certificatePdf, welcomeLetterPdf] }
     if (CC_EMAIL) {
       emailOptions.cc = CC_EMAIL
+    }
+    if (BCC_EMAIL) {
+      emailOptions.bcc = BCC_EMAIL
     }
 
     gmailApp.sendEmail(
