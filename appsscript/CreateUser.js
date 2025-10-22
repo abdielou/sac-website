@@ -443,6 +443,25 @@ function ensureMembershipStatusSheet(spreadsheet) {
 // #region Manual Overrides
 let MANUAL_OVERRIDE_RANGE = '' // Manual override range, e.g. '5-15'
 
+function manual_sendTestEmail() {
+  setupServices({})
+  // Use a template that delivers to NOTIFICATION_EMAIL to test lazy loading
+  const userData = {
+    firstName: 'Test',
+    initial: '',
+    lastName: 'User',
+    slastName: '',
+    email: 'test@example.com',
+    phone: '',
+  }
+  const result = sendTemplatedEmail('EMAIL_CREATION_FAILURE', userData)
+  if (result.success) {
+    Logger.log('Test template email sent successfully (lazy load verified)')
+  } else {
+    Logger.log('Test template email failed: ' + result.error)
+  }
+}
+
 function manual_reprocessRawSheet() {
   setupServices({})
 
@@ -2154,7 +2173,12 @@ function handlePaymentRecorded(paymentsSheet, cleanSheet, row) {
     `Account Email: ${accountResult.email}\n` +
     `Personal Email: ${senderEmail}\n` +
     `Phone: ${phone}`
-  gmailApp.sendEmail(NOTIFICATION_EMAIL, adminSubject, adminBody)
+  const adminRecipient = (NOTIFICATION_EMAIL || '').trim()
+  if (adminRecipient) {
+    gmailApp.sendEmail(adminRecipient, adminSubject, adminBody)
+  } else {
+    logger.log('Admin notification not sent: NOTIFICATION_EMAIL is not set')
+  }
 
   // 7. Mark user as created in CLEAN sheet
   const createdAtIndex = cleanHeaders.indexOf('created_at')
@@ -3042,7 +3066,14 @@ function sendTemplatedEmail(templateId, data, options = {}) {
       return { success: false, error: 'Template not found' }
     }
 
-    const recipient = options.to || template.to
+    // Evaluate template.to if it's a function; otherwise use its value.
+    const templateTo = typeof template.to === 'function' ? template.to(data) : template.to
+    // Resolve recipient at send-time with a fallback to the current NOTIFICATION_EMAIL
+    const recipient = (options.to || templateTo || NOTIFICATION_EMAIL || '').trim()
+    if (!recipient) {
+      logger.log(`Template "${templateId}" not sent: no recipient configured`)
+      return { success: false, error: 'no recipient' }
+    }
     const subject = options.subject || template.subject
     const body = template.bodyGenerator(data)
     const emailOptions = options.emailOptions || {}
