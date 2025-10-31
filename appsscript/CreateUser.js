@@ -2067,7 +2067,19 @@ function handlePaymentRecorded(paymentsSheet, cleanSheet, row) {
 
   let matchedPhone = ''
   if (matchedRow === -1 && phoneColIndex !== -1) {
-    const paymentPhone = getPhoneFromSheetRow(paymentsSheet, row)
+    // Get phone from PAYMENTS sheet's sender_phone column directly
+    const paymentsHeaders = paymentsSheet
+      .getRange(1, 1, 1, paymentsSheet.getLastColumn())
+      .getValues()[0]
+    const senderPhoneColIndex = paymentsHeaders.findIndex(
+      (header) => header && header.toLowerCase().includes('sender_phone')
+    )
+
+    let paymentPhone = null
+    if (senderPhoneColIndex !== -1) {
+      paymentPhone = paymentsSheet.getRange(row, senderPhoneColIndex + 1).getValue()
+    }
+
     const phoneToMatch = normalizePhone(paymentPhone)
     if (phoneToMatch) {
       matchedRow = findMatchingPhoneRow(cleanSheet, phoneColIndex, phoneToMatch)
@@ -2164,6 +2176,32 @@ function handlePaymentRecorded(paymentsSheet, cleanSheet, row) {
   const welcomeResult = sendWelcomeEmail(accountResult)
   if (!welcomeResult.success) {
     logger.log(`Failed to send welcome email: ${welcomeResult.error}`)
+  }
+
+  // 5.1 Send credentials email
+  try {
+    const to = senderEmail // Use the personal email from payment
+    if (to) {
+      const subject = 'Tu cuenta SAC / Your SAC account'
+      const body =
+        `Hola ${firstName} ${fullLastName},\n\n` +
+        `Se ha creado tu cuenta de la Sociedad de Astronomía del Caribe.\n` +
+        `Correo (SAC): ${accountResult.email}\n` +
+        `Contraseña temporal: ${accountResult.password}\n\n` +
+        `Primeros pasos:\n` +
+        `1) Entra a https://mail.google.com\n` +
+        `2) Accede con tu correo SAC y la contraseña temporal\n` +
+        `3) El sistema te pedirá cambiarla en el primer inicio de sesión\n\n` +
+        `Gracias.\n\n` +
+        `— SAC`
+      const options = {}
+      if (CC_EMAIL) options.cc = CC_EMAIL
+      if (BCC_EMAIL) options.bcc = BCC_EMAIL
+      gmailApp.sendEmail(to, subject, body, options)
+      logger.log(`Credentials email sent to ${to} for new workspace account ${accountResult.email}`)
+    }
+  } catch (e) {
+    logger.log(`Failed to send credentials email: ${e.message}`)
   }
 
   // 6. Notify admin of new user account creation
