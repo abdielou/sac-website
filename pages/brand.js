@@ -2,12 +2,13 @@ import Link from '@/components/Link'
 import { PageSEO } from '@/components/SEO'
 import PageTitle from '@/components/PageTitle'
 import Image from 'next/image'
+import siteMetadata from '@/data/siteMetadata'
 
 export default function Brand() {
   const logoVariants = [
     {
       name: 'Logo Principal',
-      description: 'Logo completo de la Sociedad Astronómica de Carolina',
+      description: `Logo completo de la ${siteMetadata.headerTitle}`,
       preview: '/static/brand/Logo/SVG/sac-main-logo.svg',
       background: 'light', // Light background for colored logo
       formats: {
@@ -195,15 +196,15 @@ export default function Brand() {
   return (
     <>
       <PageSEO
-        title="Guías de Marca | Sociedad Astronómica de Carolina"
-        description="Guías completas de marca de la Sociedad Astronómica de Carolina. Descarga logos, colores y recursos para mantener la consistencia de la identidad visual."
+        title={`Guías de Marca | ${siteMetadata.headerTitle}`}
+        description={`Guías completas de marca de la ${siteMetadata.headerTitle}. Descarga logos, colores y recursos para mantener la consistencia de la identidad visual.`}
       />
 
       <div className="divide-y divide-gray-200 dark:divide-gray-700">
         <div className="space-y-2 pb-8 pt-6 md:space-y-5">
           <PageTitle>Guías de Marca</PageTitle>
           <p className="text-lg leading-7 text-gray-500 dark:text-gray-400">
-            Recursos completos para la identidad visual de la Sociedad Astronómica de Carolina
+            Recursos completos para la identidad visual de la {siteMetadata.headerTitle}
           </p>
         </div>
 
