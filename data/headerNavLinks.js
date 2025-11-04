@@ -8,6 +8,7 @@ const headerNavLinks = [
   { href: '/blog', title: 'Blog' },
   // { href: '/gallery', title: 'Galería' },
   { href: '/blog/telescopios', title: 'Guía de Telescopios' },
+  { href: '/brand', title: 'Marca' },
 ]
 
 export default headerNavLinks

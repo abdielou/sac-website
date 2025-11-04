@@ -57,7 +57,7 @@ const LayoutWrapper = ({ children }) => {
               <ThemeSwitch />
               <MobileNav />
             </div>
-            <div className="hidden xl:flex justify-between">
+            <div className="hidden xl:flex justify-center pt-4">
               <NavigationLinks />
             </div>
           </div>
@@ -72,17 +72,35 @@ const LayoutWrapper = ({ children }) => {
 export default LayoutWrapper
 
 const NavigationLinks = () => {
+  const totalLinks = headerNavLinks.length
+  const linksPerRow = Math.ceil(totalLinks / 2)
+  const firstRowLinks = headerNavLinks.slice(0, linksPerRow)
+  const secondRowLinks = headerNavLinks.slice(linksPerRow)
+
   return (
-    <div className="flex flex-wrap justify-center gap-2">
-      {headerNavLinks.map((link) => (
-        <Link
-          key={link.title}
-          href={link.href}
-          className="p-1 font-medium text-gray-900 xl:p-4 md:py-3 dark:text-gray-100"
-        >
-          {link.title}
-        </Link>
-      ))}
+    <div className="flex flex-col gap-0">
+      <div className="flex flex-wrap justify-center gap-4">
+        {firstRowLinks.map((link) => (
+          <Link
+            key={link.title}
+            href={link.href}
+            className="p-1 font-medium text-gray-900 xl:p-4 md:py-3 dark:text-gray-100"
+          >
+            {link.title}
+          </Link>
+        ))}
+      </div>
+      <div className="flex flex-wrap justify-center gap-4">
+        {secondRowLinks.map((link) => (
+          <Link
+            key={link.title}
+            href={link.href}
+            className="p-1 font-medium text-gray-900 xl:p-4 md:py-3 dark:text-gray-100"
+          >
+            {link.title}
+          </Link>
+        ))}
+      </div>
     </div>
   )
 }
