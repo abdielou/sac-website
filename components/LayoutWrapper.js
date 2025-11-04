@@ -9,23 +9,17 @@ import ThemeSwitch from './ThemeSwitch'
 import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
 
-const LayoutWrapper = ({ children }) => {
+const LayoutWrapper = ({ children, forceLightHeader = false }) => {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 
-  const { theme, resolvedTheme } = useTheme('dark')
+  const { theme, resolvedTheme } = useTheme()
+  const show = forceLightHeader || mounted
+  const isLight = forceLightHeader || theme === 'light' || resolvedTheme === 'light'
   const logoShort =
-    mounted &&
-    (theme === 'light' || resolvedTheme === 'light'
-      ? siteMetadata.siteLogoShortLight
-      : siteMetadata.siteLogoShortDark)
-  const logo =
-    mounted &&
-    (theme === 'light' || resolvedTheme === 'light'
-      ? siteMetadata.siteLogoLight
-      : siteMetadata.siteLogoDark)
-  const titleColor =
-    mounted && (theme === 'light' || resolvedTheme === 'light' ? 'text-sac-primary-blue' : '')
+    show && (isLight ? siteMetadata.siteLogoShortLight : siteMetadata.siteLogoShortDark)
+  const logo = show && (isLight ? siteMetadata.siteLogoLight : siteMetadata.siteLogoDark)
+  const titleColor = show && (isLight ? 'text-sac-primary-blue' : '')
   return (
     <SectionContainer>
       <div className="flex flex-col justify-between h-screen">
@@ -34,7 +28,7 @@ const LayoutWrapper = ({ children }) => {
             <div className="flex items-center justify-between">
               <div>
                 <Link href="/" aria-label={siteMetadata.title}>
-                  {mounted && (
+                  {show && (
                     <div className="flex items-center justify-between">
                       <div className="mr-3 hidden sm:block">
                         <Image src={logoShort} alt="SAC Logo" width={200} height={47} />
@@ -54,12 +48,14 @@ const LayoutWrapper = ({ children }) => {
                   )}
                 </Link>
               </div>
-              <ThemeSwitch />
-              <MobileNav />
+              {!forceLightHeader && <ThemeSwitch />}
+              {!forceLightHeader && <MobileNav />}
             </div>
-            <div className="hidden xl:flex justify-center pt-4">
-              <NavigationLinks />
-            </div>
+            {!forceLightHeader && (
+              <div className="hidden xl:flex justify-center pt-4">
+                <NavigationLinks />
+              </div>
+            )}
           </div>
         </header>
         <main className="mb-auto">{children}</main>
