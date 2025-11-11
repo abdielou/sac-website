@@ -843,10 +843,10 @@ function manual_reconcileCleanWithWorkspace() {
                     `Hola ${firstName || ''} ${fullLastName || ''},\n\n` +
                     `Se ha creado tu cuenta de la Sociedad de Astronomía del Caribe.\n` +
                     `Correo (SAC): ${accountResult.email}\n` +
-                    `Contraseña temporal: ${accountResult.password}\n\n` +
+                    `Contraseña temporera: ${accountResult.password}\n\n` +
                     `Primeros pasos:\n` +
                     `1) Entra a https://mail.google.com\n` +
-                    `2) Accede con tu correo SAC y la contraseña temporal\n` +
+                    `2) Accede con tu correo SAC y la contraseña temporera\n` +
                     `3) El sistema te pedirá cambiarla en el primer inicio de sesión\n\n` +
                     `Gracias.\n\n` +
                     `— SAC`
@@ -2187,10 +2187,10 @@ function handlePaymentRecorded(paymentsSheet, cleanSheet, row) {
         `Hola ${firstName} ${fullLastName},\n\n` +
         `Se ha creado tu cuenta de la Sociedad de Astronomía del Caribe.\n` +
         `Correo (SAC): ${accountResult.email}\n` +
-        `Contraseña temporal: ${accountResult.password}\n\n` +
+        `Contraseña temporera: ${accountResult.password}\n\n` +
         `Primeros pasos:\n` +
         `1) Entra a https://mail.google.com\n` +
-        `2) Accede con tu correo SAC y la contraseña temporal\n` +
+        `2) Accede con tu correo SAC y la contraseña temporera\n` +
         `3) El sistema te pedirá cambiarla en el primer inicio de sesión\n\n` +
         `Gracias.\n\n` +
         `— SAC`
