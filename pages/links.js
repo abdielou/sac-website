@@ -76,18 +76,6 @@ const socialLinks = [
     url: 'https://www.youtube.com/@sociedadastronomia',
   },
   {
-    platform: 'Web',
-    image: {
-      src: '/static/images/sac-Asset 28.png',
-      width: 512,
-      height: 512,
-      sizeAdjust: 1,
-    },
-    label: 'Visita nuestra página web',
-    username: 'sociedadastronomia.com',
-    url: '/',
-  },
-  {
     platform: 'Telescope Guide',
     image: {
       src: '/static/images/sac-Asset 20.png',
@@ -98,6 +86,30 @@ const socialLinks = [
     label: 'Telescopios Recomendados',
     username: 'Guía',
     url: '/blog/telescopios',
+  },
+  {
+    platform: 'Weather',
+    image: {
+      src: '/static/images/weather.svg',
+      width: 512,
+      height: 512,
+      sizeAdjust: 1,
+    },
+    label: 'Clima',
+    username: 'Reporte detallado del tiempo.',
+    url: '/weather',
+  },
+  {
+    platform: 'Web',
+    image: {
+      src: '/static/images/sac-Asset 28.png',
+      width: 512,
+      height: 512,
+      sizeAdjust: 1,
+    },
+    label: 'Visita nuestra página web',
+    username: 'sociedadastronomia.com',
+    url: '/',
   },
   {
     platform: 'Email',
