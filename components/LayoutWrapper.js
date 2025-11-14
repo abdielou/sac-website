@@ -25,27 +25,38 @@ const LayoutWrapper = ({ children, forceLightHeader = false }) => {
       <div className="flex flex-col justify-between h-screen">
         <header className="py-10">
           <div className="flex flex-col">
-            <div className="flex items-center justify-between">
+            <div
+              className={
+                'flex items-center ' + (forceLightHeader ? 'justify-center' : 'justify-between')
+              }
+            >
               <div>
                 <Link href="/" aria-label={siteMetadata.title}>
-                  {show && (
-                    <div className="flex items-center justify-between">
-                      <div className="mr-3 hidden sm:block">
-                        <Image src={logoShort} alt="SAC Logo" width={200} height={47} />
+                  {show &&
+                    (forceLightHeader ? (
+                      <div className="flex items-center justify-center">
+                        <div>
+                          <Image src={logo} alt="SAC Logo" width={200} height={70} />
+                        </div>
                       </div>
-                      <div className="mr-3 block sm:hidden">
-                        <Image src={logo} alt="SAC Logo" width={200} height={70} />
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <div className="mr-3 hidden sm:block">
+                          <Image src={logoShort} alt="SAC Logo" width={200} height={47} />
+                        </div>
+                        <div className="mr-3 block sm:hidden">
+                          <Image src={logo} alt="SAC Logo" width={200} height={70} />
+                        </div>
+                        <div
+                          className={
+                            titleColor +
+                            ' hidden sm:block xl:pl-10 md:pl-4 h-10 xl:text-3xl md:text-2xl sm:text-xl font-semibold italic tracking-tight xl:tracking-normal'
+                          }
+                        >
+                          {siteMetadata.headerTitle}
+                        </div>
                       </div>
-                      <div
-                        className={
-                          titleColor +
-                          ' hidden sm:block xl:pl-10 md:pl-4 h-10 xl:text-3xl md:text-2xl sm:text-xl font-semibold italic tracking-tight xl:tracking-normal'
-                        }
-                      >
-                        {siteMetadata.headerTitle}
-                      </div>
-                    </div>
-                  )}
+                    ))}
                 </Link>
               </div>
               {!forceLightHeader && <ThemeSwitch />}
