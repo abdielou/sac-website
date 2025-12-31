@@ -1521,6 +1521,160 @@ function manual_reconcilePaymentsFromEmail() {
     `manual_reconcilePaymentsFromEmail summary: threads=${scannedThreads}, messages=${scannedMessages}, inserted=${inserted}, duplicates=${duplicates}`
   )
 }
+
+let MANUAL_PAYMENT_ROW_NUMBER = -1
+function manual_processManualPaymentRow() {
+  setupServices({})
+
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID)
+  const manualSheet = spreadsheet.getSheetByName('MANUAL_PAYMENTS')
+  if (!manualSheet) {
+    logger.log('Manual payments sheet not found')
+    return
+  }
+
+  const lastRow = manualSheet.getLastRow()
+  if (lastRow < 2) {
+    logger.log('Manual payments sheet has no data rows')
+    return
+  }
+
+  if (MANUAL_PAYMENT_ROW_NUMBER < 0) {
+    logger.log('Manual payment row number is not configured')
+    return
+  }
+
+  const targetRow = Number(MANUAL_PAYMENT_ROW_NUMBER)
+  if (isNaN(targetRow) || targetRow < 2) {
+    logger.log(`Manual payment row ${MANUAL_PAYMENT_ROW_NUMBER} is invalid`)
+    return
+  }
+
+  if (targetRow > lastRow) {
+    logger.log(`Manual payment row ${targetRow} is outside the available range (2-${lastRow})`)
+    return
+  }
+
+  const headers = manualSheet.getRange(1, 1, 1, manualSheet.getLastColumn()).getValues()[0]
+  const rowValues = manualSheet
+    .getRange(targetRow, 1, 1, manualSheet.getLastColumn())
+    .getValues()[0]
+
+  const findIndex = (candidates) => {
+    for (let i = 0; i < headers.length; i++) {
+      const normalized = String(headers[i] || '')
+        .trim()
+        .toLowerCase()
+      if (candidates.includes(normalized)) return i
+    }
+    return -1
+  }
+
+  const emailIdx = findIndex(['e-mail', 'email'])
+  const phoneIdx = findIndex(['teléfono', 'telefono', 'phone', 'tel'])
+  const amountIdx = findIndex(['amount', 'monto', 'cantidad'])
+  const dateIdx = findIndex(['date', 'fecha'])
+  const typeIdx = findIndex(['payment_type'])
+
+  const rawEmail = emailIdx !== -1 ? rowValues[emailIdx] : ''
+  const rawPhone = phoneIdx !== -1 ? rowValues[phoneIdx] : ''
+  const normalizedEmail = normalizeEmail(rawEmail)
+  const normalizedPhone = rawPhone ? normalizePhone(rawPhone) : ''
+
+  if (!normalizedEmail && !normalizedPhone) {
+    logger.log(`Manual payment row ${targetRow} is missing both email and phone`)
+    return
+  }
+
+  const rawAmount = amountIdx !== -1 ? rowValues[amountIdx] : ''
+  const amount = parseAmountNumber(rawAmount)
+  if (isNaN(amount)) {
+    logger.log(`Manual payment row ${targetRow} has invalid amount: ${rawAmount}`)
+    return
+  }
+
+  const manualDateValue = dateIdx !== -1 ? rowValues[dateIdx] : null
+  const paymentDatetime = parseManualPaymentDate(manualDateValue) || new Date()
+
+  const tz =
+    typeof Session !== 'undefined' && typeof Session.getScriptTimeZone === 'function'
+      ? Session.getScriptTimeZone()
+      : 'UTC'
+  const formatField = (dateValue, pattern) => {
+    if (!dateValue) return ''
+    if (utilities && typeof utilities.formatDate === 'function') {
+      return utilities.formatDate(dateValue, tz, pattern)
+    }
+    return dateValue.toISOString()
+  }
+
+  const payment_date = formatField(paymentDatetime, 'yyyy-MM-dd')
+  const payment_time = formatField(paymentDatetime, 'HH:mm:ss')
+
+  const rawType =
+    typeIdx !== -1
+      ? String(rowValues[typeIdx] || '')
+          .trim()
+          .toUpperCase()
+      : ''
+  const paymentType = rawType || 'MANUAL'
+
+  const cleanSheet = spreadsheet.getSheetByName('CLEAN')
+  if (!cleanSheet) {
+    logger.log('CLEAN sheet not found for manual payment processing')
+    return
+  }
+
+  const context = {
+    cleanSheet,
+    senderEmail: normalizedEmail,
+    sentAmount: amount,
+    senderPhone: normalizedPhone,
+    senderPhoneRaw: rawPhone,
+    paymentDate: payment_date,
+    paymentTime: payment_time,
+    paymentDatetime,
+    paymentMessage: `Manual payment row ${targetRow}`,
+    recipientName: 'Manual override',
+    emailSubject: `Manual payment (${paymentType})`,
+    emailFrom: '',
+    emailTo: '',
+    messageId: `manual-row-${targetRow}-${paymentDatetime.getTime()}`,
+    paymentService: `Manual/${paymentType}`,
+    serviceProvider: 'Manual entry',
+    logPrefix: `Manual payment row ${targetRow}`,
+    templateData: {
+      sender_name: 'Manual override',
+      sender_email: normalizedEmail,
+      sender_phone: normalizedPhone,
+      amount,
+      payment_date,
+      payment_time,
+      payment_message: `Manual payment row ${targetRow}`,
+      email_subject: `Manual payment (${paymentType})`,
+      email_from: '',
+      email_to: '',
+      message_id: `manual-row-${targetRow}-${paymentDatetime.getTime()}`,
+      payment_service: `Manual/${paymentType}`,
+      service_provider: 'Manual entry',
+    },
+  }
+
+  processPaymentRecordContext(context)
+}
+
+function parseManualPaymentDate(value) {
+  if (value instanceof Date && !isNaN(value)) return value
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = new Date(value)
+    if (!isNaN(parsed)) return parsed
+  }
+  if (typeof value === 'number' && !isNaN(value)) {
+    const parsed = new Date(value)
+    if (!isNaN(parsed)) return parsed
+  }
+  return null
+}
 // #endregion
 
 // #region Script Properties
@@ -2030,9 +2184,9 @@ function extractPaymentData(msg) {
 // #region Payment Recorded
 const MEMBERSHIP_FEE = 25
 function handlePaymentRecorded(paymentsSheet, cleanSheet, row) {
-  // 1. Retrieve and validate payment from event
   const senderEmail = paymentsSheet.getRange(row, 5).getValue()
   const sentAmount = paymentsSheet.getRange(row, 2).getValue()
+
   if (!senderEmail || !sentAmount || sentAmount < MEMBERSHIP_FEE) {
     logger.log(
       `Invalid payment record at row ${row}: senderEmail=${senderEmail}, sentAmount=${sentAmount}`
@@ -2049,8 +2203,116 @@ function handlePaymentRecorded(paymentsSheet, cleanSheet, row) {
     return
   }
 
-  // 2. Find user from payment by email
-  const emailToMatch = normalizeEmail(senderEmail)
+  const paymentsHeaders = paymentsSheet
+    .getRange(1, 1, 1, paymentsSheet.getLastColumn())
+    .getValues()[0]
+  const senderPhoneColIndex = findHeaderColumnIndex(paymentsHeaders, [
+    'sender phone',
+    'sender_phone',
+    'senderphone',
+    'teléfono',
+    'telefono',
+    'phone',
+    'tel',
+  ])
+  let paymentPhone = null
+  if (senderPhoneColIndex !== -1) {
+    paymentPhone = paymentsSheet.getRange(row, senderPhoneColIndex + 1).getValue()
+  }
+
+  const messageIdColIndex = findHeaderColumnIndex(paymentsHeaders, [
+    'message id',
+    'message_id',
+    'messageid',
+  ])
+  const messageId =
+    messageIdColIndex !== -1 ? paymentsSheet.getRange(row, messageIdColIndex + 1).getValue() : ''
+
+  processPaymentRecordContext({
+    cleanSheet,
+    paymentsSheet,
+    paymentRow: row,
+    senderEmail,
+    sentAmount,
+    senderPhone: normalizePhone(paymentPhone),
+    senderPhoneRaw: paymentPhone,
+    paymentMessage: `Payment row ${row}`,
+    recipientName: '',
+    emailSubject: '',
+    emailFrom: '',
+    emailTo: '',
+    messageId,
+    paymentService: 'Email',
+    serviceProvider: '',
+    logPrefix: `PAYMENTS row ${row}`,
+    templateData: {
+      sender_name: '',
+      sender_email: senderEmail,
+      sender_phone: normalizePhone(paymentPhone) || '',
+      amount: Number(sentAmount),
+      payment_date: '',
+      payment_time: '',
+      payment_message: `Payment row ${row}`,
+      email_subject: '',
+      email_from: '',
+      email_to: '',
+      message_id: messageId || '',
+      payment_service: 'Email',
+    },
+  })
+}
+
+function findHeaderColumnIndex(headers, candidates) {
+  for (let i = 0; i < headers.length; i++) {
+    const normalized = String(headers[i] || '')
+      .trim()
+      .toLowerCase()
+    if (candidates.includes(normalized)) {
+      return i
+    }
+  }
+  return -1
+}
+
+function setPaymentMatchStatus(paymentsSheet, paymentRow, status) {
+  if (!paymentsSheet || !paymentRow) return false
+  const headers = paymentsSheet.getRange(1, 1, 1, paymentsSheet.getLastColumn()).getValues()[0]
+  const col = findHeaderColumnIndex(headers, ['match status', 'match_status', 'status'])
+  if (col === -1) {
+    return false
+  }
+  paymentsSheet.getRange(paymentRow, col + 1).setValue(status)
+  return true
+}
+
+function processPaymentRecordContext(context) {
+  const {
+    cleanSheet,
+    paymentsSheet,
+    paymentRow,
+    senderEmail,
+    sentAmount,
+    senderPhone,
+    senderPhoneRaw,
+    paymentDate,
+    paymentTime,
+    paymentMessage,
+    recipientName,
+    emailSubject,
+    emailFrom,
+    emailTo,
+    messageId,
+    paymentService,
+    serviceProvider,
+    logPrefix,
+    templateData,
+  } = context
+
+  if (!cleanSheet) {
+    logger.log('CLEAN sheet not found for payment processing')
+    return
+  }
+
   const cleanHeaders = cleanSheet.getRange(1, 1, 1, cleanSheet.getLastColumn()).getValues()[0]
   const emailColIndex = cleanHeaders.indexOf('E-mail')
   const phoneColIndex = findPhoneColumnIndex(cleanHeaders)
@@ -2060,43 +2322,68 @@ function handlePaymentRecorded(paymentsSheet, cleanSheet, row) {
     return
   }
 
+  const normalizedAmount = Number(sentAmount)
+  const normalizedEmail = normalizeEmail(senderEmail)
   let matchedRow = -1
-  if (emailColIndex !== -1) {
-    matchedRow = findMatchingEmailRow(cleanSheet, emailColIndex, emailToMatch)
+  if (emailColIndex !== -1 && normalizedEmail) {
+    matchedRow = findMatchingEmailRow(cleanSheet, emailColIndex, normalizedEmail)
   }
 
   let matchedPhone = ''
-  if (matchedRow === -1 && phoneColIndex !== -1) {
-    // Get phone from PAYMENTS sheet's sender_phone column directly
-    const paymentsHeaders = paymentsSheet
-      .getRange(1, 1, 1, paymentsSheet.getLastColumn())
-      .getValues()[0]
-    const senderPhoneColIndex = paymentsHeaders.findIndex(
-      (header) => header && header.toLowerCase().includes('sender_phone')
-    )
+  if (matchedRow === -1 && phoneColIndex !== -1 && senderPhone) {
+    matchedRow = findMatchingPhoneRow(cleanSheet, phoneColIndex, senderPhone)
+    matchedPhone = senderPhoneRaw || senderPhone
+  }
 
-    let paymentPhone = null
-    if (senderPhoneColIndex !== -1) {
-      paymentPhone = paymentsSheet.getRange(row, senderPhoneColIndex + 1).getValue()
-    }
-
-    const phoneToMatch = normalizePhone(paymentPhone)
-    if (phoneToMatch) {
-      matchedRow = findMatchingPhoneRow(cleanSheet, phoneColIndex, phoneToMatch)
-      matchedPhone = paymentPhone || phoneToMatch
+  let matchStatus = 'UNMATCHED_NO_USER'
+  if (matchedRow !== -1) {
+    const createdAtIndex = cleanHeaders.indexOf('created_at')
+    const createdAtValue =
+      createdAtIndex !== -1 ? cleanSheet.getRange(matchedRow, createdAtIndex + 1).getValue() : ''
+    if (createdAtValue || normalizedAmount !== MEMBERSHIP_FEE) {
+      matchStatus = 'MATCHED_OTHER_PAYMENT'
+    } else {
+      matchStatus = 'MATCHED_MEMBERSHIP_PAYMENT'
     }
   }
 
+  const paymentTemplateData = templateData || {
+    sender_name: recipientName || '',
+    sender_email: senderEmail || '',
+    sender_phone: senderPhone || '',
+    amount: normalizedAmount,
+    payment_date: paymentDate || '',
+    payment_time: paymentTime || '',
+    payment_message: paymentMessage || '',
+    email_subject: emailSubject || '',
+    email_from: emailFrom || '',
+    email_to: emailTo || '',
+    message_id: messageId || '',
+    payment_service: paymentService || '',
+    service_provider: serviceProvider || '',
+  }
+
   if (matchedRow === -1) {
+    const phoneDetails = matchedPhone ? ` or phone ${matchedPhone}` : ''
     logger.log(
-      `User with email ${senderEmail}${
-        matchedPhone ? ` or phone ${matchedPhone}` : ''
-      } not found in CLEAN sheet`
+      `${
+        logPrefix || 'Payment'
+      }: User with email ${senderEmail}${phoneDetails} not found in CLEAN sheet`
+    )
+    const emailResult = sendTemplatedEmail('PAYMENT_NO_USER', paymentTemplateData)
+    if (!emailResult.success) {
+      logger.log(`Failed to send payment no user notification: ${emailResult.error}`)
+    }
+    return
+  }
+
+  if (matchStatus === 'MATCHED_OTHER_PAYMENT') {
+    logger.log(
+      `${logPrefix || 'Payment'}: Skipping onboarding for ${senderEmail}; payment marked as other.`
     )
     return
   }
 
-  // 2.25 If user exists but CLEAN.data_status is not VALID, mark payment as UNMATCHED_USER_DIRTY and stop
   const dataStatusIndex = cleanHeaders.indexOf('data_status')
   if (dataStatusIndex !== -1) {
     const rawStatus = cleanSheet.getRange(matchedRow, dataStatusIndex + 1).getValue()
@@ -2104,23 +2391,12 @@ function handlePaymentRecorded(paymentsSheet, cleanSheet, row) {
       .trim()
       .toUpperCase()
     if (normalizedStatus && normalizedStatus !== 'VALID') {
-      const paymentsHeaders = paymentsSheet
-        .getRange(1, 1, 1, paymentsSheet.getLastColumn())
-        .getValues()[0]
-      let matchStatusCol = -1
-      for (let i = 0; i < paymentsHeaders.length; i++) {
-        const h = String(paymentsHeaders[i] || '')
-          .trim()
-          .toLowerCase()
-        if (h === 'match status' || h === 'match_status' || h === 'status') {
-          matchStatusCol = i + 1
-          break
-        }
-      }
-      if (matchStatusCol !== -1) {
-        paymentsSheet.getRange(row, matchStatusCol).setValue('UNMATCHED_USER_DIRTY')
+      const updated = setPaymentMatchStatus(paymentsSheet, paymentRow, 'UNMATCHED_USER_DIRTY')
+      if (updated) {
         logger.log(
-          `Payment at row ${row} flagged as UNMATCHED_USER_DIRTY due to user data_status=${normalizedStatus}`
+          `${
+            logPrefix || 'Payment'
+          }: flagged as UNMATCHED_USER_DIRTY due to user data_status=${normalizedStatus}`
         )
       } else {
         logger.log(`PAYMENTS match_status column not found; could not flag UNMATCHED_USER_DIRTY`)
@@ -2129,7 +2405,6 @@ function handlePaymentRecorded(paymentsSheet, cleanSheet, row) {
     }
   }
 
-  // 2.5 Skip if user was already created
   const caIndex = cleanHeaders.indexOf('created_at')
   if (caIndex !== -1) {
     const existingTimestamp = cleanSheet.getRange(matchedRow, caIndex + 1).getValue()
@@ -2138,15 +2413,19 @@ function handlePaymentRecorded(paymentsSheet, cleanSheet, row) {
       return
     }
   }
+
   const rowValues = cleanSheet.getRange(matchedRow, 1, 1, cleanHeaders.length).getValues()[0]
   const firstName = rowValues[2]
   const fullLastName = rowValues[4]
   const name = `${firstName} ${fullLastName}`.trim()
   const phone = normalizePhone(rowValues[6])
 
-  logger.log(`Processing payment for ${name} ${senderEmail} ${phone} ${sentAmount}`)
+  logger.log(
+    `${
+      logPrefix || 'Payment'
+    }: Processing payment for ${name} ${senderEmail} ${phone} ${sentAmount}`
+  )
 
-  // 3. Create user account account
   const initial = rowValues[3]
   let lastName = ''
   let slastName = ''
@@ -2166,21 +2445,18 @@ function handlePaymentRecorded(paymentsSheet, cleanSheet, row) {
     return
   }
 
-  // 4. Add user to group
   const groupResult = addUserToGroup(accountResult)
   if (!groupResult.success) {
     logger.log(`Failed to add user to group: ${groupResult.error}`)
   }
 
-  // 5. Send welcome email
   const welcomeResult = sendWelcomeEmail(accountResult)
   if (!welcomeResult.success) {
     logger.log(`Failed to send welcome email: ${welcomeResult.error}`)
   }
 
-  // 5.1 Send credentials email
   try {
-    const to = senderEmail // Use the personal email from payment
+    const to = senderEmail
     if (to) {
       const subject = 'Tu cuenta SAC / Your SAC account'
       const body =
@@ -2204,7 +2480,6 @@ function handlePaymentRecorded(paymentsSheet, cleanSheet, row) {
     logger.log(`Failed to send credentials email: ${e.message}`)
   }
 
-  // 6. Notify admin of new user account creation
   const adminSubject = `New user account created: ${accountResult.email}`
   const adminBody =
     `A new user account has been created for ${firstName} ${fullLastName}.\n` +
@@ -2218,7 +2493,6 @@ function handlePaymentRecorded(paymentsSheet, cleanSheet, row) {
     logger.log('Admin notification not sent: NOTIFICATION_EMAIL is not set')
   }
 
-  // 7. Mark user as created in CLEAN sheet
   const createdAtIndex = cleanHeaders.indexOf('created_at')
   if (createdAtIndex !== -1) {
     cleanSheet.getRange(matchedRow, createdAtIndex + 1).setValue(new Date())
@@ -2226,10 +2500,8 @@ function handlePaymentRecorded(paymentsSheet, cleanSheet, row) {
     logger.log('created_at column not found in CLEAN sheet')
   }
 
-  // 7.1 Save generated SAC email in CLEAN sheet (column 'sac_email')
   let sacEmailCol = cleanHeaders.indexOf('sac_email')
   if (sacEmailCol === -1) {
-    // Add new column at the end with header 'sac_email'
     const lastCol = cleanSheet.getLastColumn()
     cleanSheet.insertColumnAfter(lastCol)
     const newCol = lastCol + 1
