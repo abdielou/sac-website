@@ -2781,9 +2781,11 @@ function buildMembershipCertificatePdfBlob(nombre, inicial, apellido1, apellido2
   const body = doc.getBody()
 
   // Validate placeholders in membership certificate template
-  validateTemplatePlaceholders(doc, ['{{Nombre}}', '{{Inicial}}', '{{Apellidos}}'])
+  validateTemplatePlaceholders(doc, ['{{Fecha}}', '{{Nombre}}', '{{Inicial}}', '{{Apellidos}}'])
 
   // 4. do your replacements on the copy
+  const fecha = formatDateSpanish(new Date())
+  body.replaceText('{{Fecha}}', fecha)
   body.replaceText('{{Nombre}}', nombre)
   body.replaceText('{{Inicial}}', inicial || '')
   const fullApellidos = [apellido1, apellido2].filter(Boolean).join(' ')
@@ -3309,6 +3311,35 @@ function formatZipForSheet(zipRaw) {
   // Pad to 5 digits for standard ZIP
   const zip5 = digits.slice(-5).padStart(5, '0')
   return "'" + zip5
+}
+
+const SPANISH_MONTH_NAMES = [
+  'enero',
+  'febrero',
+  'marzo',
+  'abril',
+  'mayo',
+  'junio',
+  'julio',
+  'agosto',
+  'septiembre',
+  'octubre',
+  'noviembre',
+  'diciembre',
+]
+
+function formatDateSpanish(date) {
+  if (!date || isNaN(date.getTime())) return ''
+  const tz =
+    typeof Session !== 'undefined' && typeof Session.getScriptTimeZone === 'function'
+      ? Session.getScriptTimeZone()
+      : 'UTC'
+  const day = utilities.formatDate(date, tz, 'd')
+  const monthIndex = Number(utilities.formatDate(date, tz, 'M')) - 1
+  const year = utilities.formatDate(date, tz, 'yyyy')
+  const month =
+    SPANISH_MONTH_NAMES[Math.max(0, Math.min(monthIndex, SPANISH_MONTH_NAMES.length - 1))]
+  return `${day} de ${month} de ${year}`
 }
 
 function mergeRowData(targetSheet, targetRow, targetHeaders, sourceData, sourceHeaders) {
