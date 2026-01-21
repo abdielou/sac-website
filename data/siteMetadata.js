@@ -17,7 +17,7 @@ const siteMetadata = {
   siteLogoDark: '/static/images/sac-white-logo-25.svg',
   siteLogoShortDark: '/static/images/sac-white-short-logo-25.svg',
   image: '/static/images/avatar.png',
-  socialBanner: '/static/images/sac-white-logo.png',
+  socialBanner: '/static/images/sac-main-short-logo.png',
   email: 'info@sociedadastronomia.com',
   twitter: 'https://twitter.com/soc_astrocaribe',
   facebook: 'https://www.facebook.com/sociedad.astronomia',
