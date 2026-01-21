@@ -3091,8 +3091,8 @@ function upsertToCleanSheet(spreadsheet, sourceSheet, sourceRow) {
     const rowData = sourceSheet.getRange(sourceRow, 1, 1, sourceHeaders.length).getValues()[0]
 
     // Find email column indices
-    const sourceEmailIndex = sourceHeaders.indexOf('E-mail')
-    const cleanEmailIndex = cleanHeaders.indexOf('E-mail')
+    const sourceEmailIndex = findHeaderIndex(sourceHeaders, 'E-mail')
+    const cleanEmailIndex = findHeaderIndex(cleanHeaders, 'E-mail')
 
     if (sourceEmailIndex === -1 || cleanEmailIndex === -1) {
       return { success: false, error: 'Email column not found in one of the sheets' }
@@ -3124,7 +3124,7 @@ function upsertToCleanSheet(spreadsheet, sourceSheet, sourceRow) {
     } else {
       // No match found, insert new row mapped to CLEAN headers only
       const mappedRow = cleanHeaders.map((header) => {
-        const sourceIndex = sourceHeaders.indexOf(header)
+        const sourceIndex = findHeaderIndex(sourceHeaders, header)
         if (sourceIndex === -1) return ''
         const headerKey = String(header || '')
           .trim()
@@ -3313,6 +3313,20 @@ function formatZipForSheet(zipRaw) {
   return "'" + zip5
 }
 
+function normalizeHeader(header) {
+  return String(header || '').trim().toLowerCase()
+}
+
+function findHeaderIndex(headers, headerName) {
+  const normalizedTarget = normalizeHeader(headerName)
+  for (let i = 0; i < headers.length; i++) {
+    if (normalizeHeader(headers[i]) === normalizedTarget) {
+      return i
+    }
+  }
+  return -1
+}
+
 const SPANISH_MONTH_NAMES = [
   'enero',
   'febrero',
@@ -3351,7 +3365,7 @@ function mergeRowData(targetSheet, targetRow, targetHeaders, sourceData, sourceH
 
   for (let i = 0; i < targetHeaders.length; i++) {
     const header = targetHeaders[i]
-    const sourceIndex = sourceHeaders.indexOf(header)
+    const sourceIndex = findHeaderIndex(sourceHeaders, header)
 
     // If header exists in source and has a non-empty value, use source value
     if (sourceIndex !== -1 && sourceData[sourceIndex] !== null && sourceData[sourceIndex] !== '') {
