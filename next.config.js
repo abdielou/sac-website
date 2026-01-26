@@ -31,16 +31,16 @@ module.exports = withBundleAnalyzer({
   },
   images: {
     minimumCacheTTL: 21600,
-    domains: [
-      'tropic.ssec.wisc.edu',
-      'cdn.star.nesdis.noaa.gov',
-      'sirocco.accuweather.com',
-      'www.nhc.noaa.gov',
-      'services.swpc.noaa.gov',
-      'sdo.gsfc.nasa.gov',
-      'www.moonmodule.com',
-      'apod.nasa.gov',
-      'localhost',
+    remotePatterns: [
+      { protocol: 'https', hostname: 'tropic.ssec.wisc.edu' },
+      { protocol: 'https', hostname: 'cdn.star.nesdis.noaa.gov' },
+      { protocol: 'https', hostname: 'sirocco.accuweather.com' },
+      { protocol: 'https', hostname: 'www.nhc.noaa.gov' },
+      { protocol: 'https', hostname: 'services.swpc.noaa.gov' },
+      { protocol: 'https', hostname: 'sdo.gsfc.nasa.gov' },
+      { protocol: 'https', hostname: 'www.moonmodule.com' },
+      { protocol: 'https', hostname: 'apod.nasa.gov' },
+      { protocol: 'http', hostname: 'localhost' },
     ],
   },
 })
