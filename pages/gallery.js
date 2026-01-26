@@ -273,12 +273,12 @@ export default function Gallery() {
                     : {}
                 }
               >
-                <h2 className="text-2xl font-bold break-words">{selectedImage.title}</h2>
+                <h2 className="text-2xl font-bold wrap-break-word">{selectedImage.title}</h2>
                 {selectedImage.description && (
-                  <p className="mt-2 break-words">{selectedImage.description}</p>
+                  <p className="mt-2 wrap-break-word">{selectedImage.description}</p>
                 )}
                 {selectedImage.year && (
-                  <p className="mt-1 text-sm text-gray-300 break-words">
+                  <p className="mt-1 text-sm text-gray-300 wrap-break-word">
                     {selectedImage.trueDate === false && 'Aproximadamente: '}
                     {selectedImage.year}
                   </p>

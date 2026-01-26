@@ -172,7 +172,7 @@ export default function Links() {
                       className="object-contain"
                     />
                   </div>
-                  <div className="flex-grow space-y-1">
+                  <div className="grow space-y-1">
                     <div className="text-sm text-gray-900">{link.label}</div>
                     <div className="text-xs text-sac-primary-blue">{link.username}</div>
                   </div>

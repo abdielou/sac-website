@@ -334,7 +334,7 @@ export default function Brand() {
               <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-4 mb-4">
                   <div
-                    className="w-16 h-16 rounded-lg border-2 border-gray-300 dark:border-gray-600 flex-shrink-0"
+                    className="w-16 h-16 rounded-lg border-2 border-gray-300 dark:border-gray-600 shrink-0"
                     style={{ backgroundColor: '#560647' }}
                   ></div>
                   <div>
@@ -351,7 +351,7 @@ export default function Brand() {
               <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-4 mb-4">
                   <div
-                    className="w-16 h-16 rounded-lg border-2 border-gray-300 dark:border-gray-600 flex-shrink-0"
+                    className="w-16 h-16 rounded-lg border-2 border-gray-300 dark:border-gray-600 shrink-0"
                     style={{ backgroundColor: '#1B1751' }}
                   ></div>
                   <div>
@@ -367,7 +367,7 @@ export default function Brand() {
               <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-4 mb-4">
                   <div
-                    className="w-16 h-16 rounded-lg border-2 border-gray-300 dark:border-gray-600 flex-shrink-0"
+                    className="w-16 h-16 rounded-lg border-2 border-gray-300 dark:border-gray-600 shrink-0"
                     style={{ backgroundColor: '#C8ABDB' }}
                   ></div>
                   <div>
@@ -383,7 +383,7 @@ export default function Brand() {
               <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-4 mb-4">
                   <div
-                    className="w-16 h-16 rounded-lg border-2 border-gray-300 dark:border-gray-600 flex-shrink-0"
+                    className="w-16 h-16 rounded-lg border-2 border-gray-300 dark:border-gray-600 shrink-0"
                     style={{ backgroundColor: '#EDB898' }}
                   ></div>
                   <div>

@@ -53,7 +53,7 @@ export default function MemberIdCard({ memberData, formData, photo }) {
                 className="w-full h-full object-cover rounded-full"
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-b from-blue-200 to-green-200 rounded-full flex flex-col items-center justify-center">
+              <div className="w-full h-full bg-linear-to-b from-blue-200 to-green-200 rounded-full flex flex-col items-center justify-center">
                 {/* Sky with cloud */}
                 <div className="w-full h-1/2 bg-blue-200 relative">
                   <div className="absolute top-2 left-1/2 transform -translate-x-1/2 text-blue-400 text-lg">
@@ -63,7 +63,7 @@ export default function MemberIdCard({ memberData, formData, photo }) {
                   </div>
                 </div>
                 {/* Hills */}
-                <div className="w-full h-1/2 bg-gradient-to-b from-green-300 to-green-400 relative">
+                <div className="w-full h-1/2 bg-linear-to-b from-green-300 to-green-400 relative">
                   <div className="absolute bottom-0 left-0 w-full h-1/2 bg-green-500 rounded-t-full"></div>
                   <div className="absolute bottom-0 left-0 w-full h-1/3 bg-green-600 rounded-t-full"></div>
                 </div>

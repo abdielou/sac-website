@@ -301,19 +301,19 @@ export default function MemberIdBuilder() {
                     </h4>
                     <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
                       <div className="flex items-start space-x-3">
-                        <span className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
+                        <span className="w-2 h-2 bg-blue-600 rounded-full mt-2 shrink-0"></span>
                         <span>Use buena iluminación</span>
                       </div>
                       <div className="flex items-start space-x-3">
-                        <span className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
+                        <span className="w-2 h-2 bg-blue-600 rounded-full mt-2 shrink-0"></span>
                         <span>Mantenga la cámara estable y alineada</span>
                       </div>
                       <div className="flex items-start space-x-3">
-                        <span className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
+                        <span className="w-2 h-2 bg-blue-600 rounded-full mt-2 shrink-0"></span>
                         <span>Evite sombras y reflejos</span>
                       </div>
                       <div className="flex items-start space-x-3">
-                        <span className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
+                        <span className="w-2 h-2 bg-blue-600 rounded-full mt-2 shrink-0"></span>
                         <span>Use un fondo sólido y sin distracciones</span>
                       </div>
                     </div>
