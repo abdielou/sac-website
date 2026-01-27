@@ -692,22 +692,5 @@ def process_inbox():
 
 
 if __name__ == "__main__":
-    # Authenticate 
-    youtube = authenticate_youtube()
-
-    # Build title map 
-    title_map = build_title_map(json_file)
-
-    # load the registry of uploaded videos
-    registry_file, uploaded_list = initialize_registry(facebook_data_dir)
-
-    # Determine pending videos 
-    videos_dir = get_videos_directory(facebook_data_dir)
-    pending = get_pending_videos(videos_dir, uploaded_list, title_map)
-
-    # Handle video upload process
-    handle_video_upload_process(youtube, facebook_data_dir, pending, title_map, uploaded_list, videos_dir)
-
-    # Save the updated registry
-    save_registry(registry_file, uploaded_list)
+    process_inbox()
 
