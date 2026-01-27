@@ -8,7 +8,7 @@
     "build": "node ./scripts/cleanup-prose-mdx && next build && node ./scripts/generate-sitemap",
     "serve": "next start",
     "analyze": "cross-env ANALYZE=true next build",
-    "lint": "next lint --fix --dir pages --dir components --dir lib --dir layouts --dir scripts",
+    "lint": "eslint --fix pages components lib layouts scripts app",
     "test": "jest"
   },
   "dependencies": {
@@ -60,9 +60,9 @@
     "dedent": "^0.7.0",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.1.5",
-    "eslint-config-prettier": "^8.3.0",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-jsx-a11y": "^6.4.1",
-    "eslint-plugin-prettier": "^3.3.1",
+    "eslint-plugin-prettier": "^5.5.5",
     "file-loader": "^6.0.0",
     "globby": "11.0.3",
     "inquirer": "^8.1.1",
@@ -70,7 +70,7 @@
     "jest-environment-jsdom": "^30.0.4",
     "lint-staged": "^11.0.0",
     "next-remote-watch": "^1.0.0",
-    "prettier": "2.2.1",
+    "prettier": "^3.8.1",
     "socket.io": "^4.4.1",
     "socket.io-client": "^4.1.3"
   },
@@ -83,7 +83,6 @@
     ]
   },
   "description": "![sac-banner](/public/static/images/logo_sac_card.png)",
-  "main": ".eslintrc.js",
   "directories": {
     "lib": "lib",
     "test": "test"

@@ -424,9 +424,7 @@ export default function MemberIdBuilder() {
                         />
                       </svg>
                     </div>
-                    <p className="text-lg">
-                      Complete el formulario para generar su identificacion
-                    </p>
+                    <p className="text-lg">Complete el formulario para generar su identificacion</p>
                   </div>
                 </div>
               )}

@@ -13,7 +13,7 @@ export default function GalleryFilters({ year, setYear, searchTerm, setSearchTer
         />
       </div>
       <div className="flex items-center">
-        {/* eslint-disable-next-line jsx-a11y/no-onchange */}
+        {}
         <select
           value={year}
           onChange={(e) => setYear(e.target.value)}

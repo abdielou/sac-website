@@ -1,4 +1,3 @@
-/* eslint-disable jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */
 import { useState, useEffect } from 'react'
 import { PageSEO } from '@/components/SEO'
 import GalleryFilters from '@/components/GalleryFilters'
@@ -230,8 +229,8 @@ export default function Gallery() {
                   &times;
                 </button>
               )}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}
+              {}
+              {}
               <img
                 src={selectedImage.imgSrc}
                 alt={selectedImage.title}
@@ -320,8 +319,8 @@ export default function Gallery() {
                 {loadingMore
                   ? 'Loading...'
                   : loadedYears.length >= yearOptions.length
-                  ? 'No more images'
-                  : 'Load more'}
+                    ? 'No more images'
+                    : 'Load more'}
               </button>
             </>
           )}
