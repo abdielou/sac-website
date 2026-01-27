@@ -1,13 +1,12 @@
-import siteMetadata from '@/data/siteMetadata'
 import weatherData from '@/data/weatherData'
 import Card from '@/components/Card'
 import LayoutWrapper from '@/components/LayoutWrapper'
 
 export const metadata = {
-  title: `Clima - ${siteMetadata.author}`,
+  title: 'Clima - SAC',
   description: 'Condiciones del tiempo, imágenes de satélite, radar Doppler y más',
   openGraph: {
-    title: `Clima - ${siteMetadata.author}`,
+    title: 'Clima - SAC',
     description: 'Condiciones del tiempo, imágenes de satélite, radar Doppler y más',
   },
 }
