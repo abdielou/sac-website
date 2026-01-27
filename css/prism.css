@@ -1,9 +1,12 @@
 /**
  * CSS Styles for code highlighting.
- * Feel free to customize token styles 
+ * Feel free to customize token styles
  * by copying from a prismjs compatible theme:
  * https://github.com/PrismJS/prism-themes
  */
+
+@import "tailwindcss" reference;
+@config "../tailwind.config.js";
 
 /* Code title styles */
 .remark-code-title {
@@ -24,7 +27,7 @@
 }
 
 .highlight-line {
-  @apply -mx-4 bg-gray-700 bg-opacity-50 border-l-4 border-primary-500;
+  @apply -mx-4 bg-gray-700/50 border-l-4 border-primary-500;
 }
 
 .line-number::before {

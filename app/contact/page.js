@@ -1,4 +1,13 @@
-import { PageSEO } from '@/components/SEO'
+import LayoutWrapper from '@/components/LayoutWrapper'
+
+export const metadata = {
+  title: 'Contacto',
+  description: 'Informacion de Contacto',
+  openGraph: {
+    title: 'Contacto | SAC',
+    description: 'Informacion de Contacto',
+  },
+}
 
 const EmailIcon = () => (
   <svg
@@ -16,6 +25,7 @@ const EmailIcon = () => (
     />
   </svg>
 )
+
 const PhoneIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -32,11 +42,12 @@ const PhoneIcon = () => (
     />
   </svg>
 )
+
 const EMAIL = 'info@sociedadastronomia.com'
-export default function Contact() {
+
+export default function ContactPage() {
   return (
-    <>
-      <PageSEO title="Contacto" description="Información de Contacto" />
+    <LayoutWrapper>
       <div className="divide-y divide-gray-200 dark:divide-gray-700">
         <div className="pt-6 pb-8 space-y-2 md:space-y-5">
           <h1 className="text-3xl font-extrabold leading-9 tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl sm:leading-10 md:text-6xl md:leading-14">
@@ -65,7 +76,7 @@ export default function Contact() {
               <div className="flex">
                 <PhoneIcon />
                 <h3 className="flex flex-row ml-1">
-                  <div className="mr-2">Teléfonos:</div>
+                  <div className="mr-2">Telefonos:</div>
                   <div className="flex flex-wrap space-x-6">
                     <a
                       className="underline text-blue-600 hover:text-blue-800 visited:text-purple-600"
@@ -86,6 +97,6 @@ export default function Contact() {
           </div>
         </div>
       </div>
-    </>
+    </LayoutWrapper>
   )
 }

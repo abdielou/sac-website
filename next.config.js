@@ -6,7 +6,7 @@ module.exports = withBundleAnalyzer({
   reactStrictMode: true,
   pageExtensions: ['js', 'jsx', 'md', 'mdx'],
   eslint: {
-    dirs: ['pages', 'components', 'lib', 'layouts', 'scripts'],
+    dirs: ['pages', 'components', 'lib', 'layouts', 'scripts', 'app'],
   },
   webpack: (config, { dev, isServer }) => {
     config.module.rules.push({
@@ -27,29 +27,20 @@ module.exports = withBundleAnalyzer({
       use: ['@svgr/webpack'],
     })
 
-    if (!dev && !isServer) {
-      // Replace React with Preact only in client production build
-      Object.assign(config.resolve.alias, {
-        react: 'preact/compat',
-        'react-dom/test-utils': 'preact/test-utils',
-        'react-dom': 'preact/compat',
-      })
-    }
-
     return config
   },
   images: {
     minimumCacheTTL: 21600,
-    domains: [
-      'tropic.ssec.wisc.edu',
-      'cdn.star.nesdis.noaa.gov',
-      'sirocco.accuweather.com',
-      'www.nhc.noaa.gov',
-      'services.swpc.noaa.gov',
-      'sdo.gsfc.nasa.gov',
-      'www.moonmodule.com',
-      'apod.nasa.gov',
-      'localhost',
+    remotePatterns: [
+      { protocol: 'https', hostname: 'tropic.ssec.wisc.edu' },
+      { protocol: 'https', hostname: 'cdn.star.nesdis.noaa.gov' },
+      { protocol: 'https', hostname: 'sirocco.accuweather.com' },
+      { protocol: 'https', hostname: 'www.nhc.noaa.gov' },
+      { protocol: 'https', hostname: 'services.swpc.noaa.gov' },
+      { protocol: 'https', hostname: 'sdo.gsfc.nasa.gov' },
+      { protocol: 'https', hostname: 'www.moonmodule.com' },
+      { protocol: 'https', hostname: 'apod.nasa.gov' },
+      { protocol: 'http', hostname: 'localhost' },
     ],
   },
 })

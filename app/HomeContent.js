@@ -1,28 +1,22 @@
+'use client'
+
 import useSWR from 'swr'
 import Link from '@/components/Link'
-import { PageSEO } from '@/components/SEO'
-import NewsletterForm from '@/components/NewsletterForm'
 import ArticleItem from '@/components/articles/ArticleItem'
 import ImageWidget from '@/components/widgets/ImageWidget'
 import ApodWidget from '@/components/widgets/ApodWidget'
-import { getAllFilesFrontMatter } from '@/lib/mdx'
+import NewsletterForm from '@/components/NewsletterForm'
 import siteMetadata from '@/data/siteMetadata'
 
 const MAX_DISPLAY = 5
 const APOD_URL = '/api/apod'
 const fetcher = (url) => fetch(url).then((res) => res.json())
 
-export async function getStaticProps() {
-  const posts = await getAllFilesFrontMatter('blog')
-
-  return { props: { posts } }
-}
-
-export default function Home({ posts }) {
+export default function HomeContent({ posts }) {
   const { data: apod, error: apodError } = useSWR(APOD_URL, fetcher)
+
   return (
     <>
-      <PageSEO title={siteMetadata.title} description={siteMetadata.description} />
       <div className="divide-y divide-gray-200 dark:divide-gray-700">
         {/* Site Description */}
         <div className="pt-6 pb-8 space-y-2 md:space-y-5">
@@ -85,7 +79,7 @@ export default function Home({ posts }) {
         </div>
       )}
 
-      {/* Newsletter Form */}
+      {/* Newsletter Form - only if provider configured */}
       {siteMetadata.newsletter.provider && (
         <div className="flex items-center justify-center pt-4">
           <NewsletterForm />

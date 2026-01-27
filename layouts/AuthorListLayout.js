@@ -17,7 +17,9 @@ export function AuthorListLayout({ authors }) {
     <div className="grid md:grid-cols-1">
       <div className="divide-y">
         <div className="pt-8 items-start">
-          {authors.map(({ frontMatter }) => ProfileCard(frontMatter))}
+          {authors.map(({ frontMatter }) => (
+            <ProfileCard key={frontMatter.name} {...frontMatter} />
+          ))}
         </div>
       </div>
     </div>
@@ -34,7 +36,7 @@ function ProfileCard({ name, avatar, occupation, bio, company, email, linkedin, 
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 pl-4 pt-4 m-4 bg-gray-50 dark:bg-gray-100 rounded shadow-lg dark:shadow-dark">
       <div className="md:col-span-1">
-        <Image src={avatar} alt="avatar" width="192px" height="192px" className="rounded-full" />
+        <Image src={avatar} alt="avatar" width={192} height={192} className="rounded-full" />
       </div>
       <div className="md:col-span-3 md:ml-4">
         <h3 className="pt-4 pb-2 text-2xl font-bold leading-8 tracking-tight text-gray-800">

@@ -24,7 +24,7 @@ const TwitterEmbed = ({ tweetId }) => {
 
   return (
     <blockquote className="twitter-tweet">
-      {/* eslint-disable-next-line jsx-a11y/anchor-has-content */}
+      {}
       <a href={`https://twitter.com/Soc_AstroCaribe/status/${tweetId}`} />
     </blockquote>
   )

@@ -1,4 +1,3 @@
-/* eslint-disable react/display-name */
 import { useMemo } from 'react'
 import ReactPlayer from 'react-player'
 import { getMDXComponent } from 'mdx-bundler/client'

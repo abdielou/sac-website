@@ -1,8 +1,9 @@
+'use client'
+
 import { useState, useRef } from 'react'
-import { PageSEO } from '@/components/SEO'
-import siteMetadata from '@/data/siteMetadata'
-import MemberIdCard from '@/components/MemberIdCard'
 import Image from 'next/image'
+import MemberIdCard from '@/components/MemberIdCard'
+import LayoutWrapper from '@/components/LayoutWrapper'
 
 export default function MemberIdBuilder() {
   const [formData, setFormData] = useState({
@@ -33,7 +34,7 @@ export default function MemberIdBuilder() {
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
         // 5MB limit
-        alert('El archivo es demasiado grande. El tamaño máximo es 5MB.')
+        alert('El archivo es demasiado grande. El tamano maximo es 5MB.')
         return
       }
 
@@ -59,7 +60,7 @@ export default function MemberIdBuilder() {
         videoRef.current.srcObject = stream
       }
     } catch (err) {
-      alert('No se pudo acceder a la cámara. Asegúrese de dar permisos.')
+      alert('No se pudo acceder a la camara. Asegurese de dar permisos.')
       console.error('Error accessing camera:', err)
     }
   }
@@ -100,7 +101,6 @@ export default function MemberIdBuilder() {
     // Simulate processing time
     await new Promise((resolve) => setTimeout(resolve, 1000))
 
-    const timestamp = Date.now()
     const randomId = Math.random().toString(36).substr(2, 6).toUpperCase()
     const memberNumber = Math.floor(Math.random() * 9999) + 1
     const memberId = `SAC-${memberNumber.toString().padStart(4, '0')}-${randomId}`
@@ -131,7 +131,7 @@ export default function MemberIdBuilder() {
     ctx.fillStyle = '#2563EB' // blue-600
     ctx.font = 'bold 24px Inter'
     ctx.textAlign = 'center'
-    ctx.fillText('SOCIEDAD DE ASTRONOMÍA DEL CARIBE', 450, 80)
+    ctx.fillText('SOCIEDAD DE ASTRONOMIA DEL CARIBE', 450, 80)
 
     // Member ID
     ctx.fillStyle = '#111827' // gray-900
@@ -148,7 +148,7 @@ export default function MemberIdBuilder() {
 
     // Photo (if available)
     if (generatedId.photo) {
-      const img = new Image()
+      const img = new window.Image()
       img.onload = () => {
         // Draw photo in top right corner
         const photoSize = 120
@@ -197,7 +197,7 @@ export default function MemberIdBuilder() {
     ctx.fillStyle = '#6B7280' // gray-500
     ctx.font = 'bold 18px Inter'
     ctx.textAlign = 'center'
-    ctx.fillText('ID Válido para eventos SAC', 450, 520)
+    ctx.fillText('ID Valido para eventos SAC', 450, 520)
 
     ctx.fillStyle = '#2563EB' // blue-600
     ctx.font = '16px Inter'
@@ -228,12 +228,7 @@ export default function MemberIdBuilder() {
   }
 
   return (
-    <>
-      <PageSEO
-        title="Member ID"
-        description="Genera tu identificación oficial de miembro de la Sociedad de Astronomía del Caribe"
-      />
-
+    <LayoutWrapper>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto px-4 py-8">
           {/* Header */}
@@ -242,7 +237,7 @@ export default function MemberIdBuilder() {
               SAC ID
             </h1>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Diseña tu identificación oficial del miembro
+              Disena tu identificacion oficial del miembro
             </p>
           </div>
 
@@ -294,27 +289,24 @@ export default function MemberIdBuilder() {
                   {/* Photography Guidelines */}
                   <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
                     <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                      <span role="img" aria-label="camera guidelines">
-                        📸
-                      </span>{' '}
-                      Guía para la Foto
+                      Guia para la Foto
                     </h4>
                     <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
                       <div className="flex items-start space-x-3">
-                        <span className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
-                        <span>Use buena iluminación</span>
+                        <span className="w-2 h-2 bg-blue-600 rounded-full mt-2 shrink-0"></span>
+                        <span>Use buena iluminacion</span>
                       </div>
                       <div className="flex items-start space-x-3">
-                        <span className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
-                        <span>Mantenga la cámara estable y alineada</span>
+                        <span className="w-2 h-2 bg-blue-600 rounded-full mt-2 shrink-0"></span>
+                        <span>Mantenga la camara estable y alineada</span>
                       </div>
                       <div className="flex items-start space-x-3">
-                        <span className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
+                        <span className="w-2 h-2 bg-blue-600 rounded-full mt-2 shrink-0"></span>
                         <span>Evite sombras y reflejos</span>
                       </div>
                       <div className="flex items-start space-x-3">
-                        <span className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span>
-                        <span>Use un fondo sólido y sin distracciones</span>
+                        <span className="w-2 h-2 bg-blue-600 rounded-full mt-2 shrink-0"></span>
+                        <span>Use un fondo solido y sin distracciones</span>
                       </div>
                     </div>
                   </div>
@@ -328,14 +320,14 @@ export default function MemberIdBuilder() {
                           onClick={startCamera}
                           className="flex-1 bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-500 transition-all duration-300 shadow-md"
                         >
-                          <span role="img" aria-label="take photo"></span> Tomar Foto
+                          Tomar Foto
                         </button>
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
                           className="flex-1 bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-gray-700 dark:hover:bg-gray-500 transition-all duration-300 shadow-md"
                         >
-                          <span role="img" aria-label="upload file"></span> Subir Foto
+                          Subir Foto
                         </button>
                       </div>
                       {/* Hidden file input */}
@@ -364,9 +356,7 @@ export default function MemberIdBuilder() {
                               onClick={() => setPhoto(null)}
                               className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
                             >
-                              <span role="img" aria-label="close">
-                                ×
-                              </span>
+                              x
                             </button>
                           </div>
                         </div>
@@ -384,7 +374,7 @@ export default function MemberIdBuilder() {
                       {isGenerating ? (
                         <span className="flex items-center justify-center">
                           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                          Generando identificación...
+                          Generando identificacion...
                         </span>
                       ) : (
                         'Submit'
@@ -398,6 +388,16 @@ export default function MemberIdBuilder() {
                       Reiniciar
                     </button>
                   </div>
+
+                  {/* Download button - shown after ID is generated */}
+                  {generatedId && (
+                    <button
+                      onClick={downloadId}
+                      className="w-full bg-green-600 text-white font-semibold py-4 px-6 rounded-lg hover:bg-green-700 transition-all duration-300 shadow-md"
+                    >
+                      Descargar ID
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -412,12 +412,22 @@ export default function MemberIdBuilder() {
                   <div className="flex flex-1 items-start justify-center text-gray-500 dark:text-gray-400 mt-8">
                     <div className="text-center">
                       <div className="text-4xl mb-4 text-gray-300 dark:text-gray-600">
-                        <span role="img" aria-label="identification card">
-                          🪪
-                        </span>
+                        <svg
+                          className="w-16 h-16 mx-auto"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"
+                          />
+                        </svg>
                       </div>
                       <p className="text-lg">
-                        Complete el formulario para generar su identificación
+                        Complete el formulario para generar su identificacion
                       </p>
                     </div>
                   </div>
@@ -429,7 +439,7 @@ export default function MemberIdBuilder() {
 
         {/* Camera Modal */}
         {showCamera && (
-          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-50 p-4">
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center">
                 Tomar Foto
@@ -447,18 +457,12 @@ export default function MemberIdBuilder() {
                   onClick={takePhoto}
                   className="flex-1 bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 transition-all duration-300"
                 >
-                  <span role="img" aria-label="capture">
-                    📸
-                  </span>{' '}
                   Capturar
                 </button>
                 <button
                   onClick={stopCamera}
                   className="flex-1 bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-gray-700 transition-all duration-300"
                 >
-                  <span role="img" aria-label="cancel">
-                    ❌
-                  </span>{' '}
                   Cancelar
                 </button>
               </div>
@@ -466,6 +470,6 @@ export default function MemberIdBuilder() {
           </div>
         )}
       </div>
-    </>
+    </LayoutWrapper>
   )
 }

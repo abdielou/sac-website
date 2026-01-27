@@ -1,4 +1,3 @@
-/* eslint-disable jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-noninteractive-tabindex */
 import { useState, useEffect } from 'react'
 import { PageSEO } from '@/components/SEO'
 import GalleryFilters from '@/components/GalleryFilters'
@@ -230,8 +229,8 @@ export default function Gallery() {
                   &times;
                 </button>
               )}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}
+              {}
+              {}
               <img
                 src={selectedImage.imgSrc}
                 alt={selectedImage.title}
@@ -273,12 +272,12 @@ export default function Gallery() {
                     : {}
                 }
               >
-                <h2 className="text-2xl font-bold break-words">{selectedImage.title}</h2>
+                <h2 className="text-2xl font-bold wrap-break-word">{selectedImage.title}</h2>
                 {selectedImage.description && (
-                  <p className="mt-2 break-words">{selectedImage.description}</p>
+                  <p className="mt-2 wrap-break-word">{selectedImage.description}</p>
                 )}
                 {selectedImage.year && (
-                  <p className="mt-1 text-sm text-gray-300 break-words">
+                  <p className="mt-1 text-sm text-gray-300 wrap-break-word">
                     {selectedImage.trueDate === false && 'Aproximadamente: '}
                     {selectedImage.year}
                   </p>
@@ -320,8 +319,8 @@ export default function Gallery() {
                 {loadingMore
                   ? 'Loading...'
                   : loadedYears.length >= yearOptions.length
-                  ? 'No more images'
-                  : 'Load more'}
+                    ? 'No more images'
+                    : 'Load more'}
               </button>
             </>
           )}

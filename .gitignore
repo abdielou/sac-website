@@ -55,3 +55,8 @@ token.json
 
 # Ignore local gallery photos test data
 gallery-photos/
+
+# GSD planning docs (keep codebase/ committed)
+.planning/*
+!.planning/codebase/
+.claude/

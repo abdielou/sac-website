@@ -1,208 +1,196 @@
 import Link from '@/components/Link'
-import { PageSEO } from '@/components/SEO'
 import PageTitle from '@/components/PageTitle'
 import Image from 'next/image'
 import siteMetadata from '@/data/siteMetadata'
+import LayoutWrapper from '@/components/LayoutWrapper'
 
-export default function Brand() {
-  const logoVariants = [
-    {
-      name: 'Logo Principal',
-      description: `Logo completo de la ${siteMetadata.headerTitle}`,
-      preview: '/static/brand/Logo/SVG/sac-main-logo.svg',
-      background: 'light', // Light background for colored logo
-      formats: {
-        png: { path: '/static/brand/Logo/PNG/sac-main-logo.png', filename: 'sac-main-logo.png' },
-        jpg: { path: '/static/brand/Logo/JPG/sac-main-logo.jpg', filename: 'sac-main-logo.jpg' },
-        svg: { path: '/static/brand/Logo/SVG/sac-main-logo.svg', filename: 'sac-main-logo.svg' },
-      },
-    },
-    {
-      name: 'Logo Simple',
-      description: 'Versión simple del logo principal',
-      preview: '/static/brand/Logo/SVG/sac-main-short-logo.svg',
-      background: 'light', // Light background for colored logo
-      formats: {
-        png: {
-          path: '/static/brand/Logo/PNG/sac-main-short-logo.png',
-          filename: 'sac-main-short-logo.png',
-        },
-        jpg: {
-          path: '/static/brand/Logo/JPG/sac-main-short-logo.jpg',
-          filename: 'sac-main-short-logo.jpg',
-        },
-        svg: {
-          path: '/static/brand/Logo/SVG/sac-main-short-logo.svg',
-          filename: 'sac-main-short-logo.svg',
-        },
-      },
-    },
-    {
-      name: 'Logo Blanco',
-      description: 'Logo en color blanco para fondos oscuros',
-      preview: '/static/brand/Logo/SVG/sac-white-main-logo.svg',
-      background: 'dark', // Dark background for white logo
-      formats: {
-        // png: {
-        //   path: '/static/brand/Logo/PNG/sac-white-main-logo.png',
-        //   filename: 'sac-white-main-logo.png',
-        // },
-        // jpg: {
-        //   path: '/static/brand/Logo/JPG/sac-white-main-logo.jpg',
-        //   filename: 'sac-white-main-logo.jpg',
-        // },
-        svg: {
-          path: '/static/brand/Logo/SVG/sac-white-main-logo.svg',
-          filename: 'sac-white-main-logo.svg',
-        },
-      },
-    },
-    {
-      name: 'Logo Blanco Simple',
-      description: 'Versión simple del logo blanco',
-      preview: '/static/brand/Logo/SVG/sac-white-main-short-logo.svg',
-      background: 'dark', // Dark background for white logo
-      formats: {
-        // png: {
-        //   path: '/static/brand/Logo/PNG/sac-white-main-short-logo.png',
-        //   filename: 'sac-white-main-short-logo.png',
-        // },
-        // jpg: {
-        //   path: '/static/brand/Logo/JPG/sac-white-main-short-logo.jpg',
-        //   filename: 'sac-white-main-short-logo.jpg',
-        // },
-        svg: {
-          path: '/static/brand/Logo/SVG/sac-white-main-short-logo.svg',
-          filename: 'sac-white-main-short-logo.svg',
-        },
-      },
-    },
-    {
-      name: 'Logo Blanco y Negro',
-      description: 'Logo en blanco y negro',
-      preview: '/static/brand/Logo/SVG/sac-bw-logo.svg',
-      background: 'light', // Light background for B&W logo
-      formats: {
-        png: { path: '/static/brand/Logo/PNG/sac-bw-logo.png', filename: 'sac-bw-logo.png' },
-        jpg: { path: '/static/brand/Logo/JPG/sac-bw-logo.jpg', filename: 'sac-bw-logo.jpg' },
-        svg: { path: '/static/brand/Logo/SVG/sac-bw-logo.svg', filename: 'sac-bw-logo.svg' },
-      },
-    },
-    {
-      name: 'Logo Blanco y Negro Simple',
-      description: 'Versión simple del logo blanco y negro',
-      preview: '/static/brand/Logo/SVG/sac-bw-short-logo.svg',
-      background: 'light', // Light background for B&W logo
-      formats: {
-        png: {
-          path: '/static/brand/Logo/PNG/sac-bw-short-logo.png',
-          filename: 'sac-bw-short-logo.png',
-        },
-        jpg: {
-          path: '/static/brand/Logo/JPG/sac-bw-short-logo.jpg',
-          filename: 'sac-bw-short-logo.jpg',
-        },
-        svg: {
-          path: '/static/brand/Logo/SVG/sac-bw-short-logo.svg',
-          filename: 'sac-bw-short-logo.svg',
-        },
-      },
-    },
-  ]
+export const metadata = {
+  title: `Guias de Marca`,
+  description: `Guias completas de marca de la ${siteMetadata.headerTitle}. Descarga logos, colores y recursos para mantener la consistencia de la identidad visual.`,
+  openGraph: {
+    title: `Guias de Marca | ${siteMetadata.headerTitle}`,
+    description: `Guias completas de marca de la ${siteMetadata.headerTitle}. Descarga logos, colores y recursos para mantener la consistencia de la identidad visual.`,
+  },
+}
 
-  const anniversaryLogos = [
-    {
-      name: 'Logo 25 Aniversario',
-      description: 'Logo especial para el 25 aniversario',
-      preview: '/static/brand/Logo 25 Aniversario/SVG/sac-logo-25-aniversario.svg',
-      background: 'light', // Light background for colored logo
-      formats: {
-        png: {
-          path: '/static/brand/Logo 25 Aniversario/PNG/sac-logo-25-aniversario.png',
-          filename: 'sac-logo-25-aniversario.png',
-        },
-        jpg: {
-          path: '/static/brand/Logo 25 Aniversario/JPG/sac-logo-25-aniversario.jpg',
-          filename: 'sac-logo-25-aniversario.jpg',
-        },
-        svg: {
-          path: '/static/brand/Logo 25 Aniversario/SVG/sac-logo-25-aniversario.svg',
-          filename: 'sac-logo-25-aniversario.svg',
-        },
+const logoVariants = [
+  {
+    name: 'Logo Principal',
+    description: `Logo completo de la ${siteMetadata.headerTitle}`,
+    preview: '/static/brand/Logo/SVG/sac-main-logo.svg',
+    background: 'light',
+    formats: {
+      png: { path: '/static/brand/Logo/PNG/sac-main-logo.png', filename: 'sac-main-logo.png' },
+      jpg: { path: '/static/brand/Logo/JPG/sac-main-logo.jpg', filename: 'sac-main-logo.jpg' },
+      svg: { path: '/static/brand/Logo/SVG/sac-main-logo.svg', filename: 'sac-main-logo.svg' },
+    },
+  },
+  {
+    name: 'Logo Simple',
+    description: 'Version simple del logo principal',
+    preview: '/static/brand/Logo/SVG/sac-main-short-logo.svg',
+    background: 'light',
+    formats: {
+      png: {
+        path: '/static/brand/Logo/PNG/sac-main-short-logo.png',
+        filename: 'sac-main-short-logo.png',
+      },
+      jpg: {
+        path: '/static/brand/Logo/JPG/sac-main-short-logo.jpg',
+        filename: 'sac-main-short-logo.jpg',
+      },
+      svg: {
+        path: '/static/brand/Logo/SVG/sac-main-short-logo.svg',
+        filename: 'sac-main-short-logo.svg',
       },
     },
-    {
-      name: 'Logo 25 Aniversario Blanco',
-      description: 'Logo especial del 25 aniversario en blanco',
-      preview: '/static/brand/Logo 25 Aniversario/SVG/sac-logo-25-aniversario-white.svg',
-      background: 'dark', // Dark background for white logo
-      formats: {
-        png: {
-          path: '/static/brand/Logo 25 Aniversario/PNG/sac-logo-25-aniversario-white.png',
-          filename: 'sac-logo-25-aniversario-white.png',
-        },
-        jpg: {
-          path: '/static/brand/Logo 25 Aniversario/JPG/sac-logo-25-aniversario-white.jpg',
-          filename: 'sac-logo-25-aniversario-white.jpg',
-        },
-        svg: {
-          path: '/static/brand/Logo 25 Aniversario/SVG/sac-logo-25-aniversario-white.svg',
-          filename: 'sac-logo-25-aniversario-white.svg',
-        },
+  },
+  {
+    name: 'Logo Blanco',
+    description: 'Logo en color blanco para fondos oscuros',
+    preview: '/static/brand/Logo/SVG/sac-white-main-logo.svg',
+    background: 'dark',
+    formats: {
+      svg: {
+        path: '/static/brand/Logo/SVG/sac-white-main-logo.svg',
+        filename: 'sac-white-main-logo.svg',
       },
     },
-    {
-      name: 'Logo 25 Aniversario Simple',
-      description: 'Versión simple del logo del 25 aniversario',
-      preview: '/static/brand/Logo 25 Aniversario/SVG/sac-logo-25-aniversario-short.svg',
-      background: 'light', // Light background for colored logo
-      formats: {
-        png: {
-          path: '/static/brand/Logo 25 Aniversario/PNG/sac-logo-25-aniversario-short.png',
-          filename: 'sac-logo-25-aniversario-short.png',
-        },
-        jpg: {
-          path: '/static/brand/Logo 25 Aniversario/JPG/sac-logo-25-aniversario-short.jpg',
-          filename: 'sac-logo-25-aniversario-short.jpg',
-        },
-        svg: {
-          path: '/static/brand/Logo 25 Aniversario/SVG/sac-logo-25-aniversario-short.svg',
-          filename: 'sac-logo-25-aniversario-short.svg',
-        },
+  },
+  {
+    name: 'Logo Blanco Simple',
+    description: 'Version simple del logo blanco',
+    preview: '/static/brand/Logo/SVG/sac-white-main-short-logo.svg',
+    background: 'dark',
+    formats: {
+      svg: {
+        path: '/static/brand/Logo/SVG/sac-white-main-short-logo.svg',
+        filename: 'sac-white-main-short-logo.svg',
       },
     },
-    {
-      name: 'Logo 25 Aniversario Simple Blanco',
-      description: 'Versión simple del logo del 25 aniversario en blanco',
-      preview: '/static/brand/Logo 25 Aniversario/SVG/sac-logo-25-aniversario-short-white.svg',
-      background: 'dark', // Dark background for white logo
-      formats: {
-        png: {
-          path: '/static/brand/Logo 25 Aniversario/PNG/sac-logo-25-aniversario-short-white.png',
-          filename: 'sac-logo-25-aniversario-short-white.png',
-        },
-        jpg: {
-          path: '/static/brand/Logo 25 Aniversario/JPG/sac-logo-25-aniversario-short-white.jpg',
-          filename: 'sac-logo-25-aniversario-short-white.jpg',
-        },
-        svg: {
-          path: '/static/brand/Logo 25 Aniversario/SVG/sac-logo-25-aniversario-short-white.svg',
-          filename: 'sac-logo-25-aniversario-short-white.svg',
-        },
+  },
+  {
+    name: 'Logo Blanco y Negro',
+    description: 'Logo en blanco y negro',
+    preview: '/static/brand/Logo/SVG/sac-bw-logo.svg',
+    background: 'light',
+    formats: {
+      png: { path: '/static/brand/Logo/PNG/sac-bw-logo.png', filename: 'sac-bw-logo.png' },
+      jpg: { path: '/static/brand/Logo/JPG/sac-bw-logo.jpg', filename: 'sac-bw-logo.jpg' },
+      svg: { path: '/static/brand/Logo/SVG/sac-bw-logo.svg', filename: 'sac-bw-logo.svg' },
+    },
+  },
+  {
+    name: 'Logo Blanco y Negro Simple',
+    description: 'Version simple del logo blanco y negro',
+    preview: '/static/brand/Logo/SVG/sac-bw-short-logo.svg',
+    background: 'light',
+    formats: {
+      png: {
+        path: '/static/brand/Logo/PNG/sac-bw-short-logo.png',
+        filename: 'sac-bw-short-logo.png',
+      },
+      jpg: {
+        path: '/static/brand/Logo/JPG/sac-bw-short-logo.jpg',
+        filename: 'sac-bw-short-logo.jpg',
+      },
+      svg: {
+        path: '/static/brand/Logo/SVG/sac-bw-short-logo.svg',
+        filename: 'sac-bw-short-logo.svg',
       },
     },
-  ]
+  },
+]
 
+const anniversaryLogos = [
+  {
+    name: 'Logo 25 Aniversario',
+    description: 'Logo especial para el 25 aniversario',
+    preview: '/static/brand/Logo 25 Aniversario/SVG/sac-logo-25-aniversario.svg',
+    background: 'light',
+    formats: {
+      png: {
+        path: '/static/brand/Logo 25 Aniversario/PNG/sac-logo-25-aniversario.png',
+        filename: 'sac-logo-25-aniversario.png',
+      },
+      jpg: {
+        path: '/static/brand/Logo 25 Aniversario/JPG/sac-logo-25-aniversario.jpg',
+        filename: 'sac-logo-25-aniversario.jpg',
+      },
+      svg: {
+        path: '/static/brand/Logo 25 Aniversario/SVG/sac-logo-25-aniversario.svg',
+        filename: 'sac-logo-25-aniversario.svg',
+      },
+    },
+  },
+  {
+    name: 'Logo 25 Aniversario Blanco',
+    description: 'Logo especial del 25 aniversario en blanco',
+    preview: '/static/brand/Logo 25 Aniversario/SVG/sac-logo-25-aniversario-white.svg',
+    background: 'dark',
+    formats: {
+      png: {
+        path: '/static/brand/Logo 25 Aniversario/PNG/sac-logo-25-aniversario-white.png',
+        filename: 'sac-logo-25-aniversario-white.png',
+      },
+      jpg: {
+        path: '/static/brand/Logo 25 Aniversario/JPG/sac-logo-25-aniversario-white.jpg',
+        filename: 'sac-logo-25-aniversario-white.jpg',
+      },
+      svg: {
+        path: '/static/brand/Logo 25 Aniversario/SVG/sac-logo-25-aniversario-white.svg',
+        filename: 'sac-logo-25-aniversario-white.svg',
+      },
+    },
+  },
+  {
+    name: 'Logo 25 Aniversario Simple',
+    description: 'Version simple del logo del 25 aniversario',
+    preview: '/static/brand/Logo 25 Aniversario/SVG/sac-logo-25-aniversario-short.svg',
+    background: 'light',
+    formats: {
+      png: {
+        path: '/static/brand/Logo 25 Aniversario/PNG/sac-logo-25-aniversario-short.png',
+        filename: 'sac-logo-25-aniversario-short.png',
+      },
+      jpg: {
+        path: '/static/brand/Logo 25 Aniversario/JPG/sac-logo-25-aniversario-short.jpg',
+        filename: 'sac-logo-25-aniversario-short.jpg',
+      },
+      svg: {
+        path: '/static/brand/Logo 25 Aniversario/SVG/sac-logo-25-aniversario-short.svg',
+        filename: 'sac-logo-25-aniversario-short.svg',
+      },
+    },
+  },
+  {
+    name: 'Logo 25 Aniversario Simple Blanco',
+    description: 'Version simple del logo del 25 aniversario en blanco',
+    preview: '/static/brand/Logo 25 Aniversario/SVG/sac-logo-25-aniversario-short-white.svg',
+    background: 'dark',
+    formats: {
+      png: {
+        path: '/static/brand/Logo 25 Aniversario/PNG/sac-logo-25-aniversario-short-white.png',
+        filename: 'sac-logo-25-aniversario-short-white.png',
+      },
+      jpg: {
+        path: '/static/brand/Logo 25 Aniversario/JPG/sac-logo-25-aniversario-short-white.jpg',
+        filename: 'sac-logo-25-aniversario-short-white.jpg',
+      },
+      svg: {
+        path: '/static/brand/Logo 25 Aniversario/SVG/sac-logo-25-aniversario-short-white.svg',
+        filename: 'sac-logo-25-aniversario-short-white.svg',
+      },
+    },
+  },
+]
+
+export default function BrandPage() {
   return (
-    <>
-      <PageSEO
-        title={`Guías de Marca | ${siteMetadata.headerTitle}`}
-        description={`Guías completas de marca de la ${siteMetadata.headerTitle}. Descarga logos, colores y recursos para mantener la consistencia de la identidad visual.`}
-      />
-
+    <LayoutWrapper>
       <div className="divide-y divide-gray-200 dark:divide-gray-700">
         <div className="space-y-2 pb-8 pt-6 md:space-y-5">
-          <PageTitle>Guías de Marca</PageTitle>
+          <PageTitle>Guias de Marca</PageTitle>
           <p className="text-lg leading-7 text-gray-500 dark:text-gray-400">
             Recursos completos para la identidad visual de la {siteMetadata.headerTitle}
           </p>
@@ -218,15 +206,15 @@ export default function Brand() {
             </p>
             <div className="prose prose-lg dark:prose-dark max-w-none">
               <ul className="space-y-1">
-                <li>Mantén siempre la proporción original del logo</li>
+                <li>Manten siempre la proporcion original del logo</li>
                 <li>No modifiques los colores, fuentes o elementos del logo</li>
                 <li>
-                  Mantén un espacio mínimo alrededor del logo equivalente al tamaño de la "S"
-                  mayúscula
+                  Manten un espacio minimo alrededor del logo equivalente al tamano de la "S"
+                  mayuscula
                 </li>
                 <li>No coloques el logo sobre fondos que reduzcan su legibilidad</li>
-                <li>Usa el logo blanco únicamente sobre fondos oscuros</li>
-                <li>Para usos comerciales, contacta con la junta directiva para aprobación</li>
+                <li>Usa el logo blanco unicamente sobre fondos oscuros</li>
+                <li>Para usos comerciales, contacta con la junta directiva para aprobacion</li>
               </ul>
             </div>
           </div>
@@ -334,7 +322,7 @@ export default function Brand() {
               <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-4 mb-4">
                   <div
-                    className="w-16 h-16 rounded-lg border-2 border-gray-300 dark:border-gray-600 flex-shrink-0"
+                    className="w-16 h-16 rounded-lg border-2 border-gray-300 dark:border-gray-600 shrink-0"
                     style={{ backgroundColor: '#560647' }}
                   ></div>
                   <div>
@@ -351,7 +339,7 @@ export default function Brand() {
               <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-4 mb-4">
                   <div
-                    className="w-16 h-16 rounded-lg border-2 border-gray-300 dark:border-gray-600 flex-shrink-0"
+                    className="w-16 h-16 rounded-lg border-2 border-gray-300 dark:border-gray-600 shrink-0"
                     style={{ backgroundColor: '#1B1751' }}
                   ></div>
                   <div>
@@ -367,7 +355,7 @@ export default function Brand() {
               <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-4 mb-4">
                   <div
-                    className="w-16 h-16 rounded-lg border-2 border-gray-300 dark:border-gray-600 flex-shrink-0"
+                    className="w-16 h-16 rounded-lg border-2 border-gray-300 dark:border-gray-600 shrink-0"
                     style={{ backgroundColor: '#C8ABDB' }}
                   ></div>
                   <div>
@@ -383,7 +371,7 @@ export default function Brand() {
               <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center space-x-4 mb-4">
                   <div
-                    className="w-16 h-16 rounded-lg border-2 border-gray-300 dark:border-gray-600 flex-shrink-0"
+                    className="w-16 h-16 rounded-lg border-2 border-gray-300 dark:border-gray-600 shrink-0"
                     style={{ backgroundColor: '#EDB898' }}
                   ></div>
                   <div>
@@ -402,17 +390,17 @@ export default function Brand() {
           {/* Implementation Examples */}
           <div className="py-8">
             <h2 className="text-2xl font-bold leading-8 tracking-tight mb-6">
-              Ejemplos de Implementación
+              Ejemplos de Implementacion
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Ejemplos visuales de cómo aplicar la marca SAC en diseños claros y oscuros para
+              Ejemplos visuales de como aplicar la marca SAC en disenos claros y oscuros para
               diferentes materiales y contextos.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
               <div className="bg-white dark:bg-gray-800 px-6 py-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex justify-center">
                 <Image
                   src="/static/brand/Implementation/imp-dark.png"
-                  alt="Ejemplo de implementación con diseño oscuro"
+                  alt="Ejemplo de implementacion con diseno oscuro"
                   width={1920}
                   height={608}
                   className="h-auto object-contain max-w-full"
@@ -422,7 +410,7 @@ export default function Brand() {
               <div className="bg-white dark:bg-gray-800 px-6 py-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex justify-center">
                 <Image
                   src="/static/brand/Implementation/imp-light.png"
-                  alt="Ejemplo de implementación con diseño claro"
+                  alt="Ejemplo de implementacion con diseno claro"
                   width={1882}
                   height={608}
                   className="h-auto object-contain max-w-full"
@@ -437,7 +425,7 @@ export default function Brand() {
               Contacto para Usos Especiales
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Para usos comerciales, modificaciones del logo, o cualquier duda sobre la aplicación
+              Para usos comerciales, modificaciones del logo, o cualquier duda sobre la aplicacion
               de la marca, por favor contacta con la junta directiva.
             </p>
             <Link
@@ -449,6 +437,6 @@ export default function Brand() {
           </div>
         </div>
       </div>
-    </>
+    </LayoutWrapper>
   )
 }

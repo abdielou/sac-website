@@ -1,27 +1,13 @@
+'use client'
+
 import { useState } from 'react'
-import { getFileBySlug } from '@/lib/mdx'
-import { PageSEO } from '@/components/SEO'
 import { AuthorListTitle, AuthorListLayout, AboutCard } from '@/layouts/AuthorListLayout'
 
-const BOARD = ['rafael', 'eddie', 'hector', 'francisco', 'luis', 'abdiel']
-const BOARD_2021 = ['janethsi', 'nelson', 'hector', 'rafael_2021', 'eddie_2021', 'victor']
-
-export async function getStaticProps() {
-  return {
-    props: {
-      about: await getFileBySlug('authors', ['default']),
-      authors: await Promise.all(BOARD.map((slug) => getFileBySlug('authors', [slug]))),
-      authors_2021: await Promise.all(BOARD_2021.map((slug) => getFileBySlug('authors', [slug]))),
-    },
-  }
-}
-
-export default function About({ about, authors, authors_2021 }) {
+export default function AboutContent({ about, authors, authors_2021 }) {
   const [activeTab, setActiveTab] = useState(0)
 
   return (
     <>
-      <PageSEO title={`Quiénes Somos`} description={`Quiénes Somos`} />
       <AboutCard {...about} />
       <AuthorListTitle title="Junta de Directores" />
 

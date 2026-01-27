@@ -1,4 +1,0 @@
-node_modules
-appsscript/**/*.js
-**/venv/**
-scripts/**/venv/**
