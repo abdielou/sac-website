@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Incremental migration of the Sociedad de Astronomía del Caribe (SAC) website from Next.js 12 (Pages Router) to Next.js 15 (App Router). The site serves Puerto Rico's astronomy community with blog posts, photo galleries, event information, and membership management — all in Spanish.
+Sociedad de Astronomia del Caribe (SAC) website running on Next.js 15 (App Router) with React 19 and Tailwind CSS 4. The site serves Puerto Rico's astronomy community with blog posts, photo galleries, event information, and membership management — all in Spanish.
 
 ## Core Value
 
@@ -12,59 +12,52 @@ The site must remain fully functional during migration — no broken pages, no l
 
 ### Validated
 
-<!-- Existing capabilities that work and must continue working -->
-
-- ✓ MDX blog with static generation, syntax highlighting, math rendering — existing
-- ✓ Photo gallery with AWS S3 integration, year/month filtering, lightbox — existing
-- ✓ NASA Astronomy Picture of the Day integration — existing
-- ✓ Newsletter subscriptions (Mailchimp/Buttondown/ConvertKit) — existing
-- ✓ Dark/light theme toggle — existing
-- ✓ SEO meta tags and social sharing — existing
-- ✓ Responsive design with Tailwind CSS — existing
-- ✓ Spanish locale (es-PR) throughout — existing
+- Upgrade to Next.js 15 — v1.0
+- Remove Preact aliasing (enable Server Components) — v1.0
+- Set up App Router (`app/` directory structure) — v1.0
+- Migrate root layout (global providers, theme, navigation) — v1.0
+- Migrate home page to App Router — v1.0
+- Migrate static pages: about, contact, events, membership, weather, brand, donate, links, id — v1.0
+- Verify Vercel deployment succeeds — v1.0
+- All migrated pages render correctly with existing styles — v1.0
+- MDX blog with static generation, syntax highlighting, math rendering — existing
+- Photo gallery with AWS S3 integration, year/month filtering, lightbox — existing
+- NASA Astronomy Picture of the Day integration — existing
+- Newsletter subscriptions (Mailchimp/Buttondown/ConvertKit) — existing
+- Dark/light theme toggle — existing (upgraded to next-themes 0.4.6)
+- SEO meta tags and social sharing — existing (using Metadata API)
+- Responsive design with Tailwind CSS — existing (upgraded to v4.1.18)
+- Spanish locale (es-PR) throughout — existing
 
 ### Active
 
-<!-- Current scope. Building toward these. -->
-
-- [ ] Upgrade to Next.js 15
-- [ ] Remove Preact aliasing (enable Server Components)
-- [ ] Set up App Router (`app/` directory structure)
-- [ ] Migrate root layout (global providers, theme, navigation)
-- [ ] Migrate home page to App Router
-- [ ] Migrate static pages: about, contact, events, membership, weather, brand, donate, links
-- [ ] Verify Vercel deployment succeeds
-- [ ] All migrated pages render correctly with existing styles
+(None — ready for next milestone planning)
 
 ### Out of Scope
 
-<!-- Explicit boundaries for this milestone -->
-
 - Blog migration — MDX complexity, defer to future milestone
 - Gallery migration — S3 integration complexity, defer to future milestone
-- API route migration to Server Actions — keep in pages/api for now
+- API route migration to Route Handlers — keep in pages/api for now
 - TypeScript conversion — stay JavaScript for this milestone
-- Tailwind v4 upgrade — one major upgrade at a time
 
 ## Context
 
-**Current state:**
-- Next.js 12.1.0 with Pages Router
-- React 17.0.2 with Preact aliasing in production
-- Tailwind CSS 2.2.2
+**Current state (v1.0 shipped):**
+- Next.js 15.5.10 with App Router (static pages) + Pages Router (blog, gallery)
+- React 19.2.4
+- Tailwind CSS 4.1.18 with @config directive
+- next-themes 0.4.6 with App Router support
+- ESLint 9 flat config
 - Deployed on Vercel
 
-**Migration approach:**
-Next.js supports running `pages/` and `app/` directories simultaneously. This enables incremental migration — new/migrated pages use App Router while existing pages continue working.
+**Tech stack:**
+- 10 pages on App Router: home, about, contact, events, membership, weather, brand, donate, links, id
+- Blog and gallery remain on Pages Router (incremental migration)
+- API routes in pages/api (mailchimp, buttondown, convertkit, apod, photos, get-years)
 
-**Key files to modify:**
-- `next.config.js` — Remove Preact aliasing, update for Next.js 15
-- `package.json` — Upgrade dependencies
-- Create `app/` directory structure with layouts
-- Migrate page components one at a time
-
-**Codebase reference:**
-See `.planning/codebase/` for detailed architecture, stack, and structure documentation.
+**Known issues:**
+- Jest SVG import configuration (one test suite fails)
+- Windows build race conditions (flaky, requires multiple build attempts)
 
 ## Constraints
 
@@ -77,10 +70,13 @@ See `.planning/codebase/` for detailed architecture, stack, and structure docume
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Incremental migration over full rewrite | Lower risk, site stays live, learn as we go | — Pending |
-| Remove Preact aliasing | Required for Server Components, worth the bundle size trade-off | — Pending |
-| Start with static pages | Simpler migration, establish patterns before complex pages | — Pending |
-| Keep blog/gallery on Pages Router | MDX and S3 integration need more research for App Router | — Pending |
+| Incremental migration over full rewrite | Lower risk, site stays live, learn as we go | Good |
+| Remove Preact aliasing | Required for Server Components, worth the bundle size trade-off | Good |
+| Start with static pages | Simpler migration, establish patterns before complex pages | Good |
+| Keep blog/gallery on Pages Router | MDX and S3 integration need more research for App Router | Good |
+| Server/Client Component split pattern | Server fetches data, Client handles interactivity | Good |
+| ESLint flat config with direct CLI | Avoids next lint wrapper issues | Good |
+| Upgrade to Tailwind CSS 4 | Better performance, modern syntax | Good |
 
 ---
-*Last updated: 2026-01-26 after initialization*
+*Last updated: 2026-01-27 after v1.0 milestone*
