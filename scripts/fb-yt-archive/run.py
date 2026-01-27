@@ -1,6 +1,8 @@
 import os
 import tempfile
 import datetime
+import zipfile
+from contextlib import contextmanager
 import google_auth_oauthlib
 from googleapiclient import discovery
 import googleapiclient.errors
@@ -90,6 +92,59 @@ def scan_inbox(inbox_path, processed_zips):
 
     # Return sorted list of full paths
     return [os.path.join(inbox_path, f) for f in sorted(pending_zips)]
+
+
+@contextmanager
+def extract_zip(zip_path):
+    """Extract zip to temp directory, auto-cleanup on exit (AUTO-02).
+
+    Use ignore_cleanup_errors=True for Windows file locking issues.
+
+    Args:
+        zip_path: Full path to the zip file
+
+    Yields:
+        Path to the temporary directory containing extracted contents
+    """
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
+        with zipfile.ZipFile(zip_path, 'r') as zf:
+            zf.extractall(temp_dir)
+        yield temp_dir
+
+
+def find_metadata_in_extracted(temp_dir):
+    """Find the live_videos.json metadata file in extracted folder (AUTO-03).
+
+    Facebook exports have nested structure. Search for live_videos.json.
+
+    Args:
+        temp_dir: Path to the extracted directory
+
+    Returns:
+        Full path to JSON file, or None if not found.
+    """
+    for root, dirs, files in os.walk(temp_dir):
+        for filename in files:
+            if filename == 'live_videos.json':
+                return os.path.join(root, filename)
+    return None
+
+
+def find_videos_dir_in_extracted(temp_dir):
+    """Find the live_videos directory containing .mp4 files.
+
+    Args:
+        temp_dir: Path to the extracted directory
+
+    Returns:
+        Full path to directory containing mp4 files, or None if not found.
+    """
+    for root, dirs, files in os.walk(temp_dir):
+        # Check if this directory contains mp4 files
+        mp4_files = [f for f in files if f.lower().endswith('.mp4')]
+        if mp4_files:
+            return root
+    return None
 
 
 # Registry structure:
