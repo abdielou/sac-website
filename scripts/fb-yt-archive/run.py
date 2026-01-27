@@ -64,6 +64,34 @@ def ensure_inbox_exists():
     return INBOX_PATH
 
 
+def scan_inbox(inbox_path, processed_zips):
+    """Find unprocessed zip files in inbox folder (AUTO-01, AUTO-05).
+
+    Args:
+        inbox_path: Path to the inbox directory
+        processed_zips: List/set of already processed zip filenames
+
+    Returns:
+        List of full paths to unprocessed zip files, sorted alphabetically
+    """
+    # Ensure inbox exists (auto-create if missing)
+    ensure_inbox_exists()
+
+    # List all files and filter to .zip files (case-insensitive)
+    try:
+        all_files = os.listdir(inbox_path)
+    except OSError:
+        return []
+
+    zip_files = [f for f in all_files if f.lower().endswith('.zip')]
+
+    # Exclude already-processed zips
+    pending_zips = [f for f in zip_files if f not in processed_zips]
+
+    # Return sorted list of full paths
+    return [os.path.join(inbox_path, f) for f in sorted(pending_zips)]
+
+
 # Registry structure:
 # {
 #   "uploaded_fbids": ["123456789", "987654321"],
