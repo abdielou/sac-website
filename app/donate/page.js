@@ -1,14 +1,12 @@
+'use client'
+
 import Image from '@/components/Image'
-import { PageSEO } from '@/components/SEO'
+import LayoutWrapper from '@/components/LayoutWrapper'
 import siteMetadata from '@/data/siteMetadata'
 
-export default function Contact() {
+export default function DonatePage() {
   return (
-    <>
-      <PageSEO
-        title="Donaciones"
-        description="Sea parte del esfuerzo de la Sociedad de Astronomía del Caribe"
-      />
+    <LayoutWrapper>
       <div className="divide-y divide-gray-200 dark:divide-gray-700">
         <div className="pt-6 pb-8 space-y-2 md:space-y-5">
           <h1 className="text-3xl font-extrabold leading-9 tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl sm:leading-10 md:text-6xl md:leading-14">
@@ -17,13 +15,13 @@ export default function Contact() {
         </div>
         <div className="items-start space-y-2 py-4 xl:grid xl:grid-cols-1 xl:gap-x-8 xl:space-y-0">
           <h2 className="text-sm tracking-tight leading-5 text-gray-800 dark:text-gray-200 sm:text-lg sm:leading-6 md:text-xl md:leading-8">
-            Sea parte del esfuerzo de la Sociedad de Astronomía del Caribe
+            Sea parte del esfuerzo de la Sociedad de Astronomia del Caribe
           </h2>
           <div className="pt-4 pb-2 prose dark:prose-dark max-w-none">
-            La Sociedad de Astronomía del Caribe es una organización sin fines de lucro 501(c)(3)
-            que ofrece varias actividades educativas y de observación astronómica durante el año en
+            La Sociedad de Astronomia del Caribe es una organizacion sin fines de lucro 501(c)(3)
+            que ofrece varias actividades educativas y de observacion astronomica durante el ano en
             diversas partes de la isla, libre de costo. Con tu donativo ayudas a la SAC a cumplir su
-            misión de difundir la ciencia de la astronomía en Puerto Rico, el Caribe y el mundo.
+            mision de difundir la ciencia de la astronomia en Puerto Rico, el Caribe y el mundo.
           </div>
           {/* ATH Movil */}
           <div className="block md:hidden">
@@ -37,7 +35,7 @@ export default function Contact() {
           {/* ATH Movil QR*/}
           <div className="hidden md:block">
             <div className="pt-2 pb-4 prose dark:prose-dark max-w-none">
-              También puedes hacer tu donativo con ATH Movil desde tu celular.
+              Tambien puedes hacer tu donativo con ATH Movil desde tu celular.
             </div>
             <Image
               src={siteMetadata.payments.payAthMovilQR}
@@ -57,6 +55,6 @@ export default function Contact() {
           </div>
         </div>
       </div>
-    </>
+    </LayoutWrapper>
   )
 }
