@@ -525,6 +525,172 @@ def handle_video_upload_process(youtube, facebook_data_dir, pending, title_map, 
         print(f"Upload process completed")
 
 
+def process_inbox():
+    """Main entry point: process all unprocessed zips from inbox folder.
+
+    This function:
+    1. Loads registry (uploaded_fbids, processed_zips, daily_uploads)
+    2. Scans inbox for unprocessed zip files
+    3. Authenticates with YouTube API
+    4. For each zip: extracts, reads metadata, processes videos
+    5. For each video: checks fbid for duplicates, uploads if new
+    6. Saves registry after EACH successful upload (crash-safe)
+    7. Stops gracefully when daily limit reached
+    8. Marks zips as processed when complete
+    9. Prints summary at end
+    """
+    # Counters for summary
+    total_uploaded = 0
+    total_skipped = 0
+    total_errors = 0
+
+    # Load registry
+    print_status("Loading registry...", 'info')
+    registry = load_registry(REGISTRY_PATH)
+    uploaded_fbids = set(registry.get("uploaded_fbids", []))
+    processed_zips = registry.get("processed_zips", [])
+
+    # Scan inbox for unprocessed zips
+    print_status(f"Scanning inbox: {INBOX_PATH}", 'info')
+    pending_zips = scan_inbox(INBOX_PATH, processed_zips)
+
+    if not pending_zips:
+        print_status("No unprocessed zip files found in inbox.", 'info')
+        print_summary(total_uploaded, total_skipped, total_errors)
+        return
+
+    print_status(f"Found {len(pending_zips)} unprocessed zip file(s)", 'info')
+
+    # Check if we can upload today before authenticating
+    if not can_upload_today(registry, max_videos_per_run):
+        print_status("Daily upload limit already reached. Run again tomorrow.", 'warning')
+        print_summary(total_uploaded, total_skipped, total_errors)
+        return
+
+    # Authenticate with YouTube
+    print_status("Authenticating with YouTube...", 'info')
+    youtube = authenticate_youtube()
+
+    # Process each zip file
+    for zip_path in pending_zips:
+        zip_name = os.path.basename(zip_path)
+        print_status(f"\nProcessing: {zip_name}", 'info')
+
+        try:
+            with extract_zip(zip_path) as temp_dir:
+                # Find metadata file
+                metadata_path = find_metadata_in_extracted(temp_dir)
+                if not metadata_path:
+                    print_status(f"  No live_videos.json found in {zip_name}", 'error')
+                    total_errors += 1
+                    continue
+
+                # Find videos directory
+                videos_dir = find_videos_dir_in_extracted(temp_dir)
+                if not videos_dir:
+                    print_status(f"  No video files found in {zip_name}", 'error')
+                    total_errors += 1
+                    continue
+
+                # Read metadata
+                entries = read_json_file(metadata_path)
+                print_status(f"  Found {len(entries)} video entries in metadata", 'info')
+
+                # Track intra-zip duplicates
+                seen_fbids_in_zip = set()
+                zip_uploaded = 0
+                zip_skipped = 0
+                zip_errors = 0
+
+                # Process each entry
+                for entry in entries:
+                    # Check daily limit before each upload
+                    if not can_upload_today(registry, max_videos_per_run):
+                        print_status("Daily limit reached. Run again tomorrow.", 'warning')
+                        # Save registry before exiting
+                        save_registry_atomic(REGISTRY_PATH, registry)
+                        print_summary(total_uploaded + zip_uploaded, total_skipped + zip_skipped, total_errors + zip_errors)
+                        return
+
+                    # Extract fbid for deduplication
+                    fbid = extract_fbid(entry)
+                    if not fbid:
+                        print_status(f"  Skipping entry: no fbid found", 'warning')
+                        zip_errors += 1
+                        continue
+
+                    # Check for cross-zip duplicate (already uploaded)
+                    if fbid in uploaded_fbids:
+                        # Silently skip cross-zip duplicates per CONTEXT.md
+                        zip_skipped += 1
+                        continue
+
+                    # Check for intra-zip duplicate
+                    if fbid in seen_fbids_in_zip:
+                        print_status(f"  Skipping {fbid}: duplicate within zip", 'warning')
+                        zip_skipped += 1
+                        continue
+
+                    seen_fbids_in_zip.add(fbid)
+
+                    # Get video filename and build path
+                    filename = extract_video_filename(entry)
+                    if not filename:
+                        print_status(f"  Skipping {fbid}: no filename found", 'warning')
+                        zip_errors += 1
+                        continue
+
+                    video_path = os.path.join(videos_dir, filename)
+                    if not os.path.exists(video_path):
+                        print_status(f"  Skipping {fbid}: video file not found", 'error')
+                        zip_errors += 1
+                        continue
+
+                    # Get title
+                    title = extract_video_title(entry)
+                    print_status(f"  Uploading: {title}", 'info')
+
+                    # Upload video
+                    success = upload_single_video(youtube, video_path, title)
+
+                    if success:
+                        # Record in registry
+                        record_upload(registry, fbid)
+                        uploaded_fbids.add(fbid)
+                        zip_uploaded += 1
+
+                        # Save registry immediately (crash-safe)
+                        save_registry_atomic(REGISTRY_PATH, registry)
+                        print_status(f"    Uploaded successfully", 'success')
+                    else:
+                        zip_errors += 1
+                        print_status(f"    Upload failed", 'error')
+
+                # Update totals
+                total_uploaded += zip_uploaded
+                total_skipped += zip_skipped
+                total_errors += zip_errors
+
+                print_status(f"  Zip complete: {zip_uploaded} uploaded, {zip_skipped} skipped, {zip_errors} errors", 'info')
+
+        except zipfile.BadZipFile:
+            print_status(f"  Invalid or corrupted zip file: {zip_name}", 'error')
+            total_errors += 1
+            continue
+        except Exception as e:
+            print_status(f"  Error processing {zip_name}: {str(e)[:100]}", 'error')
+            total_errors += 1
+            continue
+
+        # Mark zip as processed (only after successful processing)
+        registry["processed_zips"].append(zip_name)
+        save_registry_atomic(REGISTRY_PATH, registry)
+        print_status(f"  Marked {zip_name} as processed", 'success')
+
+    # Final summary
+    print_summary(total_uploaded, total_skipped, total_errors)
+
+
 if __name__ == "__main__":
     # Authenticate 
     youtube = authenticate_youtube()
