@@ -13,6 +13,18 @@ import pickle
 from google.auth.transport.requests import Request
 import socket
 
+# Optional colored output (graceful degradation if colorama not installed)
+try:
+    from colorama import Fore, Style, just_fix_windows_console
+    just_fix_windows_console()
+    COLORS_AVAILABLE = True
+except ImportError:
+    COLORS_AVAILABLE = False
+    class Fore:
+        GREEN = RED = YELLOW = CYAN = MAGENTA = ''
+    class Style:
+        RESET_ALL = ''
+
 # Force IPv4 for all socket connections (FIXED VERSION)
 orig_getaddrinfo = socket.getaddrinfo
 def ipv4_getaddrinfo(host, port, family=0, socktype=0, proto=0, flags=0):
@@ -50,7 +62,33 @@ REGISTRY_FILENAME = registry_filename
 INBOX_PATH = os.path.join(SCRIPT_DIR, inbox_dir)
 REGISTRY_PATH = os.path.join(SCRIPT_DIR, 'registry.json')
 
-# Helper function 
+def print_status(message, status='info'):
+    """Print colored status message."""
+    colors = {
+        'success': Fore.GREEN,
+        'error': Fore.RED,
+        'warning': Fore.YELLOW,
+        'info': Fore.CYAN,
+        'skip': Fore.MAGENTA,
+    }
+    color = colors.get(status, '')
+    reset = Style.RESET_ALL if color else ''
+    print(f"{color}{message}{reset}")
+
+
+def print_summary(uploaded, skipped, errors):
+    """Print processing summary."""
+    print(f"\n{'='*50}")
+    print("PROCESSING SUMMARY")
+    print(f"{'='*50}")
+    print_status(f"  Uploaded: {uploaded}", 'success' if uploaded > 0 else 'info')
+    print_status(f"  Skipped (duplicates): {skipped}", 'skip' if skipped > 0 else 'info')
+    if errors > 0:
+        print_status(f"  Errors: {errors}", 'error')
+    print(f"{'='*50}")
+
+
+# Helper function
 def get_videos_directory(base_dir):
     return os.path.join(base_dir, *VIDEOS_SUBPATH)
 
