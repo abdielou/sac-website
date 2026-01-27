@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import LayoutWrapper from '@/components/LayoutWrapper'
 
 export const metadata = {
   title: 'Enlaces - Sociedad Astronomica del Caribe',
@@ -135,8 +136,8 @@ const maxWidth = Math.max(
 
 export default function LinksPage() {
   return (
-    <div className="min-h-screen bg-white">
-      <main className="max-w-xl mx-auto px-4 py-4">
+    <LayoutWrapper forceLightHeader={true}>
+      <div className="max-w-xl mx-auto px-4 py-4">
         <div className="space-y-4">
           {socialLinks.map((link) => {
             return (
@@ -185,7 +186,7 @@ export default function LinksPage() {
             )
           })}
         </div>
-      </main>
-    </div>
+      </div>
+    </LayoutWrapper>
   )
 }
