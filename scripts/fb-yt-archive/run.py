@@ -335,6 +335,26 @@ def extract_fbid(entry):
     fbid = filename.replace('.mp4', '').replace('.MP4', '')
     return fbid if fbid else None
 
+
+def extract_creation_timestamp(entry):
+    """Extract creation timestamp from Facebook metadata entry.
+
+    Facebook exports include 'creation_timestamp' as Unix timestamp (seconds since epoch).
+
+    Args:
+        entry: A metadata entry from live_videos.json
+
+    Returns:
+        datetime object if timestamp found, None otherwise
+    """
+    timestamp = entry.get('creation_timestamp')
+    if timestamp:
+        try:
+            return datetime.datetime.fromtimestamp(timestamp)
+        except (ValueError, TypeError, OSError):
+            pass
+    return None
+
 # Helper function 
 def extract_label_value(entry, label_name):
     return next((lv.get('value') for lv in entry.get('label_values', []) if lv.get('label') == label_name), None)
@@ -423,13 +443,31 @@ def extract_video_filename(entry):
     filename = uri.split('/')[-1]
     return filename
 
-# Extract the title from an entry
-def extract_video_title(entry):
+# Extract the title from an entry (with optional timestamp prefix)
+def extract_video_title(entry, include_timestamp=True):
+    """Extract video title from entry, optionally with date prefix.
+
+    Args:
+        entry: A metadata entry from live_videos.json
+        include_timestamp: If True, prefix title with [YYYY-MM-DD] from creation_timestamp
+
+    Returns:
+        Title string, with encoding fixed and optional date prefix
+    """
     title = extract_label_value(entry, 'Title')
     if not title:  # for videos with no titles
         title = default_title
     # Fix Facebook's broken UTF-8 encoding
-    return fix_facebook_encoding(title)
+    title = fix_facebook_encoding(title)
+
+    # Add timestamp prefix if available
+    if include_timestamp:
+        timestamp = extract_creation_timestamp(entry)
+        if timestamp:
+            date_str = timestamp.strftime('%Y-%m-%d')
+            title = f"[{date_str}] {title}"
+
+    return title
 
 # Extract metadata to build mapping of filenames to titles from the JSON file
 def build_title_map(json_file):
@@ -658,10 +696,14 @@ def process_inbox(dry_run=False, verbose=False):
                         print_status(f"  No video files found in {zip_name}", 'error')
                     continue
 
-                # Read metadata
+                # Read metadata and sort by creation timestamp (oldest first)
                 entries = read_json_file(metadata_path)
+                entries = sorted(
+                    entries,
+                    key=lambda e: extract_creation_timestamp(e) or datetime.datetime.max
+                )
                 if verbose:
-                    print_status(f"  Found {len(entries)} video entries in metadata", 'info')
+                    print_status(f"  Found {len(entries)} video entries in metadata (sorted oldest first)", 'info')
 
                 # Track intra-zip duplicates
                 seen_fbids_in_zip = set()
