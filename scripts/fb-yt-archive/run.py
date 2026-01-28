@@ -668,6 +668,7 @@ def process_inbox(dry_run=False, verbose=False, limit=None):
     error_messages = []   # Track brief error messages
     total_skipped = 0
     total_errors = 0
+    run_upload_count = 0  # Track uploads in this run for --limit enforcement
 
     # Load registry
     if verbose:
@@ -689,7 +690,7 @@ def process_inbox(dry_run=False, verbose=False, limit=None):
     print_status(f"Found {len(pending_zips)} zip file(s) to process", 'info')
 
     # Check if we can upload today before authenticating (skip check in dry-run)
-    if not dry_run and not can_upload_today(registry, effective_limit):
+    if not dry_run and not can_upload_today(registry, max_videos_per_run):
         print_status("Daily upload limit already reached. Run again tomorrow.", 'warning')
         print_summary(uploaded_titles, total_skipped, total_errors, error_messages)
         return
@@ -745,11 +746,11 @@ def process_inbox(dry_run=False, verbose=False, limit=None):
 
                 # Process each entry
                 for entry in entries:
-                    # Check daily limit before each upload (skip check in dry-run)
-                    if not dry_run and not can_upload_today(registry, effective_limit):
-                        print_status("\nDaily limit reached. Run again tomorrow.", 'warning')
-                        # Save registry before exiting
-                        save_registry_atomic(REGISTRY_PATH, registry)
+                    # Check run-level limit
+                    if run_upload_count >= effective_limit:
+                        print_status(f"\nLimit of {effective_limit} video(s) reached.", 'warning')
+                        if not dry_run:
+                            save_registry_atomic(REGISTRY_PATH, registry)
                         total_skipped += zip_skipped
                         total_errors += zip_errors
                         print_summary(uploaded_titles, total_skipped, total_errors, error_messages)
@@ -805,6 +806,7 @@ def process_inbox(dry_run=False, verbose=False, limit=None):
                             print_status(f"    file: {filename} ({file_size_mb:.1f} MB)", 'info')
                         uploaded_titles.append(title)
                         zip_uploaded += 1
+                        run_upload_count += 1
                     else:
                         # Actual upload
                         print_status(f"  Uploading: {title}", 'info')
@@ -816,6 +818,7 @@ def process_inbox(dry_run=False, verbose=False, limit=None):
                             uploaded_fbids.add(fbid)
                             uploaded_titles.append(title)
                             zip_uploaded += 1
+                            run_upload_count += 1
 
                             # Save registry immediately (crash-safe)
                             save_registry_atomic(REGISTRY_PATH, registry)
