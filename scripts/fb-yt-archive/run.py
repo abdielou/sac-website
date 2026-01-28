@@ -339,7 +339,7 @@ def extract_fbid(entry):
 def extract_creation_timestamp(entry):
     """Extract creation timestamp from Facebook metadata entry.
 
-    Facebook exports include 'creation_timestamp' as Unix timestamp (seconds since epoch).
+    Facebook exports include 'timestamp' as Unix timestamp (seconds since epoch).
 
     Args:
         entry: A metadata entry from live_videos.json
@@ -347,7 +347,8 @@ def extract_creation_timestamp(entry):
     Returns:
         datetime object if timestamp found, None otherwise
     """
-    timestamp = entry.get('creation_timestamp')
+    # Primary: entry-level 'timestamp' field
+    timestamp = entry.get('timestamp')
     if timestamp:
         try:
             return datetime.datetime.fromtimestamp(timestamp)
