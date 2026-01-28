@@ -1,4 +1,6 @@
 import os
+import sys
+import argparse
 import tempfile
 import datetime
 import zipfile
@@ -525,13 +527,16 @@ def handle_video_upload_process(youtube, facebook_data_dir, pending, title_map, 
         print(f"Upload process completed")
 
 
-def process_inbox():
+def process_inbox(dry_run=False):
     """Main entry point: process all unprocessed zips from inbox folder.
+
+    Args:
+        dry_run: If True, show what would be uploaded without actually uploading.
 
     This function:
     1. Loads registry (uploaded_fbids, processed_zips, daily_uploads)
     2. Scans inbox for unprocessed zip files
-    3. Authenticates with YouTube API
+    3. Authenticates with YouTube API (skipped in dry-run mode)
     4. For each zip: extracts, reads metadata, processes videos
     5. For each video: checks fbid for duplicates, uploads if new
     6. Saves registry after EACH successful upload (crash-safe)
@@ -539,6 +544,8 @@ def process_inbox():
     8. Marks zips as processed when complete
     9. Prints summary at end
     """
+    if dry_run:
+        print_status("=== DRY RUN MODE - No uploads will occur ===", 'warning')
     # Counters for summary
     total_uploaded = 0
     total_skipped = 0
@@ -561,15 +568,19 @@ def process_inbox():
 
     print_status(f"Found {len(pending_zips)} unprocessed zip file(s)", 'info')
 
-    # Check if we can upload today before authenticating
-    if not can_upload_today(registry, max_videos_per_run):
+    # Check if we can upload today before authenticating (skip check in dry-run)
+    if not dry_run and not can_upload_today(registry, max_videos_per_run):
         print_status("Daily upload limit already reached. Run again tomorrow.", 'warning')
         print_summary(total_uploaded, total_skipped, total_errors)
         return
 
-    # Authenticate with YouTube
-    print_status("Authenticating with YouTube...", 'info')
-    youtube = authenticate_youtube()
+    # Authenticate with YouTube (skip in dry-run mode)
+    youtube = None
+    if not dry_run:
+        print_status("Authenticating with YouTube...", 'info')
+        youtube = authenticate_youtube()
+    else:
+        print_status("Skipping YouTube authentication (dry-run)", 'info')
 
     # Process each zip file
     for zip_path in pending_zips:
@@ -604,8 +615,8 @@ def process_inbox():
 
                 # Process each entry
                 for entry in entries:
-                    # Check daily limit before each upload
-                    if not can_upload_today(registry, max_videos_per_run):
+                    # Check daily limit before each upload (skip check in dry-run)
+                    if not dry_run and not can_upload_today(registry, max_videos_per_run):
                         print_status("Daily limit reached. Run again tomorrow.", 'warning')
                         # Save registry before exiting
                         save_registry_atomic(REGISTRY_PATH, registry)
@@ -648,23 +659,31 @@ def process_inbox():
 
                     # Get title
                     title = extract_video_title(entry)
-                    print_status(f"  Uploading: {title}", 'info')
 
-                    # Upload video
-                    success = upload_single_video(youtube, video_path, title)
-
-                    if success:
-                        # Record in registry
-                        record_upload(registry, fbid)
-                        uploaded_fbids.add(fbid)
+                    if dry_run:
+                        # Dry-run: show what would be uploaded
+                        file_size_mb = os.path.getsize(video_path) / (1024 * 1024)
+                        print_status(f"  [WOULD UPLOAD] {title}", 'info')
+                        print_status(f"    fbid: {fbid}", 'info')
+                        print_status(f"    file: {filename} ({file_size_mb:.1f} MB)", 'info')
                         zip_uploaded += 1
-
-                        # Save registry immediately (crash-safe)
-                        save_registry_atomic(REGISTRY_PATH, registry)
-                        print_status(f"    Uploaded successfully", 'success')
                     else:
-                        zip_errors += 1
-                        print_status(f"    Upload failed", 'error')
+                        # Actual upload
+                        print_status(f"  Uploading: {title}", 'info')
+                        success = upload_single_video(youtube, video_path, title)
+
+                        if success:
+                            # Record in registry
+                            record_upload(registry, fbid)
+                            uploaded_fbids.add(fbid)
+                            zip_uploaded += 1
+
+                            # Save registry immediately (crash-safe)
+                            save_registry_atomic(REGISTRY_PATH, registry)
+                            print_status(f"    Uploaded successfully", 'success')
+                        else:
+                            zip_errors += 1
+                            print_status(f"    Upload failed", 'error')
 
                 # Update totals
                 total_uploaded += zip_uploaded
@@ -682,15 +701,44 @@ def process_inbox():
             total_errors += 1
             continue
 
-        # Mark zip as processed (only after successful processing)
-        registry["processed_zips"].append(zip_name)
-        save_registry_atomic(REGISTRY_PATH, registry)
-        print_status(f"  Marked {zip_name} as processed", 'success')
+        # Mark zip as processed (only after successful processing, skip in dry-run)
+        if not dry_run:
+            registry["processed_zips"].append(zip_name)
+            save_registry_atomic(REGISTRY_PATH, registry)
+            print_status(f"  Marked {zip_name} as processed", 'success')
 
     # Final summary
-    print_summary(total_uploaded, total_skipped, total_errors)
+    if dry_run:
+        print_status("\n=== DRY RUN SUMMARY ===", 'warning')
+        print_status(f"Would upload: {total_uploaded} video(s)", 'info')
+        print_status(f"Would skip: {total_skipped} duplicate(s)", 'skip')
+        if total_errors > 0:
+            print_status(f"Errors: {total_errors}", 'error')
+        print_status("Run without --dry-run to actually upload", 'info')
+    else:
+        print_summary(total_uploaded, total_skipped, total_errors)
+
+
+def main():
+    """Parse arguments and run the inbox processor."""
+    parser = argparse.ArgumentParser(
+        description='Upload Facebook Live videos to YouTube from inbox folder.',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='''
+Examples:
+  python run.py              # Process and upload videos
+  python run.py --dry-run    # Preview what would be uploaded (smoketest)
+'''
+    )
+    parser.add_argument(
+        '--dry-run', '-n',
+        action='store_true',
+        help='Show what would be uploaded without actually uploading'
+    )
+    args = parser.parse_args()
+    process_inbox(dry_run=args.dry_run)
 
 
 if __name__ == "__main__":
-    process_inbox()
+    main()
 
