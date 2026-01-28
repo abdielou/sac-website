@@ -642,13 +642,14 @@ def handle_video_upload_process(youtube, facebook_data_dir, pending, title_map, 
         print(f"Upload process completed")
 
 
-def process_inbox(dry_run=False, verbose=False, limit=None):
+def process_inbox(dry_run=False, verbose=False, limit=None, force=False):
     """Main entry point: process all unprocessed zips from inbox folder.
 
     Args:
         dry_run: If True, show what would be uploaded without actually uploading.
         verbose: If True, show detailed output. Quiet by default.
         limit: Max videos to upload this run (1-6). Defaults to MAX_VIDEOS_PER_RUN env var.
+        force: If True, bypass daily and per-run upload limits.
 
     This function:
     1. Loads registry (uploaded_fbids, processed_zips, daily_uploads)
@@ -693,9 +694,9 @@ def process_inbox(dry_run=False, verbose=False, limit=None):
 
     print_status(f"Found {len(pending_zips)} zip file(s) to process", 'info')
 
-    # Check if we can upload today before authenticating (skip check in dry-run)
-    if not dry_run and not can_upload_today(registry, max_videos_per_run):
-        print_status("Daily upload limit already reached. Run again tomorrow.", 'warning')
+    # Check if we can upload today before authenticating (skip check in dry-run or force)
+    if not dry_run and not force and not can_upload_today(registry, max_videos_per_run):
+        print_status("Daily upload limit already reached. Use --force to override.", 'warning')
         print_summary(uploaded_titles, total_skipped, total_errors, error_messages)
         return
 
@@ -750,8 +751,8 @@ def process_inbox(dry_run=False, verbose=False, limit=None):
 
                 # Process each entry
                 for entry in entries:
-                    # Check run-level limit
-                    if run_upload_count >= effective_limit:
+                    # Check run-level limit (skip when --force)
+                    if not force and run_upload_count >= effective_limit:
                         print_status(f"\nLimit of {effective_limit} video(s) reached.", 'warning')
                         if not dry_run:
                             save_registry_atomic(REGISTRY_PATH, registry)
@@ -881,6 +882,7 @@ Examples:
   python run.py -n -v        # Dry-run with verbose output
   python run.py -l 2         # Upload max 2 videos this run
   python run.py -l 1 -v      # Upload 1 video with verbose output
+  python run.py -f           # Upload all videos, ignore limits
 '''
     )
     parser.add_argument(
@@ -900,8 +902,13 @@ Examples:
         metavar='N',
         help='Max videos to upload this run (1-6, default: 6)'
     )
+    parser.add_argument(
+        '--force', '-f',
+        action='store_true',
+        help='Bypass daily and per-run upload limits'
+    )
     args = parser.parse_args()
-    process_inbox(dry_run=args.dry_run, verbose=args.verbose, limit=args.limit)
+    process_inbox(dry_run=args.dry_run, verbose=args.verbose, limit=args.limit, force=args.force)
 
 
 if __name__ == "__main__":
