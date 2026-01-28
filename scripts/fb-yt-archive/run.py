@@ -404,9 +404,17 @@ def load_credentials(token_file):
     return None
 
 # Check if credentials are valid and refresh if needed
-def refresh_credentials_if_needed(credentials):
+def refresh_credentials_if_needed(credentials, token_file_path):
     if credentials and credentials.expired and credentials.refresh_token:
-        credentials.refresh(Request())
+        try:
+            credentials.refresh(Request())
+        except Exception as e:
+            # Token invalid/revoked - clear it and return None to trigger re-auth
+            print_status(f"Token refresh failed: {str(e)[:50]}", 'warning')
+            print_status("Clearing invalid token and re-authenticating...", 'info')
+            if os.path.exists(token_file_path):
+                os.remove(token_file_path)
+            return None
     return credentials
 
 # Returns an authenticated YouTube API client with persistent token storage
@@ -418,7 +426,7 @@ def authenticate_youtube():
     
     # Refresh credentials if they exist but are expired
     if credentials:
-        credentials = refresh_credentials_if_needed(credentials)
+        credentials = refresh_credentials_if_needed(credentials, token_file)
     
     # If no valid credentials exist, run OAuth flow
     if not credentials or not credentials.valid:
