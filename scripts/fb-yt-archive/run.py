@@ -78,16 +78,43 @@ def print_status(message, status='info'):
     print(f"{color}{message}{reset}")
 
 
-def print_summary(uploaded, skipped, errors):
-    """Print processing summary."""
-    print(f"\n{'='*50}")
-    print("PROCESSING SUMMARY")
-    print(f"{'='*50}")
-    print_status(f"  Uploaded: {uploaded}", 'success' if uploaded > 0 else 'info')
-    print_status(f"  Skipped (duplicates): {skipped}", 'skip' if skipped > 0 else 'info')
+def print_summary(uploaded_titles, skipped, errors, error_messages=None):
+    """Print concise processing summary.
+
+    Args:
+        uploaded_titles: List of uploaded video titles
+        skipped: Count of skipped videos
+        errors: Count of errors
+        error_messages: Optional list of brief error messages
+    """
+    print(f"\n{'='*40}")
+    print("SUMMARY")
+    print(f"{'='*40}")
+
+    # Uploaded videos (list titles)
+    if uploaded_titles:
+        print_status(f"Uploaded ({len(uploaded_titles)}):", 'success')
+        for title in uploaded_titles:
+            # Truncate long titles
+            display_title = title[:50] + "..." if len(title) > 50 else title
+            print(f"  - {display_title}")
+    else:
+        print_status("Uploaded: 0", 'info')
+
+    # Skipped (just count)
+    if skipped > 0:
+        print_status(f"Skipped: {skipped} duplicate(s)", 'skip')
+
+    # Errors (count + brief messages)
     if errors > 0:
-        print_status(f"  Errors: {errors}", 'error')
-    print(f"{'='*50}")
+        print_status(f"Errors: {errors}", 'error')
+        if error_messages:
+            for msg in error_messages[:5]:  # Show max 5 errors
+                print(f"  - {msg[:60]}")
+            if len(error_messages) > 5:
+                print(f"  ... and {len(error_messages) - 5} more")
+
+    print(f"{'='*40}")
 
 
 # Helper function
@@ -545,11 +572,12 @@ def handle_video_upload_process(youtube, facebook_data_dir, pending, title_map, 
         print(f"Upload process completed")
 
 
-def process_inbox(dry_run=False):
+def process_inbox(dry_run=False, verbose=False):
     """Main entry point: process all unprocessed zips from inbox folder.
 
     Args:
         dry_run: If True, show what would be uploaded without actually uploading.
+        verbose: If True, show detailed output. Quiet by default.
 
     This function:
     1. Loads registry (uploaded_fbids, processed_zips, daily_uploads)
@@ -564,40 +592,45 @@ def process_inbox(dry_run=False):
     """
     if dry_run:
         print_status("=== DRY RUN MODE - No uploads will occur ===", 'warning')
-    # Counters for summary
-    total_uploaded = 0
+
+    # Counters and trackers for summary
+    uploaded_titles = []  # Track titles for concise summary
+    error_messages = []   # Track brief error messages
     total_skipped = 0
     total_errors = 0
 
     # Load registry
-    print_status("Loading registry...", 'info')
+    if verbose:
+        print_status("Loading registry...", 'info')
     registry = load_registry(REGISTRY_PATH)
     uploaded_fbids = set(registry.get("uploaded_fbids", []))
     processed_zips = registry.get("processed_zips", [])
 
     # Scan inbox for unprocessed zips
-    print_status(f"Scanning inbox: {INBOX_PATH}", 'info')
+    if verbose:
+        print_status(f"Scanning inbox: {INBOX_PATH}", 'info')
     pending_zips = scan_inbox(INBOX_PATH, processed_zips)
 
     if not pending_zips:
         print_status("No unprocessed zip files found in inbox.", 'info')
-        print_summary(total_uploaded, total_skipped, total_errors)
+        print_summary(uploaded_titles, total_skipped, total_errors, error_messages)
         return
 
-    print_status(f"Found {len(pending_zips)} unprocessed zip file(s)", 'info')
+    print_status(f"Found {len(pending_zips)} zip file(s) to process", 'info')
 
     # Check if we can upload today before authenticating (skip check in dry-run)
     if not dry_run and not can_upload_today(registry, max_videos_per_run):
         print_status("Daily upload limit already reached. Run again tomorrow.", 'warning')
-        print_summary(total_uploaded, total_skipped, total_errors)
+        print_summary(uploaded_titles, total_skipped, total_errors, error_messages)
         return
 
     # Authenticate with YouTube (skip in dry-run mode)
     youtube = None
     if not dry_run:
-        print_status("Authenticating with YouTube...", 'info')
+        if verbose:
+            print_status("Authenticating with YouTube...", 'info')
         youtube = authenticate_youtube()
-    else:
+    elif verbose:
         print_status("Skipping YouTube authentication (dry-run)", 'info')
 
     # Process each zip file
@@ -610,20 +643,25 @@ def process_inbox(dry_run=False):
                 # Find metadata file
                 metadata_path = find_metadata_in_extracted(temp_dir)
                 if not metadata_path:
-                    print_status(f"  No live_videos.json found in {zip_name}", 'error')
+                    error_messages.append(f"{zip_name}: no metadata found")
                     total_errors += 1
+                    if verbose:
+                        print_status(f"  No live_videos.json found in {zip_name}", 'error')
                     continue
 
                 # Find videos directory
                 videos_dir = find_videos_dir_in_extracted(temp_dir)
                 if not videos_dir:
-                    print_status(f"  No video files found in {zip_name}", 'error')
+                    error_messages.append(f"{zip_name}: no videos found")
                     total_errors += 1
+                    if verbose:
+                        print_status(f"  No video files found in {zip_name}", 'error')
                     continue
 
                 # Read metadata
                 entries = read_json_file(metadata_path)
-                print_status(f"  Found {len(entries)} video entries in metadata", 'info')
+                if verbose:
+                    print_status(f"  Found {len(entries)} video entries in metadata", 'info')
 
                 # Track intra-zip duplicates
                 seen_fbids_in_zip = set()
@@ -635,28 +673,32 @@ def process_inbox(dry_run=False):
                 for entry in entries:
                     # Check daily limit before each upload (skip check in dry-run)
                     if not dry_run and not can_upload_today(registry, max_videos_per_run):
-                        print_status("Daily limit reached. Run again tomorrow.", 'warning')
+                        print_status("\nDaily limit reached. Run again tomorrow.", 'warning')
                         # Save registry before exiting
                         save_registry_atomic(REGISTRY_PATH, registry)
-                        print_summary(total_uploaded + zip_uploaded, total_skipped + zip_skipped, total_errors + zip_errors)
+                        total_skipped += zip_skipped
+                        total_errors += zip_errors
+                        print_summary(uploaded_titles, total_skipped, total_errors, error_messages)
                         return
 
                     # Extract fbid for deduplication
                     fbid = extract_fbid(entry)
                     if not fbid:
-                        print_status(f"  Skipping entry: no fbid found", 'warning')
+                        if verbose:
+                            print_status(f"  Skipping entry: no fbid found", 'warning')
                         zip_errors += 1
                         continue
 
                     # Check for cross-zip duplicate (already uploaded)
                     if fbid in uploaded_fbids:
-                        # Silently skip cross-zip duplicates per CONTEXT.md
+                        # Silently skip cross-zip duplicates
                         zip_skipped += 1
                         continue
 
                     # Check for intra-zip duplicate
                     if fbid in seen_fbids_in_zip:
-                        print_status(f"  Skipping {fbid}: duplicate within zip", 'warning')
+                        if verbose:
+                            print_status(f"  Skipping {fbid}: duplicate within zip", 'warning')
                         zip_skipped += 1
                         continue
 
@@ -665,13 +707,15 @@ def process_inbox(dry_run=False):
                     # Get video filename and build path
                     filename = extract_video_filename(entry)
                     if not filename:
-                        print_status(f"  Skipping {fbid}: no filename found", 'warning')
+                        if verbose:
+                            print_status(f"  Skipping {fbid}: no filename found", 'warning')
                         zip_errors += 1
                         continue
 
                     video_path = os.path.join(videos_dir, filename)
                     if not os.path.exists(video_path):
-                        print_status(f"  Skipping {fbid}: video file not found", 'error')
+                        if verbose:
+                            print_status(f"  Skipping {fbid}: video file not found", 'error')
                         zip_errors += 1
                         continue
 
@@ -680,10 +724,12 @@ def process_inbox(dry_run=False):
 
                     if dry_run:
                         # Dry-run: show what would be uploaded
-                        file_size_mb = os.path.getsize(video_path) / (1024 * 1024)
                         print_status(f"  [WOULD UPLOAD] {title}", 'info')
-                        print_status(f"    fbid: {fbid}", 'info')
-                        print_status(f"    file: {filename} ({file_size_mb:.1f} MB)", 'info')
+                        if verbose:
+                            file_size_mb = os.path.getsize(video_path) / (1024 * 1024)
+                            print_status(f"    fbid: {fbid}", 'info')
+                            print_status(f"    file: {filename} ({file_size_mb:.1f} MB)", 'info')
+                        uploaded_titles.append(title)
                         zip_uploaded += 1
                     else:
                         # Actual upload
@@ -694,47 +740,51 @@ def process_inbox(dry_run=False):
                             # Record in registry
                             record_upload(registry, fbid)
                             uploaded_fbids.add(fbid)
+                            uploaded_titles.append(title)
                             zip_uploaded += 1
 
                             # Save registry immediately (crash-safe)
                             save_registry_atomic(REGISTRY_PATH, registry)
-                            print_status(f"    Uploaded successfully", 'success')
+                            if verbose:
+                                print_status(f"    Uploaded successfully", 'success')
                         else:
                             zip_errors += 1
-                            print_status(f"    Upload failed", 'error')
+                            error_messages.append(f"Upload failed: {title[:40]}")
+                            if verbose:
+                                print_status(f"    Upload failed", 'error')
 
                 # Update totals
-                total_uploaded += zip_uploaded
                 total_skipped += zip_skipped
                 total_errors += zip_errors
 
-                print_status(f"  Zip complete: {zip_uploaded} uploaded, {zip_skipped} skipped, {zip_errors} errors", 'info')
+                if verbose:
+                    print_status(f"  Zip complete: {zip_uploaded} uploaded, {zip_skipped} skipped, {zip_errors} errors", 'info')
 
         except zipfile.BadZipFile:
-            print_status(f"  Invalid or corrupted zip file: {zip_name}", 'error')
+            error_messages.append(f"{zip_name}: corrupted zip")
             total_errors += 1
+            print_status(f"  Invalid or corrupted zip file: {zip_name}", 'error')
             continue
         except Exception as e:
-            print_status(f"  Error processing {zip_name}: {str(e)[:100]}", 'error')
+            error_messages.append(f"{zip_name}: {str(e)[:40]}")
             total_errors += 1
+            print_status(f"  Error processing {zip_name}: {str(e)[:100]}", 'error')
             continue
 
         # Mark zip as processed (only after successful processing, skip in dry-run)
         if not dry_run:
             registry["processed_zips"].append(zip_name)
             save_registry_atomic(REGISTRY_PATH, registry)
-            print_status(f"  Marked {zip_name} as processed", 'success')
+            if verbose:
+                print_status(f"  Marked {zip_name} as processed", 'success')
 
     # Final summary
     if dry_run:
-        print_status("\n=== DRY RUN SUMMARY ===", 'warning')
-        print_status(f"Would upload: {total_uploaded} video(s)", 'info')
-        print_status(f"Would skip: {total_skipped} duplicate(s)", 'skip')
-        if total_errors > 0:
-            print_status(f"Errors: {total_errors}", 'error')
+        print_status("\n=== DRY RUN COMPLETE ===", 'warning')
+        print_summary(uploaded_titles, total_skipped, total_errors, error_messages)
         print_status("Run without --dry-run to actually upload", 'info')
     else:
-        print_summary(total_uploaded, total_skipped, total_errors)
+        print_summary(uploaded_titles, total_skipped, total_errors, error_messages)
 
 
 def main():
@@ -744,8 +794,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='''
 Examples:
-  python run.py              # Process and upload videos
-  python run.py --dry-run    # Preview what would be uploaded (smoketest)
+  python run.py              # Process and upload videos (quiet mode)
+  python run.py -v           # Verbose output with detailed logging
+  python run.py --dry-run    # Preview what would be uploaded
+  python run.py -n -v        # Dry-run with verbose output
 '''
     )
     parser.add_argument(
@@ -753,8 +805,13 @@ Examples:
         action='store_true',
         help='Show what would be uploaded without actually uploading'
     )
+    parser.add_argument(
+        '--verbose', '-v',
+        action='store_true',
+        help='Show detailed output (quiet by default)'
+    )
     args = parser.parse_args()
-    process_inbox(dry_run=args.dry_run)
+    process_inbox(dry_run=args.dry_run, verbose=args.verbose)
 
 
 if __name__ == "__main__":
