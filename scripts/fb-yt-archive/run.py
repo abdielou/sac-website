@@ -751,8 +751,8 @@ def process_inbox(dry_run=False, verbose=False, limit=None, force=False):
 
                 # Process each entry
                 for entry in entries:
-                    # Check run-level limit (skip when --force)
-                    if not force and run_upload_count >= effective_limit:
+                    # Check run-level limit (only when --limit is explicitly set, or no --force)
+                    if run_upload_count >= effective_limit and (limit is not None or not force):
                         print_status(f"\nLimit of {effective_limit} video(s) reached.", 'warning')
                         if not dry_run:
                             save_registry_atomic(REGISTRY_PATH, registry)
