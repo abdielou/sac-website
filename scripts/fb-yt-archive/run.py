@@ -418,8 +418,12 @@ def save_credentials(credentials, token_file):
 # Load existing credentials from token file
 def load_credentials(token_file):
     if os.path.exists(token_file):
-        with open(token_file, 'rb') as token:
-            return pickle.load(token)
+        try:
+            with open(token_file, 'rb') as token:
+                return pickle.load(token)
+        except (EOFError, pickle.UnpicklingError, Exception):
+            print_status("Token file is corrupted. Removing it.", 'warning')
+            os.remove(token_file)
     return None
 
 # Check if credentials are valid and refresh if needed
