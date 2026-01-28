@@ -100,6 +100,23 @@ def read_json_file(file_path):
         return json.load(f)
 
 
+def fix_facebook_encoding(text):
+    """Fix Facebook's broken UTF-8 encoding in JSON exports.
+
+    Facebook exports UTF-8 text but stores it incorrectly in JSON,
+    causing characters like '¿' to appear as 'Â¿'.
+
+    The fix: encode as latin-1 (to get original bytes) then decode as UTF-8.
+    """
+    if not text:
+        return text
+    try:
+        return text.encode('latin-1').decode('utf-8')
+    except (UnicodeDecodeError, UnicodeEncodeError):
+        # If conversion fails, return original text
+        return text
+
+
 # Ensure inbox directory exists
 def ensure_inbox_exists():
     os.makedirs(INBOX_PATH, exist_ok=True)
@@ -382,9 +399,10 @@ def extract_video_filename(entry):
 # Extract the title from an entry
 def extract_video_title(entry):
     title = extract_label_value(entry, 'Title')
-    if not title:  # for videos with no titles 
+    if not title:  # for videos with no titles
         title = default_title
-    return title
+    # Fix Facebook's broken UTF-8 encoding
+    return fix_facebook_encoding(title)
 
 # Extract metadata to build mapping of filenames to titles from the JSON file
 def build_title_map(json_file):

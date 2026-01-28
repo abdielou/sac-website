@@ -31,7 +31,12 @@ The site must remain fully functional during migration — no broken pages, no l
 
 ### Active
 
-(None — ready for next milestone planning)
+**v1.1: FB-YT Archive Improvements**
+
+- [ ] Script scans inbox folder for unprocessed zip files
+- [ ] Script extracts, processes, and cleans up automatically
+- [ ] Deduplication via Facebook video ID (`fbid`)
+- [ ] Central registry in script directory
 
 ### Out of Scope
 
@@ -39,6 +44,16 @@ The site must remain fully functional during migration — no broken pages, no l
 - Gallery migration — S3 integration complexity, defer to future milestone
 - API route migration to Route Handlers — keep in pages/api for now
 - TypeScript conversion — stay JavaScript for this milestone
+
+## Current Milestone: v1.1 FB-YT Archive Improvements
+
+**Goal:** Simplify Facebook Live video archival — drop zip, run script, done.
+
+**Target features:**
+- Inbox folder processing (scan for unprocessed zips)
+- Automatic extraction and cleanup
+- Cross-zip deduplication via `fbid`
+- Central registry tracking
 
 ## Context
 
@@ -54,6 +69,12 @@ The site must remain fully functional during migration — no broken pages, no l
 - 10 pages on App Router: home, about, contact, events, membership, weather, brand, donate, links, id
 - Blog and gallery remain on Pages Router (incremental migration)
 - API routes in pages/api (mailchimp, buttondown, convertkit, apod, photos, get-years)
+
+**FB-YT Archive Script (`scripts/fb-yt-archive/`):**
+- Python script to upload Facebook Live videos to YouTube
+- Monthly Facebook data exports (zips) stored in `C:\Users\abdie\Documents\sac\`
+- Videos identified by `fbid` in metadata JSON
+- Current workflow is manual: extract, run, cleanup
 
 **Known issues:**
 - Jest SVG import configuration (one test suite fails)
@@ -79,4 +100,4 @@ The site must remain fully functional during migration — no broken pages, no l
 | Upgrade to Tailwind CSS 4 | Better performance, modern syntax | Good |
 
 ---
-*Last updated: 2026-01-27 after v1.0 milestone*
+*Last updated: 2026-01-27 after v1.1 milestone start*
