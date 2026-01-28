@@ -368,10 +368,29 @@ def clear_existing_token(token_file):
     return False #TEST
 
 # Create and run OAuth flow for authentication
-def create_oauth_flow(client_secrets_file, scopes):
+def create_oauth_flow(client_secrets_file, scopes, timeout_seconds=60):
+    """Run OAuth flow with timeout.
+
+    Args:
+        client_secrets_file: Path to OAuth client secrets JSON
+        scopes: List of OAuth scopes to request
+        timeout_seconds: How long to wait for user to complete auth (default 60s)
+
+    Returns:
+        OAuth credentials
+
+    Raises:
+        TimeoutError: If user doesn't complete auth within timeout
+    """
     flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
         client_secrets_file, scopes)
-    credentials = flow.run_local_server()
+    print_status(f"You have {timeout_seconds} seconds to complete authentication...", 'info')
+    try:
+        credentials = flow.run_local_server(timeout_seconds=timeout_seconds)
+    except Exception as e:
+        if 'timed out' in str(e).lower() or isinstance(e, TimeoutError):
+            raise TimeoutError(f"OAuth authentication timed out after {timeout_seconds} seconds. Run again to retry.")
+        raise
     return credentials
 
 # Build youtube API client
