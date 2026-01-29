@@ -31,12 +31,14 @@ The site must remain fully functional during migration — no broken pages, no l
 
 ### Active
 
-**v1.1: FB-YT Archive Improvements**
+(No active requirements — ready for next milestone)
 
-- [ ] Script scans inbox folder for unprocessed zip files
-- [ ] Script extracts, processes, and cleans up automatically
-- [ ] Deduplication via Facebook video ID (`fbid`)
-- [ ] Central registry in script directory
+### Validated (v1.1)
+
+- Inbox folder scanning for unprocessed zip files — v1.1
+- Automatic extraction, processing, and cleanup — v1.1
+- Deduplication via Facebook video ID (`fbid`) — v1.1
+- Central registry in script directory — v1.1
 
 ### Out of Scope
 
@@ -45,15 +47,11 @@ The site must remain fully functional during migration — no broken pages, no l
 - API route migration to Route Handlers — keep in pages/api for now
 - TypeScript conversion — stay JavaScript for this milestone
 
-## Current Milestone: v1.1 FB-YT Archive Improvements
+## Current State
 
-**Goal:** Simplify Facebook Live video archival — drop zip, run script, done.
+**v1.1 shipped:** FB-YT Archive script now supports drop-and-run workflow with full deduplication.
 
-**Target features:**
-- Inbox folder processing (scan for unprocessed zips)
-- Automatic extraction and cleanup
-- Cross-zip deduplication via `fbid`
-- Central registry tracking
+**Ready for:** Next milestone planning — blog migration, gallery migration, or additional archive features.
 
 ## Context
 
@@ -100,4 +98,4 @@ The site must remain fully functional during migration — no broken pages, no l
 | Upgrade to Tailwind CSS 4 | Better performance, modern syntax | Good |
 
 ---
-*Last updated: 2026-01-27 after v1.1 milestone start*
+*Last updated: 2026-01-29 after v1.1 milestone complete*
