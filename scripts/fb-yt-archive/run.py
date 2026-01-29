@@ -308,6 +308,234 @@ def can_upload_today(registry, max_per_day=6):
     return daily_uploads.get(today, 0) < max_per_day
 
 
+# ============================================================================
+# AUDIT MODE - Rebuild registry from YouTube channel
+# ============================================================================
+
+def get_uploads_playlist_id(youtube):
+    """Get the uploads playlist ID for the authenticated channel.
+
+    Args:
+        youtube: Authenticated YouTube API client
+
+    Returns:
+        Uploads playlist ID string, or None if not found
+    """
+    try:
+        response = youtube.channels().list(
+            mine=True,
+            part='contentDetails'
+        ).execute()
+
+        if response.get('items'):
+            return response['items'][0]['contentDetails']['relatedPlaylists']['uploads']
+    except Exception as e:
+        print_status(f"Failed to get channel info: {str(e)[:100]}", 'error')
+    return None
+
+
+def list_youtube_uploads(youtube, max_results=500):
+    """List all videos from the authenticated channel's uploads playlist.
+
+    Args:
+        youtube: Authenticated YouTube API client
+        max_results: Maximum number of videos to retrieve (default 500)
+
+    Yields:
+        Dict with video info: {'video_id': str, 'title': str, 'published_at': str}
+    """
+    uploads_playlist_id = get_uploads_playlist_id(youtube)
+    if not uploads_playlist_id:
+        print_status("Could not find uploads playlist", 'error')
+        return
+
+    page_token = None
+    count = 0
+
+    while count < max_results:
+        try:
+            response = youtube.playlistItems().list(
+                playlistId=uploads_playlist_id,
+                part='snippet',
+                maxResults=min(50, max_results - count),
+                pageToken=page_token
+            ).execute()
+
+            for item in response.get('items', []):
+                snippet = item.get('snippet', {})
+                yield {
+                    'video_id': snippet.get('resourceId', {}).get('videoId'),
+                    'title': snippet.get('title'),
+                    'published_at': snippet.get('publishedAt')
+                }
+                count += 1
+
+            page_token = response.get('nextPageToken')
+            if not page_token:
+                break
+
+        except Exception as e:
+            print_status(f"Error listing videos: {str(e)[:100]}", 'error')
+            break
+
+
+def build_title_to_fbid_map(verbose=False):
+    """Build a mapping from video titles to fbids by scanning all inbox zips.
+
+    Args:
+        verbose: If True, show detailed progress
+
+    Returns:
+        Dict mapping title strings to fbid strings
+    """
+    title_to_fbid = {}
+    processed_zips = []
+
+    if not os.path.exists(INBOX_PATH):
+        print_status(f"Inbox path not found: {INBOX_PATH}", 'warning')
+        return title_to_fbid
+
+    # Find all zip files in inbox
+    zip_files = [f for f in os.listdir(INBOX_PATH) if f.endswith('.zip')]
+
+    if verbose:
+        print_status(f"Scanning {len(zip_files)} zip file(s) in inbox...", 'info')
+
+    for zip_name in zip_files:
+        zip_path = os.path.join(INBOX_PATH, zip_name)
+
+        try:
+            with extract_zip(zip_path) as temp_dir:
+                metadata_path = find_metadata_in_extracted(temp_dir)
+                if not metadata_path:
+                    if verbose:
+                        print_status(f"  {zip_name}: no metadata found", 'warning')
+                    continue
+
+                entries = read_json_file(metadata_path)
+
+                for entry in entries:
+                    fbid = extract_fbid(entry)
+                    if not fbid:
+                        continue
+
+                    title = extract_video_title(entry)
+                    if title:
+                        title_to_fbid[title] = fbid
+
+                if verbose:
+                    print_status(f"  {zip_name}: found {len(entries)} entries", 'info')
+                processed_zips.append(zip_name)
+
+        except zipfile.BadZipFile:
+            if verbose:
+                print_status(f"  {zip_name}: corrupted zip", 'error')
+        except Exception as e:
+            if verbose:
+                print_status(f"  {zip_name}: {str(e)[:50]}", 'error')
+
+    return title_to_fbid
+
+
+def audit_registry(dry_run=False, verbose=False):
+    """Audit and rebuild registry by matching YouTube uploads to local metadata.
+
+    This function:
+    1. Authenticates with YouTube
+    2. Lists all videos on the channel
+    3. Scans inbox zips for title-to-fbid mapping
+    4. Matches YouTube titles to local fbids
+    5. Updates registry with matched fbids
+
+    Args:
+        dry_run: If True, show what would be updated without saving
+        verbose: If True, show detailed output
+    """
+    print_status("=== AUDIT MODE ===", 'info')
+
+    if dry_run:
+        print_status("DRY RUN - no changes will be saved", 'warning')
+
+    # Load current registry
+    registry = load_registry(REGISTRY_PATH)
+    existing_fbids = set(registry.get("uploaded_fbids", []))
+    print_status(f"Current registry has {len(existing_fbids)} fbid(s)", 'info')
+
+    # Authenticate with YouTube
+    print_status("Authenticating with YouTube...", 'info')
+    youtube = authenticate_youtube()
+
+    # List all YouTube uploads
+    print_status("Fetching uploads from YouTube...", 'info')
+    youtube_videos = list(list_youtube_uploads(youtube))
+    print_status(f"Found {len(youtube_videos)} video(s) on YouTube", 'info')
+
+    if not youtube_videos:
+        print_status("No videos found on channel", 'warning')
+        return
+
+    # Build title-to-fbid map from local zips
+    print_status("Building title map from inbox zips...", 'info')
+    title_to_fbid = build_title_to_fbid_map(verbose=verbose)
+    print_status(f"Found {len(title_to_fbid)} title-to-fbid mappings", 'info')
+
+    # Match YouTube videos to fbids
+    matched = []
+    unmatched = []
+    already_in_registry = []
+
+    for video in youtube_videos:
+        title = video['title']
+        video_id = video['video_id']
+
+        # Check if title matches any local entry
+        if title in title_to_fbid:
+            fbid = title_to_fbid[title]
+
+            if fbid in existing_fbids:
+                already_in_registry.append({'title': title, 'fbid': fbid, 'video_id': video_id})
+            else:
+                matched.append({'title': title, 'fbid': fbid, 'video_id': video_id})
+        else:
+            unmatched.append({'title': title, 'video_id': video_id})
+
+    # Report results
+    print(f"\n{'='*50}")
+    print("AUDIT RESULTS")
+    print(f"{'='*50}")
+
+    print_status(f"Already in registry: {len(already_in_registry)}", 'info')
+    print_status(f"New matches found: {len(matched)}", 'success')
+    print_status(f"Unmatched (manual or different naming): {len(unmatched)}", 'warning')
+
+    if verbose and matched:
+        print_status("\nNew matches:", 'success')
+        for m in matched[:10]:
+            print(f"  + {m['fbid']}: {m['title'][:50]}")
+        if len(matched) > 10:
+            print(f"  ... and {len(matched) - 10} more")
+
+    if verbose and unmatched:
+        print_status("\nUnmatched YouTube videos:", 'warning')
+        for u in unmatched[:10]:
+            print(f"  ? {u['title'][:60]}")
+        if len(unmatched) > 10:
+            print(f"  ... and {len(unmatched) - 10} more")
+
+    # Update registry if not dry-run
+    if matched and not dry_run:
+        for m in matched:
+            if m['fbid'] not in registry["uploaded_fbids"]:
+                registry["uploaded_fbids"].append(m['fbid'])
+
+        save_registry_atomic(REGISTRY_PATH, registry)
+        print_status(f"\nRegistry updated with {len(matched)} new fbid(s)", 'success')
+    elif matched and dry_run:
+        print_status(f"\nDRY RUN: Would add {len(matched)} fbid(s) to registry", 'warning')
+    else:
+        print_status("\nNo new fbids to add", 'info')
+
+
 def record_upload(registry, fbid):
     """Record a successful upload in the registry."""
     today = datetime.date.today().isoformat()
@@ -870,7 +1098,7 @@ def process_inbox(dry_run=False, verbose=False, limit=None, force=False):
 
 
 def main():
-    """Parse arguments and run the inbox processor."""
+    """Parse arguments and run the inbox processor or audit."""
     parser = argparse.ArgumentParser(
         description='Upload Facebook Live videos to YouTube from inbox folder.',
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -883,12 +1111,14 @@ Examples:
   python run.py -l 2         # Upload max 2 videos this run
   python run.py -l 1 -v      # Upload 1 video with verbose output
   python run.py -f           # Upload all videos, ignore limits
+  python run.py --audit      # Rebuild registry from YouTube channel
+  python run.py --audit -n   # Audit dry-run (show what would be updated)
 '''
     )
     parser.add_argument(
         '--dry-run', '-n',
         action='store_true',
-        help='Show what would be uploaded without actually uploading'
+        help='Show what would be done without making changes'
     )
     parser.add_argument(
         '--verbose', '-v',
@@ -907,8 +1137,17 @@ Examples:
         action='store_true',
         help='Bypass daily and per-run upload limits'
     )
+    parser.add_argument(
+        '--audit',
+        action='store_true',
+        help='Audit mode: rebuild registry by matching YouTube uploads to local metadata'
+    )
     args = parser.parse_args()
-    process_inbox(dry_run=args.dry_run, verbose=args.verbose, limit=args.limit, force=args.force)
+
+    if args.audit:
+        audit_registry(dry_run=args.dry_run, verbose=args.verbose)
+    else:
+        process_inbox(dry_run=args.dry_run, verbose=args.verbose, limit=args.limit, force=args.force)
 
 
 if __name__ == "__main__":
