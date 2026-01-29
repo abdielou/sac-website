@@ -60,3 +60,7 @@ gallery-photos/
 .planning/*
 !.planning/codebase/
 .claude/
+
+# FB-YT Archive
+scripts/fb-yt-archive/**/*.zip
+scripts/fb-yt-archive/registry.json

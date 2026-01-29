@@ -1,0 +1,7 @@
+# Test artifacts
+test_registry.json
+token.json.dummy
+
+# OAuth credentials (sensitive)
+token.json
+client_secrets.json

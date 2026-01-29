@@ -1,6 +1,10 @@
 from dotenv import load_dotenv
 import unittest
 from unittest.mock import patch, Mock
+import datetime
+import tempfile
+import os
+import json
 import run
 
 
@@ -513,6 +517,250 @@ class TestRun(unittest.TestCase):
             unittest.mock.call("Upload process completed")
         ]
         mock_print.assert_has_calls(expected_calls)
+
+class TestDailyLimitAndResume(unittest.TestCase):
+    """Tests for daily upload limit enforcement and resume workflow."""
+
+    def test_can_upload_today_under_limit(self):
+        """When daily count is under limit, can_upload_today returns True."""
+        registry = {
+            "uploaded_fbids": [],
+            "processed_zips": [],
+            "daily_uploads": {"2026-01-28": 3}
+        }
+        with patch('run.datetime') as mock_datetime:
+            mock_datetime.date.today.return_value.isoformat.return_value = "2026-01-28"
+            result = run.can_upload_today(registry, max_per_day=6)
+        self.assertTrue(result)
+
+    def test_can_upload_today_at_limit(self):
+        """When daily count equals limit, can_upload_today returns False."""
+        registry = {
+            "uploaded_fbids": [],
+            "processed_zips": [],
+            "daily_uploads": {"2026-01-28": 6}
+        }
+        with patch('run.datetime') as mock_datetime:
+            mock_datetime.date.today.return_value.isoformat.return_value = "2026-01-28"
+            result = run.can_upload_today(registry, max_per_day=6)
+        self.assertFalse(result)
+
+    def test_can_upload_today_over_limit(self):
+        """When daily count exceeds limit, can_upload_today returns False."""
+        registry = {
+            "uploaded_fbids": [],
+            "processed_zips": [],
+            "daily_uploads": {"2026-01-28": 10}
+        }
+        with patch('run.datetime') as mock_datetime:
+            mock_datetime.date.today.return_value.isoformat.return_value = "2026-01-28"
+            result = run.can_upload_today(registry, max_per_day=6)
+        self.assertFalse(result)
+
+    def test_can_upload_today_no_uploads_yet(self):
+        """When no uploads today, can_upload_today returns True."""
+        registry = {
+            "uploaded_fbids": [],
+            "processed_zips": [],
+            "daily_uploads": {}
+        }
+        with patch('run.datetime') as mock_datetime:
+            mock_datetime.date.today.return_value.isoformat.return_value = "2026-01-28"
+            result = run.can_upload_today(registry, max_per_day=6)
+        self.assertTrue(result)
+
+    def test_can_upload_today_yesterday_full_today_empty(self):
+        """Yesterday's full count shouldn't block today's uploads (daily reset)."""
+        registry = {
+            "uploaded_fbids": ["old1", "old2", "old3", "old4", "old5", "old6"],
+            "processed_zips": [],
+            "daily_uploads": {"2026-01-27": 6}  # Yesterday was full
+        }
+        with patch('run.datetime') as mock_datetime:
+            mock_datetime.date.today.return_value.isoformat.return_value = "2026-01-28"  # Today
+            result = run.can_upload_today(registry, max_per_day=6)
+        self.assertTrue(result)  # Should allow uploads today
+
+    def test_record_upload_adds_fbid(self):
+        """record_upload adds fbid to uploaded_fbids list."""
+        registry = {
+            "uploaded_fbids": ["existing_fbid"],
+            "processed_zips": [],
+            "daily_uploads": {}
+        }
+        with patch('run.datetime') as mock_datetime:
+            mock_datetime.date.today.return_value.isoformat.return_value = "2026-01-28"
+            run.record_upload(registry, "new_fbid")
+
+        self.assertIn("new_fbid", registry["uploaded_fbids"])
+        self.assertIn("existing_fbid", registry["uploaded_fbids"])
+
+    def test_record_upload_increments_daily_count(self):
+        """record_upload increments the daily upload counter."""
+        registry = {
+            "uploaded_fbids": [],
+            "processed_zips": [],
+            "daily_uploads": {"2026-01-28": 2}
+        }
+        with patch('run.datetime') as mock_datetime:
+            mock_datetime.date.today.return_value.isoformat.return_value = "2026-01-28"
+            run.record_upload(registry, "test_fbid")
+
+        self.assertEqual(registry["daily_uploads"]["2026-01-28"], 3)
+
+    def test_record_upload_creates_daily_count_if_missing(self):
+        """record_upload creates daily count entry if not exists."""
+        registry = {
+            "uploaded_fbids": [],
+            "processed_zips": [],
+            "daily_uploads": {}
+        }
+        with patch('run.datetime') as mock_datetime:
+            mock_datetime.date.today.return_value.isoformat.return_value = "2026-01-28"
+            run.record_upload(registry, "test_fbid")
+
+        self.assertEqual(registry["daily_uploads"]["2026-01-28"], 1)
+
+    def test_record_upload_prevents_duplicate_fbid(self):
+        """record_upload doesn't add duplicate fbids."""
+        registry = {
+            "uploaded_fbids": ["existing_fbid"],
+            "processed_zips": [],
+            "daily_uploads": {}
+        }
+        with patch('run.datetime') as mock_datetime:
+            mock_datetime.date.today.return_value.isoformat.return_value = "2026-01-28"
+            run.record_upload(registry, "existing_fbid")
+
+        # Should only have one instance
+        self.assertEqual(registry["uploaded_fbids"].count("existing_fbid"), 1)
+
+
+class TestRegistryPersistence(unittest.TestCase):
+    """Tests for registry file persistence across runs."""
+
+    def test_load_registry_creates_empty_if_missing(self):
+        """load_registry returns empty structure when file doesn't exist."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            registry_path = os.path.join(tmpdir, "registry.json")
+            result = run.load_registry(registry_path)
+
+        self.assertEqual(result, {
+            "uploaded_fbids": [],
+            "processed_zips": [],
+            "daily_uploads": {}
+        })
+
+    def test_load_registry_reads_existing_file(self):
+        """load_registry correctly reads existing registry file."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            registry_path = os.path.join(tmpdir, "registry.json")
+            test_data = {
+                "uploaded_fbids": ["fbid1", "fbid2"],
+                "processed_zips": ["zip1.zip"],
+                "daily_uploads": {"2026-01-28": 2}
+            }
+            with open(registry_path, 'w') as f:
+                json.dump(test_data, f)
+
+            result = run.load_registry(registry_path)
+
+        self.assertEqual(result, test_data)
+
+    def test_load_registry_migrates_old_format(self):
+        """load_registry migrates old list format to new dict format."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            registry_path = os.path.join(tmpdir, "registry.json")
+            # Old format was just a list
+            old_format = ["video1.mp4", "video2.mp4"]
+            with open(registry_path, 'w') as f:
+                json.dump(old_format, f)
+
+            result = run.load_registry(registry_path)
+
+        self.assertEqual(result["uploaded_fbids"], old_format)
+        self.assertEqual(result["processed_zips"], [])
+        self.assertEqual(result["daily_uploads"], {})
+
+    def test_save_registry_atomic_writes_correctly(self):
+        """save_registry_atomic writes data that can be read back."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            registry_path = os.path.join(tmpdir, "registry.json")
+            test_data = {
+                "uploaded_fbids": ["fbid1", "fbid2"],
+                "processed_zips": ["zip1.zip"],
+                "daily_uploads": {"2026-01-28": 2}
+            }
+
+            run.save_registry_atomic(registry_path, test_data)
+
+            with open(registry_path, 'r') as f:
+                result = json.load(f)
+
+        self.assertEqual(result, test_data)
+
+    def test_registry_persists_between_runs(self):
+        """Registry data persists correctly between save and load cycles."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            registry_path = os.path.join(tmpdir, "registry.json")
+
+            # First "run" - save some data
+            registry1 = run.load_registry(registry_path)
+            registry1["uploaded_fbids"].append("fbid1")
+            registry1["daily_uploads"]["2026-01-28"] = 1
+            run.save_registry_atomic(registry_path, registry1)
+
+            # Second "run" - should see previous data
+            registry2 = run.load_registry(registry_path)
+            self.assertIn("fbid1", registry2["uploaded_fbids"])
+            self.assertEqual(registry2["daily_uploads"]["2026-01-28"], 1)
+
+            # Add more data
+            registry2["uploaded_fbids"].append("fbid2")
+            registry2["daily_uploads"]["2026-01-28"] = 2
+            run.save_registry_atomic(registry_path, registry2)
+
+            # Third "run" - should see all data
+            registry3 = run.load_registry(registry_path)
+            self.assertEqual(registry3["uploaded_fbids"], ["fbid1", "fbid2"])
+            self.assertEqual(registry3["daily_uploads"]["2026-01-28"], 2)
+
+
+class TestResumeWorkflow(unittest.TestCase):
+    """Tests for resume workflow - skipping already uploaded videos."""
+
+    def test_extract_fbid_from_entry(self):
+        """extract_fbid correctly extracts fbid from entry."""
+        entry = {
+            'label_values': [
+                {
+                    'label': 'Video',
+                    'media': [{'uri': 'path/to/123456789.mp4'}]
+                }
+            ]
+        }
+        result = run.extract_fbid(entry)
+        self.assertEqual(result, "123456789")
+
+    def test_extract_fbid_handles_uppercase_extension(self):
+        """extract_fbid handles .MP4 extension."""
+        entry = {
+            'label_values': [
+                {
+                    'label': 'Video',
+                    'media': [{'uri': 'path/to/123456789.MP4'}]
+                }
+            ]
+        }
+        result = run.extract_fbid(entry)
+        self.assertEqual(result, "123456789")
+
+    def test_extract_fbid_returns_none_when_missing(self):
+        """extract_fbid returns None when video info is missing."""
+        entry = {'label_values': []}
+        result = run.extract_fbid(entry)
+        self.assertIsNone(result)
+
 
 if __name__ == "__main__":
     unittest.main()
