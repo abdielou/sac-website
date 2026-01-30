@@ -2179,6 +2179,100 @@ function extractPaymentData(msg) {
     service_provider,
   }
 }
+
+function extractPayPalPaymentData(msg) {
+  // Pull raw parts (same as ATH Movil)
+  const message_id = msg.getId()
+  const body = msg.getBody()
+  const raw = msg.getRawContent()
+
+  // Amount: "payment of $25.00 USD" or fallback "$25.00 USD"
+  let amountMatch = body.match(/payment of \$([0-9.,]+)\s*USD/i)
+  if (!amountMatch) {
+    amountMatch = body.match(/\$([0-9.,]+)\s*USD/i)
+  }
+  const amount = amountMatch ? amountMatch[1] : ''
+
+  // Transaction ID: look for alphanumeric ID after "<b>Transaction ID</b>"
+  const txIdMatch = body.match(/<b>Transaction ID<\/b>[\s\S]*?([A-Z0-9]{10,})/i)
+  const transaction_id = txIdMatch ? txIdMatch[1] : ''
+
+  // Transaction date: "Jan 25, 2026 14:57:02 PST"
+  const txDateMatch = body.match(
+    /<b>Transaction date<\/b>[\s\S]*?(\w{3}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}:\d{2}\s+\w+)/i
+  )
+  let payment_date = '',
+    payment_time = '',
+    payment_datetime = null
+  if (txDateMatch) {
+    const dateStr = txDateMatch[1].trim()
+    // Parse "Jan 25, 2026 14:57:02 PST" into date and time parts
+    const dateTimeParts = dateStr.match(/(\w{3}\s+\d{1,2},\s+\d{4})\s+(\d{1,2}:\d{2}:\d{2}\s+\w+)/)
+    if (dateTimeParts) {
+      payment_date = dateTimeParts[1]
+      payment_time = dateTimeParts[2]
+    } else {
+      payment_date = dateStr
+    }
+    // Create Date object (JavaScript can parse this format)
+    payment_datetime = new Date(dateStr)
+  }
+
+  // Buyer information: name and email on separate lines after "<b>Buyer information</b>"
+  const buyerMatch = body.match(
+    /<b>Buyer information<\/b>[\s\S]*?<br\s*\/?>\s*([^<]+)<br\s*\/?>\s*([^<]+@[^<\s]+)/i
+  )
+  const sender_name = buyerMatch ? buyerMatch[1].trim() : ''
+  const sender_email = buyerMatch ? buyerMatch[2].trim() : ''
+
+  // PayPal has no phone number in payment emails
+  const sender_phone = ''
+
+  // Instructions from buyer (message)
+  const messageMatch = body.match(/<b>Instructions from buyer<\/b>[\s\S]*?<br\s*\/?>\s*([^<]+)/i)
+  const payment_message = messageMatch ? messageMatch[1].trim() : ''
+
+  // Recipient name (not used for PayPal, but included for compatibility)
+  const recipient_name = ''
+
+  // Email headers (same as ATH Movil)
+  const email_subject = msg.getSubject()
+  const email_date = msg.getDate()
+  const email_from = msg.getFrom()
+  const email_to = msg.getTo()
+
+  // Original sender & return-path from raw headers
+  const originalMatch = raw.match(/Original-Sender:\s*([^\r\n]+)/i)
+  const original_sender = originalMatch ? originalMatch[1].trim() : ''
+  const returnMatch = raw.match(/Return-Path:\s*<([^>]+)>/i)
+  const return_path = returnMatch ? returnMatch[1] : ''
+
+  // Service info (hardcoded for PayPal)
+  const payment_service = 'PayPal'
+  const service_provider = 'PayPal, Inc.'
+
+  return {
+    message_id,
+    amount,
+    sender_name,
+    sender_phone,
+    sender_email,
+    payment_date,
+    payment_time,
+    payment_datetime,
+    payment_message,
+    recipient_name,
+    email_subject,
+    email_date,
+    email_from,
+    email_to,
+    original_sender,
+    return_path,
+    payment_service,
+    service_provider,
+    transaction_id,
+  }
+}
 // #endregion
 
 // #region Payment Recorded
