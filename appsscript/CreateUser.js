@@ -1870,17 +1870,40 @@ function handle_rowsRemoved(e) {
 
 // #region Process Payment Emails
 function handleNewMemberships(e) {
-  const query = `from:${EMAIL_FILTER_SENDER} to:${EMAIL_FILTER_RECEIVER} subject:${EMAIL_FILTER_SUBJECT_CONTAINS} newer_than:${EMAIL_SEARCH_WINDOW_DAYS}d`
-  const threads = gmailApp.search(query)
-  threads.forEach((thread) => {
+  // ATH Movil emails (subject contains "paid")
+  const athQuery = `from:${EMAIL_FILTER_SENDER} to:${EMAIL_FILTER_RECEIVER} subject:${EMAIL_FILTER_SUBJECT_CONTAINS} newer_than:${EMAIL_SEARCH_WINDOW_DAYS}d`
+
+  // PayPal emails (subject contains "payment received from")
+  const paypalQuery = `from:${EMAIL_FILTER_SENDER} to:${EMAIL_FILTER_RECEIVER} subject:"payment received from" newer_than:${EMAIL_SEARCH_WINDOW_DAYS}d`
+
+  // Process ATH Movil emails
+  const athThreads = gmailApp.search(athQuery)
+  athThreads.forEach((thread) => {
+    const messages = thread.getMessages()
+    messages.forEach(processPaymentEmail)
+  })
+
+  // Process PayPal emails
+  const paypalThreads = gmailApp.search(paypalQuery)
+  paypalThreads.forEach((thread) => {
     const messages = thread.getMessages()
     messages.forEach(processPaymentEmail)
   })
 }
 
 function processPaymentEmail(msg) {
-  // 1. Extract payment data
-  const paymentData = extractPaymentData(msg)
+  // 1. Detect payment service and extract data with appropriate parser
+  const serviceType = detectPaymentService(msg)
+  let paymentData
+
+  if (serviceType === 'paypal') {
+    paymentData = extractPayPalPaymentData(msg)
+  } else if (serviceType === 'ath_movil') {
+    paymentData = extractPaymentData(msg)
+  } else {
+    logger.log(`Unknown payment service type for message: ${msg.getId()}`)
+    return
+  }
 
   // 2. Check if we already registered this payment in PAYMENTS sheet
   const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID)
