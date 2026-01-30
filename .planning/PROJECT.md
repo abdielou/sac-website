@@ -31,7 +31,7 @@ The site must remain fully functional during migration — no broken pages, no l
 
 ### Active
 
-(No active requirements — ready for next milestone)
+- PayPal email parsing in membership payment scanner — v1.2
 
 ### Validated (v1.1)
 
@@ -47,11 +47,20 @@ The site must remain fully functional during migration — no broken pages, no l
 - API route migration to Route Handlers — keep in pages/api for now
 - TypeScript conversion — stay JavaScript for this milestone
 
+## Current Milestone: v1.2 PayPal Payment Support
+
+**Goal:** Add PayPal email parsing to the membership payment scanner so PayPal payments are automatically captured alongside ATH Movil payments.
+
+**Target features:**
+- Parse PayPal "Payment received" email notifications
+- Extract: amount, sender email, sender name, transaction ID, date, message
+- Integrate with existing `onNewMemberships` flow (same matching and processing)
+
 ## Current State
 
 **v1.1 shipped:** FB-YT Archive script now supports drop-and-run workflow with full deduplication.
 
-**Ready for:** Next milestone planning — blog migration, gallery migration, or additional archive features.
+**v1.2 in progress:** Adding PayPal payment support to membership management script.
 
 ## Context
 
@@ -74,9 +83,17 @@ The site must remain fully functional during migration — no broken pages, no l
 - Videos identified by `fbid` in metadata JSON
 - Current workflow is manual: extract, run, cleanup
 
+**Membership Management Script (`appsscript/CreateUser.js`):**
+- Google Apps Script for automated membership processing
+- Currently parses ATH Movil payment emails via `extractPaymentData()`
+- Scheduled job `onNewMemberships` scans Gmail for payment notifications
+- Matches payments to members in CLEAN sheet, triggers account creation
+- Tracks membership status (ACTIVE/EXPIRED/NO_PAYMENT) with rolling 1-year validity
+
 **Known issues:**
 - Jest SVG import configuration (one test suite fails)
 - Windows build race conditions (flaky, requires multiple build attempts)
+- PayPal payments not being captured (only ATH Movil supported)
 
 ## Constraints
 
@@ -98,4 +115,4 @@ The site must remain fully functional during migration — no broken pages, no l
 | Upgrade to Tailwind CSS 4 | Better performance, modern syntax | Good |
 
 ---
-*Last updated: 2026-01-29 after v1.1 milestone complete*
+*Last updated: 2026-01-30 after v1.2 milestone started*
