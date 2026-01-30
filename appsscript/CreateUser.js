@@ -2110,6 +2110,17 @@ function insertPaymentRecord(paymentsSheet, paymentData) {
   paymentsSheet.appendRow(newRow)
 }
 
+function detectPaymentService(msg) {
+  const subject = msg.getSubject().toLowerCase()
+  if (subject.includes('payment received from')) {
+    return 'paypal'
+  }
+  if (subject.includes('paid')) {
+    return 'ath_movil'
+  }
+  return 'unknown'
+}
+
 function extractPaymentData(msg) {
   // Pull raw parts
   const message_id = msg.getId()
