@@ -2137,31 +2137,27 @@ function detectPaymentService(msg) {
   const subject = msg.getSubject().toLowerCase()
   const raw = msg.getRawContent()
 
-  // Extract original sender from headers (for forwarded emails)
-  const originalMatch = raw.match(/Original-Sender:\s*([^\r\n]+)/i)
+  // Extract original sender from X-Original-Sender header (set by Google Groups for forwarded emails)
+  const originalMatch = raw.match(/X-Original-Sender:\s*([^\r\n]+)/i)
   const original_sender = originalMatch ? originalMatch[1].trim().toLowerCase() : ''
-  const returnMatch = raw.match(/Return-Path:\s*<([^>]+)>/i)
-  const return_path = returnMatch ? returnMatch[1].toLowerCase() : ''
 
-  // PayPal: verify both subject AND sender
+  // PayPal: verify both subject AND sender (service@paypal.com)
   if (subject.includes('payment received from')) {
-    const isFromPayPal = original_sender.includes('paypal.com') || return_path.includes('paypal.com')
-    if (isFromPayPal) {
+    if (original_sender.includes('paypal.com')) {
       return 'paypal'
     }
     // Subject matches but sender doesn't - potential spoofing attempt
-    logger.log(`Suspicious email: PayPal subject but sender is ${original_sender || return_path || 'unknown'}`)
+    logger.log(`Suspicious email: PayPal subject but X-Original-Sender is ${original_sender || 'missing'}`)
     return 'unknown'
   }
 
-  // ATH Movil: verify both subject AND sender
+  // ATH Movil: verify both subject AND sender (info@notifications.evertecinc.com)
   if (subject.includes('paid')) {
-    const isFromATH = original_sender.includes('athmovil') || return_path.includes('athmovil')
-    if (isFromATH) {
+    if (original_sender.includes('evertecinc.com')) {
       return 'ath_movil'
     }
     // Subject matches but sender doesn't - potential spoofing attempt
-    logger.log(`Suspicious email: ATH subject but sender is ${original_sender || return_path || 'unknown'}`)
+    logger.log(`Suspicious email: ATH subject but X-Original-Sender is ${original_sender || 'missing'}`)
     return 'unknown'
   }
 
