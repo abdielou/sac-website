@@ -1870,17 +1870,40 @@ function handle_rowsRemoved(e) {
 
 // #region Process Payment Emails
 function handleNewMemberships(e) {
-  const query = `from:${EMAIL_FILTER_SENDER} to:${EMAIL_FILTER_RECEIVER} subject:${EMAIL_FILTER_SUBJECT_CONTAINS} newer_than:${EMAIL_SEARCH_WINDOW_DAYS}d`
-  const threads = gmailApp.search(query)
-  threads.forEach((thread) => {
+  // ATH Movil emails (subject contains "paid")
+  const athQuery = `from:${EMAIL_FILTER_SENDER} to:${EMAIL_FILTER_RECEIVER} subject:${EMAIL_FILTER_SUBJECT_CONTAINS} newer_than:${EMAIL_SEARCH_WINDOW_DAYS}d`
+
+  // PayPal emails (subject contains "payment received from")
+  const paypalQuery = `from:${EMAIL_FILTER_SENDER} to:${EMAIL_FILTER_RECEIVER} subject:"payment received from" newer_than:${EMAIL_SEARCH_WINDOW_DAYS}d`
+
+  // Process ATH Movil emails
+  const athThreads = gmailApp.search(athQuery)
+  athThreads.forEach((thread) => {
+    const messages = thread.getMessages()
+    messages.forEach(processPaymentEmail)
+  })
+
+  // Process PayPal emails
+  const paypalThreads = gmailApp.search(paypalQuery)
+  paypalThreads.forEach((thread) => {
     const messages = thread.getMessages()
     messages.forEach(processPaymentEmail)
   })
 }
 
 function processPaymentEmail(msg) {
-  // 1. Extract payment data
-  const paymentData = extractPaymentData(msg)
+  // 1. Detect payment service and extract data with appropriate parser
+  const serviceType = detectPaymentService(msg)
+  let paymentData
+
+  if (serviceType === 'paypal') {
+    paymentData = extractPayPalPaymentData(msg)
+  } else if (serviceType === 'ath_movil') {
+    paymentData = extractPaymentData(msg)
+  } else {
+    logger.log(`Unknown payment service type for message: ${msg.getId()}`)
+    return
+  }
 
   // 2. Check if we already registered this payment in PAYMENTS sheet
   const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID)
@@ -2110,6 +2133,37 @@ function insertPaymentRecord(paymentsSheet, paymentData) {
   paymentsSheet.appendRow(newRow)
 }
 
+function detectPaymentService(msg) {
+  const subject = msg.getSubject().toLowerCase()
+  const raw = msg.getRawContent()
+
+  // Extract original sender from X-Original-Sender header (set by Google Groups for forwarded emails)
+  const originalMatch = raw.match(/X-Original-Sender:\s*([^\r\n]+)/i)
+  const original_sender = originalMatch ? originalMatch[1].trim().toLowerCase() : ''
+
+  // PayPal: verify both subject AND sender (service@paypal.com)
+  if (subject.includes('payment received from')) {
+    if (original_sender.includes('paypal.com')) {
+      return 'paypal'
+    }
+    // Subject matches but sender doesn't - potential spoofing attempt
+    logger.log(`Suspicious email: PayPal subject but X-Original-Sender is ${original_sender || 'missing'}`)
+    return 'unknown'
+  }
+
+  // ATH Movil: verify both subject AND sender (info@notifications.evertecinc.com)
+  if (subject.includes('paid')) {
+    if (original_sender.includes('evertecinc.com')) {
+      return 'ath_movil'
+    }
+    // Subject matches but sender doesn't - potential spoofing attempt
+    logger.log(`Suspicious email: ATH subject but X-Original-Sender is ${original_sender || 'missing'}`)
+    return 'unknown'
+  }
+
+  return 'unknown'
+}
+
 function extractPaymentData(msg) {
   // Pull raw parts
   const message_id = msg.getId()
@@ -2177,6 +2231,100 @@ function extractPaymentData(msg) {
     return_path,
     payment_service,
     service_provider,
+  }
+}
+
+function extractPayPalPaymentData(msg) {
+  // Pull raw parts (same as ATH Movil)
+  const message_id = msg.getId()
+  const body = msg.getBody()
+  const raw = msg.getRawContent()
+
+  // Amount: "payment of $25.00 USD" or fallback "$25.00 USD"
+  let amountMatch = body.match(/payment of \$([0-9.,]+)\s*USD/i)
+  if (!amountMatch) {
+    amountMatch = body.match(/\$([0-9.,]+)\s*USD/i)
+  }
+  const amount = amountMatch ? amountMatch[1] : ''
+
+  // Transaction ID: look for alphanumeric ID after "<b>Transaction ID</b>"
+  const txIdMatch = body.match(/<b>Transaction ID<\/b>[\s\S]*?([A-Z0-9]{10,})/i)
+  const transaction_id = txIdMatch ? txIdMatch[1] : ''
+
+  // Transaction date: "Jan 25, 2026 14:57:02 PST"
+  const txDateMatch = body.match(
+    /<b>Transaction date<\/b>[\s\S]*?(\w{3}\s+\d{1,2},\s+\d{4}\s+\d{1,2}:\d{2}:\d{2}\s+\w+)/i
+  )
+  let payment_date = '',
+    payment_time = '',
+    payment_datetime = null
+  if (txDateMatch) {
+    const dateStr = txDateMatch[1].trim()
+    // Parse "Jan 25, 2026 14:57:02 PST" into date and time parts
+    const dateTimeParts = dateStr.match(/(\w{3}\s+\d{1,2},\s+\d{4})\s+(\d{1,2}:\d{2}:\d{2}\s+\w+)/)
+    if (dateTimeParts) {
+      payment_date = dateTimeParts[1]
+      payment_time = dateTimeParts[2]
+    } else {
+      payment_date = dateStr
+    }
+    // Create Date object (JavaScript can parse this format)
+    payment_datetime = new Date(dateStr)
+  }
+
+  // Buyer information: name and email on separate lines after "<b>Buyer information</b>"
+  const buyerMatch = body.match(
+    /<b>Buyer information<\/b>[\s\S]*?<br\s*\/?>\s*([^<]+)<br\s*\/?>\s*([^<]+@[^<\s]+)/i
+  )
+  const sender_name = buyerMatch ? buyerMatch[1].trim() : ''
+  const sender_email = buyerMatch ? buyerMatch[2].trim() : ''
+
+  // PayPal has no phone number in payment emails
+  const sender_phone = ''
+
+  // Instructions from buyer (message)
+  const messageMatch = body.match(/<b>Instructions from buyer<\/b>[\s\S]*?<br\s*\/?>\s*([^<]+)/i)
+  const payment_message = messageMatch ? messageMatch[1].trim() : ''
+
+  // Recipient name (not used for PayPal, but included for compatibility)
+  const recipient_name = ''
+
+  // Email headers (same as ATH Movil)
+  const email_subject = msg.getSubject()
+  const email_date = msg.getDate()
+  const email_from = msg.getFrom()
+  const email_to = msg.getTo()
+
+  // Original sender & return-path from raw headers
+  const originalMatch = raw.match(/Original-Sender:\s*([^\r\n]+)/i)
+  const original_sender = originalMatch ? originalMatch[1].trim() : ''
+  const returnMatch = raw.match(/Return-Path:\s*<([^>]+)>/i)
+  const return_path = returnMatch ? returnMatch[1] : ''
+
+  // Service info (hardcoded for PayPal)
+  const payment_service = 'PayPal'
+  const service_provider = 'PayPal, Inc.'
+
+  return {
+    message_id,
+    amount,
+    sender_name,
+    sender_phone,
+    sender_email,
+    payment_date,
+    payment_time,
+    payment_datetime,
+    payment_message,
+    recipient_name,
+    email_subject,
+    email_date,
+    email_from,
+    email_to,
+    original_sender,
+    return_path,
+    payment_service,
+    service_provider,
+    transaction_id,
   }
 }
 // #endregion
