@@ -2135,12 +2135,36 @@ function insertPaymentRecord(paymentsSheet, paymentData) {
 
 function detectPaymentService(msg) {
   const subject = msg.getSubject().toLowerCase()
+  const raw = msg.getRawContent()
+
+  // Extract original sender from headers (for forwarded emails)
+  const originalMatch = raw.match(/Original-Sender:\s*([^\r\n]+)/i)
+  const original_sender = originalMatch ? originalMatch[1].trim().toLowerCase() : ''
+  const returnMatch = raw.match(/Return-Path:\s*<([^>]+)>/i)
+  const return_path = returnMatch ? returnMatch[1].toLowerCase() : ''
+
+  // PayPal: verify both subject AND sender
   if (subject.includes('payment received from')) {
-    return 'paypal'
+    const isFromPayPal = original_sender.includes('paypal.com') || return_path.includes('paypal.com')
+    if (isFromPayPal) {
+      return 'paypal'
+    }
+    // Subject matches but sender doesn't - potential spoofing attempt
+    logger.log(`Suspicious email: PayPal subject but sender is ${original_sender || return_path || 'unknown'}`)
+    return 'unknown'
   }
+
+  // ATH Movil: verify both subject AND sender
   if (subject.includes('paid')) {
-    return 'ath_movil'
+    const isFromATH = original_sender.includes('athmovil') || return_path.includes('athmovil')
+    if (isFromATH) {
+      return 'ath_movil'
+    }
+    // Subject matches but sender doesn't - potential spoofing attempt
+    logger.log(`Suspicious email: ATH subject but sender is ${original_sender || return_path || 'unknown'}`)
+    return 'unknown'
   }
+
   return 'unknown'
 }
 
