@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import { ThemeProvider } from 'next-themes'
+import { SessionProvider } from 'next-auth/react'
 import Analytics from '@/components/analytics'
 import { ClientReload } from '@/components/ClientReload'
 
@@ -14,16 +15,18 @@ export function Providers({ children }) {
   const forcedTheme = pathname === '/links' ? 'light' : undefined
 
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="dark"
-      enableSystem={false}
-      storageKey="theme"
-      forcedTheme={forcedTheme}
-    >
-      {isDevelopment && <ClientReload />}
-      <Analytics />
-      {children}
-    </ThemeProvider>
+    <SessionProvider>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="dark"
+        enableSystem={false}
+        storageKey="theme"
+        forcedTheme={forcedTheme}
+      >
+        {isDevelopment && <ClientReload />}
+        <Analytics />
+        {children}
+      </ThemeProvider>
+    </SessionProvider>
   )
 }
