@@ -2138,7 +2138,8 @@ function detectPaymentService(msg) {
   const raw = msg.getRawContent()
 
   // Extract original sender from X-Original-Sender header (set by Google Groups for forwarded emails)
-  const originalMatch = raw.match(/X-Original-Sender:\s*([^\r\n]+)/i)
+  // Use ^ with multiline flag to match header at line start, avoiding DKIM signature h= fields
+  const originalMatch = raw.match(/^X-Original-Sender:\s*([^\r\n]+)/im)
   const original_sender = originalMatch ? originalMatch[1].trim().toLowerCase() : ''
 
   // PayPal: verify both subject AND sender (service@paypal.com)
