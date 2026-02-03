@@ -15,28 +15,18 @@ function parseAuthorizedEmails(envValue) {
 }
 
 const AUTHORIZED_ADMIN_EMAILS = parseAuthorizedEmails(process.env.AUTHORIZED_ADMIN_EMAILS)
-const AUTHORIZED_DOMAIN = 'sociedadastronomia.com'
 
 /**
  * Check if an email is authorized to access the admin dashboard
+ * Only emails explicitly listed in AUTHORIZED_ADMIN_EMAILS are allowed
  * @param {string} email
  * @returns {boolean}
  */
 function isAuthorizedEmail(email) {
   const normalizedEmail = email.toLowerCase()
 
-  // Check if email is in the allowlist
-  if (AUTHORIZED_ADMIN_EMAILS.includes(normalizedEmail)) {
-    return true
-  }
-
-  // Check if email domain matches authorized domain
-  const domain = normalizedEmail.split('@')[1]
-  if (domain === AUTHORIZED_DOMAIN) {
-    return true
-  }
-
-  return false
+  // Only allow emails explicitly in the allowlist
+  return AUTHORIZED_ADMIN_EMAILS.includes(normalizedEmail)
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
