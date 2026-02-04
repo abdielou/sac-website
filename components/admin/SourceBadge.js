@@ -4,11 +4,15 @@
 const sourceConfig = {
   ath_movil: {
     label: 'ATH Movil',
-    classes: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+    classes: 'bg-orange-100 text-orange-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+  },
+  ath_business_team: {
+    label: 'ATH Movil',
+    classes: 'bg-orange-100 text-orange-800 dark:bg-yellow-900/30 dark:text-yellow-400',
   },
   paypal: {
     label: 'PayPal',
-    classes: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
+    classes: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
   },
 }
 
