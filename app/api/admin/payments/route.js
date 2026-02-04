@@ -65,9 +65,7 @@ export const GET = auth(async function GET(req) {
     }
 
     if (search) {
-      filteredPayments = filteredPayments.filter((p) =>
-        p.email?.toLowerCase().includes(search)
-      )
+      filteredPayments = filteredPayments.filter((p) => p.email?.toLowerCase().includes(search))
     }
 
     // Pagination

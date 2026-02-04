@@ -44,9 +44,7 @@ export const GET = auth(async function GET(req) {
 
     if (search) {
       filteredMembers = filteredMembers.filter(
-        (m) =>
-          m.email?.toLowerCase().includes(search) ||
-          m.name?.toLowerCase().includes(search)
+        (m) => m.email?.toLowerCase().includes(search) || m.name?.toLowerCase().includes(search)
       )
     }
 
