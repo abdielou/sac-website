@@ -107,6 +107,7 @@ function PaymentsContent() {
           <option value="">Todas las fuentes</option>
           <option value="ath_movil">ATH Movil</option>
           <option value="paypal">PayPal</option>
+          <option value="manual">Manual</option>
         </select>
 
         {/* Search input */}

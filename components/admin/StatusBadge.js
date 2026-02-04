@@ -14,6 +14,10 @@ const statusConfig = {
     label: 'Expirado',
     classes: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
   },
+  applied: {
+    label: 'Aplicado',
+    classes: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+  },
 }
 
 /**

@@ -108,6 +108,7 @@ function MembersContent() {
           <option value="active">Activo</option>
           <option value="expiring-soon">Vence pronto</option>
           <option value="expired">Expirado</option>
+          <option value="applied">Aplicado</option>
         </select>
 
         {/* Search input */}
