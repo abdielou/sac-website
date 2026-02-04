@@ -122,7 +122,7 @@ function PaymentsContent() {
 
       {/* Loading state - show skeleton table but keep filters visible */}
       {isPending ? (
-        <SkeletonTable rows={10} columns={4} />
+        <SkeletonTable rows={10} columns={5} />
       ) : (
         <>
           {/* Table container */}
@@ -143,13 +143,16 @@ function PaymentsContent() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Fuente
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Mensaje
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {payments.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={4}
+                        colSpan={5}
                         className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
                       >
                         No se encontraron pagos con los filtros seleccionados.
@@ -172,6 +175,9 @@ function PaymentsContent() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <SourceBadge source={payment.source} />
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
+                          {payment.notes || '-'}
                         </td>
                       </tr>
                     ))
@@ -219,7 +225,7 @@ function PaymentsContent() {
  */
 export default function PaymentsPage() {
   return (
-    <Suspense fallback={<SkeletonTable rows={10} columns={4} />}>
+    <Suspense fallback={<SkeletonTable rows={10} columns={5} />}>
       <PaymentsContent />
     </Suspense>
   )

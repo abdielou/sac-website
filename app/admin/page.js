@@ -5,7 +5,7 @@ import { useRefreshData } from '@/lib/hooks/useAdminData'
 import { StatsCard } from '@/components/admin/StatsCard'
 import { SkeletonCard } from '@/components/admin/SkeletonCard'
 import { ErrorState } from '@/components/admin/ErrorState'
-import { formatNumber, formatCurrency } from '@/lib/formatters'
+import { formatNumber } from '@/lib/formatters'
 
 export default function AdminPage() {
   const { stats, isPending, isError, error } = useStats()
@@ -24,8 +24,7 @@ export default function AdminPage() {
             Actualizar
           </button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <SkeletonCard />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <SkeletonCard />
           <SkeletonCard />
           <SkeletonCard />
@@ -60,7 +59,7 @@ export default function AdminPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatsCard
           label="Total Miembros"
           value={formatNumber(stats.total)}
@@ -78,12 +77,6 @@ export default function AdminPage() {
           value={formatNumber(stats.expiringSoon)}
           href={{ pathname: '/admin/members', query: { status: 'expiring-soon' } }}
           color="yellow"
-        />
-        <StatsCard
-          label="Pagos del Mes"
-          value={formatCurrency(stats.monthlyPayments)}
-          href="/admin/payments"
-          color="gray"
         />
       </div>
     </div>

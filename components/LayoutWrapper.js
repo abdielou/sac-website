@@ -11,7 +11,7 @@ import ThemeSwitch from './ThemeSwitch'
 import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
 
-const LayoutWrapper = ({ children, forceLightHeader = false }) => {
+const LayoutWrapper = ({ children, forceLightHeader = false, fullWidth = false }) => {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 
@@ -23,8 +23,8 @@ const LayoutWrapper = ({ children, forceLightHeader = false }) => {
   const logo = show && (isLight ? siteMetadata.siteLogoLight : siteMetadata.siteLogoDark)
   const titleColor = show && (isLight ? 'text-sac-primary-blue' : '')
   return (
-    <SectionContainer>
-      <div className="flex flex-col justify-between h-screen">
+    <div className="flex flex-col justify-between h-screen">
+      <SectionContainer>
         <header className="py-10">
           <div className="flex flex-col">
             <div
@@ -71,10 +71,18 @@ const LayoutWrapper = ({ children, forceLightHeader = false }) => {
             )}
           </div>
         </header>
+      </SectionContainer>
+      {fullWidth ? (
         <main className="mb-auto">{children}</main>
+      ) : (
+        <SectionContainer>
+          <main className="mb-auto">{children}</main>
+        </SectionContainer>
+      )}
+      <SectionContainer>
         <Footer />
-      </div>
-    </SectionContainer>
+      </SectionContainer>
+    </div>
   )
 }
 

@@ -60,6 +60,7 @@ const navItems = [
 
 export function AdminSidebar() {
   const [isOpen, setIsOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
   const pathname = usePathname()
 
   const isActive = (item) => {
@@ -136,39 +137,71 @@ export function AdminSidebar() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-40 h-screen w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 z-40 h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transform transition-all duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 lg:static lg:h-auto lg:min-h-screen`}
+        } lg:translate-x-0 lg:static lg:h-auto ${collapsed ? 'w-16' : 'w-64'}`}
       >
         {/* Header */}
-        <div className="flex items-center h-16 px-6 border-b border-gray-200 dark:border-gray-700">
-          <Link href="/admin" className="flex items-center space-x-2">
-            <span className="text-lg font-semibold text-gray-900 dark:text-white">SAC Admin</span>
-          </Link>
+        <div
+          className={`flex items-center h-16 border-b border-gray-200 dark:border-gray-700 ${
+            collapsed ? 'justify-center px-2' : 'justify-between px-6'
+          }`}
+        >
+          {!collapsed && (
+            <Link href="/admin" className="flex items-center space-x-2">
+              <span className="text-lg font-semibold text-gray-900 dark:text-white">
+                SAC Admin
+              </span>
+            </Link>
+          )}
+
+          {/* Collapse toggle (desktop only) */}
+          <button
+            type="button"
+            onClick={() => setCollapsed((c) => !c)}
+            className="hidden lg:flex items-center justify-center w-8 h-8 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            aria-label={collapsed ? 'Expandir menu' : 'Colapsar menu'}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className={`w-5 h-5 transition-transform duration-300 ${collapsed ? 'rotate-180' : ''}`}
+            >
+              <path
+                fillRule="evenodd"
+                d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
         </div>
 
         {/* Navigation */}
-        <nav className="px-4 py-6 space-y-1">
+        <nav className={`py-6 space-y-1 ${collapsed ? 'px-2' : 'px-4'}`}>
           {navItems.map((item) => {
             const active = isActive(item)
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                title={collapsed ? item.label : undefined}
+                className={`flex items-center text-sm font-medium rounded-lg transition-colors ${
+                  collapsed ? 'justify-center px-2 py-3' : 'px-4 py-3'
+                } ${
                   active
                     ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
                     : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
                 <span
-                  className={`mr-3 ${
+                  className={`flex-shrink-0 ${
                     active ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'
-                  }`}
+                  } ${collapsed ? '' : 'mr-3'}`}
                 >
                   {item.icon}
                 </span>
-                {item.label}
+                {!collapsed && item.label}
               </Link>
             )
           })}

@@ -7,6 +7,7 @@ import { StatusBadge } from '@/components/admin/StatusBadge'
 import { SkeletonTable } from '@/components/admin/SkeletonTable'
 import { ErrorState } from '@/components/admin/ErrorState'
 import { formatDate } from '@/lib/formatters'
+import { PaymentTooltip } from '@/components/admin/PaymentTooltip'
 
 /**
  * MembersContent - Main content component for members list
@@ -123,7 +124,7 @@ function MembersContent() {
 
       {/* Loading state - show skeleton table but keep filters visible */}
       {isPending ? (
-        <SkeletonTable rows={10} columns={4} />
+        <SkeletonTable rows={10} columns={5} />
       ) : (
         <>
           {/* Table container */}
@@ -144,13 +145,16 @@ function MembersContent() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Estado
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Ultimo Pago
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {members.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={4}
+                        colSpan={5}
                         className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
                       >
                         No se encontraron miembros con los filtros seleccionados.
@@ -173,6 +177,18 @@ function MembersContent() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <StatusBadge status={member.status} />
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          {member.lastPaymentAmount ? (
+                            <PaymentTooltip
+                              date={member.lastPaymentDate}
+                              amount={member.lastPaymentAmount}
+                              notes={member.lastPaymentNotes}
+                              source={member.lastPaymentSource}
+                            />
+                          ) : (
+                            <span className="text-sm text-gray-400">-</span>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -220,7 +236,7 @@ function MembersContent() {
  */
 export default function MembersPage() {
   return (
-    <Suspense fallback={<SkeletonTable rows={10} columns={4} />}>
+    <Suspense fallback={<SkeletonTable rows={10} columns={5} />}>
       <MembersContent />
     </Suspense>
   )
