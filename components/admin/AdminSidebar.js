@@ -143,9 +143,7 @@ export function AdminSidebar() {
         {/* Header */}
         <div className="flex items-center h-16 px-6 border-b border-gray-200 dark:border-gray-700">
           <Link href="/admin" className="flex items-center space-x-2">
-            <span className="text-lg font-semibold text-gray-900 dark:text-white">
-              SAC Admin
-            </span>
+            <span className="text-lg font-semibold text-gray-900 dark:text-white">SAC Admin</span>
           </Link>
         </div>
 
@@ -165,9 +163,7 @@ export function AdminSidebar() {
               >
                 <span
                   className={`mr-3 ${
-                    active
-                      ? 'text-gray-900 dark:text-white'
-                      : 'text-gray-400 dark:text-gray-500'
+                    active ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'
                   }`}
                 >
                   {item.icon}
