@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useState, useEffect, useRef } from 'react'
 import { useSearchParams, usePathname, useRouter } from 'next/navigation'
 import { usePayments } from '@/lib/hooks/useAdminData'
 import { SourceBadge } from '@/components/admin/SourceBadge'
@@ -19,13 +19,22 @@ function PaymentsContent() {
 
   // Read filters from URL params
   const source = searchParams.get('source') || ''
-  const search = searchParams.get('search') || ''
+  const searchParam = searchParams.get('search') || ''
   const page = parseInt(searchParams.get('page') || '1', 10)
+
+  // Local state for search input (prevents focus loss during debounce)
+  const [searchInput, setSearchInput] = useState(searchParam)
+  const debounceRef = useRef(null)
+
+  // Sync local state when URL param changes externally
+  useEffect(() => {
+    setSearchInput(searchParam)
+  }, [searchParam])
 
   // Fetch payments with current filters
   const { data, isPending, isError, error, refetch } = usePayments({
     source: source || undefined,
-    search: search || undefined,
+    search: searchParam || undefined,
     page,
     pageSize: 20,
   })
@@ -51,14 +60,32 @@ function PaymentsContent() {
     router.replace(`${pathname}?${params.toString()}`)
   }
 
-  // Loading state
-  if (isPending) {
-    return <SkeletonTable rows={10} columns={4} />
+  /**
+   * Handle search input with debounce to prevent focus loss
+   */
+  const handleSearchChange = (e) => {
+    const value = e.target.value
+    setSearchInput(value)
+
+    // Clear previous debounce timer
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+    }
+
+    // Debounce URL update by 300ms
+    debounceRef.current = setTimeout(() => {
+      updateFilter('search', value)
+    }, 300)
   }
 
-  // Error state
+  // Error state (show above table, keep filters visible)
   if (isError) {
-    return <ErrorState message={error?.message} onRetry={refetch} />
+    return (
+      <div>
+        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Pagos</h1>
+        <ErrorState message={error?.message} onRetry={refetch} />
+      </div>
+    )
   }
 
   const payments = data?.data || []
@@ -85,95 +112,102 @@ function PaymentsContent() {
         {/* Search input */}
         <input
           type="text"
-          value={search}
-          onChange={(e) => updateFilter('search', e.target.value)}
+          value={searchInput}
+          onChange={handleSearchChange}
           placeholder="Buscar por email..."
           className="flex-1 min-w-[200px] px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
       </div>
 
-      {/* Table container */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Fecha
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Email
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Monto
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Fuente
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {payments.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
-                  >
-                    No se encontraron pagos con los filtros seleccionados.
-                  </td>
-                </tr>
-              ) : (
-                payments.map((payment, index) => (
-                  <tr
-                    key={`${payment.date}-${payment.email}-${index}`}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {formatDate(payment.date)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {payment.email}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {formatCurrency(payment.amount)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <SourceBadge source={payment.source} />
-                    </td>
+      {/* Loading state - show skeleton table but keep filters visible */}
+      {isPending ? (
+        <SkeletonTable rows={10} columns={4} />
+      ) : (
+        <>
+          {/* Table container */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Fecha
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Email
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Monto
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Fuente
+                    </th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <span className="text-sm text-gray-700 dark:text-gray-300">
-            Mostrando {payments.length} de {totalItems} pagos
-          </span>
-          <div className="flex gap-2">
-            <button
-              onClick={() => updateFilter('page', String(page - 1))}
-              disabled={page <= 1}
-              className="px-4 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Anterior
-            </button>
-            <span className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
-              Pagina {page} de {totalPages}
-            </span>
-            <button
-              onClick={() => updateFilter('page', String(page + 1))}
-              disabled={page >= totalPages}
-              className="px-4 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Siguiente
-            </button>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {payments.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
+                      >
+                        No se encontraron pagos con los filtros seleccionados.
+                      </td>
+                    </tr>
+                  ) : (
+                    payments.map((payment, index) => (
+                      <tr
+                        key={`${payment.date}-${payment.email}-${index}`}
+                        className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                          {formatDate(payment.date)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                          {payment.email}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                          {formatCurrency(payment.amount)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <SourceBadge source={payment.source} />
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                Mostrando {payments.length} de {totalItems} pagos
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => updateFilter('page', String(page - 1))}
+                  disabled={page <= 1}
+                  className="px-4 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+                <span className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
+                  Pagina {page} de {totalPages}
+                </span>
+                <button
+                  onClick={() => updateFilter('page', String(page + 1))}
+                  disabled={page >= totalPages}
+                  className="px-4 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   )
