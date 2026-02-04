@@ -14,8 +14,8 @@ export default async function AdminPage() {
       <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Dashboard</h2>
 
       <p className="text-gray-600 dark:text-gray-400 mb-8">
-        Bienvenido, {session.user?.name || session.user?.email}. Las estadisticas se mostraran
-        aqui en la siguiente fase.
+        Bienvenido, {session.user?.name || session.user?.email}. Las estadisticas se mostraran aqui
+        en la siguiente fase.
       </p>
 
       {/* Placeholder for future stats cards */}
