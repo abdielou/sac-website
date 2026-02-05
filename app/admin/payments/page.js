@@ -213,52 +213,53 @@ function PaymentsContent() {
                       </td>
                     </tr>
                   ) : (
-                    payments.map((payment, index) => (
-                      <tr
-                        key={`${payment.date}-${payment.email}-${index}`}
-                        className={`hover:bg-gray-50 dark:hover:bg-gray-700
-                          ${rowErrors[payment.rowNumber] ? 'ring-2 ring-red-500 ring-inset' : ''}`}
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                          {formatDate(payment.date)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                          {payment.email}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                          {formatCurrency(payment.amount)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <SourceBadge source={payment.source} />
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
-                          {payment.notes || '-'}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <input
-                            type="checkbox"
-                            checked={
-                              payment._sheetName === 'MANUAL_PAYMENTS' ||
-                              (payment.is_membership_explicit && payment.is_membership)
-                            }
-                            disabled={payment._sheetName === 'MANUAL_PAYMENTS'}
-                            onChange={() => handleClassifyClick(payment)}
-                            className={`h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${
-                              payment._sheetName === 'MANUAL_PAYMENTS'
-                                ? 'opacity-50 cursor-not-allowed'
-                                : !payment.is_membership_explicit
-                                  ? 'opacity-50 cursor-pointer'
-                                  : 'cursor-pointer'
-                            } ${
-                              classifyMutation.isPending &&
-                              classifyMutation.variables?.rowNumber === payment.rowNumber
-                                ? 'opacity-30'
-                                : ''
-                            }`}
-                          />
-                        </td>
-                      </tr>
-                    ))
+                    payments.map((payment, index) => {
+                      const isSaving =
+                        classifyMutation.isPending &&
+                        classifyMutation.variables?.rowNumber === payment.rowNumber
+                      return (
+                        <tr
+                          key={`${payment.date}-${payment.email}-${index}`}
+                          className={`hover:bg-gray-50 dark:hover:bg-gray-700
+                            ${rowErrors[payment.rowNumber] ? 'ring-2 ring-red-500 ring-inset' : ''}
+                            ${isSaving ? 'opacity-50 pointer-events-none' : ''}`}
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            {formatDate(payment.date)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            {payment.email}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            {formatCurrency(payment.amount)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <SourceBadge source={payment.source} />
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
+                            {payment.notes || '-'}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <input
+                              type="checkbox"
+                              checked={
+                                payment._sheetName === 'MANUAL_PAYMENTS' ||
+                                (payment.is_membership_explicit && payment.is_membership)
+                              }
+                              disabled={payment._sheetName === 'MANUAL_PAYMENTS'}
+                              onChange={() => handleClassifyClick(payment)}
+                              className={`h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${
+                                payment._sheetName === 'MANUAL_PAYMENTS'
+                                  ? 'opacity-50 cursor-not-allowed'
+                                  : !payment.is_membership_explicit
+                                    ? 'opacity-50 cursor-pointer'
+                                    : 'cursor-pointer'
+                              }`}
+                            />
+                          </td>
+                        </tr>
+                      )
+                    })
                   )}
                 </tbody>
               </table>
