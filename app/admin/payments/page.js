@@ -252,7 +252,7 @@ function PaymentsContent() {
                                 payment._sheetName === 'MANUAL_PAYMENTS'
                                   ? 'opacity-50 cursor-not-allowed'
                                   : !payment.is_membership_explicit
-                                    ? 'opacity-50 cursor-pointer'
+                                    ? 'opacity-70 cursor-pointer'
                                     : 'cursor-pointer'
                               }`}
                             />
