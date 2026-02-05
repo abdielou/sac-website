@@ -125,7 +125,7 @@ function MembersContent() {
 
       {/* Loading state - show skeleton table but keep filters visible */}
       {isPending ? (
-        <SkeletonTable rows={10} columns={5} />
+        <SkeletonTable rows={10} columns={6} />
       ) : (
         <>
           {/* Table container */}
@@ -136,6 +136,9 @@ function MembersContent() {
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Email
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      SAC Email
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Nombre
@@ -155,7 +158,7 @@ function MembersContent() {
                   {members.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={5}
+                        colSpan={6}
                         className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
                       >
                         No se encontraron miembros con los filtros seleccionados.
@@ -167,8 +170,29 @@ function MembersContent() {
                         key={member.email || index}
                         className="hover:bg-gray-50 dark:hover:bg-gray-700"
                       >
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                          {member.email}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {member.email ? (
+                            <a
+                              href={`mailto:${member.email}`}
+                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                            >
+                              {member.email}
+                            </a>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {member.sacEmail ? (
+                            <a
+                              href={`mailto:${member.sacEmail}`}
+                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                            >
+                              {member.sacEmail}
+                            </a>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                           {member.name || '-'}
@@ -237,7 +261,7 @@ function MembersContent() {
  */
 export default function MembersPage() {
   return (
-    <Suspense fallback={<SkeletonTable rows={10} columns={5} />}>
+    <Suspense fallback={<SkeletonTable rows={10} columns={6} />}>
       <MembersContent />
     </Suspense>
   )
