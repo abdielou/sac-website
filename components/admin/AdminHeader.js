@@ -1,8 +1,9 @@
 import { auth, signOut } from '../../auth'
+import { RefreshButton } from './RefreshButton'
 
 /**
  * AdminHeader - Server component displaying user info and logout button
- * Shows current user email and provides session termination
+ * Shows current user email, refresh button, and provides session termination
  */
 export async function AdminHeader() {
   const session = await auth()
@@ -13,6 +14,7 @@ export async function AdminHeader() {
         Panel de Administracion
       </h1>
       <div className="flex items-center gap-4">
+        <RefreshButton />
         <span className="text-sm text-gray-600 dark:text-gray-400">{session?.user?.email}</span>
         <form
           action={async () => {

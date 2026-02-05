@@ -90,7 +90,7 @@ function PaymentsContent() {
 
   const payments = data?.data || []
   const totalPages = data?.pagination?.totalPages || 1
-  const totalItems = data?.pagination?.total || 0
+  const totalItems = data?.pagination?.totalItems || 0
 
   return (
     <div>
