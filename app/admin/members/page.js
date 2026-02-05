@@ -25,7 +25,15 @@ function MembersContent() {
 
   // Local state for search input (prevents focus loss during debounce)
   const [searchInput, setSearchInput] = useState(searchParam)
+  const [copiedEmail, setCopiedEmail] = useState(null)
   const debounceRef = useRef(null)
+
+  // Copy email to clipboard and show feedback
+  const handleCopyEmail = (email) => {
+    navigator.clipboard.writeText(email)
+    setCopiedEmail(email)
+    setTimeout(() => setCopiedEmail(null), 1500)
+  }
 
   // Sync local state when URL param changes externally
   useEffect(() => {
@@ -168,28 +176,68 @@ function MembersContent() {
                     members.map((member, index) => (
                       <tr
                         key={member.email || index}
-                        className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                        className="group hover:bg-gray-50 dark:hover:bg-gray-700"
                       >
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                           {member.email ? (
-                            <a
-                              href={`mailto:${member.email}`}
-                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                            >
+                            <span className="inline-flex items-center gap-2">
                               {member.email}
-                            </a>
+                              {copiedEmail === member.email ? (
+                                <span className="text-green-600 text-xs">Copied!</span>
+                              ) : (
+                                <button
+                                  onClick={() => handleCopyEmail(member.email)}
+                                  className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-opacity"
+                                  title="Copiar email"
+                                >
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                    />
+                                  </svg>
+                                </button>
+                              )}
+                            </span>
                           ) : (
                             '-'
                           )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                           {member.sacEmail ? (
-                            <a
-                              href={`mailto:${member.sacEmail}`}
-                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                            >
+                            <span className="inline-flex items-center gap-2">
                               {member.sacEmail}
-                            </a>
+                              {copiedEmail === member.sacEmail ? (
+                                <span className="text-green-600 text-xs">Copied!</span>
+                              ) : (
+                                <button
+                                  onClick={() => handleCopyEmail(member.sacEmail)}
+                                  className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-opacity"
+                                  title="Copiar email"
+                                >
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                    />
+                                  </svg>
+                                </button>
+                              )}
+                            </span>
                           ) : (
                             <span className="text-gray-400">-</span>
                           )}
