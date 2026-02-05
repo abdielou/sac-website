@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect, useRef } from 'react'
 import { useSearchParams, usePathname, useRouter } from 'next/navigation'
-import { usePayments } from '@/lib/hooks/useAdminData'
+import { usePayments, useClassifyPayment } from '@/lib/hooks/useAdminData'
 import { SourceBadge } from '@/components/admin/SourceBadge'
 import { SkeletonTable } from '@/components/admin/SkeletonTable'
 import { ErrorState } from '@/components/admin/ErrorState'
@@ -30,6 +30,25 @@ function PaymentsContent() {
   useEffect(() => {
     setSearchInput(searchParam)
   }, [searchParam])
+
+  // Row-level error tracking: { [rowNumber]: errorMessage }
+  const [rowErrors, setRowErrors] = useState({})
+
+  // Classification mutation with optimistic updates
+  const classifyMutation = useClassifyPayment({
+    onError: (err, variables) => {
+      const { rowNumber } = variables
+      setRowErrors((prev) => ({ ...prev, [rowNumber]: 'Error al clasificar pago' }))
+      // Auto-dismiss after 3 seconds
+      setTimeout(() => {
+        setRowErrors((prev) => {
+          const next = { ...prev }
+          delete next[rowNumber]
+          return next
+        })
+      }, 3000)
+    },
+  })
 
   // Fetch payments with current filters
   const { data, isPending, isError, error, refetch } = usePayments({
@@ -78,6 +97,38 @@ function PaymentsContent() {
     }, 300)
   }
 
+  /**
+   * Three-state cycling:
+   * - Explicit true -> explicit false
+   * - Explicit false -> unset (heuristic)
+   * - Unset (heuristic) -> explicit true
+   */
+  const handleClassifyClick = (payment) => {
+    // Safety guard: MANUAL_PAYMENTS are not classifiable
+    if (payment._sheetName === 'MANUAL_PAYMENTS') return
+
+    // Clear any existing error for this row
+    setRowErrors((prev) => {
+      if (!prev[payment.rowNumber]) return prev
+      const next = { ...prev }
+      delete next[payment.rowNumber]
+      return next
+    })
+
+    let nextValue
+    if (payment.is_membership_explicit) {
+      if (payment.is_membership === true) {
+        nextValue = false // explicit true -> explicit false
+      } else {
+        nextValue = null // explicit false -> clear (heuristic)
+      }
+    } else {
+      nextValue = true // heuristic -> explicit true
+    }
+
+    classifyMutation.mutate({ rowNumber: payment.rowNumber, isMembership: nextValue })
+  }
+
   // Error state (show above table, keep filters visible)
   if (isError) {
     return (
@@ -122,7 +173,7 @@ function PaymentsContent() {
 
       {/* Loading state - show skeleton table but keep filters visible */}
       {isPending ? (
-        <SkeletonTable rows={10} columns={5} />
+        <SkeletonTable rows={10} columns={6} />
       ) : (
         <>
           {/* Table container */}
@@ -146,13 +197,16 @@ function PaymentsContent() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Mensaje
                     </th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Membresia
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {payments.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={5}
+                        colSpan={6}
                         className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
                       >
                         No se encontraron pagos con los filtros seleccionados.
@@ -162,7 +216,8 @@ function PaymentsContent() {
                     payments.map((payment, index) => (
                       <tr
                         key={`${payment.date}-${payment.email}-${index}`}
-                        className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                        className={`hover:bg-gray-50 dark:hover:bg-gray-700
+                          ${rowErrors[payment.rowNumber] ? 'ring-2 ring-red-500 ring-inset' : ''}`}
                       >
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                           {formatDate(payment.date)}
@@ -178,6 +233,26 @@ function PaymentsContent() {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
                           {payment.notes || '-'}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <input
+                            type="checkbox"
+                            checked={payment.is_membership}
+                            disabled={payment._sheetName === 'MANUAL_PAYMENTS'}
+                            onChange={() => handleClassifyClick(payment)}
+                            className={`h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${
+                              payment._sheetName === 'MANUAL_PAYMENTS'
+                                ? 'opacity-50 cursor-not-allowed'
+                                : !payment.is_membership_explicit
+                                  ? 'opacity-50 cursor-pointer'
+                                  : 'cursor-pointer'
+                            } ${
+                              classifyMutation.isPending &&
+                              classifyMutation.variables?.rowNumber === payment.rowNumber
+                                ? 'opacity-30'
+                                : ''
+                            }`}
+                          />
                         </td>
                       </tr>
                     ))
@@ -225,7 +300,7 @@ function PaymentsContent() {
  */
 export default function PaymentsPage() {
   return (
-    <Suspense fallback={<SkeletonTable rows={10} columns={5} />}>
+    <Suspense fallback={<SkeletonTable rows={10} columns={6} />}>
       <PaymentsContent />
     </Suspense>
   )
