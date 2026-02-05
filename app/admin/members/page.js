@@ -183,7 +183,7 @@ function MembersContent() {
                             <span className="inline-flex items-center gap-2">
                               {member.email}
                               {copiedEmail === member.email ? (
-                                <span className="text-green-600 text-xs">Copied!</span>
+                                <span className="text-gray-500 dark:text-gray-400 text-xs">Copied!</span>
                               ) : (
                                 <button
                                   onClick={() => handleCopyEmail(member.email)}
@@ -215,7 +215,7 @@ function MembersContent() {
                             <span className="inline-flex items-center gap-2">
                               {member.sacEmail}
                               {copiedEmail === member.sacEmail ? (
-                                <span className="text-green-600 text-xs">Copied!</span>
+                                <span className="text-gray-500 dark:text-gray-400 text-xs">Copied!</span>
                               ) : (
                                 <button
                                   onClick={() => handleCopyEmail(member.sacEmail)}
