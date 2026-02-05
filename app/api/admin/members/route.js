@@ -39,7 +39,12 @@ export const GET = auth(async function GET(req) {
     let filteredMembers = allMembers
 
     if (status) {
-      filteredMembers = filteredMembers.filter((m) => m.status === status)
+      if (status === 'members') {
+        // Show all except "applied" — active, expiring-soon, expired
+        filteredMembers = filteredMembers.filter((m) => m.status !== 'applied')
+      } else {
+        filteredMembers = filteredMembers.filter((m) => m.status === status)
+      }
     }
 
     if (search) {

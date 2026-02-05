@@ -18,8 +18,8 @@ function MembersContent() {
   const pathname = usePathname()
   const router = useRouter()
 
-  // Read filters from URL params
-  const status = searchParams.get('status') || ''
+  // Read filters from URL params (default to 'members' to exclude applied)
+  const status = searchParams.get('status') ?? 'members'
   const searchParam = searchParams.get('search') || ''
   const page = parseInt(searchParams.get('page') || '1', 10)
 
@@ -105,11 +105,12 @@ function MembersContent() {
           onChange={(e) => updateFilter('status', e.target.value)}
           className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         >
-          <option value="">Todos los estados</option>
+          <option value="members">Miembros</option>
           <option value="active">Activo</option>
           <option value="expiring-soon">Vence pronto</option>
           <option value="expired">Expirado</option>
           <option value="applied">Aplicado</option>
+          <option value="">Todos</option>
         </select>
 
         {/* Search input */}
