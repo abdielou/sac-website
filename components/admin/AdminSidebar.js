@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 
@@ -58,8 +58,11 @@ const navItems = [
   },
 ]
 
+/**
+ * AdminSidebar - Desktop-only sidebar navigation
+ * Hidden on mobile/tablet where AdminNavTabs is used instead
+ */
 export function AdminSidebar() {
-  const [isOpen, setIsOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
   const pathname = usePathname()
 
@@ -68,144 +71,76 @@ export function AdminSidebar() {
     return pathname.startsWith(item.href)
   }
 
-  const onToggleNav = () => {
-    setIsOpen((status) => {
-      if (status) {
-        document.body.style.overflow = 'auto'
-      } else {
-        document.body.style.overflow = 'hidden'
-      }
-      return !status
-    })
-  }
-
-  // Close sidebar when route changes (mobile)
-  useEffect(() => {
-    if (isOpen) {
-      setIsOpen(false)
-      document.body.style.overflow = 'auto'
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname])
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      document.body.style.overflow = 'auto'
-    }
-  }, [])
-
   return (
-    <>
-      {/* Mobile toggle button */}
-      <button
-        type="button"
-        className="fixed top-4 left-4 z-50 lg:hidden p-2 rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm"
-        aria-label="Toggle sidebar"
-        onClick={onToggleNav}
+    <aside
+      className={`hidden lg:flex lg:flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ${
+        collapsed ? 'w-16' : 'w-64'
+      }`}
+    >
+      {/* Header */}
+      <div
+        className={`flex items-center h-16 border-b border-gray-200 dark:border-gray-700 ${
+          collapsed ? 'justify-center px-2' : 'justify-between px-6'
+        }`}
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-          className="w-6 h-6 text-gray-700 dark:text-gray-200"
+        {!collapsed && (
+          <Link href="/admin" className="flex items-center space-x-2">
+            <span className="text-lg font-semibold text-gray-900 dark:text-white">SAC Admin</span>
+          </Link>
+        )}
+
+        {/* Collapse toggle */}
+        <button
+          type="button"
+          onClick={() => setCollapsed((c) => !c)}
+          className="flex items-center justify-center w-8 h-8 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          aria-label={collapsed ? 'Expandir menu' : 'Colapsar menu'}
         >
-          {isOpen ? (
-            <path
-              fillRule="evenodd"
-              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-              clipRule="evenodd"
-            />
-          ) : (
-            <path
-              fillRule="evenodd"
-              d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-              clipRule="evenodd"
-            />
-          )}
-        </svg>
-      </button>
-
-      {/* Overlay for mobile */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
-          onClick={onToggleNav}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside
-        className={`fixed top-0 left-0 z-40 h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transform transition-all duration-300 ease-in-out ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 lg:static lg:h-auto ${collapsed ? 'w-16' : 'w-64'}`}
-      >
-        {/* Header */}
-        <div
-          className={`flex items-center h-16 border-b border-gray-200 dark:border-gray-700 ${
-            collapsed ? 'justify-center px-2' : 'justify-between px-6'
-          }`}
-        >
-          {!collapsed && (
-            <Link href="/admin" className="flex items-center space-x-2">
-              <span className="text-lg font-semibold text-gray-900 dark:text-white">SAC Admin</span>
-            </Link>
-          )}
-
-          {/* Collapse toggle (desktop only) */}
-          <button
-            type="button"
-            onClick={() => setCollapsed((c) => !c)}
-            className="hidden lg:flex items-center justify-center w-8 h-8 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            aria-label={collapsed ? 'Expandir menu' : 'Colapsar menu'}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            className={`w-5 h-5 transition-transform duration-300 ${collapsed ? 'rotate-180' : ''}`}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className={`w-5 h-5 transition-transform duration-300 ${collapsed ? 'rotate-180' : ''}`}
-            >
-              <path
-                fillRule="evenodd"
-                d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </button>
-        </div>
+            <path
+              fillRule="evenodd"
+              d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </button>
+      </div>
 
-        {/* Navigation */}
-        <nav className={`py-6 space-y-1 ${collapsed ? 'px-2' : 'px-4'}`}>
-          {navItems.map((item) => {
-            const active = isActive(item)
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                title={collapsed ? item.label : undefined}
-                className={`flex items-center text-sm font-medium rounded-lg transition-colors ${
-                  collapsed ? 'justify-center px-2 py-3' : 'px-4 py-3'
-                } ${
-                  active
-                    ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
-                }`}
+      {/* Navigation */}
+      <nav className={`py-6 space-y-1 ${collapsed ? 'px-2' : 'px-4'}`}>
+        {navItems.map((item) => {
+          const active = isActive(item)
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              title={collapsed ? item.label : undefined}
+              className={`flex items-center text-sm font-medium rounded-lg transition-colors ${
+                collapsed ? 'justify-center px-2 py-3' : 'px-4 py-3'
+              } ${
+                active
+                  ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              <span
+                className={`flex-shrink-0 ${
+                  active ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'
+                } ${collapsed ? '' : 'mr-3'}`}
               >
-                <span
-                  className={`flex-shrink-0 ${
-                    active ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'
-                  } ${collapsed ? '' : 'mr-3'}`}
-                >
-                  {item.icon}
-                </span>
-                {!collapsed && item.label}
-              </Link>
-            )
-          })}
-        </nav>
-      </aside>
-    </>
+                {item.icon}
+              </span>
+              {!collapsed && item.label}
+            </Link>
+          )
+        })}
+      </nav>
+    </aside>
   )
 }
 

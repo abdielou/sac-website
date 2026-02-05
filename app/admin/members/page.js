@@ -136,8 +136,86 @@ function MembersContent() {
         <SkeletonTable rows={10} columns={6} />
       ) : (
         <>
-          {/* Table container */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+          {/* Mobile card layout */}
+          <div className="md:hidden space-y-4">
+            {members.length === 0 ? (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center text-gray-500 dark:text-gray-400">
+                No se encontraron miembros con los filtros seleccionados.
+              </div>
+            ) : (
+              members.map((member, index) => (
+                <div
+                  key={member.email || index}
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-3"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {member.name || '-'}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                          {member.email || '-'}
+                        </p>
+                        {member.email && (
+                          copiedEmail === member.email ? (
+                            <span className="text-gray-500 dark:text-gray-400 text-xs">Copied!</span>
+                          ) : (
+                            <button
+                              onClick={() => handleCopyEmail(member.email)}
+                              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                          )
+                        )}
+                      </div>
+                      {member.sacEmail && (
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-xs text-gray-400 truncate">
+                            SAC: {member.sacEmail}
+                          </p>
+                          {copiedEmail === member.sacEmail ? (
+                            <span className="text-gray-500 dark:text-gray-400 text-xs">Copied!</span>
+                          ) : (
+                            <button
+                              onClick={() => handleCopyEmail(member.sacEmail)}
+                              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <StatusBadge status={member.status} />
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-500 dark:text-gray-400">
+                      Vence: {formatDate(member.expirationDate)}
+                    </span>
+                    {member.lastPaymentAmount ? (
+                      <PaymentTooltip
+                        date={member.lastPaymentDate}
+                        amount={member.lastPaymentAmount}
+                        notes={member.lastPaymentNotes}
+                        source={member.lastPaymentSource}
+                      />
+                    ) : (
+                      <span className="text-gray-400">Sin pagos</span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700">

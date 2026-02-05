@@ -177,8 +177,77 @@ function PaymentsContent() {
         <SkeletonTable rows={10} columns={6} />
       ) : (
         <>
-          {/* Table container */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+          {/* Mobile card layout */}
+          <div className="md:hidden space-y-4">
+            {payments.length === 0 ? (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center text-gray-500 dark:text-gray-400">
+                No se encontraron pagos con los filtros seleccionados.
+              </div>
+            ) : (
+              payments.map((payment, index) => {
+                const isSaving =
+                  classifyMutation.isPending &&
+                  classifyMutation.variables?.rowNumber === payment.rowNumber
+                const isManual = payment._sheetName === 'MANUAL_PAYMENTS'
+                const isUnderMinimum = payment.amount < 25
+                const isDisabled = isManual || isUnderMinimum
+                return (
+                  <div
+                    key={`${payment.date}-${payment.email}-${index}`}
+                    className={`bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-3
+                      ${rowErrors[payment.rowNumber] ? 'ring-2 ring-red-500' : ''}
+                      ${isSaving ? 'opacity-50 pointer-events-none' : ''}`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {payment.email}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {formatDate(payment.date)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                          {formatCurrency(payment.amount)}
+                        </span>
+                        <SourceBadge source={payment.source} />
+                      </div>
+                    </div>
+                    {payment.notes && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                        {payment.notes}
+                      </p>
+                    )}
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Membresia</span>
+                      <div className="relative inline-flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={isManual || (payment.is_membership_explicit && payment.is_membership)}
+                          disabled={isDisabled}
+                          onChange={() => handleClassifyClick(payment)}
+                          className={`h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${
+                            isDisabled
+                              ? 'opacity-50 cursor-not-allowed'
+                              : !payment.is_membership_explicit
+                                ? 'opacity-50 cursor-pointer'
+                                : 'cursor-pointer'
+                          }`}
+                        />
+                        {!payment.is_membership_explicit && !isDisabled && (
+                          <span className="ml-1 text-gray-400 text-xs">?</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700">
