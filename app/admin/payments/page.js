@@ -240,7 +240,7 @@ function PaymentsContent() {
                             {payment.notes || '-'}
                           </td>
                           <td className="px-6 py-4 text-center">
-                            <div className="flex items-center justify-center gap-1">
+                            <div className="relative inline-flex items-center justify-center">
                               <input
                                 type="checkbox"
                                 checked={
@@ -259,7 +259,7 @@ function PaymentsContent() {
                               />
                               {!payment.is_membership_explicit &&
                                 payment._sheetName !== 'MANUAL_PAYMENTS' && (
-                                  <span className="text-gray-400 text-xs">?</span>
+                                  <span className="absolute -right-3 text-gray-400 text-xs">?</span>
                                 )}
                             </div>
                           </td>
