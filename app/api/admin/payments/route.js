@@ -68,6 +68,9 @@ export const GET = auth(async function GET(req) {
       filteredPayments = filteredPayments.filter((p) => p.email?.toLowerCase().includes(search))
     }
 
+    // Sort by date (newest first)
+    filteredPayments.sort((a, b) => new Date(b.date) - new Date(a.date))
+
     // Pagination
     const totalItems = filteredPayments.length
     const totalPages = Math.ceil(totalItems / pageSize)
