@@ -147,12 +147,18 @@ export function PaymentTooltip({ date, amount, notes, source }) {
             {pos.showBelow ? (
               <div
                 className="absolute bottom-full border-4 border-transparent border-b-gray-900 dark:border-b-gray-700"
-                style={{ left: pos.translateX === '-20%' ? '20%' : '80%', transform: 'translateX(-50%)' }}
+                style={{
+                  left: pos.translateX === '-20%' ? '20%' : '80%',
+                  transform: 'translateX(-50%)',
+                }}
               />
             ) : (
               <div
                 className="absolute top-full border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"
-                style={{ left: pos.translateX === '-20%' ? '20%' : '80%', transform: 'translateX(-50%)' }}
+                style={{
+                  left: pos.translateX === '-20%' ? '20%' : '80%',
+                  transform: 'translateX(-50%)',
+                }}
               />
             )}
           </div>,

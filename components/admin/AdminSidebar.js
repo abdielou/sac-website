@@ -149,9 +149,7 @@ export function AdminSidebar() {
         >
           {!collapsed && (
             <Link href="/admin" className="flex items-center space-x-2">
-              <span className="text-lg font-semibold text-gray-900 dark:text-white">
-                SAC Admin
-              </span>
+              <span className="text-lg font-semibold text-gray-900 dark:text-white">SAC Admin</span>
             </Link>
           )}
 

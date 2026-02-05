@@ -12,10 +12,7 @@ export default function Footer() {
           <SocialIcon kind="youtube" href={siteMetadata.youtube} size="6" />
           <SocialIcon kind="linkedin" href={siteMetadata.linkedin} size="6" />
           <SocialIcon kind="twitter" href={siteMetadata.twitter} size="6" />
-          <Link
-            href="/admin"
-            className="text-sm text-gray-500 transition hover:text-gray-600"
-          >
+          <Link href="/admin" className="text-sm text-gray-500 transition hover:text-gray-600">
             <span className="sr-only">Admin</span>
             <svg
               xmlns="http://www.w3.org/2000/svg"
