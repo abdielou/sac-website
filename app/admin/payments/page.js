@@ -104,8 +104,9 @@ function PaymentsContent() {
    * - Unset (heuristic) -> explicit true
    */
   const handleClassifyClick = (payment) => {
-    // Safety guard: MANUAL_PAYMENTS are not classifiable
+    // Safety guards: MANUAL_PAYMENTS and payments under $25 are not classifiable
     if (payment._sheetName === 'MANUAL_PAYMENTS') return
+    if (payment.amount < 25) return
 
     // Clear any existing error for this row
     setRowErrors((prev) => {
@@ -240,28 +241,36 @@ function PaymentsContent() {
                             {payment.notes || '-'}
                           </td>
                           <td className="px-6 py-4 text-center">
-                            <div className="relative inline-flex items-center justify-center">
-                              <input
-                                type="checkbox"
-                                checked={
-                                  payment._sheetName === 'MANUAL_PAYMENTS' ||
-                                  (payment.is_membership_explicit && payment.is_membership)
-                                }
-                                disabled={payment._sheetName === 'MANUAL_PAYMENTS'}
-                                onChange={() => handleClassifyClick(payment)}
-                                className={`h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${
-                                  payment._sheetName === 'MANUAL_PAYMENTS'
-                                    ? 'opacity-50 cursor-not-allowed'
-                                    : !payment.is_membership_explicit
-                                      ? 'opacity-50 cursor-pointer'
-                                      : 'cursor-pointer'
-                                }`}
-                              />
-                              {!payment.is_membership_explicit &&
-                                payment._sheetName !== 'MANUAL_PAYMENTS' && (
-                                  <span className="absolute -right-3 text-gray-400 text-xs">?</span>
-                                )}
-                            </div>
+                            {(() => {
+                              const isManual = payment._sheetName === 'MANUAL_PAYMENTS'
+                              const isUnderMinimum = payment.amount < 25
+                              const isDisabled = isManual || isUnderMinimum
+                              return (
+                                <div className="relative inline-flex items-center justify-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={
+                                      isManual ||
+                                      (payment.is_membership_explicit && payment.is_membership)
+                                    }
+                                    disabled={isDisabled}
+                                    onChange={() => handleClassifyClick(payment)}
+                                    className={`h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${
+                                      isDisabled
+                                        ? 'opacity-50 cursor-not-allowed'
+                                        : !payment.is_membership_explicit
+                                          ? 'opacity-50 cursor-pointer'
+                                          : 'cursor-pointer'
+                                    }`}
+                                  />
+                                  {!payment.is_membership_explicit && !isDisabled && (
+                                    <span className="absolute -right-3 text-gray-400 text-xs">
+                                      ?
+                                    </span>
+                                  )}
+                                </div>
+                              )
+                            })()}
                           </td>
                         </tr>
                       )
