@@ -237,7 +237,10 @@ function PaymentsContent() {
                         <td className="px-6 py-4 text-center">
                           <input
                             type="checkbox"
-                            checked={payment.is_membership}
+                            checked={
+                              payment._sheetName === 'MANUAL_PAYMENTS' ||
+                              (payment.is_membership_explicit && payment.is_membership)
+                            }
                             disabled={payment._sheetName === 'MANUAL_PAYMENTS'}
                             onChange={() => handleClassifyClick(payment)}
                             className={`h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${
