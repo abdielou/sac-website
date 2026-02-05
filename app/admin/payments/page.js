@@ -240,22 +240,28 @@ function PaymentsContent() {
                             {payment.notes || '-'}
                           </td>
                           <td className="px-6 py-4 text-center">
-                            <input
-                              type="checkbox"
-                              checked={
-                                payment._sheetName === 'MANUAL_PAYMENTS' ||
-                                (payment.is_membership_explicit && payment.is_membership)
-                              }
-                              disabled={payment._sheetName === 'MANUAL_PAYMENTS'}
-                              onChange={() => handleClassifyClick(payment)}
-                              className={`h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${
-                                payment._sheetName === 'MANUAL_PAYMENTS'
-                                  ? 'opacity-50 cursor-not-allowed'
-                                  : !payment.is_membership_explicit
-                                    ? 'opacity-70 cursor-pointer'
-                                    : 'cursor-pointer'
-                              }`}
-                            />
+                            <div className="flex items-center justify-center gap-1">
+                              <input
+                                type="checkbox"
+                                checked={
+                                  payment._sheetName === 'MANUAL_PAYMENTS' ||
+                                  (payment.is_membership_explicit && payment.is_membership)
+                                }
+                                disabled={payment._sheetName === 'MANUAL_PAYMENTS'}
+                                onChange={() => handleClassifyClick(payment)}
+                                className={`h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${
+                                  payment._sheetName === 'MANUAL_PAYMENTS'
+                                    ? 'opacity-50 cursor-not-allowed'
+                                    : !payment.is_membership_explicit
+                                      ? 'opacity-50 cursor-pointer'
+                                      : 'cursor-pointer'
+                                }`}
+                              />
+                              {!payment.is_membership_explicit &&
+                                payment._sheetName !== 'MANUAL_PAYMENTS' && (
+                                  <span className="text-gray-400 text-xs">?</span>
+                                )}
+                            </div>
                           </td>
                         </tr>
                       )
