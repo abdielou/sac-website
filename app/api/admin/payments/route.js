@@ -65,7 +65,12 @@ export const GET = auth(async function GET(req) {
     }
 
     if (search) {
-      filteredPayments = filteredPayments.filter((p) => p.email?.toLowerCase().includes(search))
+      filteredPayments = filteredPayments.filter((p) => {
+        const email = p.email?.toLowerCase() || ''
+        const notes = p.notes?.toLowerCase() || ''
+        const amount = String(p.amount || '')
+        return email.includes(search) || notes.includes(search) || amount.includes(search)
+      })
     }
 
     // Sort by date (newest first)

@@ -36,7 +36,7 @@ function PaymentsContent() {
 
   // Classification mutation with optimistic updates
   const classifyMutation = useClassifyPayment({
-    onError: (err, variables) => {
+    onError: (_err, variables) => {
       const { rowNumber } = variables
       setRowErrors((prev) => ({ ...prev, [rowNumber]: 'Error al clasificar pago' }))
       // Auto-dismiss after 3 seconds
@@ -166,7 +166,7 @@ function PaymentsContent() {
           type="text"
           value={searchInput}
           onChange={handleSearchChange}
-          placeholder="Buscar por email..."
+          placeholder="Buscar por email, monto o mensaje..."
           className="flex-1 min-w-[200px] px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
       </div>
