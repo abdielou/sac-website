@@ -6,10 +6,11 @@ import { classifyPayment } from '../../../../../../lib/google-sheets'
 /**
  * PUT /api/admin/payments/[row]/classify
  *
- * Body: { is_membership: boolean }
- * Response: { rowNumber: number, is_membership: boolean }
+ * Body: { is_membership: boolean|null }
+ * Response: { rowNumber: number, is_membership: boolean|null }
  *
  * Writes the is_membership classification to the PAYMENTS sheet row.
+ * Pass null to clear classification (revert to heuristic).
  * Invalidates server-side caches for payments and members.
  */
 export const PUT = auth(async function PUT(req, { params }) {
@@ -34,12 +35,19 @@ export const PUT = auth(async function PUT(req, { params }) {
       )
     }
 
-    // Parse and validate body
+    // Parse and validate body — accepts true, false, or null only
     const body = await req.json()
-    const isMembership = body.is_membership === true
+    const { is_membership } = body
+
+    if (is_membership !== true && is_membership !== false && is_membership !== null) {
+      return NextResponse.json(
+        { error: 'Valor invalido', details: 'is_membership must be true, false, or null' },
+        { status: 400 }
+      )
+    }
 
     // Write classification to sheet
-    const result = await classifyPayment(rowNumber, isMembership)
+    const result = await classifyPayment(rowNumber, is_membership)
 
     return NextResponse.json(result)
   } catch (error) {
