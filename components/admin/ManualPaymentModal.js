@@ -214,9 +214,7 @@ export function ManualPaymentModal({ isOpen, onClose, member, paymentType }) {
             </div>
 
             {/* Error display */}
-            {error && (
-              <p className="text-sm text-red-600 dark:text-red-400">{error.message}</p>
-            )}
+            {error && <p className="text-sm text-red-600 dark:text-red-400">{error.message}</p>}
           </div>
 
           {/* Footer */}
@@ -234,11 +232,7 @@ export function ManualPaymentModal({ isOpen, onClose, member, paymentType }) {
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isPending && (
-                <svg
-                  className="animate-spin w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                   <circle
                     className="opacity-25"
                     cx="12"

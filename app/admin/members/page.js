@@ -8,6 +8,8 @@ import { SkeletonTable } from '@/components/admin/SkeletonTable'
 import { ErrorState } from '@/components/admin/ErrorState'
 import { formatDate } from '@/lib/formatters'
 import { PaymentTooltip } from '@/components/admin/PaymentTooltip'
+import { MemberActions } from '@/components/admin/MemberActions'
+import { ManualPaymentModal } from '@/components/admin/ManualPaymentModal'
 
 /**
  * MembersContent - Main content component for members list
@@ -26,6 +28,7 @@ function MembersContent() {
   // Local state for search input (prevents focus loss during debounce)
   const [searchInput, setSearchInput] = useState(searchParam)
   const [copiedEmail, setCopiedEmail] = useState(null)
+  const [modalState, setModalState] = useState({ isOpen: false, member: null, paymentType: null })
   const debounceRef = useRef(null)
 
   // Copy email to clipboard and show feedback
@@ -33,6 +36,14 @@ function MembersContent() {
     navigator.clipboard.writeText(email)
     setCopiedEmail(email)
     setTimeout(() => setCopiedEmail(null), 1500)
+  }
+
+  const handleAction = (member, paymentType) => {
+    setModalState({ isOpen: true, member, paymentType })
+  }
+
+  const handleCloseModal = () => {
+    setModalState({ isOpen: false, member: null, paymentType: null })
   }
 
   // Sync local state when URL param changes externally
@@ -133,7 +144,7 @@ function MembersContent() {
 
       {/* Loading state - show skeleton table but keep filters visible */}
       {isPending ? (
-        <SkeletonTable rows={10} columns={6} />
+        <SkeletonTable rows={10} columns={7} />
       ) : (
         <>
           {/* Mobile card layout */}
@@ -192,7 +203,10 @@ function MembersContent() {
                         </div>
                       )}
                     </div>
-                    <StatusBadge status={member.status} />
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={member.status} />
+                      <MemberActions member={member} onAction={handleAction} />
+                    </div>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-500 dark:text-gray-400">
@@ -238,13 +252,16 @@ function MembersContent() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Ultimo Pago
                     </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      <span className="sr-only">Acciones</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {members.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={7}
                         className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
                       >
                         No se encontraron miembros con los filtros seleccionados.
@@ -341,6 +358,9 @@ function MembersContent() {
                             <span className="text-sm text-gray-400">-</span>
                           )}
                         </td>
+                        <td className="px-3 py-4 text-center">
+                          <MemberActions member={member} onAction={handleAction} />
+                        </td>
                       </tr>
                     ))
                   )}
@@ -378,6 +398,13 @@ function MembersContent() {
           )}
         </>
       )}
+
+      <ManualPaymentModal
+        isOpen={modalState.isOpen}
+        onClose={handleCloseModal}
+        member={modalState.member}
+        paymentType={modalState.paymentType}
+      />
     </div>
   )
 }
@@ -387,7 +414,7 @@ function MembersContent() {
  */
 export default function MembersPage() {
   return (
-    <Suspense fallback={<SkeletonTable rows={10} columns={6} />}>
+    <Suspense fallback={<SkeletonTable rows={10} columns={7} />}>
       <MembersContent />
     </Suspense>
   )
