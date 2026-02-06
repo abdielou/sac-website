@@ -33,9 +33,7 @@ export function ScanCard() {
       {/* Status area */}
       <div className="mt-2 min-h-[1.75rem]">
         {status === 'idle' && !error && (
-          <p className="text-sm text-gray-400 dark:text-gray-500">
-            Buscar nuevos pagos en Gmail
-          </p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">Buscar nuevos pagos en Gmail</p>
         )}
 
         {status === 'idle' && error && (
@@ -58,9 +56,7 @@ export function ScanCard() {
           </p>
         )}
 
-        {status === 'error' && (
-          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-        )}
+        {status === 'error' && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       </div>
 
       {/* Action button */}

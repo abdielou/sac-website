@@ -2,6 +2,7 @@
 
 import { useStats } from '@/lib/hooks/useStats'
 import { StatsCard } from '@/components/admin/StatsCard'
+import { ScanCard } from '@/components/admin/ScanCard'
 import { SkeletonCard } from '@/components/admin/SkeletonCard'
 import { ErrorState } from '@/components/admin/ErrorState'
 import { formatNumber } from '@/lib/formatters'
@@ -17,6 +18,11 @@ export default function AdminPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <SkeletonCard />
           <SkeletonCard />
+          <SkeletonCard />
+        </div>
+
+        {/* Actions skeleton */}
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <SkeletonCard />
         </div>
       </div>
@@ -57,6 +63,11 @@ export default function AdminPage() {
           href={{ pathname: '/admin/members', query: { status: 'expiring-soon' } }}
           color="yellow"
         />
+      </div>
+
+      {/* Actions */}
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <ScanCard />
       </div>
     </div>
   )
