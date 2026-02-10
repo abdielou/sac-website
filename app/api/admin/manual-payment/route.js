@@ -4,6 +4,9 @@ import { NextResponse } from 'next/server'
 import { callAppsScript } from '../../../../lib/apps-script'
 import { invalidateCache } from '../../../../lib/cache'
 
+// Apps Script processing can take a while; raise Vercel timeout (requires Pro plan for >10s)
+export const maxDuration = 300
+
 /**
  * POST /api/admin/manual-payment
  *
