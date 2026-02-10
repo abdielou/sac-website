@@ -1,6 +1,7 @@
 import { AdminProviders } from './providers'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { AdminHeader } from '@/components/admin/AdminHeader'
+import { AdminNavTabs } from '@/components/admin/AdminNavTabs'
 import LayoutWrapper from '@/components/LayoutWrapper'
 
 export const metadata = {
@@ -14,9 +15,10 @@ export default function AdminLayout({ children }) {
       <AdminProviders>
         <div className="flex">
           <AdminSidebar />
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col min-w-0">
             <AdminHeader />
-            <main className="flex-1 p-6 bg-gray-50 dark:bg-gray-900">{children}</main>
+            <AdminNavTabs />
+            <main className="flex-1 p-4 md:p-6 bg-gray-50 dark:bg-gray-900">{children}</main>
           </div>
         </div>
       </AdminProviders>

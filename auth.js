@@ -34,18 +34,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      authorization: {
+        params: {
+          access_type: 'offline',
+          prompt: 'consent',
+          scope: 'openid email profile https://www.googleapis.com/auth/drive.readonly',
+        },
+      },
     }),
   ],
   callbacks: {
     /**
      * Control whether a user is allowed to sign in
-     * @param {object} params
-     * @param {object} params.user
-     * @param {object} params.account
-     * @param {object} params.profile
-     * @returns {boolean}
      */
-    signIn({ user, account, profile }) {
+    signIn({ user }) {
       const email = user.email?.toLowerCase()
 
       if (!email) {
@@ -62,30 +64,61 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
 
     /**
-     * Persist user ID in the JWT token
-     * @param {object} params
-     * @param {object} params.token
-     * @param {object} params.user
-     * @returns {object}
+     * Persist user ID and Google OAuth tokens in the JWT.
+     * On initial sign-in, account contains the tokens.
+     * On subsequent requests, refresh the access token if expired.
      */
-    jwt({ token, user }) {
-      if (user?.id) {
-        token.id = user.id
+    async jwt({ token, user, account }) {
+      // Initial sign-in: capture OAuth tokens
+      if (account) {
+        token.id = user?.id
+        token.accessToken = account.access_token
+        token.refreshToken = account.refresh_token
+        token.expiresAt = account.expires_at // epoch seconds
+        return token
       }
+
+      // Not expired yet — return as-is
+      if (token.expiresAt && Date.now() < token.expiresAt * 1000) {
+        return token
+      }
+
+      // Expired — refresh using the refresh token
+      if (token.refreshToken) {
+        try {
+          const response = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              client_id: process.env.GOOGLE_CLIENT_ID,
+              client_secret: process.env.GOOGLE_CLIENT_SECRET,
+              grant_type: 'refresh_token',
+              refresh_token: token.refreshToken,
+            }),
+          })
+          const data = await response.json()
+
+          if (data.access_token) {
+            token.accessToken = data.access_token
+            token.expiresAt = Math.floor(Date.now() / 1000) + data.expires_in
+          }
+        } catch (err) {
+          console.error('Failed to refresh Google token:', err.message)
+        }
+      }
+
       return token
     },
 
     /**
-     * Include user ID in the session
-     * @param {object} params
-     * @param {object} params.session
-     * @param {object} params.token
-     * @returns {object}
+     * Include user ID and access token in the session.
+     * accessToken is used server-side by API routes to call Apps Script.
      */
     session({ session, token }) {
       if (token.id && session.user) {
         session.user.id = token.id
       }
+      session.accessToken = token.accessToken
       return session
     },
   },

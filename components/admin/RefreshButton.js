@@ -29,7 +29,7 @@ export function RefreshButton() {
           clipRule="evenodd"
         />
       </svg>
-      {isRefreshing ? 'Actualizando...' : 'Actualizar'}
+      <span className="hidden md:inline">{isRefreshing ? 'Actualizando...' : 'Actualizar'}</span>
     </button>
   )
 }

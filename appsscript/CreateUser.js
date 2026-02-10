@@ -1,4 +1,4 @@
-const MAINTENANCE_MODE = true
+const MAINTENANCE_MODE = false
 
 // #region Testing Entry Points
 const TEST_ENTRY_ROWS = {
@@ -1161,6 +1161,7 @@ const MANUAL_PAYMENT_TYPE = Object.freeze({
   GIFT: 'GIFT',
   ADJUSTMENT: 'ADJUSTMENT',
   INTERNAL: 'INTERNAL',
+  MANUAL: 'MANUAL',
 })
 // #endregion
 
@@ -1205,6 +1206,129 @@ function setupServices(services) {
     SPREADSHEET_ID = services.SPREADSHEET_ID
   } else {
     SPREADSHEET_ID = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID') || ''
+  }
+}
+
+function jsonResponse(data) {
+  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(
+    ContentService.MimeType.JSON
+  )
+}
+
+function doPost(e) {
+  try {
+    const payload = JSON.parse(e.postData.contents)
+
+    // Verify shared secret from Script Properties
+    const expectedSecret = PropertiesService.getScriptProperties().getProperty('WEB_APP_SECRET')
+    if (!expectedSecret || payload.secret !== expectedSecret) {
+      return jsonResponse({ success: false, error: 'Unauthorized' })
+    }
+
+    switch (payload.action) {
+      case 'scan':
+        return handleScanAction()
+      case 'manual_payment':
+        return handleManualPaymentAction(payload.data)
+      default:
+        return jsonResponse({ success: false, error: 'Unknown action: ' + payload.action })
+    }
+  } catch (err) {
+    return jsonResponse({ success: false, error: err.message || 'Unknown error' })
+  }
+}
+
+function handleScanAction() {
+  const lock = LockService.getScriptLock()
+  const acquired = lock.tryLock(0)
+  if (!acquired) {
+    return jsonResponse({
+      success: false,
+      error: 'SCAN_IN_PROGRESS',
+      message: 'A scan is already running. Please wait.',
+    })
+  }
+
+  try {
+    setupServices({})
+    handleNewMemberships(null)
+    const logOutput = Logger.getLog()
+    return jsonResponse({
+      success: true,
+      message: 'Scan completed',
+      log: logOutput,
+    })
+  } catch (err) {
+    return jsonResponse({
+      success: false,
+      error: 'Scan failed: ' + err.message,
+      log: Logger.getLog(),
+    })
+  } finally {
+    lock.releaseLock()
+  }
+}
+
+function handleManualPaymentAction(data) {
+  if (!data || !data.email || data.amount == null || !data.date || !data.payment_type) {
+    return jsonResponse({
+      success: false,
+      error: 'Missing required fields: email, amount, date, payment_type',
+    })
+  }
+
+  const lock = LockService.getScriptLock()
+  if (!lock.tryLock(10000)) {
+    return jsonResponse({ success: false, error: 'OPERATION_IN_PROGRESS' })
+  }
+
+  try {
+    setupServices({})
+    const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID)
+    const manualSheet = spreadsheet.getSheetByName('MANUAL_PAYMENTS')
+    if (!manualSheet) {
+      return jsonResponse({ success: false, error: 'MANUAL_PAYMENTS sheet not found' })
+    }
+
+    // Insert row: columns are E-mail, Telefono, amount, date, payment_type, notes
+    manualSheet.appendRow([
+      data.email,
+      data.phone || '',
+      data.amount,
+      data.date,
+      data.payment_type,
+      data.notes || '',
+    ])
+
+    const insertedRow = manualSheet.getLastRow()
+
+    // Set global and process
+    MANUAL_PAYMENT_ROW_NUMBER = insertedRow
+    try {
+      manual_processManualPaymentRow()
+      return jsonResponse({
+        success: true,
+        message: 'Manual payment processed',
+        rowNumber: insertedRow,
+        log: Logger.getLog(),
+      })
+    } catch (processingError) {
+      // Cleanup: delete the inserted row on processing failure
+      manualSheet.deleteRow(insertedRow)
+      return jsonResponse({
+        success: false,
+        error: 'Processing failed: ' + processingError.message,
+        cleanup: true,
+        log: Logger.getLog(),
+      })
+    }
+  } catch (err) {
+    return jsonResponse({
+      success: false,
+      error: 'Manual payment failed: ' + err.message,
+    })
+  } finally {
+    lock.releaseLock()
   }
 }
 

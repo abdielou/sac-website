@@ -8,6 +8,8 @@ import { SkeletonTable } from '@/components/admin/SkeletonTable'
 import { ErrorState } from '@/components/admin/ErrorState'
 import { formatDate } from '@/lib/formatters'
 import { PaymentTooltip } from '@/components/admin/PaymentTooltip'
+import { MemberActions } from '@/components/admin/MemberActions'
+import { ManualPaymentModal } from '@/components/admin/ManualPaymentModal'
 
 /**
  * MembersContent - Main content component for members list
@@ -18,14 +20,31 @@ function MembersContent() {
   const pathname = usePathname()
   const router = useRouter()
 
-  // Read filters from URL params
-  const status = searchParams.get('status') || ''
+  // Read filters from URL params (default to 'members' to exclude applied)
+  const status = searchParams.get('status') ?? 'members'
   const searchParam = searchParams.get('search') || ''
   const page = parseInt(searchParams.get('page') || '1', 10)
 
   // Local state for search input (prevents focus loss during debounce)
   const [searchInput, setSearchInput] = useState(searchParam)
+  const [copiedEmail, setCopiedEmail] = useState(null)
+  const [modalState, setModalState] = useState({ isOpen: false, member: null, paymentType: null })
   const debounceRef = useRef(null)
+
+  // Copy email to clipboard and show feedback
+  const handleCopyEmail = (email) => {
+    navigator.clipboard.writeText(email)
+    setCopiedEmail(email)
+    setTimeout(() => setCopiedEmail(null), 1500)
+  }
+
+  const handleAction = (member, paymentType) => {
+    setModalState({ isOpen: true, member, paymentType })
+  }
+
+  const handleCloseModal = () => {
+    setModalState({ isOpen: false, member: null, paymentType: null })
+  }
 
   // Sync local state when URL param changes externally
   useEffect(() => {
@@ -105,11 +124,12 @@ function MembersContent() {
           onChange={(e) => updateFilter('status', e.target.value)}
           className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         >
-          <option value="">Todos los estados</option>
+          <option value="members">Miembros</option>
           <option value="active">Activo</option>
           <option value="expiring-soon">Vence pronto</option>
           <option value="expired">Expirado</option>
           <option value="applied">Aplicado</option>
+          <option value="">Todos</option>
         </select>
 
         {/* Search input */}
@@ -124,17 +144,101 @@ function MembersContent() {
 
       {/* Loading state - show skeleton table but keep filters visible */}
       {isPending ? (
-        <SkeletonTable rows={10} columns={5} />
+        <SkeletonTable rows={10} columns={7} />
       ) : (
         <>
-          {/* Table container */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+          {/* Mobile card layout */}
+          <div className="md:hidden space-y-4">
+            {members.length === 0 ? (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center text-gray-500 dark:text-gray-400">
+                No se encontraron miembros con los filtros seleccionados.
+              </div>
+            ) : (
+              members.map((member, index) => (
+                <div
+                  key={member.email || index}
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-3"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {member.name || '-'}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                          {member.email || '-'}
+                        </p>
+                        {member.email && (
+                          copiedEmail === member.email ? (
+                            <span className="text-gray-500 dark:text-gray-400 text-xs">Copied!</span>
+                          ) : (
+                            <button
+                              onClick={() => handleCopyEmail(member.email)}
+                              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                          )
+                        )}
+                      </div>
+                      {member.sacEmail && (
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-xs text-gray-400 truncate">
+                            SAC: {member.sacEmail}
+                          </p>
+                          {copiedEmail === member.sacEmail ? (
+                            <span className="text-gray-500 dark:text-gray-400 text-xs">Copied!</span>
+                          ) : (
+                            <button
+                              onClick={() => handleCopyEmail(member.sacEmail)}
+                              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={member.status} />
+                      <MemberActions member={member} onAction={handleAction} />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-500 dark:text-gray-400">
+                      Vence: {formatDate(member.expirationDate)}
+                    </span>
+                    {member.lastPaymentAmount ? (
+                      <PaymentTooltip
+                        date={member.lastPaymentDate}
+                        amount={member.lastPaymentAmount}
+                        notes={member.lastPaymentNotes}
+                        source={member.lastPaymentSource}
+                      />
+                    ) : (
+                      <span className="text-gray-400">Sin pagos</span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Email
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      SAC Email
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Nombre
@@ -148,13 +252,16 @@ function MembersContent() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Ultimo Pago
                     </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      <span className="sr-only">Acciones</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {members.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={5}
+                        colSpan={7}
                         className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
                       >
                         No se encontraron miembros con los filtros seleccionados.
@@ -164,10 +271,71 @@ function MembersContent() {
                     members.map((member, index) => (
                       <tr
                         key={member.email || index}
-                        className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                        className="group hover:bg-gray-50 dark:hover:bg-gray-700"
                       >
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                          {member.email}
+                          {member.email ? (
+                            <span className="inline-flex items-center gap-2">
+                              {member.email}
+                              {copiedEmail === member.email ? (
+                                <span className="text-gray-500 dark:text-gray-400 text-xs">Copied!</span>
+                              ) : (
+                                <button
+                                  onClick={() => handleCopyEmail(member.email)}
+                                  className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-opacity"
+                                  title="Copiar email"
+                                >
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                    />
+                                  </svg>
+                                </button>
+                              )}
+                            </span>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                          {member.sacEmail ? (
+                            <span className="inline-flex items-center gap-2">
+                              {member.sacEmail}
+                              {copiedEmail === member.sacEmail ? (
+                                <span className="text-gray-500 dark:text-gray-400 text-xs">Copied!</span>
+                              ) : (
+                                <button
+                                  onClick={() => handleCopyEmail(member.sacEmail)}
+                                  className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-opacity"
+                                  title="Copiar email"
+                                >
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                    />
+                                  </svg>
+                                </button>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                           {member.name || '-'}
@@ -189,6 +357,9 @@ function MembersContent() {
                           ) : (
                             <span className="text-sm text-gray-400">-</span>
                           )}
+                        </td>
+                        <td className="px-3 py-4 text-center">
+                          <MemberActions member={member} onAction={handleAction} />
                         </td>
                       </tr>
                     ))
@@ -227,6 +398,13 @@ function MembersContent() {
           )}
         </>
       )}
+
+      <ManualPaymentModal
+        isOpen={modalState.isOpen}
+        onClose={handleCloseModal}
+        member={modalState.member}
+        paymentType={modalState.paymentType}
+      />
     </div>
   )
 }
@@ -236,7 +414,7 @@ function MembersContent() {
  */
 export default function MembersPage() {
   return (
-    <Suspense fallback={<SkeletonTable rows={10} columns={5} />}>
+    <Suspense fallback={<SkeletonTable rows={10} columns={7} />}>
       <MembersContent />
     </Suspense>
   )
