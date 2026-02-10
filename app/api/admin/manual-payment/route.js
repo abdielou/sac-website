@@ -25,6 +25,14 @@ export const POST = auth(async function POST(req) {
     )
   }
 
+  const accessToken = req.auth.accessToken
+  if (!accessToken) {
+    return NextResponse.json(
+      { error: 'Sesión expirada', details: 'No access token in session. Please sign out and sign in again.' },
+      { status: 401 }
+    )
+  }
+
   try {
     const body = await req.json()
 
@@ -52,7 +60,7 @@ export const POST = auth(async function POST(req) {
       )
     }
 
-    const result = await callAppsScript('manual_payment', {
+    const result = await callAppsScript(accessToken, 'manual_payment', {
       email: body.email,
       phone: body.phone || '',
       amount: body.amount,
