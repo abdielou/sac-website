@@ -224,7 +224,9 @@ function PaymentsContent() {
                       <div className="relative inline-flex items-center">
                         <input
                           type="checkbox"
-                          checked={isManual || (payment.is_membership_explicit && payment.is_membership)}
+                          checked={
+                            isManual || (payment.is_membership_explicit && payment.is_membership)
+                          }
                           disabled={isDisabled}
                           onChange={() => handleClassifyClick(payment)}
                           className={`h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${

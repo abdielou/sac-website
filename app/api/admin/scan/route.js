@@ -22,7 +22,10 @@ export const POST = auth(async function POST(req) {
   const accessToken = req.auth.accessToken
   if (!accessToken) {
     return NextResponse.json(
-      { error: 'Sesión expirada', details: 'No access token in session. Please sign out and sign in again.' },
+      {
+        error: 'Sesión expirada',
+        details: 'No access token in session. Please sign out and sign in again.',
+      },
       { status: 401 }
     )
   }
