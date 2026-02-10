@@ -1270,7 +1270,7 @@ function handleScanAction() {
 }
 
 function handleManualPaymentAction(data) {
-  if (!data || !data.email || !data.amount || !data.date || !data.payment_type) {
+  if (!data || !data.email || data.amount == null || !data.date || !data.payment_type) {
     return jsonResponse({
       success: false,
       error: 'Missing required fields: email, amount, date, payment_type',

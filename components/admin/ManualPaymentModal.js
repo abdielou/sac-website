@@ -2,17 +2,35 @@
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { useSession } from 'next-auth/react'
 import { useManualPayment } from '@/lib/hooks/useAdminData'
 
 /**
- * Get today's date in YYYY-MM-DD format
+ * Get current date+time in datetime-local input format (YYYY-MM-DDTHH:mm)
  */
-function todayStr() {
+function nowStr() {
   const d = new Date()
   const yyyy = d.getFullYear()
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   const dd = String(d.getDate()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd}`
+  const hh = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`
+}
+
+/**
+ * Format datetime-local value to "M/D/YYYY HH:mm:ss" for the spreadsheet
+ */
+function formatDateForSheet(datetimeLocalValue) {
+  const d = new Date(datetimeLocalValue)
+  if (isNaN(d)) return datetimeLocalValue
+  const month = d.getMonth() + 1
+  const day = d.getDate()
+  const year = d.getFullYear()
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  const ss = String(d.getSeconds()).padStart(2, '0')
+  return `${month}/${day}/${year} ${hh}:${mm}:${ss}`
 }
 
 const TITLES = {
@@ -32,6 +50,7 @@ const labelClasses = 'block text-sm font-medium text-gray-700 dark:text-gray-300
  * @param {{ isOpen: boolean, onClose: () => void, member: { email: string, phone?: string, name?: string } | null, paymentType: 'GIFT'|'MANUAL'|null }} props
  */
 export function ManualPaymentModal({ isOpen, onClose, member, paymentType }) {
+  const { data: session } = useSession()
   const { mutate, isPending, error, reset: resetMutation } = useManualPayment()
 
   const [email, setEmail] = useState('')
@@ -46,7 +65,7 @@ export function ManualPaymentModal({ isOpen, onClose, member, paymentType }) {
       setEmail(member.email || '')
       setPhone(member.phone || '')
       setAmount(paymentType === 'GIFT' ? '0' : '25')
-      setDate(todayStr())
+      setDate(nowStr())
       setNotes('')
       resetMutation()
     }
@@ -59,14 +78,17 @@ export function ManualPaymentModal({ isOpen, onClose, member, paymentType }) {
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    const adminEmail = session?.user?.email || 'unknown'
+    const adminNote = `[${adminEmail} via admin]`
+    const fullNotes = notes ? `${adminNote} ${notes}` : adminNote
     mutate(
       {
         email,
         phone,
         amount: parseFloat(amount),
-        date,
+        date: formatDateForSheet(date),
         payment_type: paymentType,
-        notes,
+        notes: fullNotes,
       },
       {
         onSuccess: () => {
@@ -174,7 +196,7 @@ export function ManualPaymentModal({ isOpen, onClose, member, paymentType }) {
             <div>
               <label className={labelClasses}>Fecha</label>
               <input
-                type="date"
+                type="datetime-local"
                 required
                 value={date}
                 onChange={(e) => {
