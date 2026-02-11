@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** Admins can accurately track membership status and payments
-**Current focus:** v1.5 Calendar-Year Membership Rules - Phase 17
+**Current focus:** v1.5 Calendar-Year Membership Rules - Phase 18
 
 ## Current Position
 
-Phase: 17 of 18 (Calendar-Year Expiration Rules)
-Plan: 1 of 1 in current phase (COMPLETE)
-Status: Phase 17 complete
-Last activity: 2026-02-11 — Completed 17-01-PLAN.md (calendar-year membership status)
+Phase: 18 of 18 (Workspace Account Generation)
+Plan: 1 of 2 in current phase
+Status: Plan 18-01 complete, executing Phase 18
+Last activity: 2026-02-11 — Completed 18-01-PLAN.md
 
-Progress: [##########] 100% (Phase 17: 1/1 plans)
+Progress: [███████░░░] 75% (1.5/2 phases complete)
 
 ## Milestone History
 
@@ -47,7 +47,7 @@ Progress: [##########] 100% (Phase 17: 1/1 plans)
 ## Session Continuity
 
 Last session: 2026-02-11
-Stopped at: Completed 17-01-PLAN.md (calendar-year membership status)
+Stopped at: Completed 18-01-PLAN.md
 Resume file: None
 
 ## Decisions
@@ -55,3 +55,5 @@ Resume file: None
 - Use UTC date methods for timezone-independent membership status calculation
 - Injectable `now` parameter for test determinism (avoids jest.useFakeTimers)
 - Mock heavy dependencies in tests to bypass ESM-only ky dependency in Jest
+- Admin-selected sacEmail bypasses server-side availability check (trusted admin selection)
+- Client-side email generator mirrors Apps Script logic exactly for preview consistency
