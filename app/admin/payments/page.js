@@ -112,6 +112,7 @@ function PaymentsContent() {
       const columns = [
         { key: 'date', label: 'Fecha' },
         { key: 'email', label: 'Email' },
+        { key: 'phone', label: 'Telefono' },
         { key: 'amount', label: 'Monto' },
         { key: 'source', label: 'Fuente' },
         { key: 'notes', label: 'Mensaje' },
@@ -220,7 +221,7 @@ function PaymentsContent() {
 
       {/* Loading state - show skeleton table but keep filters visible */}
       {isPending ? (
-        <SkeletonTable rows={10} columns={6} />
+        <SkeletonTable rows={10} columns={7} />
       ) : (
         <>
           {/* Mobile card layout */}
@@ -249,6 +250,11 @@ function PaymentsContent() {
                         <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                           {payment.email}
                         </p>
+                        {payment.phone && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            {payment.phone}
+                          </p>
+                        )}
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                           {formatDate(payment.date)}
                         </p>
@@ -307,6 +313,9 @@ function PaymentsContent() {
                       Email
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Telefono
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Monto
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -324,7 +333,7 @@ function PaymentsContent() {
                   {payments.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={7}
                         className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
                       >
                         No se encontraron pagos con los filtros seleccionados.
@@ -347,6 +356,9 @@ function PaymentsContent() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                             {payment.email}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            {payment.phone || '-'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                             {formatCurrency(payment.amount)}
@@ -436,7 +448,7 @@ function PaymentsContent() {
  */
 export default function PaymentsPage() {
   return (
-    <Suspense fallback={<SkeletonTable rows={10} columns={6} />}>
+    <Suspense fallback={<SkeletonTable rows={10} columns={7} />}>
       <PaymentsContent />
     </Suspense>
   )

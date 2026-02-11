@@ -72,6 +72,7 @@ function MembersContent() {
         { key: 'email', label: 'Email' },
         { key: 'sacEmail', label: 'SAC Email' },
         { key: 'name', label: 'Nombre' },
+        { key: 'phone', label: 'Telefono' },
         { key: 'expirationDate', label: 'Vencimiento' },
         { key: 'status', label: 'Estado' },
         { key: 'lastPaymentDate', label: 'Fecha Ultimo Pago' },
@@ -79,11 +80,11 @@ function MembersContent() {
         { key: 'lastPaymentSource', label: 'Fuente Ultimo Pago' },
       ]
       const csv = toCsv(json.data, columns)
-      const statusSuffix = selectedStatuses.length === ALL_STATUSES.length
-        ? 'all'
-        : selectedStatuses.join('-')
+      const statusSuffix =
+        selectedStatuses.length === ALL_STATUSES.length ? 'all' : selectedStatuses.join('-')
       const searchSuffix = searchParam ? `-${searchParam.replace(/\s+/g, '_')}` : ''
-      downloadCsvFile(csv, `members-${statusSuffix}${searchSuffix}-${new Date().toISOString().slice(0, 10)}`)
+      const date = new Date().toISOString().slice(0, 10)
+      downloadCsvFile(csv, `members-${statusSuffix}${searchSuffix}-${date}`)
     } catch (err) {
       console.error('CSV export error:', err)
     } finally {
