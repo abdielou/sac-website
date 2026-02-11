@@ -1228,6 +1228,8 @@ function doPost(e) {
     switch (payload.action) {
       case 'scan':
         return handleScanAction()
+      case 'scan_status':
+        return handleScanStatusAction()
       case 'manual_payment':
         return handleManualPaymentAction(payload.data)
       default:
@@ -1267,6 +1269,16 @@ function handleScanAction() {
   } finally {
     lock.releaseLock()
   }
+}
+
+function handleScanStatusAction() {
+  const lock = LockService.getScriptLock()
+  const acquired = lock.tryLock(0)
+  if (acquired) {
+    lock.releaseLock()
+    return jsonResponse({ success: true, scanning: false })
+  }
+  return jsonResponse({ success: true, scanning: true })
 }
 
 function handleManualPaymentAction(data) {

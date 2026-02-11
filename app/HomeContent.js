@@ -5,7 +5,6 @@ import Link from '@/components/Link'
 import ArticleItem from '@/components/articles/ArticleItem'
 import ImageWidget from '@/components/widgets/ImageWidget'
 import ApodWidget from '@/components/widgets/ApodWidget'
-import NewsletterForm from '@/components/NewsletterForm'
 import siteMetadata from '@/data/siteMetadata'
 
 const MAX_DISPLAY = 5
@@ -76,13 +75,6 @@ export default function HomeContent({ posts }) {
           >
             Todos los artículos &rarr;
           </Link>
-        </div>
-      )}
-
-      {/* Newsletter Form - only if provider configured */}
-      {siteMetadata.newsletter.provider && (
-        <div className="flex items-center justify-center pt-4">
-          <NewsletterForm />
         </div>
       )}
     </>

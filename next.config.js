@@ -2,6 +2,26 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 })
 
+const securityHeaders = [
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'X-Frame-Options', value: 'DENY' },
+  { key: 'X-XSS-Protection', value: '1; mode=block' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+  {
+    key: 'Content-Security-Policy',
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://giscus.app https://platform.twitter.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com",
+      "img-src 'self' data: blob: https:",
+      "frame-src https://giscus.app https://www.youtube.com https://platform.twitter.com",
+      "connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com",
+    ].join('; '),
+  },
+]
+
 module.exports = withBundleAnalyzer({
   reactStrictMode: true,
   pageExtensions: ['js', 'jsx', 'md', 'mdx'],
@@ -28,6 +48,9 @@ module.exports = withBundleAnalyzer({
     })
 
     return config
+  },
+  async headers() {
+    return [{ source: '/(.*)', headers: securityHeaders }]
   },
   images: {
     minimumCacheTTL: 21600,

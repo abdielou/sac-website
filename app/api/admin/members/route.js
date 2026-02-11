@@ -7,7 +7,7 @@ import { getMembers } from '../../../../lib/google-sheets'
  * GET /api/admin/members
  *
  * Query params:
- * - status: 'active' | 'expired' | 'expiring-soon' (optional)
+ * - status: comma-separated list e.g. 'active,expired' or 'members' shortcut (optional)
  * - search: string to match against email or name (optional)
  * - page: page number, 1-indexed (default: 1)
  * - pageSize: items per page (default: 20, max: 100)
@@ -29,7 +29,11 @@ export const GET = auth(async function GET(req) {
     const status = searchParams.get('status')
     const search = searchParams.get('search')?.toLowerCase()
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
-    const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') || '20', 10)))
+    const pageSizeParam = searchParams.get('pageSize')
+    const exportAll = pageSizeParam === 'all'
+    const pageSize = exportAll
+      ? 5000
+      : Math.min(100, Math.max(1, parseInt(pageSizeParam || '20', 10)))
     const forceRefresh = searchParams.get('refresh') === 'true'
 
     // Fetch data (cached unless refresh=true)
@@ -40,10 +44,12 @@ export const GET = auth(async function GET(req) {
 
     if (status) {
       if (status === 'members') {
-        // Show all except "applied" — active, expiring-soon, expired
+        // Legacy shortcut: all except "applied"
         filteredMembers = filteredMembers.filter((m) => m.status !== 'applied')
       } else {
-        filteredMembers = filteredMembers.filter((m) => m.status === status)
+        // Support comma-separated statuses (e.g. "active,expired")
+        const statuses = status.split(',').map((s) => s.trim())
+        filteredMembers = filteredMembers.filter((m) => statuses.includes(m.status))
       }
     }
 
@@ -53,21 +59,22 @@ export const GET = auth(async function GET(req) {
       )
     }
 
-    // Pagination
+    // Pagination (skip when exporting all)
     const totalItems = filteredMembers.length
-    const totalPages = Math.ceil(totalItems / pageSize)
-    const startIndex = (page - 1) * pageSize
-    const paginatedMembers = filteredMembers.slice(startIndex, startIndex + pageSize)
+    const paginatedMembers = exportAll
+      ? filteredMembers
+      : filteredMembers.slice((page - 1) * pageSize, page * pageSize)
+    const totalPages = exportAll ? 1 : Math.ceil(totalItems / pageSize)
 
     return NextResponse.json({
       data: paginatedMembers,
       pagination: {
-        page,
-        pageSize,
+        page: exportAll ? 1 : page,
+        pageSize: exportAll ? totalItems : pageSize,
         totalItems,
         totalPages,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1,
+        hasNextPage: !exportAll && page < totalPages,
+        hasPrevPage: !exportAll && page > 1,
       },
       meta: {
         fromCache,

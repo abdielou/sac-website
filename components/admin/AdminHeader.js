@@ -10,9 +10,7 @@ export async function AdminHeader() {
 
   return (
     <header className="flex items-center justify-between gap-2 py-3 px-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-      <h1 className="text-base font-semibold text-gray-900 dark:text-white">
-        Admin
-      </h1>
+      <h1 className="text-base font-semibold text-gray-900 dark:text-white">Admin</h1>
       <div className="flex items-center gap-2 md:gap-4">
         <RefreshButton />
         <span className="hidden md:inline text-sm text-gray-600 dark:text-gray-400">

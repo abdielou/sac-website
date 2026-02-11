@@ -7,9 +7,9 @@ import { invalidateCache } from '../../../../lib/cache'
 /**
  * POST /api/admin/scan
  *
- * Triggers an inbox scan via Apps Script web app.
- * Scans Gmail for new ATH Movil and PayPal payment emails.
- * Returns scan summary on success.
+ * Fires off an inbox scan via Apps Script and returns immediately.
+ * The scan runs asynchronously on Google's servers; we don't wait for results.
+ * Cache is invalidated optimistically so the next data fetch picks up changes.
  */
 export const POST = auth(async function POST(req) {
   if (!req.auth) {
@@ -22,32 +22,20 @@ export const POST = auth(async function POST(req) {
   const accessToken = req.auth.accessToken
   if (!accessToken) {
     return NextResponse.json(
-      { error: 'Sesión expirada', details: 'No access token in session. Please sign out and sign in again.' },
+      {
+        error: 'Sesión expirada',
+        details: 'No access token in session. Please sign out and sign in again.',
+      },
       { status: 401 }
     )
   }
 
-  try {
-    const result = await callAppsScript(accessToken, 'scan')
+  // Fire and forget — kick off the Apps Script scan without awaiting the result.
+  // The HTTP request payload is small and sent immediately; Google processes it
+  // independently regardless of whether this function stays alive.
+  callAppsScript(accessToken, 'scan')
+    .then(() => invalidateCache())
+    .catch(() => {})
 
-    if (!result.success) {
-      // Map known Apps Script errors to HTTP status codes
-      const status = result.error === 'SCAN_IN_PROGRESS' ? 409 : 500
-      return NextResponse.json({ error: result.error, message: result.message }, { status })
-    }
-
-    // Scan may have added new members/payments - invalidate cache
-    invalidateCache()
-
-    return NextResponse.json(result)
-  } catch (error) {
-    const isTimeout = error.name === 'AbortError'
-    return NextResponse.json(
-      {
-        error: isTimeout ? 'Tiempo de espera agotado' : 'Error al ejecutar escaneo',
-        details: error.message,
-      },
-      { status: isTimeout ? 504 : 500 }
-    )
-  }
+  return NextResponse.json({ success: true, message: 'Escaneo iniciado' })
 })

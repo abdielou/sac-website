@@ -23,6 +23,7 @@ const siteMetadata = {
   twitter: 'https://twitter.com/soc_astrocaribe',
   facebook: 'https://www.facebook.com/sociedad.astronomia',
   youtube: 'https://www.youtube.com/@sociedadastronomia/',
+  instagram: 'https://www.instagram.com/socastronomiacaribe',
   // linkedin: 'https://www.linkedin.com',
   locale: 'es-PR',
   forms: {

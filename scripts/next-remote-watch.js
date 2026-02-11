@@ -20,7 +20,7 @@ const pkg = require('../package.json')
 
 const defaultWatchEvent = 'change'
 
-program.storeOptionsAsProperties().version(pkg.version)
+program.version(pkg.version)
 program
   .option('-r, --root [dir]', 'root directory of your nextjs app')
   .option('-s, --script [path]', 'path to the script you want to trigger on a watcher event', false)
@@ -33,8 +33,9 @@ program
   .option('-p, --polling [name]', `use polling for the watcher, defaults to false`, false)
   .parse(process.argv)
 
+const opts = program.opts()
 const shell = process.env.SHELL
-const app = next({ dev: true, dir: program.root || process.cwd() })
+const app = next({ dev: true, dir: opts.root || process.cwd() })
 const port = parseInt(process.env.PORT, 10) || 3000
 const handle = app.getRequestHandler()
 
@@ -42,19 +43,19 @@ app.prepare().then(() => {
   // if directories are provided, watch them for changes and trigger reload
   if (program.args.length > 0) {
     chokidar
-      .watch(program.args, { usePolling: Boolean(program.polling) })
-      .on(program.event, async (filePathContext, eventContext = defaultWatchEvent) => {
+      .watch(program.args, { usePolling: Boolean(opts.polling) })
+      .on(opts.event, async (filePathContext, eventContext = defaultWatchEvent) => {
         // Emit changes via socketio
         io.sockets.emit('reload', filePathContext)
         app.server.hotReloader.send('building')
 
-        if (program.command) {
+        if (opts.command) {
           // Use spawn here so that we can pipe stdio from the command without buffering
           spawn(
             shell,
             [
               '-c',
-              program.command
+              opts.command
                 .replace(/\{event\}/gi, filePathContext)
                 .replace(/\{path\}/gi, eventContext),
             ],
@@ -64,10 +65,10 @@ app.prepare().then(() => {
           )
         }
 
-        if (program.script) {
+        if (opts.script) {
           try {
             // find the path of your --script script
-            const scriptPath = path.join(process.cwd(), program.script.toString())
+            const scriptPath = path.join(process.cwd(), opts.script.toString())
 
             // require your --script script
             const executeFile = require(scriptPath)

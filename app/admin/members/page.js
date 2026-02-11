@@ -1,15 +1,16 @@
 'use client'
 
-import { Suspense, useState, useEffect, useRef } from 'react'
+import { Suspense, useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams, usePathname, useRouter } from 'next/navigation'
 import { useMembers } from '@/lib/hooks/useAdminData'
-import { StatusBadge } from '@/components/admin/StatusBadge'
+import { StatusBadge, statusConfig } from '@/components/admin/StatusBadge'
 import { SkeletonTable } from '@/components/admin/SkeletonTable'
 import { ErrorState } from '@/components/admin/ErrorState'
 import { formatDate } from '@/lib/formatters'
 import { PaymentTooltip } from '@/components/admin/PaymentTooltip'
 import { MemberActions } from '@/components/admin/MemberActions'
 import { ManualPaymentModal } from '@/components/admin/ManualPaymentModal'
+import { toCsv, downloadCsvFile } from '@/lib/csv'
 
 /**
  * MembersContent - Main content component for members list
@@ -20,8 +21,18 @@ function MembersContent() {
   const pathname = usePathname()
   const router = useRouter()
 
-  // Read filters from URL params (default to 'members' to exclude applied)
-  const status = searchParams.get('status') ?? 'members'
+  // Read filters from URL params
+  const statusParam = searchParams.get('status')
+  // Default: active, expiring-soon, expired (all except applied)
+  const ALL_STATUSES = ['active', 'expiring-soon', 'expired', 'applied']
+  const DEFAULT_STATUSES = ['active', 'expiring-soon']
+  const selectedStatuses =
+    statusParam === null
+      ? DEFAULT_STATUSES
+      : statusParam === ''
+        ? ALL_STATUSES
+        : statusParam.split(',').filter(Boolean)
+  const status = selectedStatuses.length === ALL_STATUSES.length ? '' : selectedStatuses.join(',')
   const searchParam = searchParams.get('search') || ''
   const page = parseInt(searchParams.get('page') || '1', 10)
 
@@ -29,6 +40,7 @@ function MembersContent() {
   const [searchInput, setSearchInput] = useState(searchParam)
   const [copiedEmail, setCopiedEmail] = useState(null)
   const [modalState, setModalState] = useState({ isOpen: false, member: null, paymentType: null })
+  const [isExporting, setIsExporting] = useState(false)
   const debounceRef = useRef(null)
 
   // Copy email to clipboard and show feedback
@@ -45,6 +57,40 @@ function MembersContent() {
   const handleCloseModal = () => {
     setModalState({ isOpen: false, member: null, paymentType: null })
   }
+
+  const handleExportCsv = useCallback(async () => {
+    setIsExporting(true)
+    try {
+      const params = new URLSearchParams()
+      if (status) params.set('status', status)
+      if (searchParam) params.set('search', searchParam)
+      params.set('pageSize', 'all')
+      const res = await fetch(`/api/admin/members?${params.toString()}`)
+      if (!res.ok) throw new Error('Export failed')
+      const json = await res.json()
+      const columns = [
+        { key: 'email', label: 'Email' },
+        { key: 'sacEmail', label: 'SAC Email' },
+        { key: 'name', label: 'Nombre' },
+        { key: 'phone', label: 'Telefono' },
+        { key: 'expirationDate', label: 'Vencimiento' },
+        { key: 'status', label: 'Estado' },
+        { key: 'lastPaymentDate', label: 'Fecha Ultimo Pago' },
+        { key: 'lastPaymentAmount', label: 'Monto Ultimo Pago' },
+        { key: 'lastPaymentSource', label: 'Fuente Ultimo Pago' },
+      ]
+      const csv = toCsv(json.data, columns)
+      const statusSuffix =
+        selectedStatuses.length === ALL_STATUSES.length ? 'all' : selectedStatuses.join('-')
+      const searchSuffix = searchParam ? `-${searchParam.replace(/\s+/g, '_')}` : ''
+      const date = new Date().toISOString().slice(0, 10)
+      downloadCsvFile(csv, `members-${statusSuffix}${searchSuffix}-${date}`)
+    } catch (err) {
+      console.error('CSV export error:', err)
+    } finally {
+      setIsExporting(false)
+    }
+  }, [status, searchParam])
 
   // Sync local state when URL param changes externally
   useEffect(() => {
@@ -118,19 +164,31 @@ function MembersContent() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-4 mb-6">
-        {/* Status filter */}
-        <select
-          value={status}
-          onChange={(e) => updateFilter('status', e.target.value)}
-          className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        >
-          <option value="members">Miembros</option>
-          <option value="active">Activo</option>
-          <option value="expiring-soon">Vence pronto</option>
-          <option value="expired">Expirado</option>
-          <option value="applied">Aplicado</option>
-          <option value="">Todos</option>
-        </select>
+        {/* Status multi-select pills */}
+        <div className="flex flex-wrap items-center gap-2">
+          {ALL_STATUSES.map((s) => {
+            const config = statusConfig[s]
+            const isSelected = selectedStatuses.includes(s)
+            return (
+              <button
+                key={s}
+                onClick={() => {
+                  const next = isSelected
+                    ? selectedStatuses.filter((v) => v !== s)
+                    : [...selectedStatuses, s]
+                  updateFilter('status', next.length === 0 ? '' : next.join(','))
+                }}
+                className={`inline-flex px-2 py-1 text-xs font-medium rounded-full transition-opacity ${
+                  isSelected
+                    ? config.classes
+                    : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
+                }`}
+              >
+                {config.label}
+              </button>
+            )
+          })}
+        </div>
 
         {/* Search input */}
         <input
@@ -140,6 +198,23 @@ function MembersContent() {
           placeholder="Buscar por email o nombre..."
           className="flex-1 min-w-[200px] px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
+
+        {/* CSV Download */}
+        <button
+          onClick={handleExportCsv}
+          disabled={isExporting || isPending}
+          className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          {isExporting ? 'Exportando...' : 'CSV'}
+        </button>
       </div>
 
       {/* Loading state - show skeleton table but keep filters visible */}
@@ -168,35 +243,56 @@ function MembersContent() {
                         <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
                           {member.email || '-'}
                         </p>
-                        {member.email && (
-                          copiedEmail === member.email ? (
-                            <span className="text-gray-500 dark:text-gray-400 text-xs">Copied!</span>
+                        {member.email &&
+                          (copiedEmail === member.email ? (
+                            <span className="text-gray-500 dark:text-gray-400 text-xs">
+                              Copied!
+                            </span>
                           ) : (
                             <button
                               onClick={() => handleCopyEmail(member.email)}
                               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                />
                               </svg>
                             </button>
-                          )
-                        )}
+                          ))}
                       </div>
                       {member.sacEmail && (
                         <div className="flex items-center gap-2 mt-1">
-                          <p className="text-xs text-gray-400 truncate">
-                            SAC: {member.sacEmail}
-                          </p>
+                          <p className="text-xs text-gray-400 truncate">SAC: {member.sacEmail}</p>
                           {copiedEmail === member.sacEmail ? (
-                            <span className="text-gray-500 dark:text-gray-400 text-xs">Copied!</span>
+                            <span className="text-gray-500 dark:text-gray-400 text-xs">
+                              Copied!
+                            </span>
                           ) : (
                             <button
                               onClick={() => handleCopyEmail(member.sacEmail)}
                               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                             >
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              <svg
+                                className="w-3 h-3"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                />
                               </svg>
                             </button>
                           )}
@@ -278,7 +374,9 @@ function MembersContent() {
                             <span className="inline-flex items-center gap-2">
                               {member.email}
                               {copiedEmail === member.email ? (
-                                <span className="text-gray-500 dark:text-gray-400 text-xs">Copied!</span>
+                                <span className="text-gray-500 dark:text-gray-400 text-xs">
+                                  Copied!
+                                </span>
                               ) : (
                                 <button
                                   onClick={() => handleCopyEmail(member.email)}
@@ -310,7 +408,9 @@ function MembersContent() {
                             <span className="inline-flex items-center gap-2">
                               {member.sacEmail}
                               {copiedEmail === member.sacEmail ? (
-                                <span className="text-gray-500 dark:text-gray-400 text-xs">Copied!</span>
+                                <span className="text-gray-500 dark:text-gray-400 text-xs">
+                                  Copied!
+                                </span>
                               ) : (
                                 <button
                                   onClick={() => handleCopyEmail(member.sacEmail)}
