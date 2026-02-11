@@ -32,7 +32,7 @@ export const GET = auth(async function GET(req) {
     const pageSizeParam = searchParams.get('pageSize')
     const exportAll = pageSizeParam === 'all'
     const pageSize = exportAll
-      ? Infinity
+      ? 5000
       : Math.min(100, Math.max(1, parseInt(pageSizeParam || '20', 10)))
     const forceRefresh = searchParams.get('refresh') === 'true'
 
