@@ -10,6 +10,7 @@ import { formatDate } from '@/lib/formatters'
 import { PaymentTooltip } from '@/components/admin/PaymentTooltip'
 import { MemberActions } from '@/components/admin/MemberActions'
 import { ManualPaymentModal } from '@/components/admin/ManualPaymentModal'
+import { WorkspaceAccountModal } from '@/components/admin/WorkspaceAccountModal'
 import { toCsv, downloadCsvFile } from '@/lib/csv'
 
 /**
@@ -40,6 +41,7 @@ function MembersContent() {
   const [searchInput, setSearchInput] = useState(searchParam)
   const [copiedEmail, setCopiedEmail] = useState(null)
   const [modalState, setModalState] = useState({ isOpen: false, member: null, paymentType: null })
+  const [workspaceModalState, setWorkspaceModalState] = useState({ isOpen: false, member: null })
   const [isExporting, setIsExporting] = useState(false)
   const debounceRef = useRef(null)
 
@@ -51,11 +53,19 @@ function MembersContent() {
   }
 
   const handleAction = (member, paymentType) => {
-    setModalState({ isOpen: true, member, paymentType })
+    if (paymentType === 'WORKSPACE') {
+      setWorkspaceModalState({ isOpen: true, member })
+    } else {
+      setModalState({ isOpen: true, member, paymentType })
+    }
   }
 
   const handleCloseModal = () => {
     setModalState({ isOpen: false, member: null, paymentType: null })
+  }
+
+  const handleCloseWorkspaceModal = () => {
+    setWorkspaceModalState({ isOpen: false, member: null })
   }
 
   const handleExportCsv = useCallback(async () => {
@@ -504,6 +514,12 @@ function MembersContent() {
         onClose={handleCloseModal}
         member={modalState.member}
         paymentType={modalState.paymentType}
+      />
+
+      <WorkspaceAccountModal
+        isOpen={workspaceModalState.isOpen}
+        onClose={handleCloseWorkspaceModal}
+        member={workspaceModalState.member}
       />
     </div>
   )
