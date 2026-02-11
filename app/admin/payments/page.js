@@ -1,12 +1,13 @@
 'use client'
 
-import { Suspense, useState, useEffect, useRef } from 'react'
+import { Suspense, useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams, usePathname, useRouter } from 'next/navigation'
 import { usePayments, useClassifyPayment } from '@/lib/hooks/useAdminData'
 import { SourceBadge } from '@/components/admin/SourceBadge'
 import { SkeletonTable } from '@/components/admin/SkeletonTable'
 import { ErrorState } from '@/components/admin/ErrorState'
 import { formatDate, formatCurrency } from '@/lib/formatters'
+import { toCsv, downloadCsvFile } from '@/lib/csv'
 
 /**
  * PaymentsContent - Main content component for payments list
@@ -24,6 +25,7 @@ function PaymentsContent() {
 
   // Local state for search input (prevents focus loss during debounce)
   const [searchInput, setSearchInput] = useState(searchParam)
+  const [isExporting, setIsExporting] = useState(false)
   const debounceRef = useRef(null)
 
   // Sync local state when URL param changes externally
@@ -96,6 +98,33 @@ function PaymentsContent() {
       updateFilter('search', value)
     }, 300)
   }
+
+  const handleExportCsv = useCallback(async () => {
+    setIsExporting(true)
+    try {
+      const params = new URLSearchParams()
+      if (source) params.set('source', source)
+      if (searchParam) params.set('search', searchParam)
+      params.set('pageSize', 'all')
+      const res = await fetch(`/api/admin/payments?${params.toString()}`)
+      if (!res.ok) throw new Error('Export failed')
+      const json = await res.json()
+      const columns = [
+        { key: 'date', label: 'Fecha' },
+        { key: 'email', label: 'Email' },
+        { key: 'amount', label: 'Monto' },
+        { key: 'source', label: 'Fuente' },
+        { key: 'notes', label: 'Mensaje' },
+        { key: 'is_membership', label: 'Membresia' },
+      ]
+      const csv = toCsv(json.data, columns)
+      downloadCsvFile(csv, `pagos-${new Date().toISOString().slice(0, 10)}`)
+    } catch (err) {
+      console.error('CSV export error:', err)
+    } finally {
+      setIsExporting(false)
+    }
+  }, [source, searchParam])
 
   /**
    * Three-state cycling:
@@ -170,6 +199,23 @@ function PaymentsContent() {
           placeholder="Buscar por email, monto o mensaje..."
           className="flex-1 min-w-[200px] px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
+
+        {/* CSV Download */}
+        <button
+          onClick={handleExportCsv}
+          disabled={isExporting || isPending}
+          className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          {isExporting ? 'Exportando...' : 'CSV'}
+        </button>
       </div>
 
       {/* Loading state - show skeleton table but keep filters visible */}

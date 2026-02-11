@@ -1,7 +1,7 @@
 // components/admin/StatusBadge.js
 // Membership status badge component with Spanish labels
 
-const statusConfig = {
+export const statusConfig = {
   active: {
     label: 'Activo',
     classes: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',

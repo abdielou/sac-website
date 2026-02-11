@@ -33,7 +33,11 @@ export const GET = auth(async function GET(req) {
     const toDate = searchParams.get('to')
     const search = searchParams.get('search')?.toLowerCase()
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
-    const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') || '20', 10)))
+    const pageSizeParam = searchParams.get('pageSize')
+    const exportAll = pageSizeParam === 'all'
+    const pageSize = exportAll
+      ? Infinity
+      : Math.min(100, Math.max(1, parseInt(pageSizeParam || '20', 10)))
     const forceRefresh = searchParams.get('refresh') === 'true'
 
     // Fetch data (cached unless refresh=true)
@@ -76,21 +80,22 @@ export const GET = auth(async function GET(req) {
     // Sort by date (newest first)
     filteredPayments.sort((a, b) => new Date(b.date) - new Date(a.date))
 
-    // Pagination
+    // Pagination (skip when exporting all)
     const totalItems = filteredPayments.length
-    const totalPages = Math.ceil(totalItems / pageSize)
-    const startIndex = (page - 1) * pageSize
-    const paginatedPayments = filteredPayments.slice(startIndex, startIndex + pageSize)
+    const paginatedPayments = exportAll
+      ? filteredPayments
+      : filteredPayments.slice((page - 1) * pageSize, page * pageSize)
+    const totalPages = exportAll ? 1 : Math.ceil(totalItems / pageSize)
 
     return NextResponse.json({
       data: paginatedPayments,
       pagination: {
-        page,
-        pageSize,
+        page: exportAll ? 1 : page,
+        pageSize: exportAll ? totalItems : pageSize,
         totalItems,
         totalPages,
-        hasNextPage: page < totalPages,
-        hasPrevPage: page > 1,
+        hasNextPage: !exportAll && page < totalPages,
+        hasPrevPage: !exportAll && page > 1,
       },
       meta: {
         fromCache,
