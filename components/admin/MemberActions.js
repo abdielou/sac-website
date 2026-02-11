@@ -6,7 +6,7 @@ import { useState, useRef, useEffect } from 'react'
  * Kebab menu (vertical three dots) with dropdown actions for a member row
  * Shows two options: grant free membership (GIFT) or register manual payment (MANUAL)
  *
- * @param {{ member: { email: string, phone?: string, name?: string }, onAction: (member, paymentType: 'GIFT'|'MANUAL') => void }} props
+ * @param {{ member: { email: string, phone?: string, name?: string, sacEmail?: string }, onAction: (member, paymentType: 'GIFT'|'MANUAL'|'WORKSPACE') => void }} props
  */
 export function MemberActions({ member, onAction }) {
   const [isOpen, setIsOpen] = useState(false)
@@ -74,6 +74,23 @@ export function MemberActions({ member, onAction }) {
             </svg>
             Registrar pago de membresia
           </button>
+          {!member.sacEmail && (
+            <button
+              type="button"
+              onClick={() => handleSelect('WORKSPACE')}
+              className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"
+                />
+              </svg>
+              Generar Cuenta Workspace
+            </button>
+          )}
         </div>
       )}
     </div>
