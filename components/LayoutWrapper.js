@@ -23,7 +23,7 @@ const LayoutWrapper = ({ children, forceLightHeader = false, fullWidth = false }
   const logo = show && (isLight ? siteMetadata.siteLogoLight : siteMetadata.siteLogoDark)
   const titleColor = show && (isLight ? 'text-sac-primary-blue' : '')
   return (
-    <div className="flex flex-col justify-between h-screen">
+    <div className="flex flex-col min-h-screen">
       <SectionContainer>
         <header className="py-10">
           <div className="flex flex-col">
@@ -72,13 +72,15 @@ const LayoutWrapper = ({ children, forceLightHeader = false, fullWidth = false }
           </div>
         </header>
       </SectionContainer>
-      {fullWidth ? (
-        <main className="mb-auto">{children}</main>
-      ) : (
-        <SectionContainer>
-          <main className="mb-auto">{children}</main>
-        </SectionContainer>
-      )}
+      <div className="flex-1">
+        {fullWidth ? (
+          <main>{children}</main>
+        ) : (
+          <SectionContainer>
+            <main>{children}</main>
+          </SectionContainer>
+        )}
+      </div>
       <SectionContainer>
         <Footer />
       </SectionContainer>

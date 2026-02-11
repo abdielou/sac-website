@@ -79,7 +79,11 @@ function MembersContent() {
         { key: 'lastPaymentSource', label: 'Fuente Ultimo Pago' },
       ]
       const csv = toCsv(json.data, columns)
-      downloadCsvFile(csv, `miembros-${new Date().toISOString().slice(0, 10)}`)
+      const statusSuffix = selectedStatuses.length === ALL_STATUSES.length
+        ? 'all'
+        : selectedStatuses.join('-')
+      const searchSuffix = searchParam ? `-${searchParam.replace(/\s+/g, '_')}` : ''
+      downloadCsvFile(csv, `members-${statusSuffix}${searchSuffix}-${new Date().toISOString().slice(0, 10)}`)
     } catch (err) {
       console.error('CSV export error:', err)
     } finally {

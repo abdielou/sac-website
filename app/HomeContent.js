@@ -77,7 +77,6 @@ export default function HomeContent({ posts }) {
           </Link>
         </div>
       )}
-
     </>
   )
 }
