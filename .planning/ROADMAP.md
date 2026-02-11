@@ -7,7 +7,7 @@
 - v1.2 PayPal Payments - Phase 7 (shipped 2026-01-30)
 - v1.3 Admin Dashboard - Phases 8-12 (shipped 2026-02-05)
 - v1.4 Payment Classification & Apps Script - Phases 13-16 (shipped 2026-02-10)
-- v1.5 Calendar-Year Membership Rules - Phases 17-18 (in progress)
+- v1.5 Calendar-Year Membership Rules - Phases 17-18 (shipped 2026-02-11)
 
 ## Phases
 
@@ -18,7 +18,7 @@ See .planning/MILESTONES.md for details on shipped milestones.
 
 </details>
 
-### v1.5 Calendar-Year Membership Rules (In Progress)
+### v1.5 Calendar-Year Membership Rules (Shipped 2026-02-11)
 
 **Milestone Goal:** Replace rolling 12-month expiration with calendar-year-based coverage rules that match how SAC actually manages memberships.
 
@@ -50,8 +50,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 18-01-PLAN.md — Backend + utility: Apps Script action, API route, mutation hook, email candidate generator, member name parts
-- [ ] 18-02-PLAN.md — UI: WorkspaceAccountModal, MemberActions WORKSPACE option, members page wiring
+- [x] 18-01-PLAN.md — Backend + utility: Apps Script action, API route, mutation hook, email candidate generator, member name parts
+- [x] 18-02-PLAN.md — UI: WorkspaceAccountModal, MemberActions WORKSPACE option, members page wiring
 
 ## Progress
 
@@ -60,4 +60,4 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 17. Calendar-Year Expiration Rules | v1.5 | 1/1 | Complete | 2026-02-11 |
-| 18. Workspace Account Generation | v1.5 | 0/2 | Not started | - |
+| 18. Workspace Account Generation | v1.5 | 2/2 | Complete | 2026-02-11 |
