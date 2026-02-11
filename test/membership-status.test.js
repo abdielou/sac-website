@@ -17,31 +17,32 @@ describe('calculateMembershipStatus — calendar-year rules', () => {
   // Helper to create a Date at midnight UTC
   const d = (year, month, day) => new Date(Date.UTC(year, month - 1, day))
 
+  // Helper to assert expiration date (UTC)
+  const expectExpiration = (expirationDate, year) => {
+    expect(expirationDate.getUTCFullYear()).toBe(year)
+    expect(expirationDate.getUTCMonth()).toBe(11) // December
+    expect(expirationDate.getUTCDate()).toBe(31)
+  }
+
   // ───── EXP-01 / EXP-03: H1 payment (Jan–Jun) → active, expires Dec 31 same year ─────
   describe('EXP-01/EXP-03: H1 payment → active, same-year Dec 31 expiration', () => {
     it('Jan 15 2025 payment, now Jun 1 2025 → active, expires Dec 31 2025', () => {
       const result = calculateMembershipStatus(d(2025, 1, 15), false, d(2025, 6, 1))
       expect(result.status).toBe('active')
-      expect(result.expirationDate.getFullYear()).toBe(2025)
-      expect(result.expirationDate.getMonth()).toBe(11) // December
-      expect(result.expirationDate.getDate()).toBe(31)
+      expectExpiration(result.expirationDate, 2025)
       expect(typeof result.monthsSincePayment).toBe('number')
     })
 
     it('Jun 30 2025 payment, now Nov 1 2025 → active, expires Dec 31 2025 (H1 boundary)', () => {
       const result = calculateMembershipStatus(d(2025, 6, 30), false, d(2025, 11, 1))
       expect(result.status).toBe('active')
-      expect(result.expirationDate.getFullYear()).toBe(2025)
-      expect(result.expirationDate.getMonth()).toBe(11)
-      expect(result.expirationDate.getDate()).toBe(31)
+      expectExpiration(result.expirationDate, 2025)
     })
 
     it('Jan 1 2025 payment, now Dec 31 2025 → active (last day of coverage)', () => {
       const result = calculateMembershipStatus(d(2025, 1, 1), false, d(2025, 12, 31))
       expect(result.status).toBe('active')
-      expect(result.expirationDate.getFullYear()).toBe(2025)
-      expect(result.expirationDate.getMonth()).toBe(11)
-      expect(result.expirationDate.getDate()).toBe(31)
+      expectExpiration(result.expirationDate, 2025)
     })
   })
 
@@ -50,33 +51,25 @@ describe('calculateMembershipStatus — calendar-year rules', () => {
     it('Jul 1 2025 payment, now Nov 1 2025 → active, expires Dec 31 2026', () => {
       const result = calculateMembershipStatus(d(2025, 7, 1), false, d(2025, 11, 1))
       expect(result.status).toBe('active')
-      expect(result.expirationDate.getFullYear()).toBe(2026)
-      expect(result.expirationDate.getMonth()).toBe(11)
-      expect(result.expirationDate.getDate()).toBe(31)
+      expectExpiration(result.expirationDate, 2026)
     })
 
     it('Oct 15 2025 payment, now Mar 1 2026 → active, expires Dec 31 2026', () => {
       const result = calculateMembershipStatus(d(2025, 10, 15), false, d(2026, 3, 1))
       expect(result.status).toBe('active')
-      expect(result.expirationDate.getFullYear()).toBe(2026)
-      expect(result.expirationDate.getMonth()).toBe(11)
-      expect(result.expirationDate.getDate()).toBe(31)
+      expectExpiration(result.expirationDate, 2026)
     })
 
     it('Dec 31 2025 payment, now Jun 1 2026 → active, expires Dec 31 2026 (H2 boundary)', () => {
       const result = calculateMembershipStatus(d(2025, 12, 31), false, d(2026, 6, 1))
       expect(result.status).toBe('active')
-      expect(result.expirationDate.getFullYear()).toBe(2026)
-      expect(result.expirationDate.getMonth()).toBe(11)
-      expect(result.expirationDate.getDate()).toBe(31)
+      expectExpiration(result.expirationDate, 2026)
     })
 
     it('Jul 1 2024 payment, now Dec 31 2025 → active (H2 coverage through end of next year)', () => {
       const result = calculateMembershipStatus(d(2024, 7, 1), false, d(2025, 12, 31))
       expect(result.status).toBe('active')
-      expect(result.expirationDate.getFullYear()).toBe(2025)
-      expect(result.expirationDate.getMonth()).toBe(11)
-      expect(result.expirationDate.getDate()).toBe(31)
+      expectExpiration(result.expirationDate, 2025)
     })
   })
 
@@ -85,25 +78,19 @@ describe('calculateMembershipStatus — calendar-year rules', () => {
     it('Mar 1 2024 payment, now Jan 15 2025 → expiring-soon, expires Dec 31 2024', () => {
       const result = calculateMembershipStatus(d(2024, 3, 1), false, d(2025, 1, 15))
       expect(result.status).toBe('expiring-soon')
-      expect(result.expirationDate.getFullYear()).toBe(2024)
-      expect(result.expirationDate.getMonth()).toBe(11)
-      expect(result.expirationDate.getDate()).toBe(31)
+      expectExpiration(result.expirationDate, 2024)
     })
 
     it('Mar 1 2024 payment, now Feb 28 2025 → expiring-soon (last day of grace)', () => {
       const result = calculateMembershipStatus(d(2024, 3, 1), false, d(2025, 2, 28))
       expect(result.status).toBe('expiring-soon')
-      expect(result.expirationDate.getFullYear()).toBe(2024)
-      expect(result.expirationDate.getMonth()).toBe(11)
-      expect(result.expirationDate.getDate()).toBe(31)
+      expectExpiration(result.expirationDate, 2024)
     })
 
     it('Oct 1 2023 payment, now Jan 15 2025 → expiring-soon (H2→next year, then grace)', () => {
       const result = calculateMembershipStatus(d(2023, 10, 1), false, d(2025, 1, 15))
       expect(result.status).toBe('expiring-soon')
-      expect(result.expirationDate.getFullYear()).toBe(2024)
-      expect(result.expirationDate.getMonth()).toBe(11)
-      expect(result.expirationDate.getDate()).toBe(31)
+      expectExpiration(result.expirationDate, 2024)
     })
   })
 
@@ -112,17 +99,13 @@ describe('calculateMembershipStatus — calendar-year rules', () => {
     it('Mar 1 2024 payment, now Mar 1 2025 → expired, expires Dec 31 2024', () => {
       const result = calculateMembershipStatus(d(2024, 3, 1), false, d(2025, 3, 1))
       expect(result.status).toBe('expired')
-      expect(result.expirationDate.getFullYear()).toBe(2024)
-      expect(result.expirationDate.getMonth()).toBe(11)
-      expect(result.expirationDate.getDate()).toBe(31)
+      expectExpiration(result.expirationDate, 2024)
     })
 
     it('Oct 1 2023 payment, now Mar 1 2025 → expired (past grace for Dec 31 2024)', () => {
       const result = calculateMembershipStatus(d(2023, 10, 1), false, d(2025, 3, 1))
       expect(result.status).toBe('expired')
-      expect(result.expirationDate.getFullYear()).toBe(2024)
-      expect(result.expirationDate.getMonth()).toBe(11)
-      expect(result.expirationDate.getDate()).toBe(31)
+      expectExpiration(result.expirationDate, 2024)
     })
   })
 
@@ -131,17 +114,13 @@ describe('calculateMembershipStatus — calendar-year rules', () => {
     it('Jan 1 2023 payment, now Jan 15 2025 → expired (coverage ended Dec 31 2023)', () => {
       const result = calculateMembershipStatus(d(2023, 1, 1), false, d(2025, 1, 15))
       expect(result.status).toBe('expired')
-      expect(result.expirationDate.getFullYear()).toBe(2023)
-      expect(result.expirationDate.getMonth()).toBe(11)
-      expect(result.expirationDate.getDate()).toBe(31)
+      expectExpiration(result.expirationDate, 2023)
     })
 
     it('Jul 1 2022 payment, now Jan 15 2025 → expired (coverage ended Dec 31 2023)', () => {
       const result = calculateMembershipStatus(d(2022, 7, 1), false, d(2025, 1, 15))
       expect(result.status).toBe('expired')
-      expect(result.expirationDate.getFullYear()).toBe(2023)
-      expect(result.expirationDate.getMonth()).toBe(11)
-      expect(result.expirationDate.getDate()).toBe(31)
+      expectExpiration(result.expirationDate, 2023)
     })
   })
 
