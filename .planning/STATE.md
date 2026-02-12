@@ -9,22 +9,23 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 
 ## Current Position
 
-Phase: 19 of 22 (S3 Article Data Layer)
-Plan: 0 of 1 in current phase
-Status: Ready to plan
-Last activity: 2026-02-12 — Roadmap created for v1.6
+Phase: 19 of 22 (S3 Article Data Layer) -- COMPLETE
+Plan: 1 of 1 in current phase
+Status: Phase 19 complete
+Last activity: 2026-02-12 — Completed 19-01 S3 Article Data Layer
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [##########] 100% (Phase 19)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 41 (across v1.0-v1.5)
-- Average duration: ~30 min
-- Total execution time: ~20 hours
+- Total plans completed: 42 (across v1.0-v1.6)
+- Average duration: ~29 min
+- Total execution time: ~20.1 hours
 
-**Recent Trend (v1.5):**
-- 3 plans in 2 days
+**Recent Trend (v1.6):**
+- 1 plan in session
+- Phase 19-01: 5 min (3 tasks, 4 files)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -37,6 +38,10 @@ Progress: [░░░░░░░░░░] 0%
 - Migrate all existing blog content + images to S3 — single source of truth
 - Keep author files as data/authors/*.md — low volume, rarely changes
 - Articles stored as JSON (not MDX) in S3 — simpler parsing, no build-time bundler needed
+- Separate S3_ARTICLES_BUCKET_NAME from gallery S3_BUCKET_NAME — isolated article storage
+- Date-path slug format YYYY/MM/DD/title-slug — preserves existing blog URL structure
+- Lazy-initialized S3 client (module-level singleton) — created on first call for performance
+- Cold-start index handling — getArticleIndex returns empty index when no index.json exists
 
 ### Pending Todos
 
@@ -51,5 +56,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Roadmap created for v1.6 Article Manager
+Stopped at: Completed 19-01-PLAN.md (S3 Article Data Layer)
 Resume file: None
