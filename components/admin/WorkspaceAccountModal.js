@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { useCreateWorkspaceAccount } from '@/lib/hooks/useAdminData'
+import { useCreateWorkspaceAccount, useMembers } from '@/lib/hooks/useAdminData'
 import { generateEmailCandidates } from '@/lib/workspace-email'
 
 const inputClasses =
@@ -19,6 +19,17 @@ const labelClasses = 'block text-sm font-medium text-gray-700 dark:text-gray-300
  */
 export function WorkspaceAccountModal({ isOpen, onClose, member }) {
   const { mutate, isPending, error, reset: resetMutation } = useCreateWorkspaceAccount()
+
+  // Fetch all members to check existing sacEmails (only when modal is open)
+  const { data: allMembersData } = useMembers({
+    pageSize: 1000,
+    enabled: isOpen,
+  })
+
+  const existingSacEmails = useMemo(() => {
+    if (!allMembersData?.members) return new Set()
+    return new Set(allMembersData.members.map((m) => m.sacEmail).filter(Boolean))
+  }, [allMembersData])
 
   const [selectedEmail, setSelectedEmail] = useState('')
   const [isSelectEnabled, setIsSelectEnabled] = useState(false)
@@ -141,11 +152,15 @@ export function WorkspaceAccountModal({ isOpen, onClose, member }) {
                     className={`${inputClasses} disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     <option value="">-- Seleccionar email --</option>
-                    {candidates.map((candidate) => (
-                      <option key={candidate} value={candidate}>
-                        {candidate}
-                      </option>
-                    ))}
+                    {candidates.map((candidate) => {
+                      const taken = existingSacEmails.has(candidate)
+                      return (
+                        <option key={candidate} value={candidate} disabled={taken}>
+                          {candidate}
+                          {taken ? ' (en uso)' : ''}
+                        </option>
+                      )
+                    })}
                   </select>
                 </>
               )}
