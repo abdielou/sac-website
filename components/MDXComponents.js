@@ -1,6 +1,8 @@
 'use client'
 
+import { useMemo } from 'react'
 import ReactPlayer from 'react-player'
+import { getMDXComponent } from 'mdx-bundler/client'
 import Image from './Image'
 import ImageCaption from './ImageCaption'
 import CustomLink from './Link'
@@ -22,6 +24,14 @@ export const MDXComponents = {
   pre: Pre,
   ResponsiveReactPlayer,
   TwitterEmbed,
+}
+
+// MDXLayoutRenderer for legacy Pages Router pages (about, authors, etc.)
+// DO NOT USE for new App Router blog pages - use next-mdx-remote instead
+export const MDXLayoutRenderer = ({ layout, mdxSource, ...rest }) => {
+  const MDXLayout = useMemo(() => getMDXComponent(mdxSource), [mdxSource])
+
+  return <MDXLayout layout={layout} components={MDXComponents} {...rest} />
 }
 
 // Export as default for compatibility
