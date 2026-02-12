@@ -1232,6 +1232,8 @@ function doPost(e) {
         return handleScanStatusAction()
       case 'manual_payment':
         return handleManualPaymentAction(payload.data)
+      case 'create_workspace_account':
+        return handleCreateWorkspaceAccountAction(payload.data)
       default:
         return jsonResponse({ success: false, error: 'Unknown action: ' + payload.action })
     }
@@ -1338,6 +1340,147 @@ function handleManualPaymentAction(data) {
     return jsonResponse({
       success: false,
       error: 'Manual payment failed: ' + err.message,
+    })
+  } finally {
+    lock.releaseLock()
+  }
+}
+
+function handleCreateWorkspaceAccountAction(data) {
+  if (!data || !data.email || !data.firstName || !data.lastName || !data.sacEmail) {
+    return jsonResponse({
+      success: false,
+      error: 'Missing required fields: email, firstName, lastName, sacEmail',
+    })
+  }
+
+  const lock = LockService.getScriptLock()
+  if (!lock.tryLock(10000)) {
+    return jsonResponse({ success: false, error: 'OPERATION_IN_PROGRESS' })
+  }
+
+  try {
+    setupServices({})
+    logger.log(`create_workspace_account: ${data.firstName} ${data.lastName} → ${data.sacEmail} (sendWelcome=${data.sendWelcome}, sendCredentials=${data.sendCredentials})`)
+    const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID)
+
+    // Generate password
+    const passwordData = generatePassword()
+
+    // Build userData from request data
+    const userData = {
+      firstName: data.firstName,
+      initial: data.initial || '',
+      lastName: data.lastName,
+      slastName: data.slastName || '',
+      email: data.email,
+      phone: data.phone || '',
+    }
+
+    // Create workspace user with admin-selected sacEmail (skip availability check)
+    const user = createWorkspaceUser(userData, data.sacEmail, passwordData)
+    if (!user) {
+      return jsonResponse({
+        success: false,
+        error: 'Error al crear usuario de Workspace',
+      })
+    }
+
+    const accountResult = {
+      success: true,
+      email: data.sacEmail,
+      password: passwordData.plainPassword,
+      userData: userData,
+    }
+
+    // Add user to group (log but don't fail)
+    const groupResult = addUserToGroup(accountResult)
+    if (!groupResult.success) {
+      logger.log(`Failed to add user to group: ${groupResult.error}`)
+    }
+
+    // Send welcome email with certificate and letter (only if sendWelcome is explicitly true)
+    if (data.sendWelcome === true) {
+      const welcomeResult = sendWelcomeEmail(accountResult)
+      if (!welcomeResult.success) {
+        logger.log(`Failed to send welcome email: ${welcomeResult.error}`)
+      }
+    } else {
+      logger.log(`Skipping welcome email for ${data.sacEmail} (sendWelcome=false)`)
+    }
+
+    // Send credentials email to personal email (only if sendCredentials is explicitly true)
+    if (data.sendCredentials === true) {
+      try {
+        const fullLastName = [data.lastName, data.slastName].filter(Boolean).join(' ')
+        const subject = 'Tu cuenta SAC / Your SAC account'
+        const body =
+          `Hola ${data.firstName} ${fullLastName},\n\n` +
+          `Se ha creado tu cuenta de la Sociedad de Astronomía del Caribe.\n` +
+          `Correo (SAC): ${data.sacEmail}\n` +
+          `Contraseña temporera: ${passwordData.plainPassword}\n\n` +
+          `Primeros pasos:\n` +
+          `1) Entra a https://mail.google.com\n` +
+          `2) Accede con tu correo SAC y la contraseña temporera\n` +
+          `3) El sistema te pedirá cambiarla en el primer inicio de sesión\n\n` +
+          `Gracias.\n\n` +
+          `— SAC`
+        const options = {}
+        if (CC_EMAIL) options.cc = CC_EMAIL
+        if (BCC_EMAIL) options.bcc = BCC_EMAIL
+        gmailApp.sendEmail(data.email, subject, body, options)
+        logger.log(`Credentials email sent to ${data.email} for account ${data.sacEmail}`)
+      } catch (e) {
+        logger.log(`Failed to send credentials email: ${e.message}`)
+      }
+    } else {
+      logger.log(`Skipping credentials email for ${data.sacEmail} (sendCredentials=false)`)
+    }
+
+    // Update CLEAN sheet: find member by personal email, set sac_email and created_at
+    const cleanSheet = spreadsheet.getSheetByName('CLEAN')
+    if (cleanSheet) {
+      const cleanHeaders = cleanSheet.getRange(1, 1, 1, cleanSheet.getLastColumn()).getValues()[0]
+      const emailColIndex = cleanHeaders.indexOf('E-mail')
+
+      if (emailColIndex !== -1) {
+        const normalizedEmail = data.email.trim().toLowerCase()
+        const matchedRow = findMatchingEmailRow(cleanSheet, emailColIndex, normalizedEmail)
+
+        if (matchedRow !== -1) {
+          // Update sac_email column
+          let sacEmailCol = cleanHeaders.indexOf('sac_email')
+          if (sacEmailCol === -1) {
+            const lastCol = cleanSheet.getLastColumn()
+            cleanSheet.insertColumnAfter(lastCol)
+            const newCol = lastCol + 1
+            cleanSheet.getRange(1, newCol).setValue('sac_email')
+            sacEmailCol = newCol - 1
+          }
+          cleanSheet.getRange(matchedRow, sacEmailCol + 1).setValue(data.sacEmail)
+
+          // Update created_at column
+          const createdAtIndex = cleanHeaders.indexOf('created_at')
+          if (createdAtIndex !== -1) {
+            cleanSheet.getRange(matchedRow, createdAtIndex + 1).setValue(new Date())
+          }
+
+          logger.log(`Updated CLEAN sheet for ${normalizedEmail}: sac_email=${data.sacEmail}`)
+        } else {
+          logger.log(`Member ${data.email} not found in CLEAN sheet`)
+        }
+      }
+    }
+
+    return jsonResponse({
+      success: true,
+      sacEmail: data.sacEmail,
+      message: 'Cuenta creada exitosamente',
+    })
+  } catch (err) {
+    return jsonResponse({
+      success: false,
+      error: 'Error al crear cuenta: ' + err.message,
     })
   } finally {
     lock.releaseLock()
@@ -2390,8 +2533,10 @@ function generatePassword() {
 
 function createWorkspaceUser(userData, primaryEmail, passwordData) {
   try {
-    const familyName = `${userData.lastName} ${userData.slastName}`.trim()
-    const givenName = `${userData.firstName} ${userData.initial}.`.trim()
+    const familyName = [userData.lastName, userData.slastName].filter(Boolean).join(' ')
+    const givenName = userData.initial
+      ? `${userData.firstName} ${userData.initial}.`
+      : userData.firstName || ''
     const address = userData.email
     const phone = userData.phone
     const recoveryEmail = userData.email

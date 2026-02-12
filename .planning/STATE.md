@@ -1,0 +1,59 @@
+# Project State
+
+## Project Reference
+
+See: .planning/PROJECT.md (updated 2026-02-12)
+
+**Core value:** Admins can accurately track membership status and payments
+**Current focus:** Planning next milestone
+
+## Current Position
+
+Phase: 18 of 18 (all shipped)
+Plan: N/A
+Status: v1.5 milestone complete
+Last activity: 2026-02-12 — Completed v1.5 milestone
+
+Progress: [██████████] 100% (all milestones shipped)
+
+## Milestone History
+
+- **v1.5 Calendar-Year Membership Rules** - Shipped 2026-02-12
+  - 2 phases (17-18), 3 plans
+  - Calendar-year expiration rules, workspace account generation
+
+- **v1.4 Payment Classification & Apps Script Triggers** - Shipped 2026-02-10
+  - 4 phases (13-16), 7 plans
+  - Payment classification, Apps Script web app, scan & manual payment UI
+
+- **v1.3 Admin Dashboard** - Shipped 2026-02-05
+  - 5 phases (08-12), 11 plans
+  - Auth + Google Sheets + Dashboard + Members/Payments lists
+
+- **v1.2 PayPal Payment Support** - Shipped 2026-01-30
+  - 1 phase, 2 plans
+  - PayPal email parsing with sender validation
+
+- **v1.1 FB-YT Archive Improvements** - Shipped 2026-01-29
+  - 1 phase, 3 plans
+  - Full inbox processing with deduplication
+
+- **v1.0 Next.js 15 Migration** - Shipped 2026-01-27
+  - 5 phases, 15 plans
+  - See .planning/MILESTONES.md for details
+
+## Blockers/Concerns
+
+- Production OAuth needs AUTH_URL env var + Authorized JavaScript origins in Google Cloud Console
+- Apps Script Web App deployment is manual (requires Google Apps Script editor)
+- Pre-existing prettier errors in AdminHeader.js, members/page.js, payments/page.js cause build failures
+
+## Session Continuity
+
+Last session: 2026-02-12
+Stopped at: Completed v1.5 milestone archival
+Resume file: None
+
+## Decisions
+
+(Cleared — see PROJECT.md Key Decisions table for full history)

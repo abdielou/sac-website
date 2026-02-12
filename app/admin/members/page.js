@@ -10,6 +10,7 @@ import { formatDate } from '@/lib/formatters'
 import { PaymentTooltip } from '@/components/admin/PaymentTooltip'
 import { MemberActions } from '@/components/admin/MemberActions'
 import { ManualPaymentModal } from '@/components/admin/ManualPaymentModal'
+import { WorkspaceAccountModal } from '@/components/admin/WorkspaceAccountModal'
 import { toCsv, downloadCsvFile } from '@/lib/csv'
 
 /**
@@ -35,11 +36,13 @@ function MembersContent() {
   const status = selectedStatuses.length === ALL_STATUSES.length ? '' : selectedStatuses.join(',')
   const searchParam = searchParams.get('search') || ''
   const page = parseInt(searchParams.get('page') || '1', 10)
+  const pageSize = parseInt(searchParams.get('pageSize') || '20', 10)
 
   // Local state for search input (prevents focus loss during debounce)
   const [searchInput, setSearchInput] = useState(searchParam)
   const [copiedEmail, setCopiedEmail] = useState(null)
   const [modalState, setModalState] = useState({ isOpen: false, member: null, paymentType: null })
+  const [workspaceModalState, setWorkspaceModalState] = useState({ isOpen: false, member: null })
   const [isExporting, setIsExporting] = useState(false)
   const debounceRef = useRef(null)
 
@@ -51,11 +54,19 @@ function MembersContent() {
   }
 
   const handleAction = (member, paymentType) => {
-    setModalState({ isOpen: true, member, paymentType })
+    if (paymentType === 'WORKSPACE') {
+      setWorkspaceModalState({ isOpen: true, member })
+    } else {
+      setModalState({ isOpen: true, member, paymentType })
+    }
   }
 
   const handleCloseModal = () => {
     setModalState({ isOpen: false, member: null, paymentType: null })
+  }
+
+  const handleCloseWorkspaceModal = () => {
+    setWorkspaceModalState({ isOpen: false, member: null })
   }
 
   const handleExportCsv = useCallback(async () => {
@@ -102,7 +113,7 @@ function MembersContent() {
     status: status || undefined,
     search: searchParam || undefined,
     page,
-    pageSize: 20,
+    pageSize,
   })
 
   /**
@@ -191,13 +202,30 @@ function MembersContent() {
         </div>
 
         {/* Search input */}
-        <input
-          type="text"
-          value={searchInput}
-          onChange={handleSearchChange}
-          placeholder="Buscar por email o nombre..."
-          className="flex-1 min-w-[200px] px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
+        <div className="relative flex-1 min-w-[200px]">
+          <input
+            type="text"
+            value={searchInput}
+            onChange={handleSearchChange}
+            placeholder="Buscar por email o nombre..."
+            className="w-full px-3 py-2 pr-8 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          {searchInput && (
+            <button
+              onClick={() => {
+                setSearchInput('')
+                if (debounceRef.current) clearTimeout(debounceRef.current)
+                updateFilter('search', '')
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              aria-label="Limpiar búsqueda"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
 
         {/* CSV Download */}
         <button
@@ -309,12 +337,15 @@ function MembersContent() {
                       Vence: {formatDate(member.expirationDate)}
                     </span>
                     {member.lastPaymentAmount ? (
-                      <PaymentTooltip
-                        date={member.lastPaymentDate}
-                        amount={member.lastPaymentAmount}
-                        notes={member.lastPaymentNotes}
-                        source={member.lastPaymentSource}
-                      />
+                      <span className="inline-flex items-center gap-1">
+                        <span>{formatDate(member.lastPaymentDate)}</span>
+                        <PaymentTooltip
+                          date={member.lastPaymentDate}
+                          amount={member.lastPaymentAmount}
+                          notes={member.lastPaymentNotes}
+                          source={member.lastPaymentSource}
+                        />
+                      </span>
                     ) : (
                       <span className="text-gray-400">Sin pagos</span>
                     )}
@@ -448,12 +479,17 @@ function MembersContent() {
                         </td>
                         <td className="px-6 py-4 text-center">
                           {member.lastPaymentAmount ? (
-                            <PaymentTooltip
-                              date={member.lastPaymentDate}
-                              amount={member.lastPaymentAmount}
-                              notes={member.lastPaymentNotes}
-                              source={member.lastPaymentSource}
-                            />
+                            <span className="inline-flex items-center gap-2">
+                              <span className="text-sm text-gray-900 dark:text-white">
+                                {formatDate(member.lastPaymentDate)}
+                              </span>
+                              <PaymentTooltip
+                                date={member.lastPaymentDate}
+                                amount={member.lastPaymentAmount}
+                                notes={member.lastPaymentNotes}
+                                source={member.lastPaymentSource}
+                              />
+                            </span>
                           ) : (
                             <span className="text-sm text-gray-400">-</span>
                           )}
@@ -470,11 +506,23 @@ function MembersContent() {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center gap-4">
               <span className="text-sm text-gray-700 dark:text-gray-300">
                 Mostrando {members.length} de {totalItems} miembros
               </span>
+              <select
+                value={pageSize}
+                onChange={(e) => updateFilter('pageSize', e.target.value)}
+                className="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="10">10 / pag</option>
+                <option value="20">20 / pag</option>
+                <option value="50">50 / pag</option>
+                <option value="100">100 / pag</option>
+              </select>
+            </div>
+            {totalPages > 1 && (
               <div className="flex gap-2">
                 <button
                   onClick={() => updateFilter('page', String(page - 1))}
@@ -494,8 +542,8 @@ function MembersContent() {
                   Siguiente
                 </button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </>
       )}
 
@@ -504,6 +552,12 @@ function MembersContent() {
         onClose={handleCloseModal}
         member={modalState.member}
         paymentType={modalState.paymentType}
+      />
+
+      <WorkspaceAccountModal
+        isOpen={workspaceModalState.isOpen}
+        onClose={handleCloseWorkspaceModal}
+        member={workspaceModalState.member}
       />
     </div>
   )
