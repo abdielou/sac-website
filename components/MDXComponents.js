@@ -1,6 +1,6 @@
-import { useMemo } from 'react'
+'use client'
+
 import ReactPlayer from 'react-player'
-import { getMDXComponent } from 'mdx-bundler/client'
 import Image from './Image'
 import ImageCaption from './ImageCaption'
 import CustomLink from './Link'
@@ -20,16 +20,9 @@ export const MDXComponents = {
   TOCInline,
   a: CustomLink,
   pre: Pre,
-  wrapper: ({ components, layout, ...rest }) => {
-    const Layout = require(`../layouts/${layout}`).default
-    return <Layout {...rest} />
-  },
   ResponsiveReactPlayer,
   TwitterEmbed,
 }
 
-export const MDXLayoutRenderer = ({ layout, mdxSource, ...rest }) => {
-  const MDXLayout = useMemo(() => getMDXComponent(mdxSource), [mdxSource])
-
-  return <MDXLayout layout={layout} components={MDXComponents} {...rest} />
-}
+// Export as default for compatibility
+export default MDXComponents
