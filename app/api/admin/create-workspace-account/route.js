@@ -71,6 +71,8 @@ export const POST = auth(async function POST(req) {
       slastName: body.slastName || '',
       sacEmail: body.sacEmail,
       phone: body.phone || '',
+      sendWelcome: body.sendWelcome === true,
+      sendCredentials: body.sendCredentials === true,
     })
 
     if (!result.success) {

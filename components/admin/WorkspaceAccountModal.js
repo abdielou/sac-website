@@ -32,14 +32,16 @@ export function WorkspaceAccountModal({ isOpen, onClose, member }) {
   }, [allMembersData])
 
   const [selectedEmail, setSelectedEmail] = useState('')
-  const [isSelectEnabled, setIsSelectEnabled] = useState(false)
+  const [sendWelcome, setSendWelcome] = useState(false)
+  const [sendCredentials, setSendCredentials] = useState(false)
   const [candidates, setCandidates] = useState([])
 
   // Reset form state when modal opens with a member
   useEffect(() => {
     if (isOpen && member) {
       setSelectedEmail('')
-      setIsSelectEnabled(false)
+      setSendWelcome(false)
+      setSendCredentials(false)
       const generated = generateEmailCandidates({
         firstName: member.firstName,
         initial: member.initial,
@@ -62,6 +64,8 @@ export function WorkspaceAccountModal({ isOpen, onClose, member }) {
         slastName: member.slastName || '',
         sacEmail: selectedEmail,
         phone: member.phone || '',
+        sendWelcome,
+        sendCredentials,
       },
       {
         onSuccess: () => {
@@ -128,28 +132,11 @@ export function WorkspaceAccountModal({ isOpen, onClose, member }) {
                 </p>
               ) : (
                 <>
-                  {/* Confirm checkbox to enable select */}
-                  <label className="flex items-center gap-2 mb-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isSelectEnabled}
-                      onChange={(e) => {
-                        setIsSelectEnabled(e.target.checked)
-                        if (!e.target.checked) setSelectedEmail('')
-                      }}
-                      className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      Confirmar seleccion
-                    </span>
-                  </label>
-
                   {/* Email candidate select */}
                   <select
                     value={selectedEmail}
                     onChange={(e) => setSelectedEmail(e.target.value)}
-                    disabled={!isSelectEnabled}
-                    className={`${inputClasses} disabled:opacity-50 disabled:cursor-not-allowed`}
+                    className={inputClasses}
                   >
                     <option value="">-- Seleccionar email --</option>
                     {candidates.map((candidate) => {
@@ -166,10 +153,34 @@ export function WorkspaceAccountModal({ isOpen, onClose, member }) {
               )}
             </div>
 
+            {/* Email toggles */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={sendWelcome}
+                  onChange={(e) => setSendWelcome(e.target.checked)}
+                  className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  Enviar email de bienvenida (certificado y carta)
+                </span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={sendCredentials}
+                  onChange={(e) => setSendCredentials(e.target.checked)}
+                  className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  Enviar email con credenciales al miembro
+                </span>
+              </label>
+            </div>
+
             {/* Error display */}
-            {error && (
-              <p className="text-sm text-red-600 dark:text-red-400">{error.message}</p>
-            )}
+            {error && <p className="text-sm text-red-600 dark:text-red-400">{error.message}</p>}
           </div>
 
           {/* Footer */}
@@ -183,7 +194,7 @@ export function WorkspaceAccountModal({ isOpen, onClose, member }) {
             </button>
             <button
               type="submit"
-              disabled={isPending || !selectedEmail || !isSelectEnabled}
+              disabled={isPending || !selectedEmail}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isPending && (

@@ -1361,6 +1361,7 @@ function handleCreateWorkspaceAccountAction(data) {
 
   try {
     setupServices({})
+    logger.log(`create_workspace_account: ${data.firstName} ${data.lastName} → ${data.sacEmail} (sendWelcome=${data.sendWelcome}, sendCredentials=${data.sendCredentials})`)
     const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID)
 
     // Generate password
@@ -1398,34 +1399,42 @@ function handleCreateWorkspaceAccountAction(data) {
       logger.log(`Failed to add user to group: ${groupResult.error}`)
     }
 
-    // Send welcome email with certificate and letter (log but don't fail)
-    const welcomeResult = sendWelcomeEmail(accountResult)
-    if (!welcomeResult.success) {
-      logger.log(`Failed to send welcome email: ${welcomeResult.error}`)
+    // Send welcome email with certificate and letter (only if sendWelcome is explicitly true)
+    if (data.sendWelcome === true) {
+      const welcomeResult = sendWelcomeEmail(accountResult)
+      if (!welcomeResult.success) {
+        logger.log(`Failed to send welcome email: ${welcomeResult.error}`)
+      }
+    } else {
+      logger.log(`Skipping welcome email for ${data.sacEmail} (sendWelcome=false)`)
     }
 
-    // Send credentials email to personal email
-    try {
-      const fullLastName = [data.lastName, data.slastName].filter(Boolean).join(' ')
-      const subject = 'Tu cuenta SAC / Your SAC account'
-      const body =
-        `Hola ${data.firstName} ${fullLastName},\n\n` +
-        `Se ha creado tu cuenta de la Sociedad de Astronomía del Caribe.\n` +
-        `Correo (SAC): ${data.sacEmail}\n` +
-        `Contraseña temporera: ${passwordData.plainPassword}\n\n` +
-        `Primeros pasos:\n` +
-        `1) Entra a https://mail.google.com\n` +
-        `2) Accede con tu correo SAC y la contraseña temporera\n` +
-        `3) El sistema te pedirá cambiarla en el primer inicio de sesión\n\n` +
-        `Gracias.\n\n` +
-        `— SAC`
-      const options = {}
-      if (CC_EMAIL) options.cc = CC_EMAIL
-      if (BCC_EMAIL) options.bcc = BCC_EMAIL
-      gmailApp.sendEmail(data.email, subject, body, options)
-      logger.log(`Credentials email sent to ${data.email} for account ${data.sacEmail}`)
-    } catch (e) {
-      logger.log(`Failed to send credentials email: ${e.message}`)
+    // Send credentials email to personal email (only if sendCredentials is explicitly true)
+    if (data.sendCredentials === true) {
+      try {
+        const fullLastName = [data.lastName, data.slastName].filter(Boolean).join(' ')
+        const subject = 'Tu cuenta SAC / Your SAC account'
+        const body =
+          `Hola ${data.firstName} ${fullLastName},\n\n` +
+          `Se ha creado tu cuenta de la Sociedad de Astronomía del Caribe.\n` +
+          `Correo (SAC): ${data.sacEmail}\n` +
+          `Contraseña temporera: ${passwordData.plainPassword}\n\n` +
+          `Primeros pasos:\n` +
+          `1) Entra a https://mail.google.com\n` +
+          `2) Accede con tu correo SAC y la contraseña temporera\n` +
+          `3) El sistema te pedirá cambiarla en el primer inicio de sesión\n\n` +
+          `Gracias.\n\n` +
+          `— SAC`
+        const options = {}
+        if (CC_EMAIL) options.cc = CC_EMAIL
+        if (BCC_EMAIL) options.bcc = BCC_EMAIL
+        gmailApp.sendEmail(data.email, subject, body, options)
+        logger.log(`Credentials email sent to ${data.email} for account ${data.sacEmail}`)
+      } catch (e) {
+        logger.log(`Failed to send credentials email: ${e.message}`)
+      }
+    } else {
+      logger.log(`Skipping credentials email for ${data.sacEmail} (sendCredentials=false)`)
     }
 
     // Update CLEAN sheet: find member by personal email, set sac_email and created_at
@@ -2524,8 +2533,10 @@ function generatePassword() {
 
 function createWorkspaceUser(userData, primaryEmail, passwordData) {
   try {
-    const familyName = `${userData.lastName} ${userData.slastName}`.trim()
-    const givenName = `${userData.firstName} ${userData.initial}.`.trim()
+    const familyName = [userData.lastName, userData.slastName].filter(Boolean).join(' ')
+    const givenName = userData.initial
+      ? `${userData.firstName} ${userData.initial}.`
+      : userData.firstName || ''
     const address = userData.email
     const phone = userData.phone
     const recoveryEmail = userData.email
