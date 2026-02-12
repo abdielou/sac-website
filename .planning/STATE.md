@@ -2,21 +2,25 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-11)
+See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** Admins can accurately track membership status and payments
-**Current focus:** v1.5 Calendar-Year Membership Rules - Phase 18
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 18 of 18 (Workspace Account Generation)
-Plan: 2 of 2 in current phase
-Status: Phase 18 complete, all plans executed
-Last activity: 2026-02-11 — Completed 18-02-PLAN.md
+Phase: 18 of 18 (all shipped)
+Plan: N/A
+Status: v1.5 milestone complete
+Last activity: 2026-02-12 — Completed v1.5 milestone
 
-Progress: [██████████] 100% (2/2 phases complete)
+Progress: [██████████] 100% (all milestones shipped)
 
 ## Milestone History
+
+- **v1.5 Calendar-Year Membership Rules** - Shipped 2026-02-12
+  - 2 phases (17-18), 3 plans
+  - Calendar-year expiration rules, workspace account generation
 
 - **v1.4 Payment Classification & Apps Script Triggers** - Shipped 2026-02-10
   - 4 phases (13-16), 7 plans
@@ -46,16 +50,10 @@ Progress: [██████████] 100% (2/2 phases complete)
 
 ## Session Continuity
 
-Last session: 2026-02-11
-Stopped at: Completed 18-02-PLAN.md (Phase 18 complete)
+Last session: 2026-02-12
+Stopped at: Completed v1.5 milestone archival
 Resume file: None
 
 ## Decisions
 
-- Use UTC date methods for timezone-independent membership status calculation
-- Injectable `now` parameter for test determinism (avoids jest.useFakeTimers)
-- Mock heavy dependencies in tests to bypass ESM-only ky dependency in Jest
-- Admin-selected sacEmail bypasses server-side availability check (trusted admin selection)
-- Client-side email generator mirrors Apps Script logic exactly for preview consistency
-- Select field disabled by default with checkbox confirmation toggle to prevent accidental workspace account creation
-- Multi-modal routing pattern: handleAction dispatches different types to separate modal state objects
+(Cleared — see PROJECT.md Key Decisions table for full history)
