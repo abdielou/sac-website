@@ -7,7 +7,7 @@ import { getPayments } from '../../../../lib/google-sheets'
  * GET /api/admin/payments
  *
  * Query params:
- * - source: 'ath_movil' | 'paypal' (optional)
+ * - source: comma-separated list e.g. 'ath_movil,paypal' (optional)
  * - from: YYYY-MM-DD start date (optional)
  * - to: YYYY-MM-DD end date (optional)
  * - search: string to match against email (optional)
@@ -47,7 +47,8 @@ export const GET = auth(async function GET(req) {
     let filteredPayments = allPayments
 
     if (source) {
-      filteredPayments = filteredPayments.filter((p) => p.source === source)
+      const sources = source.split(',')
+      filteredPayments = filteredPayments.filter((p) => sources.includes(p.source))
     }
 
     if (fromDate) {

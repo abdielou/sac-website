@@ -16,7 +16,7 @@ export const statusConfig = {
   },
   applied: {
     label: 'Aplicado',
-    classes: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+    classes: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
   },
 }
 

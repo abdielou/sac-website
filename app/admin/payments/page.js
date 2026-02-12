@@ -19,7 +19,15 @@ function PaymentsContent() {
   const router = useRouter()
 
   // Read filters from URL params
-  const source = searchParams.get('source') || ''
+  const ALL_SOURCES = ['ath_movil', 'paypal', 'manual']
+  const sourceParam = searchParams.get('source')
+  const selectedSources =
+    sourceParam === null
+      ? ALL_SOURCES
+      : sourceParam === ''
+        ? ALL_SOURCES
+        : sourceParam.split(',').filter(Boolean)
+  const source = selectedSources.length === ALL_SOURCES.length ? '' : selectedSources.join(',')
   const searchParam = searchParams.get('search') || ''
   const page = parseInt(searchParams.get('page') || '1', 10)
   const pageSize = parseInt(searchParams.get('pageSize') || '20', 10)
@@ -181,17 +189,34 @@ function PaymentsContent() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-4 mb-6">
-        {/* Source filter */}
-        <select
-          value={source}
-          onChange={(e) => updateFilter('source', e.target.value)}
-          className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        >
-          <option value="">Todas las fuentes</option>
-          <option value="ath_movil">ATH Movil</option>
-          <option value="paypal">PayPal</option>
-          <option value="manual">Manual</option>
-        </select>
+        {/* Source multi-select pills */}
+        <div className="flex flex-wrap items-center gap-2">
+          {[
+            { value: 'ath_movil', label: 'ATH Movil', classes: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
+            { value: 'paypal', label: 'PayPal', classes: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' },
+            { value: 'manual', label: 'Manual', classes: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' },
+          ].map((opt) => {
+            const isSelected = selectedSources.includes(opt.value)
+            return (
+              <button
+                key={opt.value}
+                onClick={() => {
+                  const next = isSelected
+                    ? selectedSources.filter((v) => v !== opt.value)
+                    : [...selectedSources, opt.value]
+                  updateFilter('source', next.length === 0 ? '' : next.join(','))
+                }}
+                className={`inline-flex px-2 py-1 text-xs font-medium rounded-full transition-opacity ${
+                  isSelected
+                    ? opt.classes
+                    : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
+                }`}
+              >
+                {opt.label}
+              </button>
+            )
+          })}
+        </div>
 
         {/* Search input */}
         <div className="relative flex-1 min-w-[200px]">
