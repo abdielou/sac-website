@@ -192,9 +192,21 @@ function PaymentsContent() {
         {/* Source multi-select pills */}
         <div className="flex flex-wrap items-center gap-2">
           {[
-            { value: 'ath_movil', label: 'ATH Movil', classes: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' },
-            { value: 'paypal', label: 'PayPal', classes: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' },
-            { value: 'manual', label: 'Manual', classes: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' },
+            {
+              value: 'ath_movil',
+              label: 'ATH Movil',
+              classes: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+            },
+            {
+              value: 'paypal',
+              label: 'PayPal',
+              classes: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+            },
+            {
+              value: 'manual',
+              label: 'Manual',
+              classes: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+            },
           ].map((opt) => {
             const isSelected = selectedSources.includes(opt.value)
             return (
@@ -238,7 +250,12 @@ function PaymentsContent() {
               aria-label="Limpiar búsqueda"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           )}

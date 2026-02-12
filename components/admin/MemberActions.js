@@ -40,11 +40,7 @@ export function MemberActions({ member, onAction }) {
   useEffect(() => {
     if (!isOpen) return
     function handleMouseDown(e) {
-      if (
-        buttonRef.current?.contains(e.target) ||
-        menuRef.current?.contains(e.target)
-      )
-        return
+      if (buttonRef.current?.contains(e.target) || menuRef.current?.contains(e.target)) return
       setIsOpen(false)
     }
     document.addEventListener('mousedown', handleMouseDown)
