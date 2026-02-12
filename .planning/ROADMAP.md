@@ -23,7 +23,7 @@ See .planning/MILESTONES.md for details on shipped milestones.
 
 **Milestone Goal:** Replace manual MDX-file-and-git workflow with an admin dashboard article manager backed by S3, including migration of all existing blog content and images.
 
-- [ ] **Phase 19: S3 Article Data Layer** - Read/write article JSON to S3 with index management
+- [x] **Phase 19: S3 Article Data Layer** - Read/write article JSON to S3 with index management
 - [ ] **Phase 20: Blog Rendering from S3** - Public blog reads from S3 instead of MDX files on disk
 - [ ] **Phase 21: Content Migration** - Move all existing MDX posts and blog images from repo to S3
 - [ ] **Phase 22: Article Manager** - Admin UI for creating, editing, and managing articles with markdown editor and image upload
@@ -38,10 +38,10 @@ See .planning/MILESTONES.md for details on shipped milestones.
   1. An article can be written to S3 as `articles/{slug}.json` containing metadata and markdown content, and read back identically
   2. The article index at `articles/index.json` is automatically updated whenever an article is created, edited, or deleted
   3. The index contains enough metadata (title, date, tags, summary, draft status, slug) to render listing pages without fetching individual articles
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 19-01: S3 article CRUD utilities and index management
+- [x] 19-01-PLAN.md — S3 article CRUD utilities and index management
 
 ### Phase 20: Blog Rendering from S3
 **Goal**: Visitors see the same blog experience (index, posts, tags, RSS, SEO) but all content comes from S3
@@ -101,7 +101,7 @@ Phases execute in numeric order: 19 -> 20 -> 21 -> 22
 | 8-12 | v1.3 | 11/11 | Complete | 2026-02-05 |
 | 13-16 | v1.4 | 7/7 | Complete | 2026-02-10 |
 | 17-18 | v1.5 | 3/3 | Complete | 2026-02-12 |
-| 19. S3 Article Data Layer | v1.6 | 0/1 | Not started | - |
+| 19. S3 Article Data Layer | v1.6 | 1/1 | Complete | 2026-02-12 |
 | 20. Blog Rendering from S3 | v1.6 | 0/2 | Not started | - |
 | 21. Content Migration | v1.6 | 0/1 | Not started | - |
 | 22. Article Manager | v1.6 | 0/2 | Not started | - |

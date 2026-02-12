@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** Admins can accurately track membership status and payments
-**Current focus:** v1.6 Article Manager — Phase 19 (S3 Article Data Layer)
+**Current focus:** v1.6 Article Manager — Phase 20 (Blog Rendering from S3)
 
 ## Current Position
 
