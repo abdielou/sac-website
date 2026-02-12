@@ -53,11 +53,11 @@ Plans:
   3. Tag cloud and tag filter pages display correct articles from S3
   4. RSS feed at /feed.xml contains articles sourced from S3
   5. Open Graph and JSON-LD metadata on post pages are populated from S3 article data
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 20-01: Blog data source swap (index, post pages, pagination)
-- [ ] 20-02: Tags, RSS, and SEO metadata from S3
+- [x] 20-01-PLAN.md — Blog index, pagination, and post pages from S3 with next-mdx-remote
+- [x] 20-02-PLAN.md — Tag pages, RSS feed, and on-demand revalidation API
 
 ### Phase 21: Content Migration
 **Goal**: All existing blog posts and images live in S3 as the single source of truth
@@ -102,6 +102,6 @@ Phases execute in numeric order: 19 -> 20 -> 21 -> 22
 | 13-16 | v1.4 | 7/7 | Complete | 2026-02-10 |
 | 17-18 | v1.5 | 3/3 | Complete | 2026-02-12 |
 | 19. S3 Article Data Layer | v1.6 | 1/1 | Complete | 2026-02-12 |
-| 20. Blog Rendering from S3 | v1.6 | 0/2 | Not started | - |
+| 20. Blog Rendering from S3 | v1.6 | 2/2 | Complete | 2026-02-12 |
 | 21. Content Migration | v1.6 | 0/1 | Not started | - |
 | 22. Article Manager | v1.6 | 0/2 | Not started | - |
