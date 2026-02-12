@@ -201,13 +201,30 @@ function MembersContent() {
         </div>
 
         {/* Search input */}
-        <input
-          type="text"
-          value={searchInput}
-          onChange={handleSearchChange}
-          placeholder="Buscar por email o nombre..."
-          className="flex-1 min-w-[200px] px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
+        <div className="relative flex-1 min-w-[200px]">
+          <input
+            type="text"
+            value={searchInput}
+            onChange={handleSearchChange}
+            placeholder="Buscar por email o nombre..."
+            className="w-full px-3 py-2 pr-8 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          {searchInput && (
+            <button
+              onClick={() => {
+                setSearchInput('')
+                if (debounceRef.current) clearTimeout(debounceRef.current)
+                updateFilter('search', '')
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              aria-label="Limpiar búsqueda"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
 
         {/* CSV Download */}
         <button
@@ -319,12 +336,15 @@ function MembersContent() {
                       Vence: {formatDate(member.expirationDate)}
                     </span>
                     {member.lastPaymentAmount ? (
-                      <PaymentTooltip
-                        date={member.lastPaymentDate}
-                        amount={member.lastPaymentAmount}
-                        notes={member.lastPaymentNotes}
-                        source={member.lastPaymentSource}
-                      />
+                      <span className="inline-flex items-center gap-1">
+                        <span>{formatDate(member.lastPaymentDate)}</span>
+                        <PaymentTooltip
+                          date={member.lastPaymentDate}
+                          amount={member.lastPaymentAmount}
+                          notes={member.lastPaymentNotes}
+                          source={member.lastPaymentSource}
+                        />
+                      </span>
                     ) : (
                       <span className="text-gray-400">Sin pagos</span>
                     )}
@@ -458,12 +478,17 @@ function MembersContent() {
                         </td>
                         <td className="px-6 py-4 text-center">
                           {member.lastPaymentAmount ? (
-                            <PaymentTooltip
-                              date={member.lastPaymentDate}
-                              amount={member.lastPaymentAmount}
-                              notes={member.lastPaymentNotes}
-                              source={member.lastPaymentSource}
-                            />
+                            <span className="inline-flex items-center gap-2">
+                              <span className="text-sm text-gray-900 dark:text-white">
+                                {formatDate(member.lastPaymentDate)}
+                              </span>
+                              <PaymentTooltip
+                                date={member.lastPaymentDate}
+                                amount={member.lastPaymentAmount}
+                                notes={member.lastPaymentNotes}
+                                source={member.lastPaymentSource}
+                              />
+                            </span>
                           ) : (
                             <span className="text-sm text-gray-400">-</span>
                           )}
