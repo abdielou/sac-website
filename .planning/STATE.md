@@ -10,23 +10,24 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Phase: 20 of 22 (Blog Rendering from S3)
-Plan: 1 of 2 in current phase
-Status: Plan 20-01 complete
-Last activity: 2026-02-12 — Completed 20-01 Blog Rendering from S3
+Plan: 2 of 2 in current phase
+Status: Phase 20 complete
+Last activity: 2026-02-12 — Completed 20-02 Tag Pages and RSS Feed
 
-Progress: [#####-----] 50% (Phase 20)
+Progress: [##########] 100% (Phase 20)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 43 (across v1.0-v1.6)
-- Average duration: ~28 min
-- Total execution time: ~20.2 hours
+- Total plans completed: 44 (across v1.0-v1.6)
+- Average duration: ~27 min
+- Total execution time: ~20.3 hours
 
 **Recent Trend (v1.6):**
-- 2 plans in session
+- 3 plans in session
 - Phase 19-01: 5 min (3 tasks, 4 files)
 - Phase 20-01: 8 min (3 tasks, 13 files)
+- Phase 20-02: 3 min (2 tasks, 6 files)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -47,6 +48,10 @@ Progress: [#####-----] 50% (Phase 20)
 - Split post rendering: server component for data/metadata, client component for MDX rendering
 - Removed Pages Router blog files immediately (not Phase 21) — route conflicts blocked App Router migration
 - Graceful S3 bucket check allows builds without S3 configuration — development/CI friendly
+- Tag counts computed from S3 article index (not separate tag aggregation)
+- Tag URLs use kebab-case, matched via kebabCase(tag) comparison on both sides
+- RSS feed as route handler (not build-time file write) for dynamic S3 content
+- Revalidation API always clears /blog and /tags on any mutation (aggregate pages)
 
 ### Pending Todos
 
@@ -62,5 +67,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 20-01-PLAN.md (Blog Rendering from S3)
+Stopped at: Completed 20-02-PLAN.md (Tag Pages and RSS Feed) — Phase 20 complete
 Resume file: None
