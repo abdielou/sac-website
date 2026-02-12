@@ -22,6 +22,7 @@ function PaymentsContent() {
   const source = searchParams.get('source') || ''
   const searchParam = searchParams.get('search') || ''
   const page = parseInt(searchParams.get('page') || '1', 10)
+  const pageSize = parseInt(searchParams.get('pageSize') || '20', 10)
 
   // Local state for search input (prevents focus loss during debounce)
   const [searchInput, setSearchInput] = useState(searchParam)
@@ -57,7 +58,7 @@ function PaymentsContent() {
     source: source || undefined,
     search: searchParam || undefined,
     page,
-    pageSize: 20,
+    pageSize,
   })
 
   /**
@@ -193,13 +194,30 @@ function PaymentsContent() {
         </select>
 
         {/* Search input */}
-        <input
-          type="text"
-          value={searchInput}
-          onChange={handleSearchChange}
-          placeholder="Buscar por email, monto o mensaje..."
-          className="flex-1 min-w-[200px] px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
+        <div className="relative flex-1 min-w-[200px]">
+          <input
+            type="text"
+            value={searchInput}
+            onChange={handleSearchChange}
+            placeholder="Buscar por email, monto o mensaje..."
+            className="w-full px-3 py-2 pr-8 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          {searchInput && (
+            <button
+              onClick={() => {
+                setSearchInput('')
+                if (debounceRef.current) clearTimeout(debounceRef.current)
+                updateFilter('search', '')
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              aria-label="Limpiar búsqueda"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
 
         {/* CSV Download */}
         <button
@@ -411,11 +429,23 @@ function PaymentsContent() {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center gap-4">
               <span className="text-sm text-gray-700 dark:text-gray-300">
                 Mostrando {payments.length} de {totalItems} pagos
               </span>
+              <select
+                value={pageSize}
+                onChange={(e) => updateFilter('pageSize', e.target.value)}
+                className="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="10">10 / pag</option>
+                <option value="20">20 / pag</option>
+                <option value="50">50 / pag</option>
+                <option value="100">100 / pag</option>
+              </select>
+            </div>
+            {totalPages > 1 && (
               <div className="flex gap-2">
                 <button
                   onClick={() => updateFilter('page', String(page - 1))}
@@ -435,8 +465,8 @@ function PaymentsContent() {
                   Siguiente
                 </button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </>
       )}
     </div>

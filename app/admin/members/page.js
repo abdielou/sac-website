@@ -36,6 +36,7 @@ function MembersContent() {
   const status = selectedStatuses.length === ALL_STATUSES.length ? '' : selectedStatuses.join(',')
   const searchParam = searchParams.get('search') || ''
   const page = parseInt(searchParams.get('page') || '1', 10)
+  const pageSize = parseInt(searchParams.get('pageSize') || '20', 10)
 
   // Local state for search input (prevents focus loss during debounce)
   const [searchInput, setSearchInput] = useState(searchParam)
@@ -112,7 +113,7 @@ function MembersContent() {
     status: status || undefined,
     search: searchParam || undefined,
     page,
-    pageSize: 20,
+    pageSize,
   })
 
   /**
@@ -505,11 +506,23 @@ function MembersContent() {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center gap-4">
               <span className="text-sm text-gray-700 dark:text-gray-300">
                 Mostrando {members.length} de {totalItems} miembros
               </span>
+              <select
+                value={pageSize}
+                onChange={(e) => updateFilter('pageSize', e.target.value)}
+                className="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="10">10 / pag</option>
+                <option value="20">20 / pag</option>
+                <option value="50">50 / pag</option>
+                <option value="100">100 / pag</option>
+              </select>
+            </div>
+            {totalPages > 1 && (
               <div className="flex gap-2">
                 <button
                   onClick={() => updateFilter('page', String(page - 1))}
@@ -529,8 +542,8 @@ function MembersContent() {
                   Siguiente
                 </button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </>
       )}
 
