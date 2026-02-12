@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** Admins can accurately track membership status and payments
-**Current focus:** Planning next milestone
+**Current focus:** v1.6 Article Manager — Defining requirements
 
 ## Current Position
 
-Phase: 18 of 18 (all shipped)
-Plan: N/A
-Status: v1.5 milestone complete
-Last activity: 2026-02-12 — Completed v1.5 milestone
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-12 — Milestone v1.6 started
 
-Progress: [██████████] 100% (all milestones shipped)
+Progress: [░░░░░░░░░░] 0%
 
 ## Milestone History
 
@@ -51,9 +51,11 @@ Progress: [██████████] 100% (all milestones shipped)
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed v1.5 milestone archival
+Stopped at: Defining v1.6 requirements
 Resume file: None
 
 ## Decisions
 
-(Cleared — see PROJECT.md Key Decisions table for full history)
+- S3-only for article storage (no database) — already have AWS credentials, zero new infra
+- Migrate all existing blog content + images to S3 — single source of truth
+- Keep author files as data/authors/*.md — low volume, rarely changes
