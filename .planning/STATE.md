@@ -9,23 +9,24 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 
 ## Current Position
 
-Phase: 19 of 22 (S3 Article Data Layer) -- COMPLETE
-Plan: 1 of 1 in current phase
-Status: Phase 19 complete
-Last activity: 2026-02-12 — Completed 19-01 S3 Article Data Layer
+Phase: 20 of 22 (Blog Rendering from S3)
+Plan: 1 of 2 in current phase
+Status: Plan 20-01 complete
+Last activity: 2026-02-12 — Completed 20-01 Blog Rendering from S3
 
-Progress: [##########] 100% (Phase 19)
+Progress: [#####-----] 50% (Phase 20)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 42 (across v1.0-v1.6)
-- Average duration: ~29 min
-- Total execution time: ~20.1 hours
+- Total plans completed: 43 (across v1.0-v1.6)
+- Average duration: ~28 min
+- Total execution time: ~20.2 hours
 
 **Recent Trend (v1.6):**
-- 1 plan in session
+- 2 plans in session
 - Phase 19-01: 5 min (3 tasks, 4 files)
+- Phase 20-01: 8 min (3 tasks, 13 files)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -42,6 +43,10 @@ Progress: [##########] 100% (Phase 19)
 - Date-path slug format YYYY/MM/DD/title-slug — preserves existing blog URL structure
 - Lazy-initialized S3 client (module-level singleton) — created on first call for performance
 - Cold-start index handling — getArticleIndex returns empty index when no index.json exists
+- Use next-mdx-remote instead of mdx-bundler for S3 content — simpler serialization model
+- Split post rendering: server component for data/metadata, client component for MDX rendering
+- Removed Pages Router blog files immediately (not Phase 21) — route conflicts blocked App Router migration
+- Graceful S3 bucket check allows builds without S3 configuration — development/CI friendly
 
 ### Pending Todos
 
@@ -49,12 +54,13 @@ None yet.
 
 ### Blockers/Concerns
 
-- Blog currently on Pages Router (pages/blog/) — rendering phase must work within that constraint
+- ~~Blog currently on Pages Router (pages/blog/) — rendering phase must work within that constraint~~ — RESOLVED: Migrated to App Router, Pages Router blog files removed
+- ~~Current blog uses mdx-bundler at build time with custom components — must preserve component rendering~~ — RESOLVED: Using next-mdx-remote, all components preserved
 - Pre-existing prettier errors in AdminHeader.js, members/page.js, payments/page.js cause build failures
-- Current blog uses mdx-bundler at build time with custom components — must preserve component rendering
+- Article tests failing without S3 configuration — need test environment setup or mock data
 
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 19-01-PLAN.md (S3 Article Data Layer)
+Stopped at: Completed 20-01-PLAN.md (Blog Rendering from S3)
 Resume file: None
