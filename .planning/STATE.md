@@ -5,29 +5,30 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** Admins can accurately track membership status and payments
-**Current focus:** v1.6 Article Manager — Phase 20 (Blog Rendering from S3)
+**Current focus:** v1.6 Article Manager — Phase 21 (Content Migration)
 
 ## Current Position
 
-Phase: 20 of 22 (Blog Rendering from S3)
-Plan: 2 of 2 in current phase
-Status: Phase 20 complete
-Last activity: 2026-02-12 — Completed 20-02 Tag Pages and RSS Feed
+Phase: 21 of 22 (Content Migration)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-13 — Completed 21-01 Migration Script
 
-Progress: [##########] 100% (Phase 20)
+Progress: [#####-----] 50% (Phase 21)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 44 (across v1.0-v1.6)
+- Total plans completed: 45 (across v1.0-v1.6)
 - Average duration: ~27 min
-- Total execution time: ~20.3 hours
+- Total execution time: ~20.4 hours
 
 **Recent Trend (v1.6):**
-- 3 plans in session
+- 4 plans in session
 - Phase 19-01: 5 min (3 tasks, 4 files)
 - Phase 20-01: 8 min (3 tasks, 13 files)
 - Phase 20-02: 3 min (2 tasks, 6 files)
+- Phase 21-01: 3 min (2 tasks, 2 files)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -52,6 +53,10 @@ Progress: [##########] 100% (Phase 20)
 - Tag URLs use kebab-case, matched via kebabCase(tag) comparison on both sides
 - RSS feed as route handler (not build-time file write) for dynamic S3 content
 - Revalidation API always clears /blog and /tags on any mutation (aggregate pages)
+- Filesystem slug preservation for migration (not regenerated from title) to maintain existing blog URLs
+- Two-phase migration: images first, then articles, to ensure all image URLs are valid before article upload
+- Bulk index build after all articles (not incremental per-article) for migration efficiency
+- Inline S3 calls in migration script (CommonJS cannot import ESM lib/articles-s3.js)
 
 ### Pending Todos
 
@@ -66,6 +71,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-12
-Stopped at: Completed 20-02-PLAN.md (Tag Pages and RSS Feed) — Phase 20 complete
+Last session: 2026-02-13
+Stopped at: Completed 21-01-PLAN.md (Migration Script)
 Resume file: None
