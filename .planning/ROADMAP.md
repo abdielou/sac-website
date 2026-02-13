@@ -67,10 +67,11 @@ Plans:
   1. Every existing MDX post in `data/blog/` has a corresponding `articles/{slug}.json` in S3 with all frontmatter and content preserved
   2. All blog images from `public/static/images/blog/` are in S3 and image references in migrated articles point to S3 URLs
   3. The public blog renders all migrated posts correctly (spot-check oldest, newest, and a post with custom components)
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 21-01: Migration script (MDX parsing, image upload, JSON generation, index build)
+- [ ] 21-01-PLAN.md — Migration script with MDX parsing, image upload, JSON generation, and index rebuild
+- [ ] 21-02-PLAN.md — Execute migration, verify results, and archive originals to backup branch
 
 ### Phase 22: Article Manager
 **Goal**: Admins can create, edit, publish, and manage articles entirely from the dashboard
@@ -103,5 +104,5 @@ Phases execute in numeric order: 19 -> 20 -> 21 -> 22
 | 17-18 | v1.5 | 3/3 | Complete | 2026-02-12 |
 | 19. S3 Article Data Layer | v1.6 | 1/1 | Complete | 2026-02-12 |
 | 20. Blog Rendering from S3 | v1.6 | 2/2 | Complete | 2026-02-12 |
-| 21. Content Migration | v1.6 | 0/1 | Not started | - |
+| 21. Content Migration | v1.6 | 0/2 | Not started | - |
 | 22. Article Manager | v1.6 | 0/2 | Not started | - |
