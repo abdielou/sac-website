@@ -82,7 +82,13 @@ function MembersContent() {
       const columns = [
         { key: 'email', label: 'Email' },
         { key: 'sacEmail', label: 'SAC Email' },
-        { key: 'name', label: 'Nombre' },
+        { key: 'firstName', label: 'Nombre' },
+        { key: 'initial', label: 'Inicial' },
+        {
+          key: 'apellidos',
+          label: 'Apellidos',
+          value: (row) => [row.lastName, row.slastName].filter(Boolean).join(' '),
+        },
         { key: 'phone', label: 'Telefono' },
         { key: 'expirationDate', label: 'Vencimiento' },
         { key: 'status', label: 'Estado' },
@@ -252,7 +258,7 @@ function MembersContent() {
 
       {/* Loading state - show skeleton table but keep filters visible */}
       {isPending ? (
-        <SkeletonTable rows={10} columns={7} />
+        <SkeletonTable rows={10} columns={9} />
       ) : (
         <>
           {/* Mobile card layout */}
@@ -270,7 +276,9 @@ function MembersContent() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {member.name || '-'}
+                        {[member.firstName, member.initial, member.lastName, member.slastName]
+                          .filter(Boolean)
+                          .join(' ') || '-'}
                       </p>
                       <div className="flex items-center gap-2 mt-1">
                         <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
@@ -376,6 +384,12 @@ function MembersContent() {
                       Nombre
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Inicial
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Apellidos
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Vencimiento
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -393,7 +407,7 @@ function MembersContent() {
                   {members.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={9}
                         className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
                       >
                         No se encontraron miembros con los filtros seleccionados.
@@ -474,7 +488,13 @@ function MembersContent() {
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                          {member.name || '-'}
+                          {member.firstName || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                          {member.initial || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                          {[member.lastName, member.slastName].filter(Boolean).join(' ') || '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                           {formatDate(member.expirationDate)}
@@ -573,7 +593,7 @@ function MembersContent() {
  */
 export default function MembersPage() {
   return (
-    <Suspense fallback={<SkeletonTable rows={10} columns={7} />}>
+    <Suspense fallback={<SkeletonTable rows={10} columns={9} />}>
       <MembersContent />
     </Suspense>
   )
