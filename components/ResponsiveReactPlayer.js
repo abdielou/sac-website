@@ -2,9 +2,8 @@
 
 function getYouTubeId(url) {
   // youtu.be/ID, youtube.com/watch?v=ID, youtube.com/embed/ID
-  const match = url.match(
-    /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([a-zA-Z0-9_-]{11})/
-  )
+  // prettier-ignore
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([a-zA-Z0-9_-]{11})/)
   return match ? match[1] : null
 }
 
