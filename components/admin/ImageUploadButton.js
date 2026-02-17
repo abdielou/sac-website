@@ -4,6 +4,39 @@ import { useRef, useCallback, useState } from 'react'
 import { insertAtCursor } from '@/components/admin/ArticleEditor'
 
 /**
+ * Get natural width and height of an image File object.
+ * @param {File} file
+ * @returns {Promise<{width: number, height: number}>}
+ */
+export function getImageDimensions(file) {
+  return new Promise((resolve) => {
+    const objectUrl = URL.createObjectURL(file)
+    const img = new window.Image()
+    img.onload = () => {
+      resolve({ width: img.naturalWidth, height: img.naturalHeight })
+      URL.revokeObjectURL(objectUrl)
+    }
+    img.onerror = () => {
+      resolve({ width: 800, height: 600 })
+      URL.revokeObjectURL(objectUrl)
+    }
+    img.src = objectUrl
+  })
+}
+
+/**
+ * Build the MDX <Image> + <ImageCaption> snippet for insertion.
+ * @param {string} url - S3 public URL
+ * @param {number} width
+ * @param {number} height
+ * @param {string} altText
+ * @returns {string}
+ */
+export function buildImageSnippet(url, width, height, altText) {
+  return `<Image\n  src="${url}"\n  alt="${altText}"\n  width={${width}}\n  height={${height}}\n/>\n<ImageCaption>${altText}</ImageCaption>\n`
+}
+
+/**
  * Upload an image file to the article image S3 bucket.
  * Returns the public URL on success.
  *
@@ -49,8 +82,12 @@ export default function ImageUploadButton({ editorRef }) {
 
       setIsUploading(true)
       try {
-        const url = await uploadImage(file)
-        insertAtCursor(editorRef?.current, `![](${url})\n`)
+        const [url, { width, height }] = await Promise.all([
+          uploadImage(file),
+          getImageDimensions(file),
+        ])
+        const altText = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ')
+        insertAtCursor(editorRef?.current, buildImageSnippet(url, width, height, altText))
       } catch (err) {
         alert(err.message || 'Error al subir imagen')
       } finally {

@@ -127,7 +127,7 @@ export default function ArticlePreview({ content }) {
     <div className="p-4 overflow-y-auto">
       {isLoading && <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">Compilando...</p>}
       {mdxSource && (
-        <div className="prose dark:prose-invert max-w-none">
+        <div className="prose dark:prose-dark max-w-none">
           <MDXRemote {...mdxSource} components={MDXComponents} />
         </div>
       )}

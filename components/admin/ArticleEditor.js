@@ -7,6 +7,10 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { EditorView } from '@codemirror/view'
+import {
+  getImageDimensions,
+  buildImageSnippet,
+} from '@/components/admin/ImageUploadButton'
 
 // Dynamic import of CodeMirror to avoid SSR issues
 const CodeMirror = dynamic(() => import('@uiw/react-codemirror'), { ssr: false })
@@ -168,7 +172,9 @@ export default function ArticleEditor({ content, onChange, editorRef, toolbarExt
           }
 
           const { url } = await res.json()
-          insertAtCursor(internalRef.current, `![](${url})\n`)
+          const { width, height } = await getImageDimensions(file)
+          const altText = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ')
+          insertAtCursor(internalRef.current, buildImageSnippet(url, width, height, altText))
         } catch (err) {
           alert(err.message || 'Error al subir imagen')
         }

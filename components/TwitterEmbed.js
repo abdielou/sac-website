@@ -2,32 +2,29 @@
 
 import { useEffect } from 'react'
 
-const TwitterEmbed = ({ tweetId }) => {
+const TwitterEmbed = ({ url, tweetId }) => {
+  const tweetUrl = url || (tweetId ? `https://twitter.com/i/status/${tweetId}` : null)
+
   useEffect(() => {
-    // Remove any existing Twitter script
-    const existingScript = document.querySelector(
-      'script[src="https://platform.twitter.com/widgets.js"]'
-    )
-    if (existingScript) {
-      existingScript.remove()
-    }
+    if (!tweetUrl) return
 
-    // Add new Twitter script
-    const script = document.createElement('script')
-    script.src = 'https://platform.twitter.com/widgets.js'
-    script.async = true
-    document.body.appendChild(script)
-
-    return () => {
-      // Cleanup on unmount
-      script.remove()
+    if (window.twttr?.widgets) {
+      // Script already loaded — re-process embeds on the page
+      window.twttr.widgets.load()
+    } else if (!document.querySelector('script[src="https://platform.twitter.com/widgets.js"]')) {
+      // Load script once — it will auto-process all .twitter-tweet elements on load
+      const script = document.createElement('script')
+      script.src = 'https://platform.twitter.com/widgets.js'
+      script.async = true
+      document.body.appendChild(script)
     }
-  }, [tweetId])
+  }, [tweetUrl])
+
+  if (!tweetUrl) return null
 
   return (
     <blockquote className="twitter-tweet">
-      {}
-      <a href={`https://twitter.com/Soc_AstroCaribe/status/${tweetId}`} />
+      <a href={tweetUrl} />
     </blockquote>
   )
 }

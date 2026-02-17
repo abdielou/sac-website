@@ -93,7 +93,6 @@ export const POST = auth(async function POST(req) {
         Key: key,
         Body: buffer,
         ContentType: file.type,
-        ACL: 'public-read',
       })
       .promise()
 
