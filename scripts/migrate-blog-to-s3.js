@@ -12,6 +12,7 @@
  *   node scripts/migrate-blog-to-s3.js --live       # Execute migration
  */
 
+require('dotenv').config()
 const fs = require('fs')
 const path = require('path')
 const matter = require('gray-matter')
@@ -269,34 +270,25 @@ function rewriteContentImageRefs(content, imagesBucketName) {
   const refsFound = []
 
   // Pattern 1: src={'/static/images/blog/...'}
-  rewritten = rewritten.replace(
-    /src=\{'\/static\/images\/blog\/([^']+)'\}/g,
-    (match, imgPath) => {
-      refsFound.push(imgPath)
-      const s3Key = `images/blog/${imgPath}`
-      return `src="${encodeS3Url(imagesBucketName, s3Key)}"`
-    }
-  )
+  rewritten = rewritten.replace(/src=\{'\/static\/images\/blog\/([^']+)'\}/g, (match, imgPath) => {
+    refsFound.push(imgPath)
+    const s3Key = `images/blog/${imgPath}`
+    return `src="${encodeS3Url(imagesBucketName, s3Key)}"`
+  })
 
   // Pattern 3: src={"/static/images/blog/..."} (must come before pattern 2 to avoid overlap)
-  rewritten = rewritten.replace(
-    /src=\{"\/static\/images\/blog\/([^"]+)"\}/g,
-    (match, imgPath) => {
-      refsFound.push(imgPath)
-      const s3Key = `images/blog/${imgPath}`
-      return `src="${encodeS3Url(imagesBucketName, s3Key)}"`
-    }
-  )
+  rewritten = rewritten.replace(/src=\{"\/static\/images\/blog\/([^"]+)"\}/g, (match, imgPath) => {
+    refsFound.push(imgPath)
+    const s3Key = `images/blog/${imgPath}`
+    return `src="${encodeS3Url(imagesBucketName, s3Key)}"`
+  })
 
   // Pattern 2: src="/static/images/blog/..." (plain JSX attribute)
-  rewritten = rewritten.replace(
-    /src="\/static\/images\/blog\/([^"]+)"/g,
-    (match, imgPath) => {
-      refsFound.push(imgPath)
-      const s3Key = `images/blog/${imgPath}`
-      return `src="${encodeS3Url(imagesBucketName, s3Key)}"`
-    }
-  )
+  rewritten = rewritten.replace(/src="\/static\/images\/blog\/([^"]+)"/g, (match, imgPath) => {
+    refsFound.push(imgPath)
+    const s3Key = `images/blog/${imgPath}`
+    return `src="${encodeS3Url(imagesBucketName, s3Key)}"`
+  })
 
   // Pattern 4: ![alt](/static/images/blog/...)
   rewritten = rewritten.replace(
@@ -378,9 +370,7 @@ function processArticles(postPaths, imagesBucketName) {
     // Validate required frontmatter
     for (const field of REQUIRED_FRONTMATTER) {
       if (frontmatter[field] === undefined) {
-        throw new Error(
-          `Missing required frontmatter field "${field}" in ${slug} (${filePath})`
-        )
+        throw new Error(`Missing required frontmatter field "${field}" in ${slug} (${filePath})`)
       }
     }
 
@@ -470,16 +460,12 @@ async function uploadArticles(articles, s3, bucketName, isLive, logger) {
   if (!isLive) {
     console.log('\n--- Phase 2: Posts to migrate ---')
     console.log('')
-    console.log(
-      `${'Slug'.padEnd(70)} | ${'Title'.padEnd(50)} | Draft`
-    )
+    console.log(`${'Slug'.padEnd(70)} | ${'Title'.padEnd(50)} | Draft`)
     console.log('-'.repeat(130))
     for (const article of articles) {
       const titleTrunc =
         article.title.length > 50 ? article.title.slice(0, 47) + '...' : article.title
-      console.log(
-        `${article.slug.padEnd(70)} | ${titleTrunc.padEnd(50)} | ${article.draft}`
-      )
+      console.log(`${article.slug.padEnd(70)} | ${titleTrunc.padEnd(50)} | ${article.draft}`)
       logger.log({
         action: 'article_migrate',
         type: 'article',
@@ -670,17 +656,24 @@ async function main() {
   if (isLive) {
     const AWS = require('aws-sdk')
     // Images S3 client — no custom endpoint, goes to real S3
-    imagesS3 = new AWS.S3({ region: process.env.AWS_REGION })
+    imagesS3 = new AWS.S3({
+      region: process.env.AWS_REGION,
+      httpOptions: { timeout: 600000 },
+    })
     // Articles S3 client — respects AWS_S3_ENDPOINT for localstack
     articlesS3 = new AWS.S3({
       endpoint: process.env.AWS_S3_ENDPOINT,
       s3ForcePathStyle: !!process.env.AWS_S3_ENDPOINT,
       region: process.env.AWS_REGION,
+      httpOptions: { timeout: 600000 },
     })
   }
 
   // Create log file
-  const timestamp = new Date().toISOString().replace(/:/g, '-').replace(/\.\d+Z$/, '')
+  const timestamp = new Date()
+    .toISOString()
+    .replace(/:/g, '-')
+    .replace(/\.\d+Z$/, '')
   const logPath = path.resolve(__dirname, `migration-log-${timestamp}.jsonl`)
   const logger = createLogWriter(logPath, mode)
 

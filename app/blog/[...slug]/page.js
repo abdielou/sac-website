@@ -1,5 +1,5 @@
 import { getArticle, listArticles } from '@/lib/articles'
-import { compileMDX, extractToc } from '@/lib/mdx-renderer'
+import { extractToc } from '@/lib/mdx-renderer'
 import { getAuthorDetails } from '@/lib/authors'
 import LayoutWrapper from '@/components/LayoutWrapper'
 import BlogPost from './BlogPost'
@@ -80,9 +80,6 @@ export default async function PostPage({ params }) {
   const prev = allArticles[postIndex + 1] || null
   const next = allArticles[postIndex - 1] || null
 
-  // Compile MDX
-  const { mdxSource } = await compileMDX(article.content)
-
   // Extract TOC
   const toc = extractToc(article.content)
 
@@ -132,7 +129,7 @@ export default async function PostPage({ params }) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <BlogPost
-        mdxSource={mdxSource}
+        source={article.content}
         toc={toc}
         frontMatter={frontMatter}
         authorDetails={authorDetails}

@@ -1,6 +1,11 @@
-'use client'
-
-import { MDXRemote } from 'next-mdx-remote'
+import { MDXRemote } from 'next-mdx-remote/rsc'
+import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
+import remarkCodeTitles from '@/lib/remark-code-title'
+import rehypeSlug from 'rehype-slug'
+import rehypeAutolinkHeadings from 'rehype-autolink-headings'
+import rehypeKatex from 'rehype-katex'
+import rehypePrismPlus from 'rehype-prism-plus'
 import Link from '@/components/Link'
 import PageTitle from '@/components/PageTitle'
 import SectionContainer from '@/components/SectionContainer'
@@ -11,7 +16,17 @@ import { MDXComponents } from '@/components/MDXComponents'
 
 const postDateTemplate = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
 
-export default function BlogPost({ mdxSource, toc, frontMatter, authorDetails, prev, next }) {
+const mdxOptions = {
+  remarkPlugins: [remarkGfm, remarkCodeTitles, remarkMath],
+  rehypePlugins: [
+    rehypeSlug,
+    rehypeAutolinkHeadings,
+    rehypeKatex,
+    [rehypePrismPlus, { ignoreMissing: true }],
+  ],
+}
+
+export default function BlogPost({ source, toc, frontMatter, authorDetails, prev, next }) {
   const { slug, date, title, tags } = frontMatter
 
   return (
@@ -76,7 +91,11 @@ export default function BlogPost({ mdxSource, toc, frontMatter, authorDetails, p
             </dl>
             <div className="divide-y divide-gray-200 dark:divide-gray-700 xl:pb-0 xl:col-span-3 xl:row-span-2">
               <div className="pt-10 pb-8 prose dark:prose-dark max-w-none">
-                <MDXRemote {...mdxSource} components={MDXComponents} scope={{ toc }} />
+                <MDXRemote
+                  source={source}
+                  components={MDXComponents}
+                  options={{ mdxOptions, scope: { toc } }}
+                />
               </div>
             </div>
             <footer>

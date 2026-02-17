@@ -11,7 +11,7 @@ const ArticleItem = ({ date, slug, title, tags, summary, images, imgWidth, imgHe
           <Link href={`/blog/${slug}`}>
             <Image
               className="rounded-t-sm"
-              src={`/${images[0]}`}
+              src={images[0].startsWith('http') ? images[0] : `/${images[0]}`}
               alt={title}
               width={imgWidth}
               height={imgHeight}
