@@ -8,7 +8,7 @@
 - v1.3 Admin Dashboard - Phases 8-12 (shipped 2026-02-05)
 - v1.4 Payment Classification & Apps Script - Phases 13-16 (shipped 2026-02-10)
 - v1.5 Calendar-Year Membership Rules - Phases 17-18 (shipped 2026-02-12)
-- v1.6 Article Manager - Phases 19-22 (in progress)
+- v1.6 Article Manager - Phases 19-22 (shipped 2026-02-17)
 
 ## Phases
 
@@ -19,14 +19,14 @@ See .planning/MILESTONES.md for details on shipped milestones.
 
 </details>
 
-### v1.6 Article Manager (In Progress)
+### v1.6 Article Manager (Complete)
 
 **Milestone Goal:** Replace manual MDX-file-and-git workflow with an admin dashboard article manager backed by S3, including migration of all existing blog content and images.
 
 - [x] **Phase 19: S3 Article Data Layer** - Read/write article JSON to S3 with index management
-- [ ] **Phase 20: Blog Rendering from S3** - Public blog reads from S3 instead of MDX files on disk
-- [ ] **Phase 21: Content Migration** - Move all existing MDX posts and blog images from repo to S3
-- [ ] **Phase 22: Article Manager** - Admin UI for creating, editing, and managing articles with markdown editor and image upload
+- [x] **Phase 20: Blog Rendering from S3** - Public blog reads from S3 instead of MDX files on disk
+- [x] **Phase 21: Content Migration** - Move all existing MDX posts and blog images from repo to S3
+- [x] **Phase 22: Article Manager** - Admin UI for creating, editing, and managing articles with markdown editor and image upload
 
 ## Phase Details
 
@@ -86,8 +86,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 22-01-PLAN.md — Article CRUD API routes and article list page with filters
-- [ ] 22-02-PLAN.md — Markdown editor with CodeMirror, MDX preview, metadata form, and image upload
+- [x] 22-01-PLAN.md — Article CRUD API routes and article list page with filters
+- [x] 22-02-PLAN.md — Markdown editor with CodeMirror, MDX preview, metadata form, and image upload
 
 ## Progress
 
@@ -105,4 +105,4 @@ Phases execute in numeric order: 19 -> 20 -> 21 -> 22
 | 19. S3 Article Data Layer | v1.6 | 1/1 | Complete | 2026-02-12 |
 | 20. Blog Rendering from S3 | v1.6 | 2/2 | Complete | 2026-02-12 |
 | 21. Content Migration | v1.6 | 2/2 | Complete | 2026-02-17 |
-| 22. Article Manager | v1.6 | 0/2 | Not started | - |
+| 22. Article Manager | v1.6 | 2/2 | Complete | 2026-02-17 |
