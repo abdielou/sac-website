@@ -5,30 +5,32 @@
 See: .planning/PROJECT.md (updated 2026-02-12)
 
 **Core value:** Admins can accurately track membership status and payments
-**Current focus:** v1.6 Article Manager — Phase 21 (Content Migration)
+**Current focus:** v1.6 Article Manager — Phase 22 (Article Manager)
 
 ## Current Position
 
-Phase: 21 of 22 (Content Migration)
+Phase: 22 of 22 (Article Manager)
 Plan: 1 of 2 in current phase
 Status: In progress
-Last activity: 2026-02-13 — Completed 21-01 Migration Script
+Last activity: 2026-02-17 — Completed 22-01 (Article CRUD API & List Page)
 
-Progress: [#####-----] 50% (Phase 21)
+Progress: [##########] 100% (Phase 21) | Plan 1/2 (Phase 22)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 45 (across v1.0-v1.6)
+- Total plans completed: 48 (across v1.0-v1.6)
 - Average duration: ~27 min
-- Total execution time: ~20.4 hours
+- Total execution time: ~22.5 hours
 
 **Recent Trend (v1.6):**
-- 4 plans in session
+- 6 plans in session
 - Phase 19-01: 5 min (3 tasks, 4 files)
 - Phase 20-01: 8 min (3 tasks, 13 files)
 - Phase 20-02: 3 min (2 tasks, 6 files)
 - Phase 21-01: 3 min (2 tasks, 2 files)
+- Phase 21-02: ~2h interactive (3 tasks, 16 files — includes user spot-checking and iterative fixes)
+- Phase 22-01: 7 min (2 tasks, 6 files)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -57,6 +59,15 @@ Progress: [#####-----] 50% (Phase 21)
 - Two-phase migration: images first, then articles, to ensure all image URLs are valid before article upload
 - Bulk index build after all articles (not incremental per-article) for migration efficiency
 - Inline S3 calls in migration script (CommonJS cannot import ESM lib/articles-s3.js)
+- Replaced react-player with native YouTube/Facebook iframe embeds — eliminates console warning spam
+- MDXComponents map must NOT have 'use client' for RSC MDXRemote — split into 3 files
+- Image component falls back to native <img> when width/height missing — S3 content lacks dimensions
+- Removed KaTeX stylesheets — not used by any blog content
+- Original blog files archived on backup/pre-s3-migration branch for rollback safety
+- Article admin API uses same auth pattern as members/payments (import auth, wrap handlers, Spanish 401 message)
+- S3_IMAGES_BUCKET_NAME for image uploads separate from S3_ARTICLES_BUCKET_NAME
+- Article list uses useState+useEffect+fetch (not TanStack Query) since S3 data doesn't need Google Sheets caching
+- Catch-all [...slug] route with await params for Next.js 15 async params compatibility
 
 ### Pending Todos
 
@@ -71,6 +82,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-13
-Stopped at: Completed 21-01-PLAN.md (Migration Script)
+Last session: 2026-02-17
+Stopped at: Completed 22-01-PLAN.md (Article CRUD API & List Page) — Plan 22-02 (Article Editor) next
 Resume file: None
