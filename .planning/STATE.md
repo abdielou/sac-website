@@ -10,27 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Phase: 22 of 22 (Article Manager)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-02-17 — Completed 22-01 (Article CRUD API & List Page)
+Plan: 2 of 2 in current phase
+Status: Complete
+Last activity: 2026-02-17 — Completed 22-02 (Article Editor)
 
-Progress: [##########] 100% (Phase 21) | Plan 1/2 (Phase 22)
+Progress: [##########] 100% (Phase 22) | Plan 2/2 (Phase 22)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 48 (across v1.0-v1.6)
+- Total plans completed: 49 (across v1.0-v1.6)
 - Average duration: ~27 min
-- Total execution time: ~22.5 hours
+- Total execution time: ~22.6 hours
 
 **Recent Trend (v1.6):**
-- 6 plans in session
+- 7 plans in session
 - Phase 19-01: 5 min (3 tasks, 4 files)
 - Phase 20-01: 8 min (3 tasks, 13 files)
 - Phase 20-02: 3 min (2 tasks, 6 files)
 - Phase 21-01: 3 min (2 tasks, 2 files)
 - Phase 21-02: ~2h interactive (3 tasks, 16 files — includes user spot-checking and iterative fixes)
 - Phase 22-01: 7 min (2 tasks, 6 files)
+- Phase 22-02: 8 min (2 tasks, 11 files)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -68,6 +69,10 @@ Progress: [##########] 100% (Phase 21) | Plan 1/2 (Phase 22)
 - S3_IMAGES_BUCKET_NAME for image uploads separate from S3_ARTICLES_BUCKET_NAME
 - Article list uses useState+useEffect+fetch (not TanStack Query) since S3 data doesn't need Google Sheets caching
 - Catch-all [...slug] route with await params for Next.js 15 async params compatibility
+- Dynamic import for CodeMirror (next/dynamic with ssr:false) to avoid SSR hydration issues
+- Client-side MDXRemote from next-mdx-remote (not /rsc) for preview since editor is client component
+- Preview API uses serialize() with same remark/rehype plugins as public blog for rendering parity
+- Editor page split into outer (data loading) and inner (editor hook) components — useArticleEditor needs initialArticle at mount
 
 ### Pending Todos
 
@@ -83,5 +88,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 22-01-PLAN.md (Article CRUD API & List Page) — Plan 22-02 (Article Editor) next
+Stopped at: Completed 22-02-PLAN.md (Article Editor) — Phase 22 complete, all v1.6 plans done
 Resume file: None
