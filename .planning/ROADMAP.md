@@ -70,8 +70,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 21-01-PLAN.md — Migration script with MDX parsing, image upload, JSON generation, and index rebuild
-- [ ] 21-02-PLAN.md — Execute migration, verify results, and archive originals to backup branch
+- [x] 21-01-PLAN.md — Migration script with MDX parsing, image upload, JSON generation, and index rebuild
+- [x] 21-02-PLAN.md — Execute migration, verify results, and archive originals to backup branch
 
 ### Phase 22: Article Manager
 **Goal**: Admins can create, edit, publish, and manage articles entirely from the dashboard
@@ -83,11 +83,11 @@ Plans:
   3. Admin can edit an existing article's content and metadata, and changes are reflected on the public blog
   4. Admin can toggle an article between published and draft status, and draft articles do not appear on the public blog
   5. Admin can upload an image from the editor, and the uploaded image URL is inserted into the markdown at the cursor position
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 22-01: Article list page and CRUD API routes
-- [ ] 22-02: Markdown editor with preview, metadata form, and image upload
+- [ ] 22-01-PLAN.md — Article CRUD API routes and article list page with filters
+- [ ] 22-02-PLAN.md — Markdown editor with CodeMirror, MDX preview, metadata form, and image upload
 
 ## Progress
 
@@ -104,5 +104,5 @@ Phases execute in numeric order: 19 -> 20 -> 21 -> 22
 | 17-18 | v1.5 | 3/3 | Complete | 2026-02-12 |
 | 19. S3 Article Data Layer | v1.6 | 1/1 | Complete | 2026-02-12 |
 | 20. Blog Rendering from S3 | v1.6 | 2/2 | Complete | 2026-02-12 |
-| 21. Content Migration | v1.6 | 0/2 | Not started | - |
+| 21. Content Migration | v1.6 | 2/2 | Complete | 2026-02-17 |
 | 22. Article Manager | v1.6 | 0/2 | Not started | - |
