@@ -1,6 +1,6 @@
 import SocialIcon from '@/components/social-icons'
 import Image from '@/components/Image'
-import { MDXLayoutRenderer } from '@/components/MDXComponents'
+import { MDXLayoutRenderer } from '@/components/MDXLayoutRenderer'
 
 export function AuthorListTitle({ title }) {
   return (

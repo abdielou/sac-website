@@ -2,58 +2,39 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-12)
+See: .planning/PROJECT.md (updated 2026-02-17)
 
 **Core value:** Admins can accurately track membership status and payments
 **Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 18 of 18 (all shipped)
-Plan: N/A
-Status: v1.5 milestone complete
-Last activity: 2026-02-12 — Completed v1.5 milestone
+Phase: v1.6 complete — all 22 phases, 49 plans done
+Status: Between milestones
+Last activity: 2026-02-17 — Completed v1.6 milestone (Article Manager), tagged v1.6
 
-Progress: [██████████] 100% (all milestones shipped)
+## Accumulated Context
 
-## Milestone History
+### Decisions (stable — see PROJECT.md for full list)
 
-- **v1.5 Calendar-Year Membership Rules** - Shipped 2026-02-12
-  - 2 phases (17-18), 3 plans
-  - Calendar-year expiration rules, workspace account generation
+Key patterns established across v1.6:
+- S3 JSON storage for articles with automatic index management
+- MDXComponents split: pure map file (no 'use client') consumed by RSC, client wrappers separate
+- Admin API auth pattern: import auth, wrap handlers, Spanish 401 message
+- CodeMirror in App Router: dynamic import ssr:false, insertAtCursor utility exported from editor
+- Debounced MDX preview: 500ms debounce + AbortController + same remark/rehype as public blog
 
-- **v1.4 Payment Classification & Apps Script Triggers** - Shipped 2026-02-10
-  - 4 phases (13-16), 7 plans
-  - Payment classification, Apps Script web app, scan & manual payment UI
+### Pending Todos
 
-- **v1.3 Admin Dashboard** - Shipped 2026-02-05
-  - 5 phases (08-12), 11 plans
-  - Auth + Google Sheets + Dashboard + Members/Payments lists
+None.
 
-- **v1.2 PayPal Payment Support** - Shipped 2026-01-30
-  - 1 phase, 2 plans
-  - PayPal email parsing with sender validation
+### Blockers/Concerns
 
-- **v1.1 FB-YT Archive Improvements** - Shipped 2026-01-29
-  - 1 phase, 3 plans
-  - Full inbox processing with deduplication
-
-- **v1.0 Next.js 15 Migration** - Shipped 2026-01-27
-  - 5 phases, 15 plans
-  - See .planning/MILESTONES.md for details
-
-## Blockers/Concerns
-
-- Production OAuth needs AUTH_URL env var + Authorized JavaScript origins in Google Cloud Console
-- Apps Script Web App deployment is manual (requires Google Apps Script editor)
 - Pre-existing prettier errors in AdminHeader.js, members/page.js, payments/page.js cause build failures
+- Article tests require S3 configuration (S3_ARTICLES_BUCKET_NAME) — no mock data in test env
 
 ## Session Continuity
 
-Last session: 2026-02-12
-Stopped at: Completed v1.5 milestone archival
+Last session: 2026-02-17
+Stopped at: Completed v1.6 milestone — archived, tagged, ready for next milestone
 Resume file: None
-
-## Decisions
-
-(Cleared — see PROJECT.md Key Decisions table for full history)

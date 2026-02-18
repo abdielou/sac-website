@@ -2,19 +2,32 @@
 
 ## Milestones
 
-- v1.0 MVP - Phases 1-5 (shipped 2026-01-27)
-- v1.1 FB-YT Archive - Phase 6 (shipped 2026-01-29)
-- v1.2 PayPal Payments - Phase 7 (shipped 2026-01-30)
-- v1.3 Admin Dashboard - Phases 8-12 (shipped 2026-02-05)
-- v1.4 Payment Classification & Apps Script - Phases 13-16 (shipped 2026-02-10)
-- v1.5 Calendar-Year Membership Rules - Phases 17-18 (shipped 2026-02-12)
+- ✅ **v1.0 MVP** — Phases 1-5 (shipped 2026-01-27)
+- ✅ **v1.1 FB-YT Archive** — Phase 6 (shipped 2026-01-29)
+- ✅ **v1.2 PayPal Payments** — Phase 7 (shipped 2026-01-30)
+- ✅ **v1.3 Admin Dashboard** — Phases 8-12 (shipped 2026-02-05)
+- ✅ **v1.4 Payment Classification & Apps Script** — Phases 13-16 (shipped 2026-02-10)
+- ✅ **v1.5 Calendar-Year Membership Rules** — Phases 17-18 (shipped 2026-02-12)
+- ✅ **v1.6 Article Manager** — Phases 19-22 (shipped 2026-02-17)
 
 ## Phases
 
 <details>
-<summary>v1.0 through v1.5 (Phases 1-18) - SHIPPED</summary>
+<summary>✅ v1.0 through v1.5 (Phases 1-18) — SHIPPED</summary>
 
 See .planning/MILESTONES.md for details on shipped milestones.
+
+</details>
+
+<details>
+<summary>✅ v1.6 Article Manager (Phases 19-22) — SHIPPED 2026-02-17</summary>
+
+- [x] Phase 19: S3 Article Data Layer (1/1 plan) — completed 2026-02-12
+- [x] Phase 20: Blog Rendering from S3 (2/2 plans) — completed 2026-02-12
+- [x] Phase 21: Content Migration (2/2 plans) — completed 2026-02-17
+- [x] Phase 22: Article Manager (2/2 plans) — completed 2026-02-17
+
+See .planning/milestones/v1.6-ROADMAP.md for full details.
 
 </details>
 
@@ -28,3 +41,4 @@ See .planning/MILESTONES.md for details on shipped milestones.
 | 8-12 | v1.3 | 11/11 | Complete | 2026-02-05 |
 | 13-16 | v1.4 | 7/7 | Complete | 2026-02-10 |
 | 17-18 | v1.5 | 3/3 | Complete | 2026-02-12 |
+| 19-22 | v1.6 | 7/7 | Complete | 2026-02-17 |

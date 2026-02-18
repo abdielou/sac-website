@@ -7,6 +7,7 @@ const navItems = [
   { href: '/admin', label: 'Dashboard', exactMatch: true },
   { href: '/admin/members', label: 'Miembros' },
   { href: '/admin/payments', label: 'Pagos' },
+  { href: '/admin/articles', label: 'Articulos' },
 ]
 
 /**
