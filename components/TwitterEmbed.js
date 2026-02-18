@@ -1,32 +1,56 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 const TwitterEmbed = ({ url, tweetId }) => {
-  const tweetUrl = url || (tweetId ? `https://twitter.com/i/status/${tweetId}` : null)
+  const resolvedId = tweetId || url?.match(/status\/(\d+)/)?.[1]
+  const ref = useRef(null)
 
   useEffect(() => {
-    if (!tweetUrl) return
+    if (!resolvedId || !ref.current) return
+    let intervalId = null
 
-    if (window.twttr?.widgets) {
-      // Script already loaded — re-process embeds on the page
-      window.twttr.widgets.load()
-    } else if (!document.querySelector('script[src="https://platform.twitter.com/widgets.js"]')) {
-      // Load script once — it will auto-process all .twitter-tweet elements on load
-      const script = document.createElement('script')
-      script.src = 'https://platform.twitter.com/widgets.js'
-      script.async = true
-      document.body.appendChild(script)
+    // Defer to coalesce React StrictMode double-invoke
+    const timer = setTimeout(() => {
+      if (!ref.current) return
+      ref.current.innerHTML = ''
+
+      // Ensure Twitter widgets script is on the page
+      if (!document.querySelector('script[src="https://platform.twitter.com/widgets.js"]')) {
+        const script = document.createElement('script')
+        script.src = 'https://platform.twitter.com/widgets.js'
+        script.async = true
+        document.body.appendChild(script)
+      }
+
+      // Use createTweet API — more reliable for dynamically rendered content
+      const createEmbed = () => {
+        if (window.twttr?.widgets && ref.current) {
+          window.twttr.widgets.createTweet(resolvedId, ref.current)
+        }
+      }
+
+      if (window.twttr?.widgets) {
+        createEmbed()
+      } else {
+        intervalId = setInterval(() => {
+          if (window.twttr?.widgets) {
+            clearInterval(intervalId)
+            createEmbed()
+          }
+        }, 200)
+      }
+    }, 0)
+
+    return () => {
+      clearTimeout(timer)
+      if (intervalId) clearInterval(intervalId)
     }
-  }, [tweetUrl])
+  }, [resolvedId])
 
-  if (!tweetUrl) return null
+  if (!resolvedId) return null
 
-  return (
-    <blockquote className="twitter-tweet">
-      <a href={tweetUrl} />
-    </blockquote>
-  )
+  return <div ref={ref} />
 }
 
 export default TwitterEmbed

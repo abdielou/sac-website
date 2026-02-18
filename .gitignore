@@ -66,3 +66,5 @@ gallery-photos/
 scripts/fb-yt-archive/**/*.zip
 scripts/fb-yt-archive/registry.json
 .secrets/
+
+.vercel

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { MDXRemote } from 'next-mdx-remote'
 import { MDXComponents } from '@/components/MDXComponents'
+import TOCInline from '@/components/TOCInline'
 
 /**
  * ArticlePreview - Live MDX preview panel for the article editor
@@ -16,6 +17,7 @@ import { MDXComponents } from '@/components/MDXComponents'
  */
 export default function ArticlePreview({ content }) {
   const [mdxSource, setMdxSource] = useState(null)
+  const [toc, setToc] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
   const debounceRef = useRef(null)
@@ -64,6 +66,7 @@ export default function ArticlePreview({ content }) {
           setMdxSource(null)
         } else {
           setMdxSource(data.mdxSource)
+          setToc(data.toc || [])
           setError(null)
         }
       } catch (err) {
@@ -128,7 +131,13 @@ export default function ArticlePreview({ content }) {
       {isLoading && <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">Compilando...</p>}
       {mdxSource && (
         <div className="prose dark:prose-dark max-w-none">
-          <MDXRemote {...mdxSource} components={MDXComponents} />
+          <MDXRemote
+            {...mdxSource}
+            components={{
+              ...MDXComponents,
+              TOCInline: (props) => <TOCInline {...props} toc={toc} />,
+            }}
+          />
         </div>
       )}
     </div>

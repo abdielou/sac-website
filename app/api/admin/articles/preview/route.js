@@ -4,6 +4,7 @@ import { serialize } from 'next-mdx-remote/serialize'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import remarkCodeTitles from '@/lib/remark-code-title'
+import remarkTocHeadings from '@/lib/remark-toc-headings'
 import rehypeSlug from 'rehype-slug'
 import rehypeAutolinkHeadings from 'rehype-autolink-headings'
 import rehypeKatex from 'rehype-katex'
@@ -35,9 +36,15 @@ export const POST = auth(async function POST(req) {
     }
 
     try {
+      const toc = []
       const mdxSource = await serialize(content, {
         mdxOptions: {
-          remarkPlugins: [remarkGfm, remarkCodeTitles, remarkMath],
+          remarkPlugins: [
+            remarkGfm,
+            remarkCodeTitles,
+            remarkMath,
+            [remarkTocHeadings, { exportRef: toc }],
+          ],
           rehypePlugins: [
             rehypeSlug,
             rehypeAutolinkHeadings,
@@ -45,9 +52,10 @@ export const POST = auth(async function POST(req) {
             [rehypePrismPlus, { ignoreMissing: true }],
           ],
         },
+        scope: { toc },
       })
 
-      return NextResponse.json({ mdxSource })
+      return NextResponse.json({ mdxSource, toc })
     } catch (compileError) {
       // Compilation errors are expected during editing — return as data, not 500
       return NextResponse.json({
