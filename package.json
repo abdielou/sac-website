@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node ./scripts/next-remote-watch.js ./data",
     "dev": "next dev",
-    "build": "node ./scripts/cleanup-prose-mdx && next build && node ./scripts/generate-sitemap",
+    "build": "node ./scripts/cleanup-prose-mdx && prettier --write \"pages/**/*.js\" \"components/**/*.js\" \"lib/**/*.js\" \"layouts/**/*.js\" \"app/**/*.js\" && next build && node ./scripts/generate-sitemap",
     "serve": "next start",
     "analyze": "cross-env ANALYZE=true next build",
     "lint": "eslint --fix pages components lib layouts scripts app",
