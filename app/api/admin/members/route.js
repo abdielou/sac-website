@@ -33,7 +33,7 @@ export const GET = auth(async function GET(req) {
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
     const pageSizeParam = searchParams.get('pageSize')
     const exportAll = pageSizeParam === 'all'
-    
+
     // Check permission for CSV download (exportAll)
     if (exportAll) {
       const permissionError = checkPermission(req, Actions.DOWNLOAD_CSV_MEMBERS)
@@ -41,7 +41,7 @@ export const GET = auth(async function GET(req) {
         return permissionError
       }
     }
-    
+
     const pageSize = exportAll
       ? 5000
       : Math.min(100, Math.max(1, parseInt(pageSizeParam || '20', 10)))

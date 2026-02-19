@@ -20,22 +20,11 @@ import ComponentInsertMenu from '@/components/admin/ComponentInsertMenu'
 export default function NewArticlePage() {
   const { data: session } = useSession()
   const router = useRouter()
-  
+
   const accessibleActions = session?.user?.accessibleActions || []
   const canCreateArticle = accessibleActions.includes('create_article')
-  
-  // Redirect if user doesn't have permission
-  useEffect(() => {
-    if (session && !canCreateArticle) {
-      router.push('/admin/articles')
-    }
-  }, [session, canCreateArticle, router])
-  
-  // Show nothing while checking permissions
-  if (!session || !canCreateArticle) {
-    return null
-  }
-  
+
+  // Initialize all hooks before any conditional returns
   const {
     metadata,
     content,
@@ -53,6 +42,13 @@ export default function NewArticlePage() {
   const [allTags, setAllTags] = useState([])
   const [activeTab, setActiveTab] = useState('editor') // For mobile: 'editor' | 'preview'
   const editorRef = useRef(null)
+
+  // Redirect if user doesn't have permission
+  useEffect(() => {
+    if (session && !canCreateArticle) {
+      router.push('/admin/articles')
+    }
+  }, [session, canCreateArticle, router])
 
   // Fetch authors on mount
   useEffect(() => {
@@ -119,6 +115,11 @@ export default function NewArticlePage() {
       // Error is already in saveError state
     }
   }, [publish])
+
+  // Show nothing while checking permissions
+  if (!session || !canCreateArticle) {
+    return null
+  }
 
   return (
     <div className="max-w-full">

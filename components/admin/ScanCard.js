@@ -19,10 +19,10 @@ import { useSession } from 'next-auth/react'
 export function ScanCard() {
   const { data: session } = useSession()
   const { scan, isScanning, status, error, reset } = useScan()
-  
+
   const accessibleActions = session?.user?.accessibleActions || []
   const canScanInbox = accessibleActions.includes('scan_inbox')
-  
+
   // If user doesn't have permission to scan inbox, don't render the card
   if (!canScanInbox) {
     return null

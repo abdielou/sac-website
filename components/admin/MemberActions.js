@@ -13,15 +13,12 @@ import { useSession } from 'next-auth/react'
 export function MemberActions({ member, onAction }) {
   const { data: session } = useSession()
   const accessibleActions = session?.user?.accessibleActions || []
-  
+
   // Check if user has permission to edit members or payments
   const canEditMember = accessibleActions.includes('edit_member')
   const canEditPayment = accessibleActions.includes('edit_payment')
-  
-  // If user has no permissions, don't render the actions menu
-  if (!canEditMember && !canEditPayment) {
-    return null
-  }
+
+  // Initialize all hooks before any conditional returns
   const [isOpen, setIsOpen] = useState(false)
   const buttonRef = useRef(null)
   const menuRef = useRef(null)
@@ -72,6 +69,11 @@ export function MemberActions({ member, onAction }) {
   const handleSelect = (paymentType) => {
     setIsOpen(false)
     onAction(member, paymentType)
+  }
+
+  // If user has no permissions, don't render the actions menu
+  if (!canEditMember && !canEditPayment) {
+    return null
   }
 
   return (

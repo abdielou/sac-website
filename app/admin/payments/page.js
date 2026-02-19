@@ -19,7 +19,7 @@ function PaymentsContent() {
   const pathname = usePathname()
   const router = useRouter()
   const { data: session } = useSession()
-  
+
   const accessibleActions = session?.user?.accessibleActions || []
   const canEditPayment = accessibleActions.includes('edit_payment')
   const canDownloadCsv = accessibleActions.includes('download_csv_payments')

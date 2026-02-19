@@ -50,13 +50,13 @@ export const POST = auth(async function POST(req) {
   // Check permission to create/edit articles (image upload is part of article creation/editing)
   const createPermissionError = checkPermission(req, Actions.CREATE_ARTICLE)
   const editPermissionError = checkPermission(req, Actions.EDIT_ARTICLE)
-  
+
   // User needs either create or edit permission to upload images
   if (createPermissionError && editPermissionError) {
     return NextResponse.json(
-      { 
-        error: 'Permiso denegado', 
-        details: 'You need permission to create or edit articles to upload images' 
+      {
+        error: 'Permiso denegado',
+        details: 'You need permission to create or edit articles to upload images',
       },
       { status: 403 }
     )

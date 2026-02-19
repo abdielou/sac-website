@@ -22,12 +22,12 @@ export default function EditArticlePage() {
   const router = useRouter()
   const { data: session } = useSession()
   const slug = params?.slug ? params.slug.join('/') : ''
-  
+
   const accessibleActions = session?.user?.accessibleActions || []
   const canEditArticle = accessibleActions.includes('edit_article')
   const canDeleteArticle = accessibleActions.includes('delete_article')
   const canPublishArticle = accessibleActions.includes('publish_article')
-  
+
   // Redirect if user doesn't have permission
   useEffect(() => {
     if (session && !canEditArticle) {
@@ -136,7 +136,7 @@ export default function EditArticlePage() {
       </div>
     )
   }
-  
+
   // Show nothing while checking permissions
   if (!session || !canEditArticle) {
     return null

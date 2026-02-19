@@ -23,7 +23,7 @@ function MembersContent() {
   const pathname = usePathname()
   const router = useRouter()
   const { data: session } = useSession()
-  
+
   const accessibleActions = session?.user?.accessibleActions || []
   const canDownloadCsv = accessibleActions.includes('download_csv_members')
 
