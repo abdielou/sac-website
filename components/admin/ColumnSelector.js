@@ -18,14 +18,14 @@ export function ColumnSelector({ visibleColumnIds, onColumnToggle, onReset }) {
   const [isOpen, setIsOpen] = useState(false)
   const buttonRef = useRef(null)
   const menuRef = useRef(null)
-  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 })
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 })
 
   const updatePosition = useCallback(() => {
     if (!buttonRef.current) return
     const rect = buttonRef.current.getBoundingClientRect()
     setMenuPos({
       top: rect.bottom + 4,
-      left: rect.left,
+      right: window.innerWidth - rect.right,
     })
   }, [])
 
@@ -98,8 +98,8 @@ export function ColumnSelector({ visibleColumnIds, onColumnToggle, onReset }) {
         createPortal(
           <div
             ref={menuRef}
-            style={{ position: 'fixed', top: menuPos.top, left: menuPos.left }}
-            className="bg-white dark:bg-gray-700 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 py-2 w-auto max-h-[400px] overflow-y-auto z-[9999]"
+            style={{ position: 'fixed', top: menuPos.top, right: menuPos.right }}
+            className="bg-white dark:bg-gray-700 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 py-2 min-w-[420px] max-h-[400px] overflow-y-auto z-[9999]"
             role="dialog"
             aria-label="Selector de columnas"
           >
