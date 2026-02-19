@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 
 const navItems = [
-  { href: '/admin', label: 'Dashboard', exactMatch: true },
-  { href: '/admin/members', label: 'Miembros' },
-  { href: '/admin/payments', label: 'Pagos' },
-  { href: '/admin/articles', label: 'Articulos' },
+  { href: '/admin', label: 'Dashboard', exactMatch: true, feature: 'dashboard' },
+  { href: '/admin/members', label: 'Miembros', feature: 'members' },
+  { href: '/admin/payments', label: 'Pagos', feature: 'payments' },
+  { href: '/admin/articles', label: 'Articulos', feature: 'articles' },
 ]
 
 /**
@@ -16,15 +17,24 @@ const navItems = [
  */
 export function AdminNavTabs() {
   const pathname = usePathname()
+  const { data: session } = useSession()
 
   const isActive = (item) => {
     if (item.exactMatch) return pathname === item.href
     return pathname.startsWith(item.href)
   }
 
+  // Filter nav items based on user permissions from session
+  const accessibleItems = navItems.filter((item) => {
+    if (!session?.user?.accessibleFeatures) {
+      return false
+    }
+    return session.user.accessibleFeatures.includes(item.feature)
+  })
+
   return (
     <nav className="lg:hidden flex border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-x-auto">
-      {navItems.map((item) => {
+      {accessibleItems.map((item) => {
         const active = isActive(item)
         return (
           <Link

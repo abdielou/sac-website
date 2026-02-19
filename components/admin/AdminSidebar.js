@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { usePathname } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 
 const navItems = [
@@ -9,6 +10,7 @@ const navItems = [
     href: '/admin',
     label: 'Dashboard',
     exactMatch: true,
+    feature: 'dashboard',
     icon: (
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -27,6 +29,7 @@ const navItems = [
   {
     href: '/admin/members',
     label: 'Miembros',
+    feature: 'members',
     icon: (
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -41,6 +44,7 @@ const navItems = [
   {
     href: '/admin/payments',
     label: 'Pagos',
+    feature: 'payments',
     icon: (
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -59,6 +63,7 @@ const navItems = [
   {
     href: '/admin/articles',
     label: 'Articulos',
+    feature: 'articles',
     icon: (
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -83,11 +88,20 @@ const navItems = [
 export function AdminSidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const pathname = usePathname()
+  const { data: session } = useSession()
 
   const isActive = (item) => {
     if (item.exactMatch) return pathname === item.href
     return pathname.startsWith(item.href)
   }
+
+  // Filter nav items based on user permissions from session
+  const accessibleItems = navItems.filter((item) => {
+    if (!session?.user?.accessibleFeatures) {
+      return false
+    }
+    return session.user.accessibleFeatures.includes(item.feature)
+  })
 
   return (
     <aside
@@ -131,7 +145,7 @@ export function AdminSidebar() {
 
       {/* Navigation */}
       <nav className={`py-6 space-y-1 ${collapsed ? 'px-2' : 'px-4'}`}>
-        {navItems.map((item) => {
+        {accessibleItems.map((item) => {
           const active = isActive(item)
           return (
             <Link

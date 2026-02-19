@@ -2,6 +2,8 @@ import { auth } from '../../../../../auth'
 import { revalidatePath } from 'next/cache'
 import { NextResponse } from 'next/server'
 import { getArticle, updateArticle, deleteArticle } from '@/lib/articles'
+import { checkPermission } from '../../../../../lib/api-permissions'
+import { Actions } from '../../../../../lib/permissions'
 
 /**
  * GET /api/admin/articles/[...slug]
@@ -52,6 +54,12 @@ export const PUT = auth(async function PUT(req, { params }) {
     )
   }
 
+  // Check permission to edit articles
+  const permissionError = checkPermission(req, Actions.EDIT_ARTICLE)
+  if (permissionError) {
+    return permissionError
+  }
+
   try {
     const resolvedParams = await params
     const slug = resolvedParams.slug.join('/')
@@ -88,6 +96,12 @@ export const DELETE = auth(async function DELETE(req, { params }) {
       { error: 'No autenticado', details: 'Authentication required' },
       { status: 401 }
     )
+  }
+
+  // Check permission to delete articles
+  const permissionError = checkPermission(req, Actions.DELETE_ARTICLE)
+  if (permissionError) {
+    return permissionError
   }
 
   try {

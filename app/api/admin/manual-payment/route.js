@@ -3,6 +3,8 @@ import { auth } from '../../../../auth'
 import { NextResponse } from 'next/server'
 import { callAppsScript } from '../../../../lib/apps-script'
 import { invalidateCache } from '../../../../lib/cache'
+import { checkPermission } from '../../../../lib/api-permissions'
+import { Actions } from '../../../../lib/permissions'
 
 /**
  * POST /api/admin/manual-payment
@@ -23,6 +25,12 @@ export const POST = auth(async function POST(req) {
       { error: 'No autenticado', details: 'Authentication required' },
       { status: 401 }
     )
+  }
+
+  // Check permission to edit payments
+  const permissionError = checkPermission(req, Actions.EDIT_PAYMENT)
+  if (permissionError) {
+    return permissionError
   }
 
   const accessToken = req.auth.accessToken

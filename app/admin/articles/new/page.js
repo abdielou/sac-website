@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { useArticleEditor } from '@/lib/hooks/useArticleEditor'
 import ArticleMetadataForm from '@/components/admin/ArticleMetadataForm'
 import ArticleEditor from '@/components/admin/ArticleEditor'
@@ -16,6 +18,24 @@ import ComponentInsertMenu from '@/components/admin/ComponentInsertMenu'
  * and live MDX preview panel.
  */
 export default function NewArticlePage() {
+  const { data: session } = useSession()
+  const router = useRouter()
+  
+  const accessibleActions = session?.user?.accessibleActions || []
+  const canCreateArticle = accessibleActions.includes('create_article')
+  
+  // Redirect if user doesn't have permission
+  useEffect(() => {
+    if (session && !canCreateArticle) {
+      router.push('/admin/articles')
+    }
+  }, [session, canCreateArticle, router])
+  
+  // Show nothing while checking permissions
+  if (!session || !canCreateArticle) {
+    return null
+  }
+  
   const {
     metadata,
     content,

@@ -2,6 +2,8 @@ import { auth } from '../../../../auth'
 import { revalidatePath } from 'next/cache'
 import { NextResponse } from 'next/server'
 import { listArticles, createArticle } from '@/lib/articles'
+import { checkPermission } from '../../../../lib/api-permissions'
+import { Actions } from '../../../../lib/permissions'
 
 /**
  * GET /api/admin/articles
@@ -92,6 +94,12 @@ export const POST = auth(async function POST(req) {
       { error: 'No autenticado', details: 'Authentication required' },
       { status: 401 }
     )
+  }
+
+  // Check permission to create articles
+  const permissionError = checkPermission(req, Actions.CREATE_ARTICLE)
+  if (permissionError) {
+    return permissionError
   }
 
   try {

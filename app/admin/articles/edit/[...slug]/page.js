@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useArticleEditor } from '@/lib/hooks/useArticleEditor'
 import ArticleMetadataForm from '@/components/admin/ArticleMetadataForm'
@@ -18,7 +19,21 @@ import ComponentInsertMenu from '@/components/admin/ComponentInsertMenu'
  */
 export default function EditArticlePage() {
   const params = useParams()
+  const router = useRouter()
+  const { data: session } = useSession()
   const slug = params?.slug ? params.slug.join('/') : ''
+  
+  const accessibleActions = session?.user?.accessibleActions || []
+  const canEditArticle = accessibleActions.includes('edit_article')
+  const canDeleteArticle = accessibleActions.includes('delete_article')
+  const canPublishArticle = accessibleActions.includes('publish_article')
+  
+  // Redirect if user doesn't have permission
+  useEffect(() => {
+    if (session && !canEditArticle) {
+      router.push('/admin/articles')
+    }
+  }, [session, canEditArticle, router])
 
   const [article, setArticle] = useState(null)
   const [isLoadingArticle, setIsLoadingArticle] = useState(true)
@@ -121,6 +136,11 @@ export default function EditArticlePage() {
       </div>
     )
   }
+  
+  // Show nothing while checking permissions
+  if (!session || !canEditArticle) {
+    return null
+  }
 
   // Error state
   if (loadError) {
@@ -157,6 +177,8 @@ export default function EditArticlePage() {
       editorRef={editorRef}
       showDeleteConfirm={showDeleteConfirm}
       setShowDeleteConfirm={setShowDeleteConfirm}
+      canDeleteArticle={canDeleteArticle}
+      canPublishArticle={canPublishArticle}
     />
   )
 }
@@ -174,6 +196,8 @@ function EditArticleContent({
   editorRef,
   showDeleteConfirm,
   setShowDeleteConfirm,
+  canDeleteArticle,
+  canPublishArticle,
 }) {
   const {
     metadata,
@@ -268,13 +292,15 @@ function EditArticleContent({
           </span>
 
           {/* Delete button */}
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            disabled={isSaving}
-            className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 transition-colors"
-          >
-            Eliminar
-          </button>
+          {canDeleteArticle && (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={isSaving}
+              className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 transition-colors"
+            >
+              Eliminar
+            </button>
+          )}
 
           <button
             onClick={handleSaveDraft}
@@ -283,13 +309,15 @@ function EditArticleContent({
           >
             Guardar borrador
           </button>
-          <button
-            onClick={handlePublish}
-            disabled={isSaving}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            Publicar
-          </button>
+          {canPublishArticle && (
+            <button
+              onClick={handlePublish}
+              disabled={isSaving}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              Publicar
+            </button>
+          )}
         </div>
       </div>
 
