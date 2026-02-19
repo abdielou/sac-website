@@ -155,36 +155,6 @@ function MembersContent() {
     setWorkspaceModalState({ isOpen: false, member: null })
   }
 
-  const handleExportCsv = useCallback(async () => {
-    setIsExporting(true)
-    try {
-      // Use the already filtered members data instead of making a new API call
-      // This ensures CSV export matches what the user sees in the table
-      const membersToExport = filteredMembers
-      
-      // Build columns array from visibleColumns
-      const columns = visibleColumns.map(col => ({
-        key: col.id,
-        label: col.label,
-        value: (row) => {
-          const value = col.accessor(row)
-          return col.formatter ? col.formatter(value) : value
-        }
-      }))
-      
-      const csv = toCsv(membersToExport, columns)
-      const statusSuffix =
-        selectedStatuses.length === ALL_STATUSES.length ? 'all' : selectedStatuses.join('-')
-      const searchSuffix = searchParam ? `-${searchParam.replace(/\s+/g, '_')}` : ''
-      const date = new Date().toISOString().slice(0, 10)
-      downloadCsvFile(csv, `members-${statusSuffix}${searchSuffix}-${date}`)
-    } catch (err) {
-      console.error('CSV export error:', err)
-    } finally {
-      setIsExporting(false)
-    }
-  }, [filteredMembers, visibleColumns, selectedStatuses, searchParam])
-
   // Sync local state when URL param changes externally
   useEffect(() => {
     setSearchInput(searchParam)
@@ -242,6 +212,36 @@ function MembersContent() {
     },
     meta: apiData?.meta || {},
   }
+
+  const handleExportCsv = useCallback(async () => {
+    setIsExporting(true)
+    try {
+      // Use the already filtered members data instead of making a new API call
+      // This ensures CSV export matches what the user sees in the table
+      const membersToExport = filteredMembers
+      
+      // Build columns array from visibleColumns
+      const columns = visibleColumns.map(col => ({
+        key: col.id,
+        label: col.label,
+        value: (row) => {
+          const value = col.accessor(row)
+          return col.formatter ? col.formatter(value) : value
+        }
+      }))
+      
+      const csv = toCsv(membersToExport, columns)
+      const statusSuffix =
+        selectedStatuses.length === ALL_STATUSES.length ? 'all' : selectedStatuses.join('-')
+      const searchSuffix = searchParam ? `-${searchParam.replace(/\s+/g, '_')}` : ''
+      const date = new Date().toISOString().slice(0, 10)
+      downloadCsvFile(csv, `members-${statusSuffix}${searchSuffix}-${date}`)
+    } catch (err) {
+      console.error('CSV export error:', err)
+    } finally {
+      setIsExporting(false)
+    }
+  }, [filteredMembers, visibleColumns, selectedStatuses, searchParam])
 
   /**
    * Update URL params when filter changes
