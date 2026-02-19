@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState, useEffect, useRef, useCallback } from 'react'
+import { Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useSearchParams, usePathname, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useMembers } from '@/lib/hooks/useAdminData'
@@ -158,13 +158,9 @@ function MembersContent() {
   const handleExportCsv = useCallback(async () => {
     setIsExporting(true)
     try {
-      const params = new URLSearchParams()
-      if (status) params.set('status', status)
-      if (searchParam) params.set('search', searchParam)
-      params.set('pageSize', 'all')
-      const res = await fetch(`/api/admin/members?${params.toString()}`)
-      if (!res.ok) throw new Error('Export failed')
-      const json = await res.json()
+      // Use the already filtered members data instead of making a new API call
+      // This ensures CSV export matches what the user sees in the table
+      const membersToExport = filteredMembers
       
       // Build columns array from visibleColumns
       const columns = visibleColumns.map(col => ({
@@ -176,7 +172,7 @@ function MembersContent() {
         }
       }))
       
-      const csv = toCsv(json.data, columns)
+      const csv = toCsv(membersToExport, columns)
       const statusSuffix =
         selectedStatuses.length === ALL_STATUSES.length ? 'all' : selectedStatuses.join('-')
       const searchSuffix = searchParam ? `-${searchParam.replace(/\s+/g, '_')}` : ''
@@ -187,20 +183,65 @@ function MembersContent() {
     } finally {
       setIsExporting(false)
     }
-  }, [status, searchParam, visibleColumns])
+  }, [filteredMembers, visibleColumns, selectedStatuses, searchParam])
 
   // Sync local state when URL param changes externally
   useEffect(() => {
     setSearchInput(searchParam)
   }, [searchParam])
 
-  // Fetch members with current filters
-  const { data, isPending, isError, error, refetch } = useMembers({
+  // Fetch members with current filters (no search - we'll filter client-side)
+  const { data: apiData, isPending, isError, error, refetch } = useMembers({
     status: status || undefined,
-    search: searchParam || undefined,
-    page,
-    pageSize,
+    search: undefined, // Don't filter on server - we'll do it client-side based on visible columns
+    page: 1,
+    pageSize: 5000, // Fetch all to filter client-side
   })
+
+  // Client-side filtering based on visible columns and search term
+  const filteredMembers = useMemo(() => {
+    if (!apiData?.data) return []
+    
+    let filtered = apiData.data
+
+    // Apply search filter across all visible columns
+    if (searchParam) {
+      const searchLower = searchParam.toLowerCase()
+      filtered = filtered.filter((member) => {
+        // Search through all visible columns
+        return visibleColumns.some((col) => {
+          const value = col.accessor(member)
+          if (value == null) return false
+          
+          // Format the value if formatter exists
+          const displayValue = col.formatter ? col.formatter(value) : value
+          
+          // Convert to string and search
+          return String(displayValue).toLowerCase().includes(searchLower)
+        })
+      })
+    }
+
+    return filtered
+  }, [apiData?.data, searchParam, visibleColumns])
+
+  // Client-side pagination
+  const totalItems = filteredMembers.length
+  const totalPages = Math.ceil(totalItems / pageSize)
+  const paginatedMembers = filteredMembers.slice((page - 1) * pageSize, page * pageSize)
+
+  const data = {
+    data: paginatedMembers,
+    pagination: {
+      page,
+      pageSize,
+      totalItems,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    },
+    meta: apiData?.meta || {},
+  }
 
   /**
    * Update URL params when filter changes
