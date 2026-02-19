@@ -21,7 +21,7 @@
  *
  */
 const TOCInline = ({
-  toc,
+  toc = [],
   indentDepth = 3,
   fromHeading = 1,
   toHeading = 6,

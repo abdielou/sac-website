@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams, usePathname, useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { SkeletonTable } from '@/components/admin/SkeletonTable'
 import { ErrorState } from '@/components/admin/ErrorState'
 import { formatDate } from '@/lib/formatters'
@@ -15,6 +16,10 @@ function ArticlesContent() {
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const router = useRouter()
+  const { data: session } = useSession()
+
+  const accessibleActions = session?.user?.accessibleActions || []
+  const canCreateArticle = accessibleActions.includes('create_article')
 
   // Read filters from URL params
   const statusParam = searchParams.get('status') || 'all'
@@ -160,15 +165,22 @@ function ArticlesContent() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Articulos</h1>
-        <Link
-          href="/admin/articles/new"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Nuevo Articulo
-        </Link>
+        {canCreateArticle && (
+          <Link
+            href="/admin/articles/new"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Nuevo Articulo
+          </Link>
+        )}
       </div>
 
       {/* Filters */}
@@ -260,12 +272,14 @@ function ArticlesContent() {
             />
           </svg>
           <p className="text-gray-500 dark:text-gray-400 mb-4">No se encontraron articulos</p>
-          <Link
-            href="/admin/articles/new"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Crear primer articulo
-          </Link>
+          {canCreateArticle && (
+            <Link
+              href="/admin/articles/new"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Crear primer articulo
+            </Link>
+          )}
         </div>
       ) : (
         <>

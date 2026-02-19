@@ -3,6 +3,8 @@ import { auth } from '../../../../auth'
 import { NextResponse } from 'next/server'
 import { callAppsScript } from '../../../../lib/apps-script'
 import { invalidateCache } from '../../../../lib/cache'
+import { checkPermission } from '../../../../lib/api-permissions'
+import { Actions } from '../../../../lib/permissions'
 
 /**
  * POST /api/admin/create-workspace-account
@@ -24,6 +26,12 @@ export const POST = auth(async function POST(req) {
       { error: 'No autenticado', details: 'Authentication required' },
       { status: 401 }
     )
+  }
+
+  // Check permission to edit members
+  const permissionError = checkPermission(req, Actions.EDIT_MEMBER)
+  if (permissionError) {
+    return permissionError
   }
 
   const accessToken = req.auth.accessToken

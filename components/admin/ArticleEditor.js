@@ -7,10 +7,7 @@ import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
 import { languages } from '@codemirror/language-data'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { EditorView } from '@codemirror/view'
-import {
-  getImageDimensions,
-  buildImageSnippet,
-} from '@/components/admin/ImageUploadButton'
+import { getImageDimensions, buildImageSnippet } from '@/components/admin/ImageUploadButton'
 
 // Dynamic import of CodeMirror to avoid SSR issues
 const CodeMirror = dynamic(() => import('@uiw/react-codemirror'), { ssr: false })

@@ -2,6 +2,8 @@
 import { auth } from '../../../../auth'
 import { NextResponse } from 'next/server'
 import { getMembers } from '../../../../lib/google-sheets'
+import { checkPermission } from '../../../../lib/api-permissions'
+import { Actions } from '../../../../lib/permissions'
 
 /**
  * GET /api/admin/members
@@ -31,6 +33,15 @@ export const GET = auth(async function GET(req) {
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10))
     const pageSizeParam = searchParams.get('pageSize')
     const exportAll = pageSizeParam === 'all'
+
+    // Check permission for CSV download (exportAll)
+    if (exportAll) {
+      const permissionError = checkPermission(req, Actions.DOWNLOAD_CSV_MEMBERS)
+      if (permissionError) {
+        return permissionError
+      }
+    }
+
     const pageSize = exportAll
       ? 5000
       : Math.min(100, Math.max(1, parseInt(pageSizeParam || '20', 10)))

@@ -1,6 +1,7 @@
 'use client'
 
 import { useScan } from '@/lib/hooks/useAdminData'
+import { useSession } from 'next-auth/react'
 
 /**
  * ScanCard - Action card for triggering inbox scan from dashboard
@@ -16,7 +17,16 @@ import { useScan } from '@/lib/hooks/useAdminData'
  * - error: Red error message with retry button
  */
 export function ScanCard() {
+  const { data: session } = useSession()
   const { scan, isScanning, status, error, reset } = useScan()
+
+  const accessibleActions = session?.user?.accessibleActions || []
+  const canScanInbox = accessibleActions.includes('scan_inbox')
+
+  // If user doesn't have permission to scan inbox, don't render the card
+  if (!canScanInbox) {
+    return null
+  }
 
   const handleClick = () => {
     if (status === 'error') {

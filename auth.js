@@ -1,34 +1,50 @@
 import NextAuth from 'next-auth'
 import Google from 'next-auth/providers/google'
+import { PermissionConfig, PermissionChecker, Role } from './lib/permissions.js'
 
-/**
- * Parse comma-separated email list from environment variable
- * @param {string|undefined} envValue
- * @returns {string[]}
- */
-function parseAuthorizedEmails(envValue) {
-  if (!envValue) return []
-  return envValue
-    .split(',')
-    .map((email) => email.trim().toLowerCase())
-    .filter((email) => email.length > 0)
+// Parse legacy AUTHORIZED_ADMIN_EMAILS (comma-separated, backward compatible)
+const legacyEmails = process.env.AUTHORIZED_ADMIN_EMAILS || ''
+const legacyUsers = legacyEmails
+  ? legacyEmails.split(',').map((email) => ({
+      email: email.trim().toLowerCase(),
+      role: null, // No role = read-only access
+      assignedFeatures: [],
+    }))
+  : []
+
+// Parse new ADMIN_ROLE_PERMISSIONS (semicolon-separated with roles/features)
+const roleBasedConfig = new PermissionConfig(process.env.ADMIN_ROLE_PERMISSIONS || '')
+
+// Merge configurations: role-based takes precedence over legacy
+const mergedUsers = [...roleBasedConfig.users]
+legacyUsers.forEach((legacyUser) => {
+  if (!mergedUsers.find((u) => u.email === legacyUser.email)) {
+    mergedUsers.push(legacyUser)
+  }
+})
+
+// Create merged config
+class MergedConfig extends PermissionConfig {
+  constructor() {
+    super('')
+    this.users = mergedUsers
+  }
 }
 
-const AUTHORIZED_ADMIN_EMAILS = parseAuthorizedEmails(process.env.AUTHORIZED_ADMIN_EMAILS)
+const permissionConfig = new MergedConfig()
+const permissionChecker = new PermissionChecker(permissionConfig)
+
+// Get list of authorized emails for backward compatibility
+const AUTHORIZED_ADMIN_EMAILS = permissionConfig.users.map((u) => u.email)
 
 /**
  * Check if an email is authorized to access the admin dashboard
- * Only emails explicitly listed in AUTHORIZED_ADMIN_EMAILS are allowed
  * @param {string} email
  * @returns {boolean}
  */
 function isAuthorizedEmail(email) {
-  const normalizedEmail = email.toLowerCase()
-
-  // Only allow emails explicitly in the allowlist
-  return AUTHORIZED_ADMIN_EMAILS.includes(normalizedEmail)
+  return permissionChecker.canAccessDashboard(email)
 }
-
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Google({
@@ -113,12 +129,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     /**
      * Include user ID and access token in the session.
      * accessToken is used server-side by API routes to call Apps Script.
+     * Also include user permissions for client-side access control.
      */
     session({ session, token }) {
       if (token.id && session.user) {
         session.user.id = token.id
       }
       session.accessToken = token.accessToken
+      
+      // Add user permissions to session for client-side access control
+      if (session.user?.email) {
+        session.user.role = permissionChecker.getUserRole(session.user.email)
+        session.user.accessibleFeatures = permissionChecker.getAccessibleFeatures(session.user.email)
+        session.user.accessibleActions = permissionChecker.getAccessibleActions(session.user.email)
+        session.user.isAdmin = permissionChecker.isAdmin(session.user.email)
+      }
+      
       return session
     },
   },
@@ -131,3 +157,4 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     maxAge: 24 * 60 * 60, // 24 hours
   },
 })
+
