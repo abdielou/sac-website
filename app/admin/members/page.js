@@ -13,6 +13,9 @@ import { MemberActions } from '@/components/admin/MemberActions'
 import { ManualPaymentModal } from '@/components/admin/ManualPaymentModal'
 import { WorkspaceAccountModal } from '@/components/admin/WorkspaceAccountModal'
 import { toCsv, downloadCsvFile } from '@/lib/csv'
+import { COLUMN_REGISTRY } from '@/lib/admin/columnRegistry'
+import { useColumnPreferences } from '@/lib/hooks/useColumnPreferences'
+import { ColumnSelector } from '@/components/admin/ColumnSelector'
 
 /**
  * MembersContent - Main content component for members list
@@ -26,6 +29,84 @@ function MembersContent() {
 
   const accessibleActions = session?.user?.accessibleActions || []
   const canDownloadCsv = accessibleActions.includes('download_csv_members')
+
+  // Column customization
+  const { visibleColumns, visibleColumnIds, toggleColumn, resetToDefault } = useColumnPreferences()
+
+  /**
+   * Render cell content with special handling for specific columns
+   */
+  const renderCellContent = (col, member) => {
+    const value = col.accessor(member)
+    const formattedValue = col.formatter ? col.formatter(value) : value
+
+    // Special rendering for email columns (with copy button)
+    if (col.id === 'email' || col.id === 'sacEmail') {
+      if (!value) {
+        return col.id === 'sacEmail' ? (
+          <span className="text-gray-400">-</span>
+        ) : (
+          '-'
+        )
+      }
+      return (
+        <span className="inline-flex items-center gap-2">
+          {value}
+          {copiedEmail === value ? (
+            <span className="text-gray-500 dark:text-gray-400 text-xs">Copied!</span>
+          ) : (
+            <button
+              onClick={() => handleCopyEmail(value)}
+              className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-opacity"
+              title="Copiar email"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                />
+              </svg>
+            </button>
+          )}
+        </span>
+      )
+    }
+
+    // Special rendering for status column (with badge)
+    if (col.id === 'status') {
+      return <StatusBadge status={value} />
+    }
+
+    // Special rendering for lastPayment column (with tooltip)
+    if (col.id === 'lastPayment') {
+      if (member.lastPaymentAmount) {
+        return (
+          <span className="inline-flex items-center gap-2">
+            <span className="text-sm text-gray-900 dark:text-white">
+              {formattedValue || '-'}
+            </span>
+            <PaymentTooltip
+              date={member.lastPaymentDate}
+              amount={member.lastPaymentAmount}
+              notes={member.lastPaymentNotes}
+              source={member.lastPaymentSource}
+            />
+          </span>
+        )
+      }
+      return <span className="text-sm text-gray-400">-</span>
+    }
+
+    // Default rendering for all other columns
+    return formattedValue || '-'
+  }
 
   // Read filters from URL params
   const statusParam = searchParams.get('status')
@@ -84,23 +165,17 @@ function MembersContent() {
       const res = await fetch(`/api/admin/members?${params.toString()}`)
       if (!res.ok) throw new Error('Export failed')
       const json = await res.json()
-      const columns = [
-        { key: 'email', label: 'Email' },
-        { key: 'sacEmail', label: 'SAC Email' },
-        { key: 'firstName', label: 'Nombre' },
-        { key: 'initial', label: 'Inicial' },
-        {
-          key: 'apellidos',
-          label: 'Apellidos',
-          value: (row) => [row.lastName, row.slastName].filter(Boolean).join(' '),
-        },
-        { key: 'phone', label: 'Telefono' },
-        { key: 'expirationDate', label: 'Vencimiento' },
-        { key: 'status', label: 'Estado' },
-        { key: 'lastPaymentDate', label: 'Fecha Ultimo Pago' },
-        { key: 'lastPaymentAmount', label: 'Monto Ultimo Pago' },
-        { key: 'lastPaymentSource', label: 'Fuente Ultimo Pago' },
-      ]
+      
+      // Build columns array from visibleColumns
+      const columns = visibleColumns.map(col => ({
+        key: col.id,
+        label: col.label,
+        value: (row) => {
+          const value = col.accessor(row)
+          return col.formatter ? col.formatter(value) : value
+        }
+      }))
+      
       const csv = toCsv(json.data, columns)
       const statusSuffix =
         selectedStatuses.length === ALL_STATUSES.length ? 'all' : selectedStatuses.join('-')
@@ -112,7 +187,7 @@ function MembersContent() {
     } finally {
       setIsExporting(false)
     }
-  }, [status, searchParam])
+  }, [status, searchParam, visibleColumns])
 
   // Sync local state when URL param changes externally
   useEffect(() => {
@@ -261,6 +336,15 @@ function MembersContent() {
             {isExporting ? 'Exportando...' : 'CSV'}
           </button>
         )}
+
+        {/* Column Selector - Hidden on mobile */}
+        <div className="hidden md:block">
+          <ColumnSelector
+            visibleColumnIds={visibleColumnIds}
+            onColumnToggle={toggleColumn}
+            onReset={resetToDefault}
+          />
+        </div>
       </div>
 
       {/* Loading state - show skeleton table but keep filters visible */}
@@ -381,30 +465,14 @@ function MembersContent() {
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Email
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      SAC Email
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Nombre
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Inicial
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Apellidos
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Vencimiento
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Estado
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Ultimo Pago
-                    </th>
+                    {visibleColumns.map((col) => (
+                      <th
+                        key={col.id}
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                      >
+                        {col.label}
+                      </th>
+                    ))}
                     <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       <span className="sr-only">Acciones</span>
                     </th>
@@ -414,7 +482,7 @@ function MembersContent() {
                   {members.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={9}
+                        colSpan={visibleColumns.length + 1}
                         className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
                       >
                         No se encontraron miembros con los filtros seleccionados.
@@ -426,106 +494,16 @@ function MembersContent() {
                         key={member.email || index}
                         className="group hover:bg-gray-50 dark:hover:bg-gray-700"
                       >
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                          {member.email ? (
-                            <span className="inline-flex items-center gap-2">
-                              {member.email}
-                              {copiedEmail === member.email ? (
-                                <span className="text-gray-500 dark:text-gray-400 text-xs">
-                                  Copied!
-                                </span>
-                              ) : (
-                                <button
-                                  onClick={() => handleCopyEmail(member.email)}
-                                  className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-opacity"
-                                  title="Copiar email"
-                                >
-                                  <svg
-                                    className="w-4 h-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                                    />
-                                  </svg>
-                                </button>
-                              )}
-                            </span>
-                          ) : (
-                            '-'
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                          {member.sacEmail ? (
-                            <span className="inline-flex items-center gap-2">
-                              {member.sacEmail}
-                              {copiedEmail === member.sacEmail ? (
-                                <span className="text-gray-500 dark:text-gray-400 text-xs">
-                                  Copied!
-                                </span>
-                              ) : (
-                                <button
-                                  onClick={() => handleCopyEmail(member.sacEmail)}
-                                  className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-opacity"
-                                  title="Copiar email"
-                                >
-                                  <svg
-                                    className="w-4 h-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                                    />
-                                  </svg>
-                                </button>
-                              )}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                          {member.firstName || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                          {member.initial || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                          {[member.lastName, member.slastName].filter(Boolean).join(' ') || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                          {formatDate(member.expirationDate)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <StatusBadge status={member.status} />
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          {member.lastPaymentAmount ? (
-                            <span className="inline-flex items-center gap-2">
-                              <span className="text-sm text-gray-900 dark:text-white">
-                                {formatDate(member.lastPaymentDate)}
-                              </span>
-                              <PaymentTooltip
-                                date={member.lastPaymentDate}
-                                amount={member.lastPaymentAmount}
-                                notes={member.lastPaymentNotes}
-                                source={member.lastPaymentSource}
-                              />
-                            </span>
-                          ) : (
-                            <span className="text-sm text-gray-400">-</span>
-                          )}
-                        </td>
+                        {visibleColumns.map((col) => (
+                          <td
+                            key={col.id}
+                            className={`px-6 py-4 ${
+                              col.id === 'lastPayment' ? 'text-center' : 'whitespace-nowrap'
+                            } text-sm text-gray-900 dark:text-white`}
+                          >
+                            {renderCellContent(col, member)}
+                          </td>
+                        ))}
                         <td className="px-3 py-4 text-center">
                           <MemberActions member={member} onAction={handleAction} />
                         </td>
