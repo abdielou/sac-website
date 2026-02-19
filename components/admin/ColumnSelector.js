@@ -99,7 +99,7 @@ export function ColumnSelector({ visibleColumnIds, onColumnToggle, onReset }) {
           <div
             ref={menuRef}
             style={{ position: 'fixed', top: menuPos.top, left: menuPos.left }}
-            className="bg-white dark:bg-gray-700 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 py-2 min-w-[380px] max-w-[500px] max-h-[400px] overflow-y-auto z-[9999]"
+            className="bg-white dark:bg-gray-700 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 py-2 w-auto max-h-[400px] overflow-y-auto z-[9999]"
             role="dialog"
             aria-label="Selector de columnas"
           >
@@ -138,7 +138,7 @@ export function ColumnSelector({ visibleColumnIds, onColumnToggle, onReset }) {
                       className="w-4 h-4 flex-shrink-0 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                       aria-label={`${isVisible ? 'Ocultar' : 'Mostrar'} columna ${column.label}`}
                     />
-                    <span className="ml-3 flex-1 text-gray-700 dark:text-gray-200 whitespace-nowrap overflow-hidden text-ellipsis">
+                    <span className="ml-3 flex-1 text-gray-700 dark:text-gray-200 whitespace-nowrap">
                       {column.label}
                     </span>
                     {isVisible && (
