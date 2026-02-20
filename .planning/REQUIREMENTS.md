@@ -9,15 +9,15 @@ Requirements for Members Map View milestone. Each maps to roadmap phases.
 
 ### UI Navigation
 
-- [ ] **UI-01**: Admin can toggle between grid view and map view on the members tab
-- [ ] **UI-02**: View preference persists across page navigation
+- [x] **UI-01**: Admin can toggle between grid view and map view on the members tab
+- [x] **UI-02**: View preference persists across page navigation
 
 ### Map Display
 
-- [ ] **MAP-01**: Admin can see an interactive Leaflet/OpenStreetMap map covering 80% of viewport width
-- [ ] **MAP-02**: Geocoded members appear as pins on the map
-- [ ] **MAP-03**: Hovering a pin shows a popup with member info; moving away dismisses it
-- [ ] **MAP-04**: Clicking a pin keeps the popup open until explicitly closed
+- [x] **MAP-01**: Admin can see an interactive Leaflet/OpenStreetMap map covering 80% of viewport width
+- [x] **MAP-02**: Geocoded members appear as pins on the map
+- [x] **MAP-03**: Hovering a pin shows a popup with member info; moving away dismisses it
+- [x] **MAP-04**: Clicking a pin keeps the popup open until explicitly closed
 
 ### Side Panel
 
@@ -61,12 +61,12 @@ Requirements for Members Map View milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| UI-01 | Phase 24 | Pending |
-| UI-02 | Phase 24 | Pending |
-| MAP-01 | Phase 24 | Pending |
-| MAP-02 | Phase 24 | Pending |
-| MAP-03 | Phase 24 | Pending |
-| MAP-04 | Phase 24 | Pending |
+| UI-01 | Phase 24 | Complete |
+| UI-02 | Phase 24 | Complete |
+| MAP-01 | Phase 24 | Complete |
+| MAP-02 | Phase 24 | Complete |
+| MAP-03 | Phase 24 | Complete |
+| MAP-04 | Phase 24 | Complete |
 | PANEL-01 | Phase 24 | Pending |
 | PANEL-02 | Phase 24 | Pending |
 | RAD-01 | Phase 25 | Pending |

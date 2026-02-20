@@ -100,5 +100,5 @@ Phases execute in numeric order: 23 → 24 → 25
 | 17-18 | v1.5 | 3/3 | Complete | 2026-02-12 |
 | 19-22 | v1.6 | 7/7 | Complete | 2026-02-17 |
 | 23. Geocoding Pipeline | 2/2 | Complete    | 2026-02-20 | - |
-| 24. Map View & Side Panel | v1.7 | 0/2 | Not started | - |
+| 24. Map View & Side Panel | 1/2 | In Progress|  | - |
 | 25. Radius Filtering | v1.7 | 0/1 | Not started | - |
