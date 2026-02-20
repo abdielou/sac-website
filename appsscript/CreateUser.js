@@ -3290,6 +3290,50 @@ function mergeRowData(targetSheet, targetRow, targetHeaders, sourceData, sourceH
     }
   }
 
+  // Geo column invalidation: when address fields change, wipe cached lat/lng
+  // so the app re-geocodes from the updated address on next map load.
+  // Safe operations (do NOT call mergeRowData):
+  //   - handleNewMemberships → writes to PAYMENTS only
+  //   - handleManualPaymentAction → writes to MANUAL_PAYMENTS only
+  //   - handleCreateWorkspaceAccountAction → updates sac_email/created_at individually
+  const GEO_TRIGGER_HEADERS = [
+    'dirección postal',
+    'direccion postal',
+    'pueblo',
+    'zipcode',
+    'zip',
+    'postal code',
+    'código postal',
+    'codigo postal',
+  ]
+  const GEO_COLUMNS = ['geo_lat', 'geo_lng']
+
+  let addressChanged = false
+  for (let i = 0; i < targetHeaders.length; i++) {
+    const headerKey = String(targetHeaders[i] || '')
+      .trim()
+      .toLowerCase()
+    if (GEO_TRIGGER_HEADERS.indexOf(headerKey) !== -1) {
+      const existingVal = String(existingData[i] || '').trim()
+      const newVal = String(mergedData[i] || '').trim()
+      if (newVal !== existingVal) {
+        addressChanged = true
+        break
+      }
+    }
+  }
+
+  if (addressChanged) {
+    for (let i = 0; i < targetHeaders.length; i++) {
+      const headerKey = String(targetHeaders[i] || '')
+        .trim()
+        .toLowerCase()
+      if (GEO_COLUMNS.indexOf(headerKey) !== -1) {
+        mergedData[i] = ''
+      }
+    }
+  }
+
   // Update the target row with merged data
   targetSheet.getRange(targetRow, 1, 1, mergedData.length).setValues([mergedData])
 }
