@@ -17,6 +17,7 @@ import { COLUMN_REGISTRY } from '@/lib/admin/columnRegistry'
 import { useColumnPreferences } from '@/lib/hooks/useColumnPreferences'
 import { ColumnSelector } from '@/components/admin/ColumnSelector'
 import ViewToggle from '@/components/admin/ViewToggle'
+import MembersSidePanel from '@/components/admin/MembersSidePanel'
 import dynamic from 'next/dynamic'
 
 const MembersMap = dynamic(() => import('@/components/admin/MembersMap'), { ssr: false })
@@ -409,7 +410,14 @@ function MembersContent() {
       {isPending ? (
         <SkeletonTable rows={10} columns={9} />
       ) : viewMode === 'map' ? (
-        <MembersMap members={filteredMembers} />
+        <div className="flex gap-4">
+          <div className="flex-1 lg:w-4/5">
+            <MembersMap members={filteredMembers} />
+          </div>
+          <div className="hidden lg:block lg:w-1/5 min-w-[200px]">
+            <MembersSidePanel members={filteredMembers} />
+          </div>
+        </div>
       ) : (
         <>
           {/* Mobile card layout */}
