@@ -3,8 +3,10 @@
 import { useState, useEffect, useMemo } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
 import { StatusBadge } from '@/components/admin/StatusBadge'
+
+// Leaflet CSS version must match installed leaflet version
+const LEAFLET_CSS_URL = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
 
 // Fix Leaflet default marker icons (known Next.js/webpack issue)
 delete L.Icon.Default.prototype._getIconUrl
@@ -49,6 +51,15 @@ function FitBoundsToMarkers({ members }) {
  */
 export default function MembersMap({ members }) {
   const [pinnedMarker, setPinnedMarker] = useState(null)
+
+  // Inject Leaflet CSS via CDN (avoids webpack/file-loader conflicts with node_modules CSS)
+  useEffect(() => {
+    if (document.querySelector(`link[href="${LEAFLET_CSS_URL}"]`)) return
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = LEAFLET_CSS_URL
+    document.head.appendChild(link)
+  }, [])
 
   // Filter to only members with valid geocoding
   const geocodedMembers = useMemo(() => {
@@ -126,9 +137,7 @@ export default function MembersMap({ members }) {
                 <div className="mt-2">
                   <StatusBadge status={member.status} />
                 </div>
-                {member.town && (
-                  <p className="text-xs text-gray-400 mt-1">{member.town}</p>
-                )}
+                {member.town && <p className="text-xs text-gray-400 mt-1">{member.town}</p>}
               </div>
             </Popup>
           </Marker>
