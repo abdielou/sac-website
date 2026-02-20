@@ -66,11 +66,11 @@ Plans:
   2. The map view shows a Leaflet/OpenStreetMap map (80% width) with pins for all geocoded members
   3. Hovering a pin shows a popup with member info that dismisses on mouse-out; clicking a pin keeps the popup open until explicitly closed
   4. A side panel (20% width) lists all members with a scrollable name list, showing a "no location" indicator for members without coordinates
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 24-01: View toggle and Leaflet map with member pins
-- [ ] 24-02: Side panel with member list and popup interactions
+- [ ] 24-01-PLAN.md — View toggle, Leaflet map with member pins and hover/click popups
+- [ ] 24-02-PLAN.md — Side panel with scrollable member list and no-location indicators
 
 ### Phase 25: Radius Filtering
 **Goal**: Admins can click anywhere on the map to filter members within a configurable radius
@@ -99,6 +99,6 @@ Phases execute in numeric order: 23 → 24 → 25
 | 13-16 | v1.4 | 7/7 | Complete | 2026-02-10 |
 | 17-18 | v1.5 | 3/3 | Complete | 2026-02-12 |
 | 19-22 | v1.6 | 7/7 | Complete | 2026-02-17 |
-| 23. Geocoding Pipeline | 2/2 | Complete   | 2026-02-20 | - |
+| 23. Geocoding Pipeline | 2/2 | Complete    | 2026-02-20 | - |
 | 24. Map View & Side Panel | v1.7 | 0/2 | Not started | - |
 | 25. Radius Filtering | v1.7 | 0/1 | Not started | - |
