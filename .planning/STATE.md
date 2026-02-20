@@ -2,27 +2,41 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-17)
+See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** Admins can accurately track membership status and payments
-**Current focus:** Planning next milestone
+**Current focus:** v1.7 Members Map View — Phase 23 Geocoding Pipeline
 
 ## Current Position
 
-Phase: v1.6 complete — all 22 phases, 49 plans done
-Status: Between milestones
-Last activity: 2026-02-17 — Completed v1.6 milestone (Article Manager), tagged v1.6
+Phase: 23 of 25 (Geocoding Pipeline)
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-20 — Completed 23-01 Geocoding Pipeline
+
+Progress: [#####░░░░░] 50%
+
+## Performance Metrics
+
+**Velocity:**
+- Total plans completed: 48 (across v1.0-v1.6)
+- Average duration: ~30 min
+- Total execution time: ~24 hours
+
+**Recent Trend (v1.6):**
+- 7 plans across 4 phases in 5 days
+- Trend: Stable
 
 ## Accumulated Context
 
-### Decisions (stable — see PROJECT.md for full list)
+### Decisions (stable -- see PROJECT.md for full list)
 
-Key patterns established across v1.6:
-- S3 JSON storage for articles with automatic index management
-- MDXComponents split: pure map file (no 'use client') consumed by RSC, client wrappers separate
-- Admin API auth pattern: import auth, wrap handlers, Spanish 401 message
-- CodeMirror in App Router: dynamic import ssr:false, insertAtCursor utility exported from editor
-- Debounced MDX preview: 500ms debounce + AbortController + same remark/rehype as public blog
+- Leaflet + OpenStreetMap chosen over Google Maps (free tiles, no API key for display)
+- Lazy geocoding with sheet caching (avoid redundant API calls)
+- Member location data is mixed/inconsistent -- geocoding must handle town-only, full address, and blank
+- Geocoding always appends ", Puerto Rico" to queries (all SAC members are in PR)
+- 200ms delay between geocoding API calls for rate limit compliance
+- Missing API key returns null with warning (graceful degradation)
 
 ### Pending Todos
 
@@ -31,10 +45,11 @@ None.
 ### Blockers/Concerns
 
 - Pre-existing prettier errors in AdminHeader.js, members/page.js, payments/page.js cause build failures
-- Article tests require S3 configuration (S3_ARTICLES_BUCKET_NAME) — no mock data in test env
+- Member location data is mixed/inconsistent -- geocoding must handle town-only, full address, and blank
+- Google Geocoding API requires API key and billing (confirm key exists or needs setup)
 
 ## Session Continuity
 
-Last session: 2026-02-17
-Stopped at: Completed v1.6 milestone — archived, tagged, ready for next milestone
+Last session: 2026-02-20
+Stopped at: Completed 23-01-PLAN.md (Geocoding Pipeline)
 Resume file: None
