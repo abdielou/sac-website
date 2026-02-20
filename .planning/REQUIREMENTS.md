@@ -38,8 +38,8 @@ Requirements for Members Map View milestone. Each maps to roadmap phases.
 
 ### Geocoding (Apps Script)
 
-- [ ] **GEO-04**: When address columns change via Apps Script, wipe geo columns to trigger re-geocode
-- [ ] **GEO-05**: Existing Apps Script operations (scan, update, manual payment) do not wipe geo columns
+- [x] **GEO-04**: When address columns change via Apps Script, wipe geo columns to trigger re-geocode
+- [x] **GEO-05**: Existing Apps Script operations (scan, update, manual payment) do not wipe geo columns
 
 ## Future Requirements
 
@@ -75,8 +75,8 @@ Requirements for Members Map View milestone. Each maps to roadmap phases.
 | GEO-01 | Phase 23 | Complete |
 | GEO-02 | Phase 23 | Complete |
 | GEO-03 | Phase 23 | Complete |
-| GEO-04 | Phase 23 | Pending |
-| GEO-05 | Phase 23 | Pending |
+| GEO-04 | Phase 23 | Complete |
+| GEO-05 | Phase 23 | Complete |
 
 **Coverage:**
 - v1.7 requirements: 16 total

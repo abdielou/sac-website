@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-20)
 ## Current Position
 
 Phase: 23 of 25 (Geocoding Pipeline)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-20 — Completed 23-01 Geocoding Pipeline
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase Complete
+Last activity: 2026-02-20 — Completed 23-02 Geo Column Invalidation
 
-Progress: [#####░░░░░] 50%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
@@ -37,6 +37,8 @@ Progress: [#####░░░░░] 50%
 - Geocoding always appends ", Puerto Rico" to queries (all SAC members are in PR)
 - 200ms delay between geocoding API calls for rate limit compliance
 - Missing API key returns null with warning (graceful degradation)
+- Geo invalidation only in mergeRowData -- other Apps Script operations are safe by design
+- Compare old vs new address values to avoid unnecessary geo invalidation on re-submissions
 
 ### Pending Todos
 
@@ -51,5 +53,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 23-01-PLAN.md (Geocoding Pipeline)
+Stopped at: Completed 23-02-PLAN.md (Geo Column Invalidation)
 Resume file: None
