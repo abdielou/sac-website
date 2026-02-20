@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import { StatusBadge } from '@/components/admin/StatusBadge'
 
@@ -38,18 +38,35 @@ function FitBoundsToMarkers({ members }) {
 }
 
 /**
+ * MapClickHandler - Internal component that captures clicks on empty map area
+ * Uses useMapEvents hook to register click handler
+ */
+function MapClickHandler({ onMapClick }) {
+  useMapEvents({
+    click: (e) => {
+      onMapClick([e.latlng.lat, e.latlng.lng])
+    },
+  })
+  return null
+}
+
+/**
  * MembersMap - Interactive Leaflet map showing geocoded members as pins
  *
  * Features:
  * - OpenStreetMap tiles centered on Puerto Rico
  * - Auto-fits bounds to visible markers
  * - Hover shows popup, click pins it open
+ * - Circle overlay with configurable radius for area filtering
  * - Empty state message when no geocoded members
  *
  * @param {Object} props
  * @param {Array} props.members - Array of member objects from useMembers
+ * @param {Array|null} props.circleCenter - [lat, lng] for circle overlay, or null
+ * @param {number} props.radiusKm - Circle radius in kilometers (default 5)
+ * @param {Function} props.onMapClick - Callback receiving [lat, lng] on map click
  */
-export default function MembersMap({ members }) {
+export default function MembersMap({ members, circleCenter = null, radiusKm = 5, onMapClick }) {
   const [pinnedMarker, setPinnedMarker] = useState(null)
 
   // Inject Leaflet CSS via CDN (avoids webpack/file-loader conflicts with node_modules CSS)
@@ -142,6 +159,19 @@ export default function MembersMap({ members }) {
             </Popup>
           </Marker>
         ))}
+        {onMapClick && <MapClickHandler onMapClick={onMapClick} />}
+        {circleCenter && (
+          <Circle
+            center={circleCenter}
+            radius={radiusKm * 1000}
+            pathOptions={{
+              color: '#3b82f6',
+              fillColor: '#3b82f6',
+              fillOpacity: 0.1,
+              weight: 2,
+            }}
+          />
+        )}
       </MapContainer>
     </div>
   )
