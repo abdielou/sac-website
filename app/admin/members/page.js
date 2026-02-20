@@ -16,6 +16,10 @@ import { toCsv, downloadCsvFile } from '@/lib/csv'
 import { COLUMN_REGISTRY } from '@/lib/admin/columnRegistry'
 import { useColumnPreferences } from '@/lib/hooks/useColumnPreferences'
 import { ColumnSelector } from '@/components/admin/ColumnSelector'
+import ViewToggle from '@/components/admin/ViewToggle'
+import dynamic from 'next/dynamic'
+
+const MembersMap = dynamic(() => import('@/components/admin/MembersMap'), { ssr: false })
 
 /**
  * MembersContent - Main content component for members list
@@ -43,11 +47,7 @@ function MembersContent() {
     // Special rendering for email columns (with copy button)
     if (col.id === 'email' || col.id === 'sacEmail') {
       if (!value) {
-        return col.id === 'sacEmail' ? (
-          <span className="text-gray-400">-</span>
-        ) : (
-          '-'
-        )
+        return col.id === 'sacEmail' ? <span className="text-gray-400">-</span> : '-'
       }
       return (
         <span className="inline-flex items-center gap-2">
@@ -60,12 +60,7 @@ function MembersContent() {
               className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-opacity"
               title="Copiar email"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -89,9 +84,7 @@ function MembersContent() {
       if (member.lastPaymentAmount) {
         return (
           <span className="inline-flex items-center gap-2">
-            <span className="text-sm text-gray-900 dark:text-white">
-              {formattedValue || '-'}
-            </span>
+            <span className="text-sm text-gray-900 dark:text-white">{formattedValue || '-'}</span>
             <PaymentTooltip
               date={member.lastPaymentDate}
               amount={member.lastPaymentAmount}
@@ -130,7 +123,22 @@ function MembersContent() {
   const [modalState, setModalState] = useState({ isOpen: false, member: null, paymentType: null })
   const [workspaceModalState, setWorkspaceModalState] = useState({ isOpen: false, member: null })
   const [isExporting, setIsExporting] = useState(false)
+  const [viewMode, setViewMode] = useState('grid')
   const debounceRef = useRef(null)
+
+  // Load saved view preference on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('members-view-mode')
+    if (saved === 'grid' || saved === 'map') {
+      setViewMode(saved)
+    }
+  }, [])
+
+  // Persist view preference
+  const handleViewToggle = (mode) => {
+    setViewMode(mode)
+    localStorage.setItem('members-view-mode', mode)
+  }
 
   // Copy email to clipboard and show feedback
   const handleCopyEmail = (email) => {
@@ -161,7 +169,13 @@ function MembersContent() {
   }, [searchParam])
 
   // Fetch members with current filters (no search - we'll filter client-side)
-  const { data: apiData, isPending, isError, error, refetch } = useMembers({
+  const {
+    data: apiData,
+    isPending,
+    isError,
+    error,
+    refetch,
+  } = useMembers({
     status: status || undefined,
     search: undefined, // Don't filter on server - we'll do it client-side based on visible columns
     page: 1,
@@ -171,7 +185,7 @@ function MembersContent() {
   // Client-side filtering based on visible columns and search term
   const filteredMembers = useMemo(() => {
     if (!apiData?.data) return []
-    
+
     let filtered = apiData.data
 
     // Apply search filter across all visible columns
@@ -182,10 +196,10 @@ function MembersContent() {
         return visibleColumns.some((col) => {
           const value = col.accessor(member)
           if (value == null) return false
-          
+
           // Format the value if formatter exists
           const displayValue = col.formatter ? col.formatter(value) : value
-          
+
           // Convert to string and search
           return String(displayValue).toLowerCase().includes(searchLower)
         })
@@ -219,17 +233,17 @@ function MembersContent() {
       // Use the already filtered members data instead of making a new API call
       // This ensures CSV export matches what the user sees in the table
       const membersToExport = filteredMembers
-      
+
       // Build columns array from visibleColumns
-      const columns = visibleColumns.map(col => ({
+      const columns = visibleColumns.map((col) => ({
         key: col.id,
         label: col.label,
         value: (row) => {
           const value = col.accessor(row)
           return col.formatter ? col.formatter(value) : value
-        }
+        },
       }))
-      
+
       const csv = toCsv(membersToExport, columns)
       const statusSuffix =
         selectedStatuses.length === ALL_STATUSES.length ? 'all' : selectedStatuses.join('-')
@@ -300,6 +314,9 @@ function MembersContent() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-4 mb-6">
+        {/* View toggle */}
+        <ViewToggle viewMode={viewMode} onToggle={handleViewToggle} />
+
         {/* Status multi-select pills */}
         <div className="flex flex-wrap items-center gap-2">
           {ALL_STATUSES.map((s) => {
@@ -357,8 +374,8 @@ function MembersContent() {
           )}
         </div>
 
-        {/* CSV Download */}
-        {canDownloadCsv && (
+        {/* CSV Download - Grid mode only */}
+        {viewMode === 'grid' && canDownloadCsv && (
           <button
             onClick={handleExportCsv}
             disabled={isExporting || isPending}
@@ -376,19 +393,23 @@ function MembersContent() {
           </button>
         )}
 
-        {/* Column Selector - Hidden on mobile */}
-        <div className="hidden md:block">
-          <ColumnSelector
-            visibleColumnIds={visibleColumnIds}
-            onColumnToggle={toggleColumn}
-            onReset={resetToDefault}
-          />
-        </div>
+        {/* Column Selector - Grid mode only, hidden on mobile */}
+        {viewMode === 'grid' && (
+          <div className="hidden md:block">
+            <ColumnSelector
+              visibleColumnIds={visibleColumnIds}
+              onColumnToggle={toggleColumn}
+              onReset={resetToDefault}
+            />
+          </div>
+        )}
       </div>
 
       {/* Loading state - show skeleton table but keep filters visible */}
       {isPending ? (
         <SkeletonTable rows={10} columns={9} />
+      ) : viewMode === 'map' ? (
+        <MembersMap members={filteredMembers} />
       ) : (
         <>
           {/* Mobile card layout */}
