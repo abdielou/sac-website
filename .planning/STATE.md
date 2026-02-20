@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** Admins can accurately track membership status and payments
-**Current focus:** v1.7 Members Map View — Phase 24 Map View & Side Panel
+**Current focus:** v1.7 Members Map View — Phase 25 Radius Filtering
 
 ## Current Position
 
-Phase: 24 of 25 (Map View & Side Panel)
-Plan: 2 of 2 in current phase (COMPLETE)
+Phase: 25 of 25 (Radius Filtering)
+Plan: 1 of 1 in current phase (COMPLETE)
 Status: Phase Complete
-Last activity: 2026-02-20 — Completed 24-02 Side Panel
+Last activity: 2026-02-20 — Completed 25-01 Radius Filtering
 
 Progress: [##########] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 50 (across v1.0-v1.7)
+- Total plans completed: 51 (across v1.0-v1.7)
 - Average duration: ~30 min
 - Total execution time: ~24 hours
 
@@ -41,6 +41,10 @@ Progress: [##########] 100%
 - Missing API key returns null with warning (graceful degradation)
 - Geo invalidation only in mergeRowData -- other Apps Script operations are safe by design
 - Compare old vs new address values to avoid unnecessary geo invalidation on re-submissions
+- Haversine distance helper at module level for radius filtering (no external lib needed)
+- Circle color #3b82f6 matches admin UI blue theme
+- Members without coordinates excluded from radius filter results
+- Radius value persists when clearing circle (only center resets)
 
 ### Pending Todos
 
@@ -55,5 +59,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 24-02-PLAN.md (Side Panel) — Phase 24 complete
+Stopped at: Completed 25-01-PLAN.md (Radius Filtering) — Phase 25 complete
 Resume file: None

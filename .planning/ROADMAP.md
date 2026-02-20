@@ -38,7 +38,7 @@ See .planning/milestones/v1.6-ROADMAP.md for full details.
 
 - [x] **Phase 23: Geocoding Pipeline** - Lazy geocoding with sheet caching and Apps Script geo column protection (completed 2026-02-20)
 - [x] **Phase 24: Map View & Side Panel** - Interactive map with member pins, popups, side panel, and view toggle (completed 2026-02-20)
-- [ ] **Phase 25: Radius Filtering** - Click-on-map circle filter with adjustable radius
+- [x] **Phase 25: Radius Filtering** - Click-on-map circle filter with adjustable radius (completed 2026-02-20)
 
 ## Phase Details
 
@@ -80,10 +80,10 @@ Plans:
   1. Clicking on the map places a visible circle with a 5km default radius
   2. The side panel list filters to show only members whose pins fall within the circle
   3. A radius control at the top of the side panel adjusts the circle size and the filtered list updates in real time
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 25-01: Circle placement, radius control, and filtered member list
+- [ ] 25-01-PLAN.md — Circle placement, radius slider control, and filtered member list
 
 ## Progress
 
@@ -100,5 +100,5 @@ Phases execute in numeric order: 23 → 24 → 25
 | 17-18 | v1.5 | 3/3 | Complete | 2026-02-12 |
 | 19-22 | v1.6 | 7/7 | Complete | 2026-02-17 |
 | 23. Geocoding Pipeline | 2/2 | Complete    | 2026-02-20 | - |
-| 24. Map View & Side Panel | 2/2 | Complete   | 2026-02-20 | - |
-| 25. Radius Filtering | v1.7 | 0/1 | Not started | - |
+| 24. Map View & Side Panel | 2/2 | Complete    | 2026-02-20 | - |
+| 25. Radius Filtering | 1/1 | Complete   | 2026-02-20 | - |

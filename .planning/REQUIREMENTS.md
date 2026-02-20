@@ -26,9 +26,9 @@ Requirements for Members Map View milestone. Each maps to roadmap phases.
 
 ### Radius Filtering
 
-- [ ] **RAD-01**: Clicking on the map places a circle with 5km default radius
-- [ ] **RAD-02**: Side panel list filters to show only members within the circle
-- [ ] **RAD-03**: Radius control at the top of the side panel adjusts the circle size
+- [x] **RAD-01**: Clicking on the map places a circle with 5km default radius
+- [x] **RAD-02**: Side panel list filters to show only members within the circle
+- [x] **RAD-03**: Radius control at the top of the side panel adjusts the circle size
 
 ### Geocoding (App-Driven)
 
@@ -69,9 +69,9 @@ Requirements for Members Map View milestone. Each maps to roadmap phases.
 | MAP-04 | Phase 24 | Complete |
 | PANEL-01 | Phase 24 | Complete |
 | PANEL-02 | Phase 24 | Complete |
-| RAD-01 | Phase 25 | Pending |
-| RAD-02 | Phase 25 | Pending |
-| RAD-03 | Phase 25 | Pending |
+| RAD-01 | Phase 25 | Complete |
+| RAD-02 | Phase 25 | Complete |
+| RAD-03 | Phase 25 | Complete |
 | GEO-01 | Phase 23 | Complete |
 | GEO-02 | Phase 23 | Complete |
 | GEO-03 | Phase 23 | Complete |
