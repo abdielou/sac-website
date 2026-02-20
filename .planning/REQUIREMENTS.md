@@ -21,8 +21,8 @@ Requirements for Members Map View milestone. Each maps to roadmap phases.
 
 ### Side Panel
 
-- [ ] **PANEL-01**: 20% width side panel shows a scrollable list of member names
-- [ ] **PANEL-02**: Members without location data appear in the list with a "no location" indicator (no map pin)
+- [x] **PANEL-01**: 20% width side panel shows a scrollable list of member names
+- [x] **PANEL-02**: Members without location data appear in the list with a "no location" indicator (no map pin)
 
 ### Radius Filtering
 
@@ -67,8 +67,8 @@ Requirements for Members Map View milestone. Each maps to roadmap phases.
 | MAP-02 | Phase 24 | Complete |
 | MAP-03 | Phase 24 | Complete |
 | MAP-04 | Phase 24 | Complete |
-| PANEL-01 | Phase 24 | Pending |
-| PANEL-02 | Phase 24 | Pending |
+| PANEL-01 | Phase 24 | Complete |
+| PANEL-02 | Phase 24 | Complete |
 | RAD-01 | Phase 25 | Pending |
 | RAD-02 | Phase 25 | Pending |
 | RAD-03 | Phase 25 | Pending |

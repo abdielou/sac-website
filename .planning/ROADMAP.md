@@ -37,7 +37,7 @@ See .planning/milestones/v1.6-ROADMAP.md for full details.
 **Milestone Goal:** Admins can visualize member locations on an interactive map with geocoding and radius-based filtering.
 
 - [x] **Phase 23: Geocoding Pipeline** - Lazy geocoding with sheet caching and Apps Script geo column protection (completed 2026-02-20)
-- [ ] **Phase 24: Map View & Side Panel** - Interactive map with member pins, popups, side panel, and view toggle
+- [x] **Phase 24: Map View & Side Panel** - Interactive map with member pins, popups, side panel, and view toggle (completed 2026-02-20)
 - [ ] **Phase 25: Radius Filtering** - Click-on-map circle filter with adjustable radius
 
 ## Phase Details
@@ -100,5 +100,5 @@ Phases execute in numeric order: 23 → 24 → 25
 | 17-18 | v1.5 | 3/3 | Complete | 2026-02-12 |
 | 19-22 | v1.6 | 7/7 | Complete | 2026-02-17 |
 | 23. Geocoding Pipeline | 2/2 | Complete    | 2026-02-20 | - |
-| 24. Map View & Side Panel | 1/2 | In Progress|  | - |
+| 24. Map View & Side Panel | 2/2 | Complete   | 2026-02-20 | - |
 | 25. Radius Filtering | v1.7 | 0/1 | Not started | - |
