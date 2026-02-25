@@ -20,7 +20,7 @@ export default function MembersSidePanel({
 }) {
   if (members.length === 0 && !isFiltered) {
     return (
-      <div className="h-[calc(100vh-280px)] flex flex-col bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+      <div className="h-[calc(100vh-380px)] flex flex-col bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
         <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-gray-900 dark:text-white">Miembros</span>
@@ -66,7 +66,7 @@ export default function MembersSidePanel({
   )
 
   return (
-    <div className="h-[calc(100vh-280px)] flex flex-col bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+    <div className="h-[calc(100vh-380px)] flex flex-col bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
       {/* Fixed header */}
       <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">

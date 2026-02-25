@@ -116,7 +116,7 @@ export default function MembersMap({ members, circleCenter = null, radiusKm = 5,
 
   if (geocodedMembers.length === 0) {
     return (
-      <div className="h-[calc(100vh-280px)] w-full rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 flex items-center justify-center bg-gray-50 dark:bg-gray-800">
+      <div className="h-[calc(100vh-380px)] w-full rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 flex items-center justify-center bg-gray-50 dark:bg-gray-800">
         {isGeocoding ? (
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-3"></div>
@@ -134,7 +134,7 @@ export default function MembersMap({ members, circleCenter = null, radiusKm = 5,
   }
 
   return (
-    <div className="h-[calc(100vh-280px)] w-full rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+    <div className="h-[calc(100vh-380px)] w-full rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
       <MapContainer
         center={PR_CENTER}
         zoom={PR_ZOOM}
