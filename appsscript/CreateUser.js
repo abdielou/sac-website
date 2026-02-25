@@ -2008,8 +2008,10 @@ function extractPayPalPaymentData(msg) {
   }
 
   // Buyer information: name and email on separate lines after "<b>Buyer information</b>"
+  // PayPal wraps values in <span> tags: <br /><span>NAME<br/></span><span>EMAIL<br/></span>
+  // Also handle older format without <span>: <br /> NAME <br /> EMAIL
   const buyerMatch = body.match(
-    /<b>Buyer information<\/b>[\s\S]*?<br\s*\/?>\s*([^<]+)<br\s*\/?>\s*([^<]+@[^<\s]+)/i
+    /<b>Buyer information<\/b>[\s\S]*?<br\s*\/?>\s*(?:<span>)?\s*([^<]+?)(?:<br\s*\/?>)?(?:<\/span>)?\s*(?:<span>)?\s*([^<]+@[^<\s]+)/i
   )
   const sender_name = buyerMatch ? buyerMatch[1].trim() : ''
   const sender_email = buyerMatch ? buyerMatch[2].trim() : ''
@@ -2018,7 +2020,9 @@ function extractPayPalPaymentData(msg) {
   const sender_phone = ''
 
   // Instructions from buyer (message)
-  const messageMatch = body.match(/<b>Instructions from buyer<\/b>[\s\S]*?<br\s*\/?>\s*([^<]+)/i)
+  // PayPal wraps in <span> tags: <br /><span>MESSAGE</span>
+  // Also handle older format without <span>: <br /> MESSAGE
+  const messageMatch = body.match(/<b>Instructions from buyer<\/b>[\s\S]*?<br\s*\/?>\s*(?:<span>)?\s*([^<]+)/i)
   const payment_message = messageMatch ? messageMatch[1].trim() : ''
 
   // Recipient name (not used for PayPal, but included for compatibility)
