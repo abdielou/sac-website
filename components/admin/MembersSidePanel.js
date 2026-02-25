@@ -18,7 +18,7 @@ export default function MembersSidePanel({
   onClearRadius,
   isFiltered = false,
 }) {
-  if (members.length === 0) {
+  if (members.length === 0 && !isFiltered) {
     return (
       <div className="h-[calc(100vh-280px)] flex flex-col bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
         <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">

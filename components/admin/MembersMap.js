@@ -66,7 +66,7 @@ function MapClickHandler({ onMapClick }) {
  * @param {number} props.radiusKm - Circle radius in kilometers (default 5)
  * @param {Function} props.onMapClick - Callback receiving [lat, lng] on map click
  */
-export default function MembersMap({ members, circleCenter = null, radiusKm = 5, onMapClick }) {
+export default function MembersMap({ members, circleCenter = null, radiusKm = 5, onMapClick, isGeocoding = false }) {
   const [pinnedMarker, setPinnedMarker] = useState(null)
 
   // Inject Leaflet CSS via CDN (avoids webpack/file-loader conflicts with node_modules CSS)
@@ -97,9 +97,18 @@ export default function MembersMap({ members, circleCenter = null, radiusKm = 5,
   if (geocodedMembers.length === 0) {
     return (
       <div className="h-[calc(100vh-280px)] w-full rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 flex items-center justify-center bg-gray-50 dark:bg-gray-800">
-        <p className="text-gray-500 dark:text-gray-400 text-sm">
-          No hay miembros con ubicacion para mostrar
-        </p>
+        {isGeocoding ? (
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-3"></div>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">
+              Geocodificando direcciones de miembros...
+            </p>
+          </div>
+        ) : (
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
+            No hay miembros con ubicacion para mostrar
+          </p>
+        )}
       </div>
     )
   }

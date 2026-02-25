@@ -244,6 +244,35 @@ function MembersContent() {
     setCircleCenter(null)
   }, [])
 
+  // Auto-geocode members when switching to map view
+  const geocodeTriggeredRef = useRef(false)
+  const [isGeocoding, setIsGeocoding] = useState(false)
+  useEffect(() => {
+    if (viewMode !== 'map' || !apiData?.data || geocodeTriggeredRef.current) return
+
+    // Check if any members need geocoding: missing coords but have address info
+    const needsGeocoding = apiData.data.some((m) => {
+      const missingCoords = !m.geoLat && !m.geoLng
+      const hasAddress = !!(m.postalAddress || m.town || m.zipcode)
+      return missingCoords && hasAddress
+    })
+
+    if (!needsGeocoding) return
+
+    geocodeTriggeredRef.current = true
+    setIsGeocoding(true)
+
+    fetch('/api/admin/members/geocode', { method: 'POST' })
+      .then((r) => r.json())
+      .then((result) => {
+        if (result.success && result.stats?.geocoded > 0) {
+          refetch()
+        }
+      })
+      .catch((err) => console.error('[geocode] Auto-geocode failed:', err))
+      .finally(() => setIsGeocoding(false))
+  }, [viewMode, apiData?.data, refetch])
+
   // Clear circle when switching away from map view
   useEffect(() => {
     if (viewMode !== 'map') {
@@ -458,6 +487,7 @@ function MembersContent() {
               circleCenter={circleCenter}
               radiusKm={radiusKm}
               onMapClick={setCircleCenter}
+              isGeocoding={isGeocoding}
             />
           </div>
           <div className="hidden lg:block lg:w-1/5 min-w-[200px]">
