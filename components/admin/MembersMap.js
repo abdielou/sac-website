@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
-import { StatusBadge } from '@/components/admin/StatusBadge'
+import { statusConfig } from '@/components/admin/StatusBadge'
 
 // Leaflet CSS version must match installed leaflet version
 const LEAFLET_CSS_URL = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
@@ -15,6 +15,26 @@ L.Icon.Default.mergeOptions({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
+
+// Stronger badge colors for Leaflet popups (always white background)
+const mapStatusStyles = {
+  active: { bg: '#dcfce7', color: '#166534', label: 'Activo' },
+  'expiring-soon': { bg: '#fef9c3', color: '#854d0e', label: 'Vence pronto' },
+  expired: { bg: '#fee2e2', color: '#991b1b', label: 'Expirado' },
+  applied: { bg: '#f3e8ff', color: '#6b21a8', label: 'Aplicado' },
+}
+
+function MapStatusBadge({ status }) {
+  const style = mapStatusStyles[status] || mapStatusStyles.expired
+  return (
+    <span
+      style={{ backgroundColor: style.bg, color: style.color }}
+      className="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full"
+    >
+      {style.label}
+    </span>
+  )
+}
 
 // Puerto Rico center coordinates
 const PR_CENTER = [18.22, -66.59]
@@ -161,7 +181,7 @@ export default function MembersMap({ members, circleCenter = null, radiusKm = 5,
                 <p className="font-bold text-sm text-gray-900">{getFullName(member)}</p>
                 <p className="text-xs text-gray-500 mt-1">{member.email}</p>
                 <div className="mt-2">
-                  <StatusBadge status={member.status} />
+                  <MapStatusBadge status={member.status} />
                 </div>
                 {member.town && <p className="text-xs text-gray-400 mt-1">{member.town}</p>}
               </div>
