@@ -5,9 +5,9 @@
   "scripts": {
     "start": "node ./scripts/next-remote-watch.js ./data",
     "dev": "next dev",
-    "build": "node ./scripts/cleanup-prose-mdx && prettier --write \"pages/**/*.js\" \"components/**/*.js\" \"lib/**/*.js\" \"layouts/**/*.js\" \"app/**/*.js\" && next build && node ./scripts/generate-sitemap",
+    "build": "node ./scripts/cleanup-prose-mdx && prettier --write \"pages/**/*.js\" \"components/**/*.js\" \"lib/**/*.js\" \"layouts/**/*.js\" \"app/**/*.js\" && next build --webpack && node ./scripts/generate-sitemap",
     "serve": "next start",
-    "analyze": "cross-env ANALYZE=true next build",
+    "analyze": "cross-env ANALYZE=true next build --webpack",
     "lint": "eslint --fix pages components lib layouts scripts app",
     "test": "jest"
   },
@@ -31,7 +31,7 @@
     "leaflet": "^1.9.4",
     "mdast-util-to-string": "^4.0.0",
     "mdx-bundler": "^10.1.1",
-    "next": "^15.5.10",
+    "next": "^16.1.6",
     "next-auth": "^5.0.0-beta.30",
     "next-mdx-remote": "^6.0.0",
     "next-themes": "^0.4.6",
