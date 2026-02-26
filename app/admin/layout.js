@@ -1,3 +1,5 @@
+import { auth } from '../../auth'
+import { redirect } from 'next/navigation'
 import { AdminProviders } from './providers'
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { AdminHeader } from '@/components/admin/AdminHeader'
@@ -9,7 +11,12 @@ export const metadata = {
   description: 'Panel de administracion de la Sociedad de Astronomia del Caribe',
 }
 
-export default function AdminLayout({ children }) {
+export default async function AdminLayout({ children }) {
+  const session = await auth()
+  if (!session?.user?.isAdmin) {
+    redirect('/auth/signin')
+  }
+
   return (
     <LayoutWrapper fullWidth>
       <AdminProviders>
