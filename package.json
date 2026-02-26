@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "node ./scripts/next-remote-watch.js ./data",
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "node ./scripts/cleanup-prose-mdx && prettier --write \"pages/**/*.js\" \"components/**/*.js\" \"lib/**/*.js\" \"layouts/**/*.js\" \"app/**/*.js\" && next build --webpack && node ./scripts/generate-sitemap",
     "serve": "next start",
     "analyze": "cross-env ANALYZE=true next build --webpack",

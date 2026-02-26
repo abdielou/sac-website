@@ -23,6 +23,7 @@ const securityHeaders = [
 ]
 
 module.exports = withBundleAnalyzer({
+  turbopack: {},
   reactStrictMode: true,
   pageExtensions: ['js', 'jsx', 'md', 'mdx'],
   webpack: (config, { dev, isServer }) => {
