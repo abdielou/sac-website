@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Phase: 27 (2 of 5 in v1.8) — Member Authentication
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-26 — Completed 27-01-PLAN.md
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase Complete
+Last activity: 2026-02-26 — Completed 27-02-PLAN.md
 
-Progress: [███░░░░░░░] 30%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 57 (across v1.0-v1.8)
+- Total plans completed: 58 (across v1.0-v1.8)
 - Average duration: ~30 min
 - Total execution time: ~26 hours
 
@@ -34,6 +34,8 @@ Progress: [███░░░░░░░] 30%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [27-02]: Admin route checks ordered before member route checks in proxy.js for correct precedence
+- [27-02]: Non-admin users on /admin redirected to /member (not sign-in) since already authenticated
 - [27-01]: isMember from JWT token, isAdmin from permissionChecker -- intentional dual source
 - [27-01]: token.isAdmin supplementary for proxy.js; session.user.isAdmin from permissionChecker is authoritative
 - [26-02]: proxy.js logic kept identical to middleware.js -- only export pattern changed
@@ -58,5 +60,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 27-01-PLAN.md
+Stopped at: Completed 27-02-PLAN.md (Phase 27 complete)
 Resume file: None

@@ -52,7 +52,7 @@ See .planning/milestones/v1.7-ROADMAP.md for full details.
   **Plans:** 2 plans
   - [x] 26-01-PLAN.md -- Upgrade Next.js 16, update config and build scripts
   - [x] 26-02-PLAN.md -- Rename middleware to proxy, verify all routes and async APIs
-- [ ] **Phase 27: Member Authentication** - SAC Google account sign-in with member role and route protection
+- [x] **Phase 27: Member Authentication** - SAC Google account sign-in with member role and route protection (completed 2026-02-26)
   **Plans:** 2 plans
   - [ ] 27-01-PLAN.md -- Extend auth.js callbacks for member sign-in, update sign-in page
   - [ ] 27-02-PLAN.md -- Add member route protection in proxy.js, admin layout guard
