@@ -54,8 +54,8 @@ See .planning/milestones/v1.7-ROADMAP.md for full details.
   - [x] 26-02-PLAN.md -- Rename middleware to proxy, verify all routes and async APIs
 - [x] **Phase 27: Member Authentication** - SAC Google account sign-in with member role and route protection (completed 2026-02-26)
   **Plans:** 2 plans
-  - [ ] 27-01-PLAN.md -- Extend auth.js callbacks for member sign-in, update sign-in page
-  - [ ] 27-02-PLAN.md -- Add member route protection in proxy.js, admin layout guard
+  - [x] 27-01-PLAN.md -- Extend auth.js callbacks for member sign-in, update sign-in page
+  - [x] 27-02-PLAN.md -- Add member route protection in proxy.js, admin layout guard
 - [ ] **Phase 28: Photo Storage & Member Profile** - Google Drive photo integration and member profile pages
 - [ ] **Phase 29: ID Card System** - Year-versioned templates, PDF generation, admin indicators
 - [ ] **Phase 30: Bulk Generation & Notifications** - Multi-member PDF export and profile setup nudge emails
@@ -75,4 +75,5 @@ See .planning/milestones/v1.8-ROADMAP.md for full details.
 | 19-22 | v1.6 | 7/7 | Complete | 2026-02-17 |
 | 23-25 | v1.7 | 5/5 | Complete | 2026-02-25 |
 | 26 | v1.8 | 2/2 | Complete | 2026-02-26 |
-| 27-30 | v1.8 | 0/? | Not started | - |
+| 27 | v1.8 | 2/2 | Complete | 2026-02-26 |
+| 28-30 | v1.8 | 0/? | Not started | - |

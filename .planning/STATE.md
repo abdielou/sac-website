@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Admins can accurately track membership status and payments so that no member falls through the cracks.
-**Current focus:** Phase 27 — Member Authentication
+**Current focus:** Phase 28 — Photo Storage & Member Profile
 
 ## Current Position
 
-Phase: 27 (2 of 5 in v1.8) — Member Authentication
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase Complete
-Last activity: 2026-02-26 — Completed 27-02-PLAN.md
+Phase: 28 (3 of 5 in v1.8) — Photo Storage & Member Profile
+Plan: 0 of ? in current phase (NOT PLANNED)
+Status: Ready to plan
+Last activity: 2026-02-26 — Phase 27 complete, all human verification passed
 
 Progress: [████░░░░░░] 40%
 
@@ -60,5 +60,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 27-02-PLAN.md (Phase 27 complete)
+Stopped at: Phase 27 verified and closed. Ready for Phase 28 planning.
 Resume file: None
