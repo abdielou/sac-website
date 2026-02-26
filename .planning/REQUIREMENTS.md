@@ -10,8 +10,8 @@ Requirements for Member Profiles & ID Cards milestone. Each maps to roadmap phas
 ### Migration
 
 - [x] **MIG-01**: Next.js upgraded from 15 to 16 with all breaking changes resolved
-- [ ] **MIG-02**: middleware.js renamed to proxy.js with Auth.js integration working
-- [ ] **MIG-03**: All async params/cookies/headers patterns updated for Next.js 16
+- [x] **MIG-02**: middleware.js renamed to proxy.js with Auth.js integration working
+- [x] **MIG-03**: All async params/cookies/headers patterns updated for Next.js 16
 
 ### Member Authentication
 
@@ -73,8 +73,8 @@ Requirements for Member Profiles & ID Cards milestone. Each maps to roadmap phas
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | MIG-01 | Phase 26 | Complete |
-| MIG-02 | Phase 26 | Pending |
-| MIG-03 | Phase 26 | Pending |
+| MIG-02 | Phase 26 | Complete |
+| MIG-03 | Phase 26 | Complete |
 | AUTH-01 | Phase 27 | Pending |
 | AUTH-02 | Phase 27 | Pending |
 | AUTH-03 | Phase 27 | Pending |

@@ -48,7 +48,7 @@ See .planning/milestones/v1.7-ROADMAP.md for full details.
 
 **Milestone Goal:** Members sign in with SAC Google accounts, view their profile, upload photos, and preview ID cards. Admins generate printable PDF ID cards for events.
 
-- [ ] **Phase 26: Next.js 16 Migration** - Upgrade framework, rename middleware to proxy, fix async APIs
+- [x] **Phase 26: Next.js 16 Migration** - Upgrade framework, rename middleware to proxy, fix async APIs (completed 2026-02-26)
   **Plans:** 2 plans
   - [ ] 26-01-PLAN.md -- Upgrade Next.js 16, update config and build scripts
   - [ ] 26-02-PLAN.md -- Rename middleware to proxy, verify all routes and async APIs
