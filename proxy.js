@@ -1,7 +1,7 @@
 import { auth } from './auth'
 import { NextResponse } from 'next/server'
 
-export default auth((req) => {
+const proxy = auth((req) => {
   const isLoggedIn = !!req.auth
   const { pathname } = req.nextUrl
 
@@ -37,6 +37,8 @@ export default auth((req) => {
 
   return NextResponse.next()
 })
+
+export { proxy }
 
 export const config = {
   matcher: ['/admin', '/admin/:path*', '/api/admin/:path*', '/auth/:path*', '/api/auth/:path*'],
