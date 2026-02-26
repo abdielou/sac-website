@@ -86,7 +86,13 @@ function MapClickHandler({ onMapClick }) {
  * @param {number} props.radiusKm - Circle radius in kilometers (default 5)
  * @param {Function} props.onMapClick - Callback receiving [lat, lng] on map click
  */
-export default function MembersMap({ members, circleCenter = null, radiusKm = 5, onMapClick, isGeocoding = false }) {
+export default function MembersMap({
+  members,
+  circleCenter = null,
+  radiusKm = 5,
+  onMapClick,
+  isGeocoding = false,
+}) {
   const [pinnedMarker, setPinnedMarker] = useState(null)
 
   // Inject Leaflet CSS via CDN (avoids webpack/file-loader conflicts with node_modules CSS)

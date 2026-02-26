@@ -8,7 +8,7 @@ import { COLUMN_REGISTRY } from '@/lib/admin/columnRegistry'
  * ColumnSelector - Dropdown component for selecting visible table columns
  * Displays checkboxes for all available columns with visual indicators
  * Includes "Reset to Default" button and visible column count
- * 
+ *
  * @param {Object} props
  * @param {string[]} props.visibleColumnIds - Array of currently visible column IDs
  * @param {Function} props.onColumnToggle - Callback to toggle column visibility (columnId) => void
