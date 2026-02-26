@@ -2,27 +2,35 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-17)
+See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** Admins can accurately track membership status and payments
 **Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: v1.6 complete — all 22 phases, 49 plans done
+Milestone: v1.7 Members Map View — SHIPPED 2026-02-25
 Status: Between milestones
-Last activity: 2026-02-17 — Completed v1.6 milestone (Article Manager), tagged v1.6
+Last activity: 2026-02-25 — Completed v1.7 milestone
+
+Progress: [##########] 100% (v1.7)
+
+## Performance Metrics
+
+**Velocity:**
+- Total plans completed: 54 (across v1.0-v1.7)
+- Average duration: ~30 min
+- Total execution time: ~26 hours
+
+**Recent Trend (v1.7):**
+- 5 plans across 3 phases in 5 days
+- Trend: Stable
 
 ## Accumulated Context
 
-### Decisions (stable — see PROJECT.md for full list)
+### Decisions (stable -- see PROJECT.md for full list)
 
-Key patterns established across v1.6:
-- S3 JSON storage for articles with automatic index management
-- MDXComponents split: pure map file (no 'use client') consumed by RSC, client wrappers separate
-- Admin API auth pattern: import auth, wrap handlers, Spanish 401 message
-- CodeMirror in App Router: dynamic import ssr:false, insertAtCursor utility exported from editor
-- Debounced MDX preview: 500ms debounce + AbortController + same remark/rehype as public blog
+All v1.7 decisions recorded in PROJECT.md Key Decisions table.
 
 ### Pending Todos
 
@@ -31,10 +39,9 @@ None.
 ### Blockers/Concerns
 
 - Pre-existing prettier errors in AdminHeader.js, members/page.js, payments/page.js cause build failures
-- Article tests require S3 configuration (S3_ARTICLES_BUCKET_NAME) — no mock data in test env
 
 ## Session Continuity
 
-Last session: 2026-02-17
-Stopped at: Completed v1.6 milestone — archived, tagged, ready for next milestone
+Last session: 2026-02-25
+Stopped at: Completed v1.7 milestone archival
 Resume file: None

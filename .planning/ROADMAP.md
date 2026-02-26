@@ -9,6 +9,7 @@
 - ✅ **v1.4 Payment Classification & Apps Script** — Phases 13-16 (shipped 2026-02-10)
 - ✅ **v1.5 Calendar-Year Membership Rules** — Phases 17-18 (shipped 2026-02-12)
 - ✅ **v1.6 Article Manager** — Phases 19-22 (shipped 2026-02-17)
+- ✅ **v1.7 Members Map View** — Phases 23-25 (shipped 2026-02-25)
 
 ## Phases
 
@@ -31,6 +32,17 @@ See .planning/milestones/v1.6-ROADMAP.md for full details.
 
 </details>
 
+<details>
+<summary>✅ v1.7 Members Map View (Phases 23-25) — SHIPPED 2026-02-25</summary>
+
+- [x] Phase 23: Geocoding Pipeline (2/2 plans) — completed 2026-02-20
+- [x] Phase 24: Map View & Side Panel (2/2 plans) — completed 2026-02-20
+- [x] Phase 25: Radius Filtering (1/1 plan) — completed 2026-02-20
+
+See .planning/milestones/v1.7-ROADMAP.md for full details.
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -42,3 +54,4 @@ See .planning/milestones/v1.6-ROADMAP.md for full details.
 | 13-16 | v1.4 | 7/7 | Complete | 2026-02-10 |
 | 17-18 | v1.5 | 3/3 | Complete | 2026-02-12 |
 | 19-22 | v1.6 | 7/7 | Complete | 2026-02-17 |
+| 23-25 | v1.7 | 5/5 | Complete | 2026-02-25 |
