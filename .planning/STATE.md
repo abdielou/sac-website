@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Admins can accurately track membership status and payments so that no member falls through the cracks.
-**Current focus:** Phase 26 — Next.js 16 Migration
+**Current focus:** Phase 27 — Member Authentication
 
 ## Current Position
 
-Phase: 26 (1 of 5 in v1.8) — Next.js 16 Migration
-Plan: 2 of 2 in current phase (COMPLETE)
-Status: Phase Complete
-Last activity: 2026-02-26 — Completed 26-02 (proxy.js rename and verification)
+Phase: 27 (2 of 5 in v1.8) — Member Authentication
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-26 — Completed 27-01-PLAN.md
 
-Progress: [██████████] 100%
+Progress: [███░░░░░░░] 30%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 56 (across v1.0-v1.8)
+- Total plans completed: 57 (across v1.0-v1.8)
 - Average duration: ~30 min
 - Total execution time: ~26 hours
 
@@ -34,6 +34,8 @@ Progress: [██████████] 100%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [27-01]: isMember from JWT token, isAdmin from permissionChecker -- intentional dual source
+- [27-01]: token.isAdmin supplementary for proxy.js; session.user.isAdmin from permissionChecker is authoritative
 - [26-02]: proxy.js logic kept identical to middleware.js -- only export pattern changed
 - [26-02]: Dev server requires --webpack flag (Turbopack not yet compatible with webpack config)
 - [26-01]: No --legacy-peer-deps needed: next-auth beta.30 resolved cleanly with next@16
@@ -56,5 +58,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 26-02-PLAN.md (Phase 26 complete)
+Stopped at: Completed 27-01-PLAN.md
 Resume file: None

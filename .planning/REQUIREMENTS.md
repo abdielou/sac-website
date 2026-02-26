@@ -15,8 +15,8 @@ Requirements for Member Profiles & ID Cards milestone. Each maps to roadmap phas
 
 ### Member Authentication
 
-- [ ] **AUTH-01**: Member can sign in with their @sociedadastronomia.com Google account
-- [ ] **AUTH-02**: Member session includes isMember flag and is scoped to their own data only
+- [x] **AUTH-01**: Member can sign in with their @sociedadastronomia.com Google account
+- [x] **AUTH-02**: Member session includes isMember flag and is scoped to their own data only
 - [ ] **AUTH-03**: Admin routes remain restricted to admin-only (existing behavior preserved)
 
 ### Member Profile
@@ -75,8 +75,8 @@ Requirements for Member Profiles & ID Cards milestone. Each maps to roadmap phas
 | MIG-01 | Phase 26 | Complete |
 | MIG-02 | Phase 26 | Complete |
 | MIG-03 | Phase 26 | Complete |
-| AUTH-01 | Phase 27 | Pending |
-| AUTH-02 | Phase 27 | Pending |
+| AUTH-01 | Phase 27 | Complete |
+| AUTH-02 | Phase 27 | Complete |
 | AUTH-03 | Phase 27 | Pending |
 | PROF-01 | Phase 28 | Pending |
 | PROF-02 | Phase 28 | Pending |
