@@ -44,9 +44,7 @@ export default async function SignInPage({ searchParams }) {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              Panel de Administracion
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Acceso SAC</h1>
             <p className="text-gray-600 dark:text-gray-400">Sociedad de Astronomia del Caribe</p>
           </div>
 
@@ -55,7 +53,7 @@ export default async function SignInPage({ searchParams }) {
             <div className="mb-6 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
               <p className="text-sm text-red-700 dark:text-red-300">
                 {error === 'AccessDenied'
-                  ? 'No tienes autorizacion para acceder a esta area. Contacta al administrador.'
+                  ? 'Tu cuenta no esta asociada a la Sociedad de Astronomia del Caribe. Si eres miembro, usa tu cuenta @sociedadastronomia.com.'
                   : 'Error al iniciar sesion. Por favor intenta de nuevo.'}
               </p>
             </div>
@@ -79,7 +77,8 @@ export default async function SignInPage({ searchParams }) {
 
           {/* Footer */}
           <p className="mt-6 text-xs text-center text-gray-500 dark:text-gray-400">
-            Solo usuarios autorizados pueden acceder al panel de administracion.
+            Acceso exclusivo para miembros y administradores de la Sociedad de Astronomia del
+            Caribe.
           </p>
         </div>
       </div>
