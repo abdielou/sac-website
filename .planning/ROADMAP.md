@@ -10,6 +10,7 @@
 - ✅ **v1.5 Calendar-Year Membership Rules** — Phases 17-18 (shipped 2026-02-12)
 - ✅ **v1.6 Article Manager** — Phases 19-22 (shipped 2026-02-17)
 - ✅ **v1.7 Members Map View** — Phases 23-25 (shipped 2026-02-25)
+- 🚧 **v1.8 Member Profiles & ID Cards** — Phases 26-30 (in progress)
 
 ## Phases
 
@@ -43,6 +44,21 @@ See .planning/milestones/v1.7-ROADMAP.md for full details.
 
 </details>
 
+### 🚧 v1.8 Member Profiles & ID Cards (In Progress)
+
+**Milestone Goal:** Members sign in with SAC Google accounts, view their profile, upload photos, and preview ID cards. Admins generate printable PDF ID cards for events.
+
+- [ ] **Phase 26: Next.js 16 Migration** - Upgrade framework, rename middleware to proxy, fix async APIs
+  **Plans:** 2 plans
+  - [ ] 26-01-PLAN.md -- Upgrade Next.js 16, update config and build scripts
+  - [ ] 26-02-PLAN.md -- Rename middleware to proxy, verify all routes and async APIs
+- [ ] **Phase 27: Member Authentication** - SAC Google account sign-in with member role and route protection
+- [ ] **Phase 28: Photo Storage & Member Profile** - Google Drive photo integration and member profile pages
+- [ ] **Phase 29: ID Card System** - Year-versioned templates, PDF generation, admin indicators
+- [ ] **Phase 30: Bulk Generation & Notifications** - Multi-member PDF export and profile setup nudge emails
+
+See .planning/milestones/v1.8-ROADMAP.md for full details.
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -55,3 +71,4 @@ See .planning/milestones/v1.7-ROADMAP.md for full details.
 | 17-18 | v1.5 | 3/3 | Complete | 2026-02-12 |
 | 19-22 | v1.6 | 7/7 | Complete | 2026-02-17 |
 | 23-25 | v1.7 | 5/5 | Complete | 2026-02-25 |
+| 26-30 | v1.8 | 0/? | Not started | - |
