@@ -60,5 +60,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Phase 27 verified and closed. Ready for Phase 28 planning.
-Resume file: None
+Stopped at: Phase 28 context gathered. Ready for planning.
+Resume file: .planning/phases/28-photo-storage-member-profile/28-CONTEXT.md
