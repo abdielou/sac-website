@@ -23,11 +23,9 @@ const securityHeaders = [
 ]
 
 module.exports = withBundleAnalyzer({
+  turbopack: {},
   reactStrictMode: true,
   pageExtensions: ['js', 'jsx', 'md', 'mdx'],
-  eslint: {
-    dirs: ['pages', 'components', 'lib', 'layouts', 'scripts', 'app'],
-  },
   webpack: (config, { dev, isServer }) => {
     config.module.rules.push({
       test: /\.(png|jpe?g|gif|mp4)$/i,

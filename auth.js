@@ -75,6 +75,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         return true
       }
 
+      // SAC member domain
+      if (email.endsWith('@sociedadastronomia.com')) {
+        return true
+      }
+
       console.log(`Unauthorized login attempt: ${email}`)
       return false
     },
@@ -91,6 +96,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.accessToken = account.access_token
         token.refreshToken = account.refresh_token
         token.expiresAt = account.expires_at // epoch seconds
+
+        // Role determination
+        const email = token.email?.toLowerCase()
+        token.isMember = email?.endsWith('@sociedadastronomia.com') || false
+        token.isAdmin = isAuthorizedEmail(email) || false
+
         return token
       }
 
@@ -143,6 +154,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.accessibleFeatures = permissionChecker.getAccessibleFeatures(session.user.email)
         session.user.accessibleActions = permissionChecker.getAccessibleActions(session.user.email)
         session.user.isAdmin = permissionChecker.isAdmin(session.user.email)
+        // Member flag from JWT
+        session.user.isMember = token.isMember || false
       }
       
       return session
