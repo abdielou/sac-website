@@ -57,6 +57,12 @@ See .planning/milestones/v1.7-ROADMAP.md for full details.
   - [x] 27-01-PLAN.md -- Extend auth.js callbacks for member sign-in, update sign-in page
   - [x] 27-02-PLAN.md -- Add member route protection in proxy.js, admin layout guard
 - [ ] **Phase 28: Photo Storage & Member Profile** - Google Drive photo integration and member profile pages
+  **Plans:** 4 plans
+  Plans:
+  - [ ] 28-01-PLAN.md -- Google Drive utility, spreadsheet functions, and member API routes
+  - [ ] 28-02-PLAN.md -- Shared dashboard components and member layout
+  - [ ] 28-03-PLAN.md -- Profile page with view/edit, photo upload/crop
+  - [ ] 28-04-PLAN.md -- Human verification checkpoint
 - [ ] **Phase 29: ID Card System** - Year-versioned templates, PDF generation, admin indicators
 - [ ] **Phase 30: Bulk Generation & Notifications** - Multi-member PDF export and profile setup nudge emails
 
