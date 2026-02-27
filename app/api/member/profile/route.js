@@ -33,7 +33,9 @@ export const GET = auth(async function GET(req) {
 
     // Build profile response, stripping internal fields
     const { _raw, id, ...profileFields } = member
-    const photoUrl = member.photoFileId ? `/api/member/photo/${encodeURIComponent(email)}` : null
+    const photoUrl = member.photoFileId
+      ? `/api/member/photo/${encodeURIComponent(email)}?v=${encodeURIComponent(member.photoFileId)}`
+      : null
 
     return NextResponse.json({
       ...profileFields,
@@ -160,11 +162,9 @@ export const PUT = auth(async function PUT(req) {
     }
 
     const { _raw, id, ...profileFields } = updatedMember
-    const photoBase = updatedMember.photoFileId
-      ? `/api/member/photo/${encodeURIComponent(email)}`
+    const photoUrl = updatedMember.photoFileId
+      ? `/api/member/photo/${encodeURIComponent(email)}?v=${encodeURIComponent(updatedMember.photoFileId)}`
       : null
-    // Bust browser cache when a new photo was uploaded
-    const photoUrl = photoBase && fields.photoFileId ? `${photoBase}?v=${Date.now()}` : photoBase
 
     return NextResponse.json({
       ...profileFields,
