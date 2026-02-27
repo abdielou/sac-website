@@ -22,17 +22,17 @@ Requirements for Member Profiles & ID Cards milestone. Each maps to roadmap phas
 ### Member Profile
 
 - [x] **PROF-01**: Member can view their profile showing name, email, status, expiration, and member-since date
-- [ ] **PROF-02**: Member can edit their contact info (phone, town, postal address, zipcode)
-- [ ] **PROF-03**: Member can edit their equipment info (telescope model, other equipment)
+- [x] **PROF-02**: Member can edit their contact info (phone, town, postal address, zipcode)
+- [x] **PROF-03**: Member can edit their equipment info (telescope model, other equipment)
 - [ ] **PROF-04**: Member can upload a profile photo with client-side crop to square
 - [ ] **PROF-05**: Member can take a photo using their device camera and crop it
 - [ ] **PROF-06**: Member can preview their ID card on their profile page
 
 ### Photo Storage
 
-- [ ] **PHOTO-01**: Profile photos stored in Google Drive folder with board-only access
-- [ ] **PHOTO-02**: Photos served to authenticated members only via API route proxy
-- [ ] **PHOTO-03**: Photo file ID tracked in spreadsheet (photoFileId column in CLEAN sheet)
+- [x] **PHOTO-01**: Profile photos stored in Google Drive folder with board-only access
+- [x] **PHOTO-02**: Photos served to authenticated members only via API route proxy
+- [x] **PHOTO-03**: Photo file ID tracked in spreadsheet (photoFileId column in CLEAN sheet)
 
 ### ID Cards
 
@@ -79,14 +79,14 @@ Requirements for Member Profiles & ID Cards milestone. Each maps to roadmap phas
 | AUTH-02 | Phase 27 | Complete |
 | AUTH-03 | Phase 27 | Complete |
 | PROF-01 | Phase 28 | Complete |
-| PROF-02 | Phase 28 | Pending |
-| PROF-03 | Phase 28 | Pending |
+| PROF-02 | Phase 28 | Complete |
+| PROF-03 | Phase 28 | Complete |
 | PROF-04 | Phase 28 | Pending |
 | PROF-05 | Phase 28 | Pending |
 | PROF-06 | Phase 29 | Pending |
-| PHOTO-01 | Phase 28 | Pending |
-| PHOTO-02 | Phase 28 | Pending |
-| PHOTO-03 | Phase 28 | Pending |
+| PHOTO-01 | Phase 28 | Complete |
+| PHOTO-02 | Phase 28 | Complete |
+| PHOTO-03 | Phase 28 | Complete |
 | ID-01 | Phase 29 | Pending |
 | ID-02 | Phase 29 | Pending |
 | ID-03 | Phase 29 | Pending |

@@ -67,5 +67,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 28-02-PLAN.md (shared dashboard components)
-Resume file: .planning/phases/28-photo-storage-member-profile/28-02-SUMMARY.md
+Stopped at: Completed 28-01-PLAN.md (backend API foundation)
+Resume file: .planning/phases/28-photo-storage-member-profile/28-01-SUMMARY.md
