@@ -88,7 +88,6 @@ export function ProfileForm({ profile, onCancel, onSave, isSaving }) {
   const [lastName, setLastName] = useState(
     [profile.lastName, profile.slastName].filter(Boolean).join(' ')
   )
-  const [phone, setPhone] = useState(profile.phone || '')
   const [town, setTown] = useState(profile.town || '')
   const [postalAddress, setPostalAddress] = useState(profile.postalAddress || '')
   const [zipcode, setZipcode] = useState(profile.zipcode || '')
@@ -124,7 +123,6 @@ export function ProfileForm({ profile, onCancel, onSave, isSaving }) {
         firstName,
         initial,
         lastName,
-        phone,
         town,
         postalAddress,
         zipcode,
@@ -218,6 +216,14 @@ export function ProfileForm({ profile, onCancel, onSave, isSaving }) {
                 </span>
               </span>
             </ReadOnlyField>
+            <ReadOnlyField label="Telefono">
+              <span className="flex items-center gap-2">
+                {profile.phone || '\u2014'}
+                <span className="inline-flex px-1.5 py-0.5 text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded">
+                  Solo lectura
+                </span>
+              </span>
+            </ReadOnlyField>
             <ReadOnlyField label="Estado">
               <span
                 className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusCfg.classes}`}
@@ -234,23 +240,6 @@ export function ProfileForm({ profile, onCancel, onSave, isSaving }) {
       {/* Contact */}
       <Section title="Contacto">
         <div className="space-y-4">
-          <div>
-            <label
-              htmlFor="phone"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >
-              Telefono
-            </label>
-            <input
-              id="phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              disabled={isSaving}
-              className={inputClasses}
-              placeholder="787-555-1234"
-            />
-          </div>
           <div>
             <label
               htmlFor="town"

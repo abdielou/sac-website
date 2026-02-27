@@ -59,7 +59,6 @@ const ALLOWED_FIELDS = [
   'firstName',
   'initial',
   'lastName',
-  'phone',
   'town',
   'postalAddress',
   'zipcode',
