@@ -106,7 +106,7 @@ export function ProfileView({ profile, onEdit }) {
           </div>
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              {display(profile.firstName || profile.name)}
+              {display(profile.name)}
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">{profile.email}</p>
           </div>
@@ -123,7 +123,11 @@ export function ProfileView({ profile, onEdit }) {
       {/* Personal Info */}
       <Section title="Informacion Personal">
         <dl className="divide-y divide-gray-100 dark:divide-gray-700">
-          <Field label="Nombre">{display(profile.firstName || profile.name)}</Field>
+          <Field label="Nombre">{display(profile.firstName)}</Field>
+          <Field label="Inicial">{display(profile.initial)}</Field>
+          <Field label="Apellidos">
+            {display([profile.lastName, profile.slastName].filter(Boolean).join(' '))}
+          </Field>
           <Field label="Email">
             <span className="flex items-center gap-2">
               {profile.email}
