@@ -50,6 +50,10 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
 
   const startCamera = async () => {
     setCameraError(null)
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError('Tu navegador no soporta acceso a la camara')
+      return
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 640 } },
@@ -62,8 +66,15 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
           videoRef.current.srcObject = stream
         }
       })
-    } catch {
-      setCameraError('No se pudo acceder a la camara')
+    } catch (err) {
+      console.error('Camera access failed:', err.name, err.message)
+      if (err.name === 'NotAllowedError') {
+        setCameraError('Permiso de camara denegado. Verifica los permisos del navegador.')
+      } else if (err.name === 'NotFoundError') {
+        setCameraError('No se encontro una camara en este dispositivo.')
+      } else {
+        setCameraError('No se pudo acceder a la camara')
+      }
     }
   }
 
