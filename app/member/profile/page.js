@@ -64,7 +64,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl">
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Mi Perfil</h1>
 
       {/* Success feedback */}
