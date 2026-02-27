@@ -23,18 +23,63 @@ const DEFAULT_AVATAR =
 export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, disabled }) {
   const [cropModalOpen, setCropModalOpen] = useState(false)
   const [rawImageSrc, setRawImageSrc] = useState(null)
+  const [cameraActive, setCameraActive] = useState(false)
+  const [cameraError, setCameraError] = useState(null)
   const fileInputRef = useRef(null)
-  const cameraInputRef = useRef(null)
+  const videoRef = useRef(null)
+  const streamRef = useRef(null)
   const objectUrlRef = useRef(null)
 
-  // Cleanup object URLs on unmount
+  // Cleanup object URLs and camera stream on unmount
   useEffect(() => {
     return () => {
       if (objectUrlRef.current) {
         URL.revokeObjectURL(objectUrlRef.current)
       }
+      stopCamera()
     }
   }, [])
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
+    }
+    setCameraActive(false)
+  }
+
+  const startCamera = async () => {
+    setCameraError(null)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 640 } },
+      })
+      streamRef.current = stream
+      setCameraActive(true)
+      // Wait for next render so videoRef is mounted
+      requestAnimationFrame(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+        }
+      })
+    } catch {
+      setCameraError('No se pudo acceder a la camara')
+    }
+  }
+
+  const captureFrame = () => {
+    const video = videoRef.current
+    if (!video) return
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(video, 0, 0)
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9)
+    stopCamera()
+    setRawImageSrc(dataUrl)
+    setCropModalOpen(true)
+  }
 
   const handleFileSelected = useCallback((e) => {
     const file = e.target.files?.[0]
@@ -87,27 +132,63 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
         />
       </div>
 
-      {/* Upload buttons */}
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={disabled}
-          className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Subir foto
-        </button>
-        <button
-          type="button"
-          onClick={() => cameraInputRef.current?.click()}
-          disabled={disabled}
-          className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Tomar foto
-        </button>
-      </div>
+      {/* Camera viewfinder */}
+      {cameraActive && (
+        <div className="flex flex-col items-center gap-2">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-48 h-48 rounded-lg object-cover border-2 border-blue-500"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={captureFrame}
+              className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Capturar
+            </button>
+            <button
+              type="button"
+              onClick={stopCamera}
+              className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
-      {/* Hidden file inputs */}
+      {/* Upload buttons */}
+      {!cameraActive && (
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={disabled}
+              className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Subir foto
+            </button>
+            <button
+              type="button"
+              onClick={startCamera}
+              disabled={disabled}
+              className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Tomar foto
+            </button>
+          </div>
+          {cameraError && (
+            <p className="text-xs text-red-500 dark:text-red-400">{cameraError}</p>
+          )}
+        </div>
+      )}
+
+      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -115,15 +196,6 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
         onChange={handleFileSelected}
         className="hidden"
         aria-label="Seleccionar foto desde dispositivo"
-      />
-      <input
-        ref={cameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="user"
-        onChange={handleFileSelected}
-        className="hidden"
-        aria-label="Tomar foto con camara"
       />
 
       {/* Crop Modal */}
