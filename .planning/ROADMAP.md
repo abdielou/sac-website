@@ -63,6 +63,11 @@ See .planning/milestones/v1.7-ROADMAP.md for full details.
   - [x] 28-03-PLAN.md -- Profile page with view/edit, photo upload/crop
   - [x] 28-04-PLAN.md -- Human verification checkpoint
 - [ ] **Phase 29: ID Card System** - Year-versioned templates, PDF generation, admin indicators
+  **Plans:** 4 plans
+  - [ ] 29-01-PLAN.md -- PDF template, QR utility, admin PDF API, verification page
+  - [ ] 29-02-PLAN.md -- Missing photo indicator and filter on admin members list
+  - [ ] 29-03-PLAN.md -- Member profile ID card preview and old /id page cleanup
+  - [ ] 29-04-PLAN.md -- Human verification checkpoint
 - [ ] **Phase 30: Bulk Generation & Notifications** - Multi-member PDF export and profile setup nudge emails
 
 See .planning/milestones/v1.8-ROADMAP.md for full details.
@@ -82,4 +87,5 @@ See .planning/milestones/v1.8-ROADMAP.md for full details.
 | 26 | v1.8 | 2/2 | Complete | 2026-02-26 |
 | 27 | v1.8 | 2/2 | Complete | 2026-02-26 |
 | 28 | v1.8 | 4/4 | Complete | 2026-02-27 |
-| 29-30 | v1.8 | 0/? | Not started | - |
+| 29 | v1.8 | 0/4 | Not started | - |
+| 30 | v1.8 | 0/? | Not started | - |
