@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Phase: 29 (4 of 5 in v1.8) — ID Card System
-Plan: 2 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: In Progress
-Last activity: 2026-02-27 — Completed 29-02 (missing photo filter)
+Last activity: 2026-02-27 — Completed 29-01 (PDF pipeline + verification page)
 
 Progress: [█████-----] 50%
 
@@ -26,7 +26,7 @@ Progress: [█████-----] 50%
 - 28-02: 3min, 2 tasks, 7 files
 - 28-03: 3min, 2 tasks, 7 files
 - 28-04: verification checkpoint, 11 issues fixed inline
-- 29-01: plan 01 (if completed prior)
+- 29-01: 3min, 2 tasks, 6 files
 - 29-02: 2min, 2 tasks, 2 files
 
 **Recent Trend (v1.8):**
@@ -40,6 +40,9 @@ Progress: [█████-----] 50%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [29-01]: serverExternalPackages at top level (not experimental) for Next.js 16
+- [29-01]: renderToStream preferred over renderToBuffer for reliability
+- [29-01]: Verification page shows name and status only, no sensitive data
 - [29-02]: hasPhoto column defaultVisible: false -- opt-in via column selector
 - [29-02]: Photo filter is independent toggle, not part of status multi-select
 - [28-04]: Phone number is read-only (intentional, not editable by members)
@@ -72,5 +75,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 29-02-PLAN.md
-Resume file: .planning/phases/29-id-card-system/29-02-SUMMARY.md
+Stopped at: Completed 29-01-PLAN.md
+Resume file: .planning/phases/29-id-card-system/29-01-SUMMARY.md

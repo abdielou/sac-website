@@ -36,9 +36,9 @@ Requirements for Member Profiles & ID Cards milestone. Each maps to roadmap phas
 
 ### ID Cards
 
-- [ ] **ID-01**: Year-versioned ID card React template with swappable background image and year text
-- [ ] **ID-02**: ID card includes QR code linking to membership verification
-- [ ] **ID-03**: Admin can generate a printable PDF ID card for a single member
+- [x] **ID-01**: Year-versioned ID card React template with swappable background image and year text
+- [x] **ID-02**: ID card includes QR code linking to membership verification
+- [x] **ID-03**: Admin can generate a printable PDF ID card for a single member
 - [ ] **ID-04**: Admin can bulk generate printable PDF ID cards for all active members with photos
 - [x] **ID-05**: Admin members list shows "missing photo" indicator and is filterable by it
 
@@ -87,9 +87,9 @@ Requirements for Member Profiles & ID Cards milestone. Each maps to roadmap phas
 | PHOTO-01 | Phase 28 | Complete |
 | PHOTO-02 | Phase 28 | Complete |
 | PHOTO-03 | Phase 28 | Complete |
-| ID-01 | Phase 29 | Pending |
-| ID-02 | Phase 29 | Pending |
-| ID-03 | Phase 29 | Pending |
+| ID-01 | Phase 29 | Complete |
+| ID-02 | Phase 29 | Complete |
+| ID-03 | Phase 29 | Complete |
 | ID-04 | Phase 30 | Pending |
 | ID-05 | Phase 29 | Complete |
 | NOTIF-01 | Phase 30 | Pending |
