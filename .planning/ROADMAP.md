@@ -62,7 +62,7 @@ See .planning/milestones/v1.7-ROADMAP.md for full details.
   - [x] 28-02-PLAN.md -- Shared dashboard components and member layout
   - [x] 28-03-PLAN.md -- Profile page with view/edit, photo upload/crop
   - [x] 28-04-PLAN.md -- Human verification checkpoint
-- [ ] **Phase 29: ID Card System** - Year-versioned templates, PDF generation, admin indicators
+- [x] **Phase 29: ID Card System** - Year-versioned templates, PDF generation, admin indicators (completed 2026-02-27)
   **Plans:** 4 plans
   - [ ] 29-01-PLAN.md -- PDF template, QR utility, admin PDF API, verification page
   - [ ] 29-02-PLAN.md -- Missing photo indicator and filter on admin members list
@@ -87,5 +87,5 @@ See .planning/milestones/v1.8-ROADMAP.md for full details.
 | 26 | v1.8 | 2/2 | Complete | 2026-02-26 |
 | 27 | v1.8 | 2/2 | Complete | 2026-02-26 |
 | 28 | v1.8 | 4/4 | Complete | 2026-02-27 |
-| 29 | 3/4 | In Progress|  | - |
+| 29 | 3/4 | Complete    | 2026-02-27 | - |
 | 30 | v1.8 | 0/? | Not started | - |
