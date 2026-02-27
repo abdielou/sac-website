@@ -33,9 +33,7 @@ export const GET = auth(async function GET(req) {
 
     // Build profile response, stripping internal fields
     const { _raw, id, ...profileFields } = member
-    const photoUrl = member.photoFileId
-      ? `/api/member/photo/${encodeURIComponent(email)}`
-      : null
+    const photoUrl = member.photoFileId ? `/api/member/photo/${encodeURIComponent(email)}` : null
 
     return NextResponse.json({
       ...profileFields,
@@ -59,6 +57,8 @@ const MAX_PHOTO_SIZE = 5 * 1024 * 1024
  */
 const ALLOWED_FIELDS = [
   'firstName',
+  'initial',
+  'lastName',
   'phone',
   'town',
   'postalAddress',
@@ -104,10 +104,7 @@ export const PUT = auth(async function PUT(req) {
         try {
           fields = JSON.parse(fieldsStr)
         } catch {
-          return NextResponse.json(
-            { error: 'Formato de campos invalido' },
-            { status: 400 }
-          )
+          return NextResponse.json({ error: 'Formato de campos invalido' }, { status: 400 })
         }
       }
     } else {
@@ -118,18 +115,12 @@ export const PUT = auth(async function PUT(req) {
     // Validate photo if present
     if (photoFile && photoFile.size > 0) {
       if (photoFile.size > MAX_PHOTO_SIZE) {
-        return NextResponse.json(
-          { error: 'Archivo muy grande (maximo 5MB)' },
-          { status: 400 }
-        )
+        return NextResponse.json({ error: 'Archivo muy grande (maximo 5MB)' }, { status: 400 })
       }
 
       const photoMime = photoFile.type || ''
       if (!photoMime.startsWith('image/')) {
-        return NextResponse.json(
-          { error: 'El archivo debe ser una imagen' },
-          { status: 400 }
-        )
+        return NextResponse.json({ error: 'El archivo debe ser una imagen' }, { status: 400 })
       }
 
       // Upload photo to Drive

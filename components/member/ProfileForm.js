@@ -83,7 +83,11 @@ const inputClasses =
  * @param {boolean} props.isSaving - Whether save is in progress
  */
 export function ProfileForm({ profile, onCancel, onSave, isSaving }) {
-  const [firstName, setFirstName] = useState(profile.firstName || profile.name || '')
+  const [firstName, setFirstName] = useState(profile.firstName || '')
+  const [initial, setInitial] = useState(profile.initial || '')
+  const [lastName, setLastName] = useState(
+    [profile.lastName, profile.slastName].filter(Boolean).join(' ')
+  )
   const [phone, setPhone] = useState(profile.phone || '')
   const [town, setTown] = useState(profile.town || '')
   const [postalAddress, setPostalAddress] = useState(profile.postalAddress || '')
@@ -118,6 +122,8 @@ export function ProfileForm({ profile, onCancel, onSave, isSaving }) {
     onSave(
       {
         firstName,
+        initial,
+        lastName,
         phone,
         town,
         postalAddress,
@@ -146,23 +152,60 @@ export function ProfileForm({ profile, onCancel, onSave, isSaving }) {
       {/* Personal Info */}
       <Section title="Informacion Personal">
         <div className="space-y-4">
-          {/* Editable: firstName */}
-          <div>
-            <label
-              htmlFor="firstName"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >
-              Nombre
-            </label>
-            <input
-              id="firstName"
-              type="text"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              disabled={isSaving}
-              className={inputClasses}
-              placeholder="Tu nombre"
-            />
+          {/* Editable name fields */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label
+                htmlFor="firstName"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
+                Nombre
+              </label>
+              <input
+                id="firstName"
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                disabled={isSaving}
+                className={inputClasses}
+                placeholder="Nombre"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="initial"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
+                Inicial
+              </label>
+              <input
+                id="initial"
+                type="text"
+                value={initial}
+                onChange={(e) => setInitial(e.target.value)}
+                disabled={isSaving}
+                className={inputClasses}
+                maxLength={1}
+                placeholder="Inicial"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="lastName"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
+                Apellidos
+              </label>
+              <input
+                id="lastName"
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                disabled={isSaving}
+                className={inputClasses}
+                placeholder="Apellidos"
+              />
+            </div>
           </div>
 
           {/* Read-only fields */}

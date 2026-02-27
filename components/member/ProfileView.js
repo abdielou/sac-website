@@ -123,11 +123,7 @@ export function ProfileView({ profile, onEdit }) {
       {/* Personal Info */}
       <Section title="Informacion Personal">
         <dl className="divide-y divide-gray-100 dark:divide-gray-700">
-          <Field label="Nombre">{display(profile.firstName)}</Field>
-          <Field label="Inicial">{display(profile.initial)}</Field>
-          <Field label="Apellidos">
-            {display([profile.lastName, profile.slastName].filter(Boolean).join(' '))}
-          </Field>
+          <Field label="Nombre">{display(profile.name)}</Field>
           <Field label="Email">
             <span className="flex items-center gap-2">
               {profile.email}
