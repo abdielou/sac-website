@@ -208,22 +208,8 @@ export function ProfileForm({ profile, onCancel, onSave, isSaving }) {
 
           {/* Read-only fields */}
           <dl className="divide-y divide-gray-100 dark:divide-gray-700">
-            <ReadOnlyField label="Email">
-              <span className="flex items-center gap-2">
-                {profile.email}
-                <span className="inline-flex px-1.5 py-0.5 text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded">
-                  Solo lectura
-                </span>
-              </span>
-            </ReadOnlyField>
-            <ReadOnlyField label="Telefono">
-              <span className="flex items-center gap-2">
-                {profile.phone || '\u2014'}
-                <span className="inline-flex px-1.5 py-0.5 text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded">
-                  Solo lectura
-                </span>
-              </span>
-            </ReadOnlyField>
+            <ReadOnlyField label="Email">{profile.email}</ReadOnlyField>
+            <ReadOnlyField label="Telefono">{profile.phone || '\u2014'}</ReadOnlyField>
             <ReadOnlyField label="Estado">
               <span
                 className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${statusCfg.classes}`}
