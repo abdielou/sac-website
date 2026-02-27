@@ -40,7 +40,7 @@ Requirements for Member Profiles & ID Cards milestone. Each maps to roadmap phas
 - [ ] **ID-02**: ID card includes QR code linking to membership verification
 - [ ] **ID-03**: Admin can generate a printable PDF ID card for a single member
 - [ ] **ID-04**: Admin can bulk generate printable PDF ID cards for all active members with photos
-- [ ] **ID-05**: Admin members list shows "missing photo" indicator and is filterable by it
+- [x] **ID-05**: Admin members list shows "missing photo" indicator and is filterable by it
 
 ### Notifications
 
@@ -91,7 +91,7 @@ Requirements for Member Profiles & ID Cards milestone. Each maps to roadmap phas
 | ID-02 | Phase 29 | Pending |
 | ID-03 | Phase 29 | Pending |
 | ID-04 | Phase 30 | Pending |
-| ID-05 | Phase 29 | Pending |
+| ID-05 | Phase 29 | Complete |
 | NOTIF-01 | Phase 30 | Pending |
 | CLEAN-01 | Phase 29 | Pending |
 

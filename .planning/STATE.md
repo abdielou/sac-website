@@ -5,30 +5,32 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Admins can accurately track membership status and payments so that no member falls through the cracks.
-**Current focus:** Phase 28 complete — ready for Phase 29
+**Current focus:** Phase 29 in progress — ID Card System
 
 ## Current Position
 
-Phase: 28 (3 of 5 in v1.8) — Photo Storage & Member Profile
-Plan: 4 of 4 in current phase
-Status: Complete
-Last activity: 2026-02-27 — Phase 28 verified and complete
+Phase: 29 (4 of 5 in v1.8) — ID Card System
+Plan: 2 of 4 in current phase
+Status: In Progress
+Last activity: 2026-02-27 — Completed 29-02 (missing photo filter)
 
-Progress: [██████████] 100%
+Progress: [█████-----] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 64 (across v1.0-v1.8)
+- Total plans completed: 66 (across v1.0-v1.8)
 - Average duration: ~30 min
 - Total execution time: ~27 hours
 - 28-01: 3min, 2 tasks, 5 files
 - 28-02: 3min, 2 tasks, 7 files
 - 28-03: 3min, 2 tasks, 7 files
 - 28-04: verification checkpoint, 11 issues fixed inline
+- 29-01: plan 01 (if completed prior)
+- 29-02: 2min, 2 tasks, 2 files
 
 **Recent Trend (v1.8):**
-- 8 plans across 3 phases in 2 days
+- 10 plans across 4 phases in 2 days
 - Trend: Accelerating
 
 ## Accumulated Context
@@ -38,6 +40,8 @@ Progress: [██████████] 100%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [29-02]: hasPhoto column defaultVisible: false -- opt-in via column selector
+- [29-02]: Photo filter is independent toggle, not part of status multi-select
 - [28-04]: Phone number is read-only (intentional, not editable by members)
 - [28-04]: SAC email matching added to getMemberByEmail and updateMemberProfile
 - [28-04]: Drive scope changed from drive.file to drive for Shared Drive access
@@ -68,5 +72,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Phase 28 complete, ready for Phase 29
-Resume file: .planning/phases/28-photo-storage-member-profile/28-04-SUMMARY.md
+Stopped at: Completed 29-02-PLAN.md
+Resume file: .planning/phases/29-id-card-system/29-02-SUMMARY.md
