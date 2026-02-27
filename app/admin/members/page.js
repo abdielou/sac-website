@@ -115,6 +115,25 @@ function MembersContent() {
       return <span className="text-sm text-gray-400">-</span>
     }
 
+    // Special rendering for hasPhoto column (photo status indicator)
+    if (col.id === 'hasPhoto') {
+      return value ? (
+        <span className="text-green-600 dark:text-green-400 text-xs">Si</span>
+      ) : (
+        <span className="inline-flex items-center gap-1 text-orange-600 dark:text-orange-400 text-xs font-medium">
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          Sin foto
+        </span>
+      )
+    }
+
     // Default rendering for all other columns
     return formattedValue || '-'
   }
@@ -141,6 +160,7 @@ function MembersContent() {
   const [modalState, setModalState] = useState({ isOpen: false, member: null, paymentType: null })
   const [workspaceModalState, setWorkspaceModalState] = useState({ isOpen: false, member: null })
   const [isExporting, setIsExporting] = useState(false)
+  const [photoFilter, setPhotoFilter] = useState(false)
   const [viewMode, setViewMode] = useState('grid')
   const [circleCenter, setCircleCenter] = useState(null)
   const [radiusKm, setRadiusKm] = useState(5)
@@ -208,6 +228,11 @@ function MembersContent() {
 
     let filtered = apiData.data
 
+    // Apply photo filter
+    if (photoFilter) {
+      filtered = filtered.filter((member) => !member.photoFileId)
+    }
+
     // Apply search filter across all visible columns
     if (searchParam) {
       const searchLower = searchParam.toLowerCase()
@@ -227,7 +252,7 @@ function MembersContent() {
     }
 
     return filtered
-  }, [apiData?.data, searchParam, visibleColumns])
+  }, [apiData?.data, searchParam, visibleColumns, photoFilter])
 
   // Radius filtering: when circle is active, show only members within radius
   const radiusFilteredMembers = useMemo(() => {
@@ -414,6 +439,26 @@ function MembersContent() {
           })}
         </div>
 
+        {/* Photo filter pill */}
+        <button
+          onClick={() => setPhotoFilter(!photoFilter)}
+          className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full transition-opacity ${
+            photoFilter
+              ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+              : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
+          }`}
+        >
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          Sin foto
+        </button>
+
         {/* Search input */}
         <div className="relative flex-1 min-w-[200px]">
           <input
@@ -520,6 +565,24 @@ function MembersContent() {
                         {[member.firstName, member.initial, member.lastName, member.slastName]
                           .filter(Boolean)
                           .join(' ') || '-'}
+                        {!member.photoFileId && (
+                          <span className="ml-2 inline-flex items-center gap-0.5 text-orange-600 dark:text-orange-400 text-xs font-medium">
+                            <svg
+                              className="w-3 h-3"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
+                            </svg>
+                            Sin foto
+                          </span>
+                        )}
                       </p>
                       <div className="flex items-center gap-2 mt-1">
                         <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
