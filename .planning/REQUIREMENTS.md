@@ -26,7 +26,7 @@ Requirements for Member Profiles & ID Cards milestone. Each maps to roadmap phas
 - [x] **PROF-03**: Member can edit their equipment info (telescope model, other equipment)
 - [x] **PROF-04**: Member can upload a profile photo with client-side crop to square
 - [x] **PROF-05**: Member can take a photo using their device camera and crop it
-- [ ] **PROF-06**: Member can preview their ID card on their profile page
+- [x] **PROF-06**: Member can preview their ID card on their profile page
 
 ### Photo Storage
 
@@ -48,7 +48,7 @@ Requirements for Member Profiles & ID Cards milestone. Each maps to roadmap phas
 
 ### Cleanup
 
-- [ ] **CLEAN-01**: Existing mock /id page removed and replaced with profile-based ID experience
+- [x] **CLEAN-01**: Existing mock /id page removed and replaced with profile-based ID experience
 
 ## Future Requirements
 
@@ -83,7 +83,7 @@ Requirements for Member Profiles & ID Cards milestone. Each maps to roadmap phas
 | PROF-03 | Phase 28 | Complete |
 | PROF-04 | Phase 28 | Complete |
 | PROF-05 | Phase 28 | Complete |
-| PROF-06 | Phase 29 | Pending |
+| PROF-06 | Phase 29 | Complete |
 | PHOTO-01 | Phase 28 | Complete |
 | PHOTO-02 | Phase 28 | Complete |
 | PHOTO-03 | Phase 28 | Complete |
@@ -93,7 +93,7 @@ Requirements for Member Profiles & ID Cards milestone. Each maps to roadmap phas
 | ID-04 | Phase 30 | Pending |
 | ID-05 | Phase 29 | Complete |
 | NOTIF-01 | Phase 30 | Pending |
-| CLEAN-01 | Phase 29 | Pending |
+| CLEAN-01 | Phase 29 | Complete |
 
 **Coverage:**
 - v1.8 requirements: 22 total

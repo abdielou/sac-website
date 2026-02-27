@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Phase: 29 (4 of 5 in v1.8) — ID Card System
-Plan: 3 of 4 in current phase
+Plan: 4 of 4 in current phase
 Status: In Progress
-Last activity: 2026-02-27 — Completed 29-01 (PDF pipeline + verification page)
+Last activity: 2026-02-27 — Completed 29-03 (ID card preview + profile integration)
 
-Progress: [█████-----] 50%
+Progress: [███████---] 75%
 
 ## Performance Metrics
 
@@ -28,6 +28,7 @@ Progress: [█████-----] 50%
 - 28-04: verification checkpoint, 11 issues fixed inline
 - 29-01: 3min, 2 tasks, 6 files
 - 29-02: 2min, 2 tasks, 2 files
+- 29-03: 3min, 2 tasks, 5 files
 
 **Recent Trend (v1.8):**
 - 10 plans across 4 phases in 2 days
@@ -44,6 +45,9 @@ Recent decisions affecting current work:
 - [29-01]: renderToStream preferred over renderToBuffer for reliability
 - [29-01]: Verification page shows name and status only, no sensitive data
 - [29-02]: hasPhoto column defaultVisible: false -- opt-in via column selector
+- [29-03]: IdCardPreview uses HTML/Tailwind (not @react-pdf/renderer) for browser rendering
+- [29-03]: QR placeholder in browser preview; actual QR only in PDF
+- [29-03]: Member PDF download requires active or expiring-soon status
 - [29-02]: Photo filter is independent toggle, not part of status multi-select
 - [28-04]: Phone number is read-only (intentional, not editable by members)
 - [28-04]: SAC email matching added to getMemberByEmail and updateMemberProfile
@@ -75,5 +79,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 29-01-PLAN.md
-Resume file: .planning/phases/29-id-card-system/29-01-SUMMARY.md
+Stopped at: Completed 29-03-PLAN.md
+Resume file: .planning/phases/29-id-card-system/29-03-SUMMARY.md

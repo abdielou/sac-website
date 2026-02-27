@@ -87,5 +87,5 @@ See .planning/milestones/v1.8-ROADMAP.md for full details.
 | 26 | v1.8 | 2/2 | Complete | 2026-02-26 |
 | 27 | v1.8 | 2/2 | Complete | 2026-02-26 |
 | 28 | v1.8 | 4/4 | Complete | 2026-02-27 |
-| 29 | 2/4 | In Progress|  | - |
+| 29 | 3/4 | In Progress|  | - |
 | 30 | v1.8 | 0/? | Not started | - |
