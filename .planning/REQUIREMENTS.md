@@ -21,7 +21,7 @@ Requirements for Member Profiles & ID Cards milestone. Each maps to roadmap phas
 
 ### Member Profile
 
-- [ ] **PROF-01**: Member can view their profile showing name, email, status, expiration, and member-since date
+- [x] **PROF-01**: Member can view their profile showing name, email, status, expiration, and member-since date
 - [ ] **PROF-02**: Member can edit their contact info (phone, town, postal address, zipcode)
 - [ ] **PROF-03**: Member can edit their equipment info (telescope model, other equipment)
 - [ ] **PROF-04**: Member can upload a profile photo with client-side crop to square
@@ -78,7 +78,7 @@ Requirements for Member Profiles & ID Cards milestone. Each maps to roadmap phas
 | AUTH-01 | Phase 27 | Complete |
 | AUTH-02 | Phase 27 | Complete |
 | AUTH-03 | Phase 27 | Complete |
-| PROF-01 | Phase 28 | Pending |
+| PROF-01 | Phase 28 | Complete |
 | PROF-02 | Phase 28 | Pending |
 | PROF-03 | Phase 28 | Pending |
 | PROF-04 | Phase 28 | Pending |

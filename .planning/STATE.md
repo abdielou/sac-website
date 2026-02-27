@@ -10,18 +10,20 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Phase: 28 (3 of 5 in v1.8) — Photo Storage & Member Profile
-Plan: 0 of ? in current phase (NOT PLANNED)
-Status: Ready to plan
-Last activity: 2026-02-26 — Phase 27 complete, all human verification passed
+Plan: 2 of 4 in current phase
+Status: Executing
+Last activity: 2026-02-27 — Plan 28-02 complete (shared dashboard components)
 
-Progress: [████░░░░░░] 40%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 58 (across v1.0-v1.8)
+- Total plans completed: 60 (across v1.0-v1.8)
 - Average duration: ~30 min
 - Total execution time: ~26 hours
+- 28-01: 3min, 2 tasks, 5 files
+- 28-02: 3min, 2 tasks, 7 files
 
 **Recent Trend (v1.7):**
 - 5 plans across 3 phases in 5 days
@@ -34,6 +36,11 @@ Progress: [████░░░░░░] 40%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [28-01]: Separate Drive JWT auth (drive.file scope) from Sheets auth (spreadsheets scope)
+- [28-01]: getMemberByEmail reuses getMembers() cache rather than direct sheet query
+- [28-01]: Photo proxy returns binary with Cache-Control private, max-age=3600
+- [28-02]: Nav items use roles array for filtering; profile item always shown regardless of accessibleFeatures
+- [28-02]: Old admin components kept temporarily for backward compatibility
 - [27-02]: Admin route checks ordered before member route checks in proxy.js for correct precedence
 - [27-02]: Non-admin users on /admin redirected to /member (not sign-in) since already authenticated
 - [27-01]: isMember from JWT token, isAdmin from permissionChecker -- intentional dual source
@@ -59,6 +66,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-26
-Stopped at: Phase 28 context gathered. Ready for planning.
-Resume file: .planning/phases/28-photo-storage-member-profile/28-CONTEXT.md
+Last session: 2026-02-27
+Stopped at: Completed 28-02-PLAN.md (shared dashboard components)
+Resume file: .planning/phases/28-photo-storage-member-profile/28-02-SUMMARY.md
