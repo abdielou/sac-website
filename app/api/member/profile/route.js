@@ -160,9 +160,11 @@ export const PUT = auth(async function PUT(req) {
     }
 
     const { _raw, id, ...profileFields } = updatedMember
-    const photoUrl = updatedMember.photoFileId
+    const photoBase = updatedMember.photoFileId
       ? `/api/member/photo/${encodeURIComponent(email)}`
       : null
+    // Bust browser cache when a new photo was uploaded
+    const photoUrl = photoBase && fields.photoFileId ? `${photoBase}?v=${Date.now()}` : photoBase
 
     return NextResponse.json({
       ...profileFields,
