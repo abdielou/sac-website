@@ -10,20 +10,21 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Phase: 28 (3 of 5 in v1.8) — Photo Storage & Member Profile
-Plan: 2 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: Executing
-Last activity: 2026-02-27 — Plan 28-02 complete (shared dashboard components)
+Last activity: 2026-02-27 — Plan 28-03 complete (member profile UI)
 
-Progress: [█████░░░░░] 50%
+Progress: [███████░░░] 75%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 60 (across v1.0-v1.8)
+- Total plans completed: 61 (across v1.0-v1.8)
 - Average duration: ~30 min
 - Total execution time: ~26 hours
 - 28-01: 3min, 2 tasks, 5 files
 - 28-02: 3min, 2 tasks, 7 files
+- 28-03: 3min, 2 tasks, 7 files
 
 **Recent Trend (v1.7):**
 - 5 plans across 3 phases in 5 days
@@ -41,6 +42,9 @@ Recent decisions affecting current work:
 - [28-01]: Photo proxy returns binary with Cache-Control private, max-age=3600
 - [28-02]: Nav items use roles array for filtering; profile item always shown regardless of accessibleFeatures
 - [28-02]: Old admin components kept temporarily for backward compatibility
+- [28-03]: Inline status badge config in member components to avoid coupling to admin StatusBadge
+- [28-03]: CropModal uses round cropShape for profile photo aesthetics
+- [28-03]: Photo staged locally as Blob after crop, uploaded only on profile save
 - [27-02]: Admin route checks ordered before member route checks in proxy.js for correct precedence
 - [27-02]: Non-admin users on /admin redirected to /member (not sign-in) since already authenticated
 - [27-01]: isMember from JWT token, isAdmin from permissionChecker -- intentional dual source
@@ -67,5 +71,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 28-01-PLAN.md (backend API foundation)
-Resume file: .planning/phases/28-photo-storage-member-profile/28-01-SUMMARY.md
+Stopped at: Completed 28-03-PLAN.md (member profile UI)
+Resume file: .planning/phases/28-photo-storage-member-profile/28-03-SUMMARY.md

@@ -24,8 +24,8 @@ Requirements for Member Profiles & ID Cards milestone. Each maps to roadmap phas
 - [x] **PROF-01**: Member can view their profile showing name, email, status, expiration, and member-since date
 - [x] **PROF-02**: Member can edit their contact info (phone, town, postal address, zipcode)
 - [x] **PROF-03**: Member can edit their equipment info (telescope model, other equipment)
-- [ ] **PROF-04**: Member can upload a profile photo with client-side crop to square
-- [ ] **PROF-05**: Member can take a photo using their device camera and crop it
+- [x] **PROF-04**: Member can upload a profile photo with client-side crop to square
+- [x] **PROF-05**: Member can take a photo using their device camera and crop it
 - [ ] **PROF-06**: Member can preview their ID card on their profile page
 
 ### Photo Storage
@@ -81,8 +81,8 @@ Requirements for Member Profiles & ID Cards milestone. Each maps to roadmap phas
 | PROF-01 | Phase 28 | Complete |
 | PROF-02 | Phase 28 | Complete |
 | PROF-03 | Phase 28 | Complete |
-| PROF-04 | Phase 28 | Pending |
-| PROF-05 | Phase 28 | Pending |
+| PROF-04 | Phase 28 | Complete |
+| PROF-05 | Phase 28 | Complete |
 | PROF-06 | Phase 29 | Pending |
 | PHOTO-01 | Phase 28 | Complete |
 | PHOTO-02 | Phase 28 | Complete |
