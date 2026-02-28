@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Phase: 30 (5 of 5 in v1.8) — Bulk Generation & Notifications
-Plan: 2 of 2 in current phase
-Status: In Progress
-Last activity: 2026-02-27 — Completed 30-02 (profile setup nudge email)
+Plan: 2 of 2 in current phase (all complete)
+Status: Phase Complete
+Last activity: 2026-02-28 — Completed 30-01 (bulk ID card PDF generation)
 
-Progress: [████████--] 80%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -29,6 +29,7 @@ Progress: [████████--] 80%
 - 29-01: 3min, 2 tasks, 6 files
 - 29-02: 2min, 2 tasks, 2 files
 - 29-03: 3min, 2 tasks, 5 files
+- 30-01: 3min, 2 tasks, 3 files
 - 30-02: 1min, 1 task, 1 file
 
 **Recent Trend (v1.8):**
@@ -66,6 +67,9 @@ Recent decisions affecting current work:
 - [28-03]: Photo staged locally as Blob after crop, uploaded only on profile save
 - [27-02]: Admin route checks ordered before member route checks in proxy.js for correct precedence
 - [27-01]: isMember from JWT token, isAdmin from permissionChecker -- intentional dual source
+- [30-01]: Copied styles from IdCardDocument (react-pdf requires per-module StyleSheet)
+- [30-01]: Background image from current year for bulk consistency
+- [30-01]: maxDuration=60 for Vercel timeout on bulk photo fetching
 - [Phase 30]: Plain ASCII in nudge email body to avoid Apps Script encoding issues
 
 ### Research Flags
@@ -80,6 +84,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-27
-Stopped at: Completed 30-02-PLAN.md
-Resume file: .planning/phases/30-bulk-generation-notifications/30-02-SUMMARY.md
+Last session: 2026-02-28
+Stopped at: Completed 30-01-PLAN.md (Phase 30 all plans complete)
+Resume file: .planning/phases/30-bulk-generation-notifications/30-01-SUMMARY.md
