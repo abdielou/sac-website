@@ -44,7 +44,7 @@ Requirements for Member Profiles & ID Cards milestone. Each maps to roadmap phas
 
 ### Notifications
 
-- [ ] **NOTIF-01**: Apps Script sends profile setup email at membership creation nudging photo upload
+- [x] **NOTIF-01**: Apps Script sends profile setup email at membership creation nudging photo upload
 
 ### Cleanup
 
@@ -92,7 +92,7 @@ Requirements for Member Profiles & ID Cards milestone. Each maps to roadmap phas
 | ID-03 | Phase 29 | Complete |
 | ID-04 | Phase 30 | Pending |
 | ID-05 | Phase 29 | Complete |
-| NOTIF-01 | Phase 30 | Pending |
+| NOTIF-01 | Phase 30 | Complete |
 | CLEAN-01 | Phase 29 | Complete |
 
 **Coverage:**

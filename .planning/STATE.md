@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Admins can accurately track membership status and payments so that no member falls through the cracks.
-**Current focus:** Phase 29 in progress — ID Card System
+**Current focus:** Phase 30 in progress — Bulk Generation & Notifications
 
 ## Current Position
 
-Phase: 29 (4 of 5 in v1.8) — ID Card System
-Plan: 4 of 4 in current phase
+Phase: 30 (5 of 5 in v1.8) — Bulk Generation & Notifications
+Plan: 2 of 2 in current phase
 Status: In Progress
-Last activity: 2026-02-27 — Completed 29-03 (ID card preview + profile integration)
+Last activity: 2026-02-27 — Completed 30-02 (profile setup nudge email)
 
-Progress: [███████---] 75%
+Progress: [████████--] 80%
 
 ## Performance Metrics
 
@@ -29,6 +29,7 @@ Progress: [███████---] 75%
 - 29-01: 3min, 2 tasks, 6 files
 - 29-02: 2min, 2 tasks, 2 files
 - 29-03: 3min, 2 tasks, 5 files
+- 30-02: 1min, 1 task, 1 file
 
 **Recent Trend (v1.8):**
 - 10 plans across 4 phases in 2 days
@@ -65,6 +66,7 @@ Recent decisions affecting current work:
 - [28-03]: Photo staged locally as Blob after crop, uploaded only on profile save
 - [27-02]: Admin route checks ordered before member route checks in proxy.js for correct precedence
 - [27-01]: isMember from JWT token, isAdmin from permissionChecker -- intentional dual source
+- [Phase 30]: Plain ASCII in nudge email body to avoid Apps Script encoding issues
 
 ### Research Flags
 
@@ -79,5 +81,5 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 29-03-PLAN.md
-Resume file: .planning/phases/29-id-card-system/29-03-SUMMARY.md
+Stopped at: Completed 30-02-PLAN.md
+Resume file: .planning/phases/30-bulk-generation-notifications/30-02-SUMMARY.md

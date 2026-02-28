@@ -69,6 +69,10 @@ See .planning/milestones/v1.7-ROADMAP.md for full details.
   - [ ] 29-03-PLAN.md -- Member profile ID card preview and old /id page cleanup
   - [ ] 29-04-PLAN.md -- Human verification checkpoint
 - [ ] **Phase 30: Bulk Generation & Notifications** - Multi-member PDF export and profile setup nudge emails
+  **Goal:** Admins can bulk-export ID cards for events and new members get nudged to complete their profile
+  **Plans:** 2 plans
+  - [ ] 30-01-PLAN.md -- Bulk PDF generation endpoint for admin multi-member ID cards
+  - [ ] 30-02-PLAN.md -- Apps Script profile setup nudge email on membership creation
 
 See .planning/milestones/v1.8-ROADMAP.md for full details.
 
@@ -88,4 +92,4 @@ See .planning/milestones/v1.8-ROADMAP.md for full details.
 | 27 | v1.8 | 2/2 | Complete | 2026-02-26 |
 | 28 | v1.8 | 4/4 | Complete | 2026-02-27 |
 | 29 | 3/4 | Complete    | 2026-02-27 | - |
-| 30 | v1.8 | 0/? | Not started | - |
+| 30 | 1/2 | In Progress|  | - |
