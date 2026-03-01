@@ -39,13 +39,17 @@ export function IdCardPreview({ profile }) {
     ? `/api/member/photo/${encodeURIComponent(profile.email)}?v=${profile.photoFileId}`
     : null
 
+  const vigenciaYear = profile.expirationDate
+    ? new Date(profile.expirationDate).getUTCFullYear()
+    : new Date().getUTCFullYear()
+
   const cardData = buildCardData({
     member: profile,
     images: {
-      logo: '/static/images/sac-white-logo.png',
+      logo: '/static/images/sac-main-logo.png',
       photo: photoUrl,
       qr: qrDataUrl,
-      background: null,
+      background: `/static/images/id-bg-${vigenciaYear}.png`,
     },
   })
 
