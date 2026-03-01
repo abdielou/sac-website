@@ -1,10 +1,6 @@
 'use client'
 
-/**
- * Default avatar SVG as inline data URL.
- */
-const DEFAULT_AVATAR =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Ccircle cx='64' cy='64' r='64' fill='%23e5e7eb'/%3E%3Ccircle cx='64' cy='48' r='22' fill='%239ca3af'/%3E%3Cellipse cx='64' cy='100' rx='36' ry='24' fill='%239ca3af'/%3E%3C/svg%3E"
+import { IdCardPreview } from '@/components/member/IdCardPreview'
 
 /**
  * Status badge configuration matching admin StatusBadge pattern.
@@ -93,31 +89,46 @@ export function ProfileView({ profile, onEdit }) {
 
   return (
     <div className="space-y-6">
-      {/* Header: Photo + Name + Edit button */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 shrink-0">
-            <img
-              src={profile.photoUrl || DEFAULT_AVATAR}
-              alt="Foto de perfil"
-              className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
-            />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              {display(profile.name)}
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{profile.email}</p>
-          </div>
+      {/* ID Card + Buttons */}
+      <div className="flex flex-col gap-4">
+        <div className="w-64">
+          <IdCardPreview profile={profile} />
         </div>
-        <button
-          type="button"
-          onClick={onEdit}
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shrink-0"
-        >
-          Editar
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              />
+            </svg>
+            Editar
+          </button>
+          {(profile.status === 'active' || profile.status === 'expiring-soon') && (
+            <a
+              href="/api/member/id-card"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              Descargar
+            </a>
+          )}
+        </div>
       </div>
 
       {/* Personal Info */}

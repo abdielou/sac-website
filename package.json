@@ -29,6 +29,7 @@
     "google-spreadsheet": "^5.0.2",
     "gray-matter": "^4.0.2",
     "image-size": "1.0.0",
+    "jimp": "^1.6.0",
     "leaflet": "^1.9.4",
     "mdast-util-to-string": "^4.0.0",
     "mdx-bundler": "^10.1.1",

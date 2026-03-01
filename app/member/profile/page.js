@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useMemberProfile, useUpdateMemberProfile } from '@/lib/hooks/useMemberProfile'
 import { ProfileView } from '@/components/member/ProfileView'
 import { ProfileForm } from '@/components/member/ProfileForm'
-import { IdCardPreview } from '@/components/member/IdCardPreview'
 
 /**
  * Skeleton placeholder shown while profile data is loading.
@@ -115,18 +114,6 @@ export default function ProfilePage() {
           ) : (
             <ProfileView profile={profile} onEdit={() => setIsEditing(true)} />
           )}
-
-          {/* ID Card Section */}
-          <hr className="my-8 border-gray-200 dark:border-gray-700" />
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
-              Mi Tarjeta de Identificacion
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              Vista previa de tu tarjeta de miembro SAC
-            </p>
-            <IdCardPreview profile={profile} />
-          </div>
         </>
       )}
     </div>

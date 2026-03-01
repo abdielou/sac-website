@@ -3,6 +3,7 @@ import { auth } from '../../../../auth'
 import { NextResponse } from 'next/server'
 import { getMemberByEmail, updateMemberProfile } from '../../../../lib/google-sheets'
 import { uploadPhoto } from '../../../../lib/google-drive'
+import { generateVerifyToken } from '../../../../lib/id-card/verifyToken'
 
 /**
  * GET /api/member/profile
@@ -40,6 +41,7 @@ export const GET = auth(async function GET(req) {
     return NextResponse.json({
       ...profileFields,
       photoUrl,
+      verifyToken: generateVerifyToken(email),
     })
   } catch (error) {
     console.error('Error fetching member profile:', error)
