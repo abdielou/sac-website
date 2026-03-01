@@ -3492,7 +3492,7 @@ const EMAIL_TEMPLATES = {
       `Tu membresia en la Sociedad de Astronomia del Caribe ha sido activada.\n\n` +
       `Para completar tu perfil y obtener tu tarjeta de identificacion digital, ` +
       `sube tu foto de perfil visitando:\n` +
-      `https://sociedadastronomia.com/profile\n\n` +
+      `https://sociedadastronomia.com/member/profile\n\n` +
       `Pasos:\n` +
       `1) Accede con tu cuenta SAC (correo @sociedadastronomia.com)\n` +
       `2) Sube tu foto de perfil\n` +

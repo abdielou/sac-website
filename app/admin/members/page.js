@@ -160,7 +160,7 @@ function MembersContent() {
   const [modalState, setModalState] = useState({ isOpen: false, member: null, paymentType: null })
   const [workspaceModalState, setWorkspaceModalState] = useState({ isOpen: false, member: null })
   const [isExporting, setIsExporting] = useState(false)
-  const [photoFilter, setPhotoFilter] = useState(false)
+  const [photoFilter, setPhotoFilter] = useState(null) // null | 'with' | 'without'
   const [viewMode, setViewMode] = useState('grid')
   const [circleCenter, setCircleCenter] = useState(null)
   const [radiusKm, setRadiusKm] = useState(5)
@@ -229,8 +229,10 @@ function MembersContent() {
     let filtered = apiData.data
 
     // Apply photo filter
-    if (photoFilter) {
+    if (photoFilter === 'without') {
       filtered = filtered.filter((member) => !member.photoFileId)
+    } else if (photoFilter === 'with') {
+      filtered = filtered.filter((member) => !!member.photoFileId)
     }
 
     // Apply search filter across all visible columns
@@ -439,25 +441,29 @@ function MembersContent() {
           })}
         </div>
 
-        {/* Photo filter pill */}
-        <button
-          onClick={() => setPhotoFilter(!photoFilter)}
-          className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full transition-opacity ${
-            photoFilter
-              ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-              : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
-          }`}
-        >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          Sin foto
-        </button>
+        {/* Photo filter pills */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setPhotoFilter(photoFilter === 'with' ? null : 'with')}
+            className={`inline-flex px-2 py-1 text-xs font-medium rounded-full transition-opacity ${
+              photoFilter === 'with'
+                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
+            }`}
+          >
+            Con foto
+          </button>
+          <button
+            onClick={() => setPhotoFilter(photoFilter === 'without' ? null : 'without')}
+            className={`inline-flex px-2 py-1 text-xs font-medium rounded-full transition-opacity ${
+              photoFilter === 'without'
+                ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
+            }`}
+          >
+            Sin foto
+          </button>
+        </div>
 
         {/* Search input */}
         <div className="relative flex-1 min-w-[200px]">

@@ -27,7 +27,7 @@ export const GET = auth(async function GET(req) {
   }
 
   try {
-    const members = await getMembers()
+    const { data: members } = await getMembers()
 
     // Filter to active members with photos
     const eligible = members.filter((m) => m.status === 'active' && m.photoFileId)

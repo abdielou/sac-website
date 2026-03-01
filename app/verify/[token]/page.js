@@ -1,5 +1,6 @@
 import Image from 'next/image'
-import { getMemberByEmail } from '../../../lib/google-sheets'
+import { getMembers } from '../../../lib/google-sheets'
+import { generateVerifyToken } from '../../../lib/id-card/verifyToken'
 
 export const metadata = {
   title: 'Verificacion de Membresia - SAC',
@@ -10,12 +11,13 @@ export const metadata = {
 export const dynamic = 'force-dynamic'
 
 export default async function VerifyMemberPage({ params }) {
-  const { email } = await params
-  const decodedEmail = decodeURIComponent(email)
+  const { token } = await params
 
+  // Find member whose email produces this token
   let member = null
   try {
-    member = await getMemberByEmail(decodedEmail)
+    const { data: members } = await getMembers()
+    member = members.find((m) => generateVerifyToken(m.email) === token) || null
   } catch {
     // If fetch fails, member stays null — handled below
   }
