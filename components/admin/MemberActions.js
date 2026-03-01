@@ -131,6 +131,31 @@ export function MemberActions({ member, onAction }) {
                 Registrar pago de membresia
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(false)
+                if (!member.photoFileId) {
+                  alert('Este miembro no tiene foto de perfil. Se requiere una foto para generar el carnet.')
+                  return
+                }
+                window.open(
+                  `/api/admin/members/${encodeURIComponent(member.email)}/id-card`,
+                  '_blank'
+                )
+              }}
+              className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0"
+                />
+              </svg>
+              Descargar ID
+            </button>
             {canEditMember && !member.sacEmail && (
               <button
                 type="button"

@@ -36,6 +36,16 @@ export const GET = auth(async function GET(req, { params }) {
       )
     }
 
+    if (!member.photoFileId) {
+      return Response.json(
+        {
+          error: 'Foto de perfil requerida',
+          details: 'Member must have a profile photo to generate an ID card',
+        },
+        { status: 422 }
+      )
+    }
+
     const stream = await generateIdCardPdf(member)
 
     return new Response(stream, {

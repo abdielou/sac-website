@@ -16,6 +16,7 @@ import { toCsv, downloadCsvFile } from '@/lib/csv'
 import { COLUMN_REGISTRY } from '@/lib/admin/columnRegistry'
 import { useColumnPreferences } from '@/lib/hooks/useColumnPreferences'
 import { ColumnSelector } from '@/components/admin/ColumnSelector'
+import { FilterDropdown } from '@/components/admin/FilterDropdown'
 import ViewToggle from '@/components/admin/ViewToggle'
 import MembersSidePanel from '@/components/admin/MembersSidePanel'
 import dynamic from 'next/dynamic'
@@ -415,55 +416,19 @@ function MembersContent() {
         {/* View toggle */}
         <ViewToggle viewMode={viewMode} onToggle={handleViewToggle} />
 
-        {/* Status multi-select pills */}
-        <div className="flex flex-wrap items-center gap-2">
-          {ALL_STATUSES.map((s) => {
-            const config = statusConfig[s]
-            const isSelected = selectedStatuses.includes(s)
-            return (
-              <button
-                key={s}
-                onClick={() => {
-                  const next = isSelected
-                    ? selectedStatuses.filter((v) => v !== s)
-                    : [...selectedStatuses, s]
-                  updateFilter('status', next.length === 0 ? '' : next.join(','))
-                }}
-                className={`inline-flex px-2 py-1 text-xs font-medium rounded-full transition-opacity ${
-                  isSelected
-                    ? config.classes
-                    : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
-                }`}
-              >
-                {config.label}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Photo filter pills */}
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => setPhotoFilter(photoFilter === 'with' ? null : 'with')}
-            className={`inline-flex px-2 py-1 text-xs font-medium rounded-full transition-opacity ${
-              photoFilter === 'with'
-                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
-            }`}
-          >
-            Con foto
-          </button>
-          <button
-            onClick={() => setPhotoFilter(photoFilter === 'without' ? null : 'without')}
-            className={`inline-flex px-2 py-1 text-xs font-medium rounded-full transition-opacity ${
-              photoFilter === 'without'
-                ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-                : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
-            }`}
-          >
-            Sin foto
-          </button>
-        </div>
+        {/* Filter dropdown (status + photo) */}
+        <FilterDropdown
+          selectedStatuses={selectedStatuses}
+          allStatuses={ALL_STATUSES}
+          onStatusToggle={(s) => {
+            const next = selectedStatuses.includes(s)
+              ? selectedStatuses.filter((v) => v !== s)
+              : [...selectedStatuses, s]
+            updateFilter('status', next.length === 0 ? '' : next.join(','))
+          }}
+          photoFilter={photoFilter}
+          onPhotoFilterChange={setPhotoFilter}
+        />
 
         {/* Search input */}
         <div className="relative flex-1 min-w-[200px]">
@@ -513,6 +478,26 @@ function MembersContent() {
             </svg>
             {isExporting ? 'Exportando...' : 'CSV'}
           </button>
+        )}
+
+        {/* Bulk ID Cards Download */}
+        {viewMode === 'grid' && (
+          <a
+            href="/api/admin/members/bulk-id-cards"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 inline-flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0"
+              />
+            </svg>
+            IDs
+          </a>
         )}
 
         {/* Column Selector - Grid mode only, hidden on mobile */}
