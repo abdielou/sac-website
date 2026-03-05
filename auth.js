@@ -153,7 +153,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.role = permissionChecker.getUserRole(session.user.email)
         session.user.accessibleFeatures = permissionChecker.getAccessibleFeatures(session.user.email)
         session.user.accessibleActions = permissionChecker.getAccessibleActions(session.user.email)
-        session.user.isAdmin = permissionChecker.isAdmin(session.user.email)
+        session.user.isAdmin = permissionChecker.canAccessDashboard(session.user.email)
         // Member flag from JWT
         session.user.isMember = token.isMember || false
       }
