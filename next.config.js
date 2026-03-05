@@ -23,6 +23,7 @@ const securityHeaders = [
 ]
 
 module.exports = withBundleAnalyzer({
+  serverExternalPackages: ['@react-pdf/renderer'],
   turbopack: {},
   reactStrictMode: true,
   pageExtensions: ['js', 'jsx', 'md', 'mdx'],

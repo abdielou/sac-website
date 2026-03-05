@@ -193,9 +193,7 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
               Tomar foto
             </button>
           </div>
-          {cameraError && (
-            <p className="text-xs text-red-500 dark:text-red-400">{cameraError}</p>
-          )}
+          {cameraError && <p className="text-xs text-red-500 dark:text-red-400">{cameraError}</p>}
         </div>
       )}
 

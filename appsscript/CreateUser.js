@@ -1437,6 +1437,15 @@ function handleCreateWorkspaceAccountAction(data) {
       logger.log(`Skipping credentials email for ${data.sacEmail} (sendCredentials=false)`)
     }
 
+    // Send profile setup nudge to personal email
+    const nudgeResult = sendTemplatedEmail('PROFILE_SETUP_NUDGE', {
+      firstName: data.firstName,
+      personalEmail: data.email,
+    })
+    if (!nudgeResult.success) {
+      logger.log(`Failed to send profile setup nudge: ${nudgeResult.error}`)
+    }
+
     // Update CLEAN sheet: find member by personal email, set sac_email and created_at
     const cleanSheet = spreadsheet.getSheetByName('CLEAN')
     if (cleanSheet) {
@@ -2365,6 +2374,15 @@ function processPaymentRecordContext(context) {
     }
   } catch (e) {
     logger.log(`Failed to send credentials email: ${e.message}`)
+  }
+
+  // Send profile setup nudge to personal email
+  const nudgeResult = sendTemplatedEmail('PROFILE_SETUP_NUDGE', {
+    firstName: firstName,
+    personalEmail: senderEmail,
+  })
+  if (!nudgeResult.success) {
+    logger.log(`Failed to send profile setup nudge: ${nudgeResult.error}`)
   }
 
   const adminSubject = `New user account created: ${accountResult.email}`
@@ -3458,13 +3476,29 @@ const EMAIL_TEMPLATES = {
     subject: 'Invalid renewal payment amount',
     bodyGenerator: (data) => `
       An invalid renewal payment amount was received.
-      
+
       Member Email: ${data.email}
       Amount Sent: $${data.sentAmount}
       Required Fee: $${data.membershipFee}
-      
+
       Please review this payment and contact the member if necessary.
     `,
+  },
+  PROFILE_SETUP_NUDGE: {
+    to: (data) => data.personalEmail,
+    subject: 'Completa tu perfil de miembro SAC',
+    bodyGenerator: (data) =>
+      `Hola ${data.firstName},\n\n` +
+      `Tu membresia en la Sociedad de Astronomia del Caribe ha sido activada.\n\n` +
+      `Para completar tu perfil y obtener tu tarjeta de identificacion digital, ` +
+      `sube tu foto de perfil visitando:\n` +
+      `https://sociedadastronomia.com/member/profile\n\n` +
+      `Pasos:\n` +
+      `1) Accede con tu cuenta SAC (correo @sociedadastronomia.com)\n` +
+      `2) Sube tu foto de perfil\n` +
+      `3) Tu carnet digital estara disponible en tu perfil\n\n` +
+      `Gracias,\n` +
+      `-- SAC`,
   },
 }
 // #endregion
