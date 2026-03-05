@@ -41,7 +41,7 @@ export const GET = auth(async function GET(req) {
     return NextResponse.json({
       ...profileFields,
       photoUrl,
-      verifyToken: generateVerifyToken(email),
+      verifyToken: generateVerifyToken(member.email),
     })
   } catch (error) {
     console.error('Error fetching member profile:', error)
