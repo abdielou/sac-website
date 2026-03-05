@@ -110,12 +110,11 @@ export function ProfileView({ profile, onEdit }) {
             </svg>
             Editar
           </button>
+          {/* TODO: Re-enable PDF download — swap <span> back to <a href="/api/member/id-card"> */}
           {(profile.status === 'active' || profile.status === 'expiring-soon') && (
-            <a
-              href="/api/member/id-card"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+            <span
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600/50 rounded-lg cursor-not-allowed"
+              title="No disponible en este momento"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -126,7 +125,7 @@ export function ProfileView({ profile, onEdit }) {
                 />
               </svg>
               Descargar
-            </a>
+            </span>
           )}
         </div>
       </div>
