@@ -1,4 +1,5 @@
 const MAINTENANCE_MODE = false
+const SEND_PROFILE_SETUP_NUDGE = false // Set to false to disable the profile photo upload reminder email
 
 // #region Testing Entry Points
 const TEST_ENTRY_ROWS = {
@@ -580,14 +581,14 @@ function manual_validateNewUsersExists() {
     newMembersHeaders.indexOf('Nombre') !== -1
       ? newMembersHeaders.indexOf('Nombre')
       : newMembersHeaders.indexOf('first name') !== -1
-      ? newMembersHeaders.indexOf('first name')
-      : -1
+        ? newMembersHeaders.indexOf('first name')
+        : -1
   const lastNameIdx =
     newMembersHeaders.indexOf('Apellidos') !== -1
       ? newMembersHeaders.indexOf('Apellidos')
       : newMembersHeaders.indexOf('last name') !== -1
-      ? newMembersHeaders.indexOf('last name')
-      : -1
+        ? newMembersHeaders.indexOf('last name')
+        : -1
 
   if (newMembersEmailIdx === -1) {
     logger.log('E-mail column not found in NEW_MEMBERS_2025')
@@ -1361,7 +1362,9 @@ function handleCreateWorkspaceAccountAction(data) {
 
   try {
     setupServices({})
-    logger.log(`create_workspace_account: ${data.firstName} ${data.lastName} → ${data.sacEmail} (sendWelcome=${data.sendWelcome}, sendCredentials=${data.sendCredentials})`)
+    logger.log(
+      `create_workspace_account: ${data.firstName} ${data.lastName} → ${data.sacEmail} (sendWelcome=${data.sendWelcome}, sendCredentials=${data.sendCredentials})`
+    )
     const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID)
 
     // Generate password
@@ -1438,12 +1441,16 @@ function handleCreateWorkspaceAccountAction(data) {
     }
 
     // Send profile setup nudge to personal email
-    const nudgeResult = sendTemplatedEmail('PROFILE_SETUP_NUDGE', {
-      firstName: data.firstName,
-      personalEmail: data.email,
-    })
-    if (!nudgeResult.success) {
-      logger.log(`Failed to send profile setup nudge: ${nudgeResult.error}`)
+    if (SEND_PROFILE_SETUP_NUDGE) {
+      const nudgeResult = sendTemplatedEmail('PROFILE_SETUP_NUDGE', {
+        firstName: data.firstName,
+        personalEmail: data.email,
+      })
+      if (!nudgeResult.success) {
+        logger.log(`Failed to send profile setup nudge: ${nudgeResult.error}`)
+      }
+    } else {
+      logger.log(`Profile setup nudge skipped for ${data.email} (SEND_PROFILE_SETUP_NUDGE=false)`)
     }
 
     // Update CLEAN sheet: find member by personal email, set sac_email and created_at
@@ -1616,8 +1623,11 @@ function handleNewMemberships(e) {
   // ATH Movil emails (subject contains "paid")
   const athQuery = `from:${EMAIL_FILTER_SENDER} to:${EMAIL_FILTER_RECEIVER} subject:${EMAIL_FILTER_SUBJECT_CONTAINS} newer_than:${EMAIL_SEARCH_WINDOW_DAYS}d`
 
-  // PayPal emails (subject contains "payment received from")
+  // PayPal payment emails (subject contains "payment received from")
   const paypalQuery = `from:${EMAIL_FILTER_SENDER} to:${EMAIL_FILTER_RECEIVER} subject:"payment received from" newer_than:${EMAIL_SEARCH_WINDOW_DAYS}d`
+
+  // PayPal donation emails (subject is "Notification of Donation Received")
+  const paypalDonationQuery = `from:${EMAIL_FILTER_SENDER} to:${EMAIL_FILTER_RECEIVER} subject:"Notification of Donation Received" newer_than:${EMAIL_SEARCH_WINDOW_DAYS}d`
 
   // Process ATH Movil emails
   const athThreads = gmailApp.search(athQuery)
@@ -1626,9 +1636,16 @@ function handleNewMemberships(e) {
     messages.forEach(processPaymentEmail)
   })
 
-  // Process PayPal emails
+  // Process PayPal payment emails
   const paypalThreads = gmailApp.search(paypalQuery)
   paypalThreads.forEach((thread) => {
+    const messages = thread.getMessages()
+    messages.forEach(processPaymentEmail)
+  })
+
+  // Process PayPal donation emails
+  const paypalDonationThreads = gmailApp.search(paypalDonationQuery)
+  paypalDonationThreads.forEach((thread) => {
     const messages = thread.getMessages()
     messages.forEach(processPaymentEmail)
   })
@@ -1641,6 +1658,8 @@ function processPaymentEmail(msg) {
 
   if (serviceType === 'paypal') {
     paymentData = extractPayPalPaymentData(msg)
+  } else if (serviceType === 'paypal_donation') {
+    paymentData = extractPayPalDonationData(msg)
   } else if (serviceType === 'ath_movil') {
     paymentData = extractPaymentData(msg)
   } else {
@@ -1891,7 +1910,20 @@ function detectPaymentService(msg) {
       return 'paypal'
     }
     // Subject matches but sender doesn't - potential spoofing attempt
-    logger.log(`Suspicious email: PayPal subject but X-Original-Sender is ${original_sender || 'missing'}`)
+    logger.log(
+      `Suspicious email: PayPal subject but X-Original-Sender is ${original_sender || 'missing'}`
+    )
+    return 'unknown'
+  }
+
+  // PayPal donation notification
+  if (subject.includes('notification of donation received')) {
+    if (original_sender.includes('paypal.com')) {
+      return 'paypal_donation'
+    }
+    logger.log(
+      `Suspicious email: PayPal donation subject but X-Original-Sender is ${original_sender || 'missing'}`
+    )
     return 'unknown'
   }
 
@@ -1901,7 +1933,9 @@ function detectPaymentService(msg) {
       return 'ath_movil'
     }
     // Subject matches but sender doesn't - potential spoofing attempt
-    logger.log(`Suspicious email: ATH subject but X-Original-Sender is ${original_sender || 'missing'}`)
+    logger.log(
+      `Suspicious email: ATH subject but X-Original-Sender is ${original_sender || 'missing'}`
+    )
     return 'unknown'
   }
 
@@ -2031,7 +2065,9 @@ function extractPayPalPaymentData(msg) {
   // Instructions from buyer (message)
   // PayPal wraps in <span> tags: <br /><span>MESSAGE</span>
   // Also handle older format without <span>: <br /> MESSAGE
-  const messageMatch = body.match(/<b>Instructions from buyer<\/b>[\s\S]*?<br\s*\/?>\s*(?:<span>)?\s*([^<]+)/i)
+  const messageMatch = body.match(
+    /<b>Instructions from buyer<\/b>[\s\S]*?<br\s*\/?>\s*(?:<span>)?\s*([^<]+)/i
+  )
   const payment_message = messageMatch ? messageMatch[1].trim() : ''
 
   // Recipient name (not used for PayPal, but included for compatibility)
@@ -2073,6 +2109,75 @@ function extractPayPalPaymentData(msg) {
     payment_service,
     service_provider,
     transaction_id,
+  }
+}
+
+function extractPayPalDonationData(msg) {
+  const message_id = msg.getId()
+  const body = msg.getBody()
+  const raw = msg.getRawContent()
+
+  // Amount: "you have received a donation of $50.00 USD"
+  let amountMatch = body.match(/donation of \$([0-9.,]+)\s*USD/i)
+  if (!amountMatch) amountMatch = body.match(/\$([0-9.,]+)\s*USD/i)
+  const amount = amountMatch ? amountMatch[1] : ''
+
+  // Sender email: "from none (abecker1@gmail.com)" — PayPal puts email in parens
+  const donorMatch = body.match(/from\s+([^(]*)\(([^)]+@[^)]+)\)/i)
+  const sender_name = donorMatch ? donorMatch[1].trim() : ''
+  const sender_email = donorMatch ? donorMatch[2].trim() : ''
+
+  // No phone in donation emails
+  const sender_phone = ''
+
+  // Confirmation number: store as payment_message since there's no transaction date field
+  const confirmMatch = body.match(/<b>Confirmation number:<\/b>[\s\S]*?<span>([A-Z0-9]+)<\/span>/i)
+  const confirmation_number = confirmMatch ? confirmMatch[1] : ''
+  const payment_message = confirmation_number ? `Confirmation: ${confirmation_number}` : ''
+
+  // Date: use email date since donation emails have no transaction date in body
+  const emailDate = msg.getDate()
+  const payment_datetime = emailDate
+  const tz = typeof Session !== 'undefined' ? Session.getScriptTimeZone() : 'UTC'
+  const payment_date =
+    typeof Utilities !== 'undefined'
+      ? Utilities.formatDate(emailDate, tz, 'yyyy-MM-dd')
+      : emailDate.toISOString().slice(0, 10)
+  const payment_time =
+    typeof Utilities !== 'undefined'
+      ? Utilities.formatDate(emailDate, tz, 'HH:mm:ss')
+      : emailDate.toISOString().slice(11, 19)
+
+  const email_subject = msg.getSubject()
+  const email_date = emailDate
+  const email_from = msg.getFrom()
+  const email_to = msg.getTo()
+
+  const originalMatch = raw.match(/^X-Original-Sender:\s*([^\r\n]+)/im)
+  const original_sender = originalMatch ? originalMatch[1].trim() : ''
+  const returnMatch = raw.match(/Return-Path:\s*<([^>]+)>/i)
+  const return_path = returnMatch ? returnMatch[1] : ''
+
+  return {
+    message_id,
+    amount,
+    sender_name,
+    sender_phone,
+    sender_email,
+    payment_date,
+    payment_time,
+    payment_datetime,
+    payment_message,
+    recipient_name: '',
+    email_subject,
+    email_date,
+    email_from,
+    email_to,
+    original_sender,
+    return_path,
+    payment_service: 'PayPal Donation',
+    service_provider: 'PayPal, Inc.',
+    transaction_id: confirmation_number,
   }
 }
 // #endregion
@@ -2377,12 +2482,16 @@ function processPaymentRecordContext(context) {
   }
 
   // Send profile setup nudge to personal email
-  const nudgeResult = sendTemplatedEmail('PROFILE_SETUP_NUDGE', {
-    firstName: firstName,
-    personalEmail: senderEmail,
-  })
-  if (!nudgeResult.success) {
-    logger.log(`Failed to send profile setup nudge: ${nudgeResult.error}`)
+  if (SEND_PROFILE_SETUP_NUDGE) {
+    const nudgeResult = sendTemplatedEmail('PROFILE_SETUP_NUDGE', {
+      firstName: firstName,
+      personalEmail: senderEmail,
+    })
+    if (!nudgeResult.success) {
+      logger.log(`Failed to send profile setup nudge: ${nudgeResult.error}`)
+    }
+  } else {
+    logger.log(`Profile setup nudge skipped for ${senderEmail} (SEND_PROFILE_SETUP_NUDGE=false)`)
   }
 
   const adminSubject = `New user account created: ${accountResult.email}`
@@ -2933,7 +3042,8 @@ function validateEmail(email) {
   }
 
   // RFC 5322 compliant email regex
-  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
+  const emailRegex =
+    /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
 
   if (!emailRegex.test(email)) {
     return 'Email format is invalid'
@@ -3221,7 +3331,9 @@ function formatZipForSheet(zipRaw) {
 }
 
 function normalizeHeader(header) {
-  return String(header || '').trim().toLowerCase()
+  return String(header || '')
+    .trim()
+    .toLowerCase()
 }
 
 function findHeaderIndex(headers, headerName) {
@@ -3401,8 +3513,8 @@ const EMAIL_TEMPLATES = {
     bodyGenerator: (userData) => `
       Manual review needed for new user email creation:
       Name: ${userData.firstName} ${userData.initial || ''} ${userData.lastName} ${
-      userData.slastName || ''
-    }
+        userData.slastName || ''
+      }
       Personal Email: ${userData.email || 'Not provided'}
       Phone: ${userData.phone || 'Not provided'}
       
@@ -3426,8 +3538,8 @@ const EMAIL_TEMPLATES = {
         
         Provided data:
         Name: ${userData.firstName || '[MISSING]'} ${userData.initial || ''} ${
-        userData.lastName || '[MISSING]'
-      } ${userData.slastName || ''}
+          userData.lastName || '[MISSING]'
+        } ${userData.slastName || ''}
         Personal Email: ${userData.email || '[MISSING]'}
         Phone: ${userData.phone || '[MISSING]'}
         
