@@ -44,7 +44,7 @@ export const GET = auth(async function GET(req) {
 
     const pageSize = exportAll
       ? 5000
-      : Math.min(100, Math.max(1, parseInt(pageSizeParam || '20', 10)))
+      : Math.min(5000, Math.max(1, parseInt(pageSizeParam || '20', 10)))
     const forceRefresh = searchParams.get('refresh') === 'true'
 
     // Fetch data (cached unless refresh=true)
