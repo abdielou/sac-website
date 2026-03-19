@@ -25,6 +25,8 @@ export const GET = auth(async function GET(req) {
       return NextResponse.json({ error: 'CLEAN sheet not found', sheets: Object.keys(doc.sheetsByTitle) })
     }
 
+    await sheet.loadHeaderRow()
+
     const sheetInfo = {
       title: sheet.title,
       rowCount: sheet.rowCount,
