@@ -1152,7 +1152,7 @@ let documentApp
 const EMAIL_FILTER_SENDER = 'finance@sociedadastronomia.com'
 const EMAIL_FILTER_RECEIVER = 'finance@sociedadastronomia.com'
 const EMAIL_SEARCH_WINDOW_DAYS = 14
-const EMAIL_FILTER_SUBJECT_CONTAINS = 'paid'
+const EMAIL_FILTER_SUBJECT_CONTAINS = '{paid pagó}'
 const SAC_DOMAIN = '@sociedadastronomia.com'
 // Renewal reconciliation explicit scope
 const RENEWAL_YEAR = 2025
@@ -1928,7 +1928,8 @@ function detectPaymentService(msg) {
   }
 
   // ATH Movil: verify both subject AND sender (info@notifications.evertecinc.com)
-  if (subject.includes('paid')) {
+  // Support both English ("paid") and Spanish ("pagó" / "pago") subject formats
+  if (subject.includes('paid') || subject.includes('pagó') || subject.includes('pago')) {
     if (original_sender.includes('evertecinc.com')) {
       return 'ath_movil'
     }
@@ -1947,18 +1948,18 @@ function extractPaymentData(msg) {
   const message_id = msg.getId()
   const body = msg.getBody()
   const raw = msg.getRawContent()
-  // amount
-  const amountMatch = body.match(/<b>Amount:<\/b>\s*\$([0-9.,]+)/i)
+  // amount — supports English "Amount" and Spanish "Cantidad"
+  const amountMatch = body.match(/<b>(?:Amount|Cantidad):<\/b>\s*\$([0-9.,]+)/i)
   const amount = amountMatch ? amountMatch[1] : ''
-  // sender name & phone
-  const fromMatch = body.match(/<b>From:<\/b>\s*([^<\-]+)-\s*([^<]+)/i)
+  // sender name & phone — supports English "From" and Spanish "Desde"
+  const fromMatch = body.match(/<b>(?:From|Desde):<\/b>\s*([^<\-]+)-\s*([^<]+)/i)
   const sender_name = fromMatch ? fromMatch[1].trim() : ''
   const sender_phone = fromMatch ? fromMatch[2].trim() : ''
   // sender email
   const emailMatch = body.match(/<b>Email:<\/b>\s*([^<]+)/i)
   const sender_email = emailMatch ? emailMatch[1].trim() : ''
-  // date & time
-  const dateMatch = body.match(/<b>Date:<\/b>\s*([^<]+)/i)
+  // date & time — supports English "Date" and Spanish "Fecha"
+  const dateMatch = body.match(/<b>(?:Date|Fecha):<\/b>\s*([^<]+)/i)
   let payment_date = '',
     payment_time = '',
     payment_datetime = null
@@ -1969,8 +1970,8 @@ function extractPaymentData(msg) {
     payment_time = parts[1] ? parts[1].trim() : ''
     payment_datetime = new Date(dateStr)
   }
-  // message body
-  const messageMatch = body.match(/<b>Message:<\/b>\s*([^<]*)/i)
+  // message body — supports English "Message" and Spanish "Mensaje"
+  const messageMatch = body.match(/<b>(?:Message|Mensaje):<\/b>\s*([^<]*)/i)
   const payment_message = messageMatch ? messageMatch[1].trim() : ''
   // recipient sign-off
   const recipientMatch = body.match(/<b>([^<]+)<\/b>\s*<br\s*\/>/i)
