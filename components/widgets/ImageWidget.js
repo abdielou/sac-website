@@ -3,8 +3,17 @@
 import { useState } from 'react'
 import Image from '@/components/Image'
 
-const ImageWidget = ({ name, imgSrc, href, width, height }) => {
+const ImageWidget = ({ name, imgSrc, fallbackSrc, href, width, height }) => {
+  const [src, setSrc] = useState(imgSrc)
   const [failed, setFailed] = useState(false)
+
+  const handleError = () => {
+    if (src === imgSrc && fallbackSrc) {
+      setSrc(fallbackSrc)
+    } else {
+      setFailed(true)
+    }
+  }
 
   if (failed) return null
 
@@ -14,10 +23,10 @@ const ImageWidget = ({ name, imgSrc, href, width, height }) => {
       <div>
         {href ? (
           <a href={href} target="_blank" rel="noopener noreferrer">
-            <Image alt={name} src={imgSrc} width={width} height={height} onError={() => setFailed(true)} />
+            <Image alt={name} src={src} width={width} height={height} onError={handleError} />
           </a>
         ) : (
-          <Image alt={name} src={imgSrc} width={width} height={height} onError={() => setFailed(true)} />
+          <Image alt={name} src={src} width={width} height={height} onError={handleError} />
         )}
       </div>
     </div>

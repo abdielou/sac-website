@@ -60,6 +60,7 @@ module.exports = withBundleAnalyzer({
       { protocol: 'https', hostname: 'www.nhc.noaa.gov' },
       { protocol: 'https', hostname: 'services.swpc.noaa.gov' },
       { protocol: 'https', hostname: 'sdo.gsfc.nasa.gov' },
+      { protocol: 'https', hostname: 'soho.nascom.nasa.gov' },
       { protocol: 'https', hostname: 'www.moonmodule.com' },
       { protocol: 'https', hostname: 'apod.nasa.gov' },
       { protocol: 'https', hostname: 'sac-blog-images.s3.amazonaws.com' },

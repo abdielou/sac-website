@@ -41,6 +41,7 @@ export default function HomeContent({ posts }) {
               <ImageWidget
                 name="Manchas Solares"
                 imgSrc="https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_HMIIC.jpg"
+                fallbackSrc="https://soho.nascom.nasa.gov/data/realtime/hmi_igr/512/latest.jpg"
                 href="https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_HMIIC.jpg"
                 width="512"
                 height="512"
@@ -48,6 +49,7 @@ export default function HomeContent({ posts }) {
               <ImageWidget
                 name="Prominencias Solares"
                 imgSrc="https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0304.jpg"
+                fallbackSrc="https://soho.nascom.nasa.gov/data/realtime/eit_304/512/latest.jpg"
                 href="https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0304.jpg"
                 width="512"
                 height="512"
