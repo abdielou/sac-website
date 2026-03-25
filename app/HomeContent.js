@@ -40,17 +40,17 @@ export default function HomeContent({ posts }) {
             <div className="flex flex-col items-center md:items-end">
               <ImageWidget
                 name="Manchas Solares"
-                imgSrc="https://sdo.gsfc.nasa.gov/assets/img/latest/latest_2048_HMIIC.jpg"
-                href="https://sdo.gsfc.nasa.gov/assets/img/latest/latest_2048_HMIIC.jpg"
-                width="2048"
-                height="2048"
+                imgSrc="https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_HMIIC.jpg"
+                href="https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_HMIIC.jpg"
+                width="512"
+                height="512"
               />
               <ImageWidget
                 name="Prominencias Solares"
-                imgSrc="https://sdo.gsfc.nasa.gov/assets/img/latest/latest_2048_0304.jpg"
-                href="https://sdo.gsfc.nasa.gov/assets/img/latest/latest_2048_0304.jpg"
-                width="2048"
-                height="2048"
+                imgSrc="https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0304.jpg"
+                href="https://sdo.gsfc.nasa.gov/assets/img/latest/latest_512_0304.jpg"
+                width="512"
+                height="512"
               />
               <ImageWidget
                 name="Fase Lunar"
