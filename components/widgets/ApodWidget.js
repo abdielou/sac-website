@@ -7,10 +7,10 @@ const ApodWidget = ({ name, title, imgSrc, href, alt }) => (
       <div className="relative w-26 h-26">
         {href ? (
           <a href={href} target="_blank" rel="noopener noreferrer">
-            <Image alt={alt} src={imgSrc} fill style={{ objectFit: 'contain' }} />
+            <Image alt={alt} src={imgSrc} fill unoptimized style={{ objectFit: 'contain' }} />
           </a>
         ) : (
-          <Image alt={alt} src={imgSrc} fill style={{ objectFit: 'contain' }} />
+          <Image alt={alt} src={imgSrc} fill unoptimized style={{ objectFit: 'contain' }} />
         )}
       </div>
       <div className="text-xs text-left">{title}</div>

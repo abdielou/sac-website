@@ -52,7 +52,7 @@ module.exports = withBundleAnalyzer({
     return [{ source: '/(.*)', headers: securityHeaders }]
   },
   images: {
-    minimumCacheTTL: 21600,
+    minimumCacheTTL: 2678400,
     remotePatterns: [
       { protocol: 'https', hostname: 'tropic.ssec.wisc.edu' },
       { protocol: 'https', hostname: 'cdn.star.nesdis.noaa.gov' },
