@@ -102,5 +102,18 @@
     "constellation": "Ori",
     "commonName": "Horsehead Nebula",
     "commonNameEs": "Nebulosa Cabeza de Caballo"
+  },
+  {
+    "id": "IC2177",
+    "name": "IC 2177",
+    "catalogIds": { "ngc": null, "ic": "IC 2177", "messier": null },
+    "ra": 106.1538,
+    "dec": -10.4711,
+    "magnitude": null,
+    "angularSize": { "major": 20, "minor": 20 },
+    "objectType": "Reflection Nebula",
+    "constellation": "Mon",
+    "commonName": "Seagull Nebula",
+    "commonNameEs": "Nebulosa de la Gaviota"
   }
 ]
