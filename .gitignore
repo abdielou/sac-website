@@ -30,6 +30,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# full catalog (3.6MB, only used for rebuild — curated version is committed)
+data/catalog/openngc.json
+
 # local env files
 .env
 .env.local

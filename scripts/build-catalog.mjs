@@ -352,17 +352,31 @@ async function main() {
   writeFileSync(spanishPath, JSON.stringify(spanishNames, null, 2))
   console.log(`\nWrote ${Object.keys(spanishNames).length} Spanish names to ${spanishPath}`)
 
-  // Write full catalog
+  // Write full catalog (kept for reference/rebuild, not used at runtime)
   const catalogPath = join(DATA_DIR, 'openngc.json')
   writeFileSync(catalogPath, JSON.stringify(catalog))
   console.log(`Wrote ${catalog.length} objects to ${catalogPath}`)
 
+  // Build curated catalog: mag <= 11, has common name, or has Messier ID
+  const curated = catalog.filter(
+    (o) =>
+      (o.magnitude != null && o.magnitude <= 11) ||
+      o.commonName ||
+      o.commonNameEs ||
+      o.catalogIds?.messier
+  )
+  const curatedPath = join(DATA_DIR, 'openngc-curated.json')
+  writeFileSync(curatedPath, JSON.stringify(curated))
+  console.log(
+    `Wrote ${curated.length} curated objects to ${curatedPath} (${(JSON.stringify(curated).length / 1024).toFixed(0)} KB)`
+  )
+
   // Print stats
   const types = {}
-  for (const obj of catalog) {
+  for (const obj of curated) {
     types[obj.objectType] = (types[obj.objectType] || 0) + 1
   }
-  console.log('\nObject type distribution:')
+  console.log('\nCurated catalog type distribution:')
   for (const [type, count] of Object.entries(types).sort((a, b) => b[1] - a[1])) {
     console.log(`  ${type}: ${count}`)
   }
