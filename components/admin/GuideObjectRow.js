@@ -1,6 +1,16 @@
 'use client'
 
 import { useState } from 'react'
+import hubbleImages from '@/data/catalog/hubble-images.json'
+
+function getObjectImageUrl(objectId, catalog) {
+  const hubbleId = hubbleImages[objectId]
+  if (hubbleId) return `https://cdn.esahubble.org/archives/images/thumb300y/${hubbleId}.jpg`
+  if (catalog?.ra != null && catalog?.dec != null) {
+    return `https://skyview.gsfc.nasa.gov/current/cgi/runquery.pl?Position=${catalog.ra},${catalog.dec}&Survey=DSS&Return=JPEG&Pixels=80`
+  }
+  return null
+}
 
 /**
  * Difficulty, equipment, and location option values for guide entry annotations.
@@ -72,12 +82,25 @@ export default function GuideObjectRow({
 
   return (
     <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-      {/* Header row: object name, reorder, remove */}
+      {/* Header row: thumbnail, object name, reorder, remove */}
       <div className="flex items-center gap-2">
         {/* Index badge */}
         <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-600 dark:text-gray-300">
           {index + 1}
         </span>
+
+        {/* Thumbnail */}
+        {(() => {
+          const imgUrl = getObjectImageUrl(entry.objectId, cat)
+          return imgUrl ? (
+            <img
+              src={imgUrl}
+              alt={name}
+              loading="lazy"
+              className="flex-shrink-0 w-10 h-10 rounded object-cover bg-gray-100 dark:bg-gray-900"
+            />
+          ) : null
+        })()}
 
         {/* Object name + IDs */}
         <button
