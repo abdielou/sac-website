@@ -82,6 +82,7 @@ export default function GuideSection({ type, editions, sectionTitle }) {
   const [loading, setLoading] = useState(false)
   const [filters, setFilters] = useState({ equipment: [], difficulty: [], location: [] })
   const [sortField, setSortField] = useState('nombre')
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   const fetchGuide = useCallback(async (slug) => {
     if (!slug) return
@@ -171,48 +172,89 @@ export default function GuideSection({ type, editions, sectionTitle }) {
         </div>
       </div>
 
-      {/* Filter pills */}
-      <div className="mb-4 space-y-2">
-        {Object.entries(FILTER_DIMENSIONS).map(([dim, config]) => (
-          <div key={dim} className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 w-20">
-              {config.label}:
-            </span>
-            {config.options.map((opt) => {
-              const active = filters[dim].includes(opt.value)
-              return (
-                <button
-                  key={opt.value}
-                  onClick={() => toggleFilter(dim, opt.value)}
-                  className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
-                    active
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-blue-400'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              )
-            })}
-          </div>
-        ))}
-      </div>
+      {/* Collapsible filters & sort */}
+      {(() => {
+        const activeCount = Object.values(filters).reduce((sum, arr) => sum + arr.length, 0)
+        return (
+          <div className="mb-4">
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((o) => !o)}
+              className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+            >
+              <svg
+                className={`w-4 h-4 transition-transform ${filtersOpen ? 'rotate-90' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+              Filtros y orden
+              {!filtersOpen && activeCount > 0 && (
+                <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-blue-600 rounded-full">
+                  {activeCount}
+                </span>
+              )}
+            </button>
 
-      {/* Sort control */}
-      <div className="mb-4 flex items-center gap-2">
-        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Ordenar por:</span>
-        <select
-          value={sortField}
-          onChange={(e) => setSortField(e.target.value)}
-          className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs px-2 py-1 text-gray-900 dark:text-gray-100"
-        >
-          {SORT_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </div>
+            {filtersOpen && (
+              <div className="mt-3 space-y-2 pl-6">
+                {Object.entries(FILTER_DIMENSIONS).map(([dim, config]) => (
+                  <div key={dim} className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 w-20">
+                      {config.label}:
+                    </span>
+                    {config.options.map((opt) => {
+                      const active = filters[dim].includes(opt.value)
+                      return (
+                        <button
+                          key={opt.value}
+                          onClick={() => toggleFilter(dim, opt.value)}
+                          className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
+                            active
+                              ? 'bg-blue-600 text-white border-blue-600'
+                              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-blue-400'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                ))}
+
+                {/* Sort control */}
+                <div className="flex items-center gap-2 pt-1">
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 w-20">
+                    Ordenar:
+                  </span>
+                  <select
+                    value={sortField}
+                    onChange={(e) => setSortField(e.target.value)}
+                    className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs px-2 py-1 text-gray-900 dark:text-gray-100"
+                  >
+                    {SORT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearFilters}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    Limpiar filtros
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Loading state */}
       {loading && (
