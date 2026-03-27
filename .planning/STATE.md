@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Observing Guides
 status: executing
-stopped_at: Completed 32-02-PLAN.md
-last_updated: "2026-03-27T12:56:22.806Z"
-last_activity: 2026-03-27 — Completed 32-02 Admin Guide Builder UI
+stopped_at: Completed 33-01-PLAN.md
+last_updated: "2026-03-27T13:42:00.000Z"
+last_activity: 2026-03-27 — Completed 33-01 Public Guides API
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 6
+  completed_plans: 5
   percent: 50
 ---
 
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-26)
 
 **Core value:** Admins can accurately track membership status and payments so that no member falls through the cracks.
-**Current focus:** Phase 32 — Admin Guide Builder
+**Current focus:** Phase 33 — Public Guides Page
 
 ## Current Position
 
 Milestone: v1.9 — Observing Guides
-Phase: 32 of 34 (Admin Guide Builder)
-Plan: 2 of 2 (Phase 32 complete)
+Phase: 33 of 34 (Public Guides Page)
+Plan: 1 of 2
 Status: Executing
-Last activity: 2026-03-27 — Completed 32-02 Admin Guide Builder UI
+Last activity: 2026-03-27 — Completed 33-01 Public Guides API
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ v1.9 decisions so far:
 - [Phase 31]: Catalog uses fs.readFileSync for Node 24 compat; display names strip leading zeros
 - [Phase 32]: Guide slug uses NFD normalization + timestamp; blog_admin gets full guide permissions; guide types validated at API level
 - [Phase 32-02]: Catalog data resolved at edit-load time via search API; split-panel editor layout (search 40% + entries 60%); annotations use Spanish label dropdowns
+- [Phase 33-01]: Public API reuses lib/guides.js business layer; catalog resolved server-side for SkyView RA/Dec
 
 ### Blockers/Concerns
 
@@ -67,6 +68,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-27T12:56:20.706Z
-Stopped at: Completed 32-02-PLAN.md
-Resume: Execute Phase 33 (Public Guide Renderer)
+Last session: 2026-03-27T13:42:00.000Z
+Stopped at: Completed 33-01-PLAN.md
+Resume: Execute 33-02 (Public Guide Renderer Page)

@@ -15,12 +15,12 @@ Requirements for Observing Guides milestone. Each maps to roadmap phases.
 
 ### Public Experience
 
-- [ ] **PUB-01**: User can view a `/guides` page with two sections: seasonal galaxies and monthly objects
+- [x] **PUB-01**: User can view a `/guides` page with two sections: seasonal galaxies and monthly objects
 - [ ] **PUB-02**: User can filter objects by equipment type, difficulty, and location suitability
 - [ ] **PUB-03**: User can sort object lists by name, optimal time, difficulty, or magnitude
-- [ ] **PUB-04**: User can select past guide editions via dropdown per section, defaulting to most recent
+- [x] **PUB-04**: User can select past guide editions via dropdown per section, defaulting to most recent
 - [ ] **PUB-05**: User can download a guide as a branded PDF with SAC design
-- [ ] **PUB-06**: Each object displays a SkyView thumbnail image auto-generated from its coordinates
+- [x] **PUB-06**: Each object displays a SkyView thumbnail image auto-generated from its coordinates
 
 ### Admin Guide Builder
 
@@ -65,12 +65,12 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | DATA-01 | Phase 31 | Complete |
 | DATA-02 | Phase 31 | Complete |
 | DATA-03 | Phase 31 | Complete |
-| PUB-01 | Phase 33 | Pending |
+| PUB-01 | Phase 33 | Complete |
 | PUB-02 | Phase 33 | Pending |
 | PUB-03 | Phase 33 | Pending |
-| PUB-04 | Phase 33 | Pending |
+| PUB-04 | Phase 33 | Complete |
 | PUB-05 | Phase 34 | Pending |
-| PUB-06 | Phase 33 | Pending |
+| PUB-06 | Phase 33 | Complete |
 | ADMIN-01 | Phase 32 | Complete |
 | ADMIN-02 | Phase 32 | Complete |
 | ADMIN-03 | Phase 32 | Complete |

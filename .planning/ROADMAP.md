@@ -100,11 +100,11 @@ Plans:
   3. User can sort object lists by name, optimal viewing time, difficulty, or magnitude
   4. User can select past guide editions from a dropdown per section, and the list updates to show that edition's objects
   5. Each object in a guide displays a SkyView thumbnail image generated from its RA/Dec coordinates
-**Plans**: TBD
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 33-01: TBD
-- [ ] 33-02: TBD
+- [ ] 33-01-PLAN.md — Public API route for published guides with catalog data + nav link
+- [ ] 33-02-PLAN.md — Interactive /guides page with sections, filtering, sorting, edition browsing, SkyView thumbnails
 
 ### Phase 34: PDF Export
 **Goal**: Users can download branded PDF versions of observing guides
@@ -134,6 +134,6 @@ Plans:
 | 23-25 | v1.7 | 5/5 | Complete | 2026-02-25 |
 | 26-30 | v1.8 | 14/14 | Complete | 2026-03-02 |
 | 31. Catalog & Storage | 2/2 | Complete    | 2026-03-27 | - |
-| 32. Admin Guide Builder | 2/2 | Complete   | 2026-03-27 | - |
-| 33. Public Guides Page | v1.9 | 0/? | Not started | - |
+| 32. Admin Guide Builder | 2/2 | Complete    | 2026-03-27 | - |
+| 33. Public Guides Page | 1/2 | In Progress|  | - |
 | 34. PDF Export | v1.9 | 0/? | Not started | - |
