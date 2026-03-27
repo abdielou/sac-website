@@ -51,9 +51,13 @@ function sortEntries(entries, sortField) {
     case 'nombre':
       return sorted.sort((a, b) => getDisplayName(a).localeCompare(getDisplayName(b), 'es'))
     case 'hora':
-      return sorted.sort((a, b) => (a.optimalTime || '99:99').localeCompare(b.optimalTime || '99:99'))
+      return sorted.sort((a, b) =>
+        (a.optimalTime || '99:99').localeCompare(b.optimalTime || '99:99')
+      )
     case 'dificultad':
-      return sorted.sort((a, b) => (DIFFICULTY_ORDER[a.difficulty] ?? 99) - (DIFFICULTY_ORDER[b.difficulty] ?? 99))
+      return sorted.sort(
+        (a, b) => (DIFFICULTY_ORDER[a.difficulty] ?? 99) - (DIFFICULTY_ORDER[b.difficulty] ?? 99)
+      )
     case 'magnitud':
       return sorted.sort((a, b) => (a.catalog?.magnitude ?? 99) - (b.catalog?.magnitude ?? 99))
     default:
@@ -154,7 +158,12 @@ export default function GuideSection({ type, editions, sectionTitle }) {
             className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
             </svg>
             PDF
           </button>
@@ -239,9 +248,7 @@ export default function GuideSection({ type, editions, sectionTitle }) {
 
       {/* No entries in this guide */}
       {!loading && entries.length === 0 && guideData && (
-        <p className="text-gray-500 dark:text-gray-400 py-4">
-          Esta guia no tiene objetos aun.
-        </p>
+        <p className="text-gray-500 dark:text-gray-400 py-4">Esta guia no tiene objetos aun.</p>
       )}
     </section>
   )

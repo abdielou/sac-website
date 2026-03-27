@@ -3,21 +3,45 @@
 import { useState } from 'react'
 
 const EQUIPMENT_LABELS = {
-  telefono_inteligente: { label: 'Tel. inteligente', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' },
-  equipo_pequeno: { label: 'Equipo pequeno', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
-  telescopio_grande: { label: 'Telescopio grande', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' },
+  telefono_inteligente: {
+    label: 'Tel. inteligente',
+    color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  },
+  equipo_pequeno: {
+    label: 'Equipo pequeno',
+    color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  },
+  telescopio_grande: {
+    label: 'Telescopio grande',
+    color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+  },
 }
 
 const DIFFICULTY_LABELS = {
-  facil: { label: 'Facil', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' },
-  intermedio: { label: 'Intermedio', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' },
+  facil: {
+    label: 'Facil',
+    color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  },
+  intermedio: {
+    label: 'Intermedio',
+    color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+  },
   retante: { label: 'Retante', color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' },
 }
 
 const LOCATION_LABELS = {
-  ciudad: { label: 'Ciudad', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' },
-  suburbios: { label: 'Suburbios', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' },
-  oscuro: { label: 'Oscuro', color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200' },
+  ciudad: {
+    label: 'Ciudad',
+    color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+  },
+  suburbios: {
+    label: 'Suburbios',
+    color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  },
+  oscuro: {
+    label: 'Oscuro',
+    color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+  },
 }
 
 function Tag({ label, color }) {
@@ -77,9 +101,7 @@ export default function ObjectCard({ entry }) {
       <div className="p-3 flex-1 min-w-0">
         {/* Name */}
         <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{displayName}</h3>
-        {catalogIds && (
-          <p className="text-xs text-gray-500 dark:text-gray-400">{catalogIds}</p>
-        )}
+        {catalogIds && <p className="text-xs text-gray-500 dark:text-gray-400">{catalogIds}</p>}
 
         {/* Key data */}
         <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-600 dark:text-gray-300">
