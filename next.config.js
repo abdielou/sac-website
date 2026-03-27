@@ -23,6 +23,11 @@ const securityHeaders = [
 ]
 
 module.exports = withBundleAnalyzer({
+  outputFileTracingIncludes: {
+    '/api/guides/public': ['./data/catalog/**/*.json'],
+    '/api/admin/catalog/search': ['./data/catalog/**/*.json'],
+    '/guides': ['./data/catalog/**/*.json'],
+  },
   serverExternalPackages: ['@react-pdf/renderer'],
   turbopack: {},
   reactStrictMode: true,
