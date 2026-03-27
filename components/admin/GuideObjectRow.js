@@ -91,18 +91,22 @@ export default function GuideObjectRow({
 
         {/* Thumbnail with hover preview */}
         {(() => {
-          const imgUrl = getObjectImageUrl(entry.objectId, cat)
-          return imgUrl ? (
-            <div className="relative flex-shrink-0 group">
+          const hubbleId = hubbleImages[entry.objectId]
+          const thumbUrl = getObjectImageUrl(entry.objectId, cat)
+          const previewUrl = hubbleId
+            ? `https://cdn.esahubble.org/archives/images/thumb700x/${hubbleId}.jpg`
+            : thumbUrl
+          return thumbUrl ? (
+            <div className="relative flex-shrink-0 group/thumb">
               <img
-                src={imgUrl}
+                src={thumbUrl}
                 alt={name}
                 loading="lazy"
                 className="w-10 h-10 rounded object-cover bg-gray-100 dark:bg-gray-900 cursor-pointer"
               />
-              <div className="hidden group-hover:block absolute z-50 left-12 top-0 p-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl">
+              <div className="invisible opacity-0 group-hover/thumb:visible group-hover/thumb:opacity-100 transition-opacity duration-150 absolute z-[100] left-12 -top-2 p-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl pointer-events-none">
                 <img
-                  src={imgUrl}
+                  src={previewUrl}
                   alt={name}
                   className="w-48 h-48 rounded object-cover"
                 />
