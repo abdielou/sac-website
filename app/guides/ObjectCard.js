@@ -106,7 +106,15 @@ export default function ObjectCard({ entry }) {
         {/* Key data */}
         <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-600 dark:text-gray-300">
           {catalog.magnitude != null && <span>Mag: {catalog.magnitude}</span>}
-          {catalog.angularSize != null && <span>Tam: {catalog.angularSize}&apos;</span>}
+          {catalog.angularSize != null && (
+            <span>
+              Tam:{' '}
+              {typeof catalog.angularSize === 'object'
+                ? catalog.angularSize.major
+                : catalog.angularSize}
+              &apos;
+            </span>
+          )}
           {catalog.constellation && <span>{catalog.constellation}</span>}
         </div>
 
