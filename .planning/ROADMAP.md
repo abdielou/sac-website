@@ -84,11 +84,11 @@ Plans:
   3. Admin can annotate each object in a guide with difficulty, equipment needed, location suitability, optimal viewing time, and freeform notes
   4. Admin can reorder, remove, and edit objects within a guide, then save as draft or publish
   5. Admin can edit existing guides and toggle between published and unpublished states
-**Plans**: TBD
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 32-01: TBD
-- [ ] 32-02: TBD
+- [ ] 32-01-PLAN.md — API layer: guide business logic, permissions, catalog search and guide CRUD endpoints
+- [ ] 32-02-PLAN.md — Admin UI: guide list page, editor with catalog search, annotations, reorder, draft/publish
 
 ### Phase 33: Public Guides Page
 **Goal**: Users can browse interactive observing guides on the public website
@@ -133,7 +133,7 @@ Plans:
 | 19-22 | v1.6 | 7/7 | Complete | 2026-02-17 |
 | 23-25 | v1.7 | 5/5 | Complete | 2026-02-25 |
 | 26-30 | v1.8 | 14/14 | Complete | 2026-03-02 |
-| 31. Catalog & Storage | 2/2 | Complete   | 2026-03-27 | - |
-| 32. Admin Guide Builder | v1.9 | 0/? | Not started | - |
+| 31. Catalog & Storage | 2/2 | Complete    | 2026-03-27 | - |
+| 32. Admin Guide Builder | 1/2 | In Progress|  | - |
 | 33. Public Guides Page | v1.9 | 0/? | Not started | - |
 | 34. PDF Export | v1.9 | 0/? | Not started | - |

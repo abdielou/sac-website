@@ -24,12 +24,12 @@ Requirements for Observing Guides milestone. Each maps to roadmap phases.
 
 ### Admin Guide Builder
 
-- [ ] **ADMIN-01**: Admin can search the object catalog by name, catalog ID, or object type
-- [ ] **ADMIN-02**: Admin can create a new guide with free-form title, type (galaxies/objects), and add objects from the catalog
+- [x] **ADMIN-01**: Admin can search the object catalog by name, catalog ID, or object type
+- [x] **ADMIN-02**: Admin can create a new guide with free-form title, type (galaxies/objects), and add objects from the catalog
 - [ ] **ADMIN-03**: Admin can annotate each object in a guide with difficulty, equipment, location suitability, optimal viewing time, and notes
 - [ ] **ADMIN-04**: Admin can reorder, remove, and edit objects within a guide
-- [ ] **ADMIN-05**: Admin can save guide as draft or publish to public
-- [ ] **ADMIN-06**: Admin can edit and unpublish existing guides
+- [x] **ADMIN-05**: Admin can save guide as draft or publish to public
+- [x] **ADMIN-06**: Admin can edit and unpublish existing guides
 
 ## Future Requirements
 
@@ -71,12 +71,12 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | PUB-04 | Phase 33 | Pending |
 | PUB-05 | Phase 34 | Pending |
 | PUB-06 | Phase 33 | Pending |
-| ADMIN-01 | Phase 32 | Pending |
-| ADMIN-02 | Phase 32 | Pending |
+| ADMIN-01 | Phase 32 | Complete |
+| ADMIN-02 | Phase 32 | Complete |
 | ADMIN-03 | Phase 32 | Pending |
 | ADMIN-04 | Phase 32 | Pending |
-| ADMIN-05 | Phase 32 | Pending |
-| ADMIN-06 | Phase 32 | Pending |
+| ADMIN-05 | Phase 32 | Complete |
+| ADMIN-06 | Phase 32 | Complete |
 
 **Coverage:**
 - v1.9 requirements: 15 total
