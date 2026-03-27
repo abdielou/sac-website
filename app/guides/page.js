@@ -11,7 +11,8 @@ export const metadata = {
   },
 }
 
-export const dynamic = 'force-dynamic'
+// Revalidate the guide index every 5 minutes — guide data rarely changes
+export const revalidate = 300
 
 export default async function GuidesPage() {
   let galaxyEditions = []

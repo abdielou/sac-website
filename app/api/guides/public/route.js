@@ -3,6 +3,11 @@ import { listGuides, getGuide } from '@/lib/guides'
 import { getObjectById } from '@/lib/catalog'
 import hubbleImages from '@/data/catalog/hubble-images.json'
 
+// Cache public guide responses: 5 min fresh, serve stale up to 1 hour while revalidating
+const CACHE_HEADERS = {
+  'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600',
+}
+
 /**
  * GET /api/guides/public
  *
@@ -67,7 +72,7 @@ async function handleListGuides() {
   grouped.galaxies.sort(sortDesc)
   grouped.objects.sort(sortDesc)
 
-  return NextResponse.json(grouped)
+  return NextResponse.json(grouped, { headers: CACHE_HEADERS })
 }
 
 /**
@@ -112,13 +117,16 @@ async function handleSingleGuide(slug) {
     }
   })
 
-  return NextResponse.json({
-    guide: {
-      title: guide.title,
-      type: guide.type,
-      slug: guide.slug,
-      publishedAt: guide.publishedAt,
-      entries,
+  return NextResponse.json(
+    {
+      guide: {
+        title: guide.title,
+        type: guide.type,
+        slug: guide.slug,
+        publishedAt: guide.publishedAt,
+        entries,
+      },
     },
-  })
+    { headers: CACHE_HEADERS }
+  )
 }
