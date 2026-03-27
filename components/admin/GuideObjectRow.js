@@ -59,6 +59,7 @@ export default function GuideObjectRow({
   onMoveDown,
 }) {
   const [expanded, setExpanded] = useState(true)
+  const [showPreview, setShowPreview] = useState(false)
 
   const cat = entry._catalogData || {}
   const name = cat.commonNameEs || cat.commonName || cat.name || entry.objectId
@@ -97,20 +98,36 @@ export default function GuideObjectRow({
             ? `https://cdn.esahubble.org/archives/images/thumb700x/${hubbleId}.jpg`
             : thumbUrl
           return thumbUrl ? (
-            <div className="relative flex-shrink-0 group/thumb">
+            <div
+              className="relative flex-shrink-0"
+              onMouseEnter={() => setShowPreview(true)}
+              onMouseLeave={() => setShowPreview(false)}
+            >
               <img
                 src={thumbUrl}
                 alt={name}
                 loading="lazy"
                 className="w-10 h-10 rounded object-cover bg-gray-100 dark:bg-gray-900 cursor-pointer"
               />
-              <div className="invisible opacity-0 group-hover/thumb:visible group-hover/thumb:opacity-100 transition-opacity duration-150 absolute z-[100] left-12 -top-2 p-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl pointer-events-none">
-                <img
-                  src={previewUrl}
-                  alt={name}
-                  className="w-48 h-48 rounded object-cover"
-                />
-              </div>
+              {showPreview && (
+                <div
+                  className="fixed z-[9999] p-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl pointer-events-none"
+                  style={{ top: 'var(--preview-top)', left: 'var(--preview-left)' }}
+                  ref={(el) => {
+                    if (el) {
+                      const rect = el.previousElementSibling.getBoundingClientRect()
+                      el.style.top = `${rect.top - 20}px`
+                      el.style.left = `${rect.right + 8}px`
+                    }
+                  }}
+                >
+                  <img
+                    src={previewUrl}
+                    alt={name}
+                    className="w-48 h-48 rounded object-cover"
+                  />
+                </div>
+              )}
             </div>
           ) : null
         })()}
