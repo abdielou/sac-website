@@ -149,7 +149,7 @@ export default function GuideSection({ type, editions, sectionTitle }) {
           >
             {editions.map((ed) => (
               <option key={ed.slug} value={ed.slug}>
-                {ed.title} ({new Date(ed.publishedAt).toLocaleDateString('es-PR')})
+                {ed.title}
               </option>
             ))}
           </select>
