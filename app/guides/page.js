@@ -64,12 +64,12 @@ export default async function GuidesPage() {
 
         {hasGuides ? (
           <div className="py-4">
+            <GuideSection type="objects" editions={objectEditions} sectionTitle="Objetos del mes" />
             <GuideSection
               type="galaxies"
               editions={galaxyEditions}
               sectionTitle="Galaxias de la temporada"
             />
-            <GuideSection type="objects" editions={objectEditions} sectionTitle="Objetos del mes" />
 
             {/* Attribution */}
             <div className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-400 dark:text-gray-500 space-y-1">
