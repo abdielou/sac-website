@@ -55,7 +55,7 @@ See .planning/milestones/v1.8-ROADMAP.md for full details.
 
 - [x] **Phase 31: Object Catalog & Storage** - OpenNGC catalog with Spanish names and S3 guide storage layer (completed 2026-03-27)
 - [x] **Phase 32: Admin Guide Builder** - Dashboard CRUD for creating, curating, and publishing guides (completed 2026-03-27)
-- [ ] **Phase 33: Public Guides Page** - Interactive `/guides` page with filtering, sorting, and edition browsing
+- [x] **Phase 33: Public Guides Page** - Interactive `/guides` page with filtering, sorting, and edition browsing (completed 2026-03-27)
 - [ ] **Phase 34: PDF Export** - Branded PDF download per guide using @react-pdf/renderer
 
 ## Phase Details
@@ -100,7 +100,7 @@ Plans:
   3. User can sort object lists by name, optimal viewing time, difficulty, or magnitude
   4. User can select past guide editions from a dropdown per section, and the list updates to show that edition's objects
   5. Each object in a guide displays a SkyView thumbnail image generated from its RA/Dec coordinates
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 33-01-PLAN.md — Public API route for published guides with catalog data + nav link
@@ -135,5 +135,5 @@ Plans:
 | 26-30 | v1.8 | 14/14 | Complete | 2026-03-02 |
 | 31. Catalog & Storage | 2/2 | Complete    | 2026-03-27 | - |
 | 32. Admin Guide Builder | 2/2 | Complete    | 2026-03-27 | - |
-| 33. Public Guides Page | 1/2 | In Progress|  | - |
+| 33. Public Guides Page | 2/2 | Complete   | 2026-03-27 | - |
 | 34. PDF Export | v1.9 | 0/? | Not started | - |

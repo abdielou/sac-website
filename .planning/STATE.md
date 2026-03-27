@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Observing Guides
-status: executing
-stopped_at: Completed 33-01-PLAN.md
-last_updated: "2026-03-27T13:42:00.000Z"
-last_activity: 2026-03-27 — Completed 33-01 Public Guides API
+status: completed
+stopped_at: Completed 33-02-PLAN.md
+last_updated: "2026-03-27T14:38:33.647Z"
+last_activity: 2026-03-27 — Completed 33-02 Public Guides Page
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 6
-  completed_plans: 5
-  percent: 50
+  completed_plans: 6
+  percent: 100
 ---
 
 # Project State
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-26)
 
 **Core value:** Admins can accurately track membership status and payments so that no member falls through the cracks.
-**Current focus:** Phase 33 — Public Guides Page
+**Current focus:** Phase 34 — PDF Export
 
 ## Current Position
 
 Milestone: v1.9 — Observing Guides
 Phase: 33 of 34 (Public Guides Page)
-Plan: 1 of 2
-Status: Executing
-Last activity: 2026-03-27 — Completed 33-01 Public Guides API
+Plan: 2 of 2
+Status: Phase Complete
+Last activity: 2026-03-27 — Completed 33-02 Public Guides Page
 
 Progress: [██████████] 100%
 
@@ -61,6 +61,7 @@ v1.9 decisions so far:
 - [Phase 32]: Guide slug uses NFD normalization + timestamp; blog_admin gets full guide permissions; guide types validated at API level
 - [Phase 32-02]: Catalog data resolved at edit-load time via search API; split-panel editor layout (search 40% + entries 60%); annotations use Spanish label dropdowns
 - [Phase 33-01]: Public API reuses lib/guides.js business layer; catalog resolved server-side for SkyView RA/Dec
+- [Phase 33-02]: SkyView 150px thumbnails with lazy loading; filter AND across dimensions, OR within; server-side index fetch; nav label in Spanish
 
 ### Blockers/Concerns
 
@@ -68,6 +69,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-27T13:42:00.000Z
-Stopped at: Completed 33-01-PLAN.md
-Resume: Execute 33-02 (Public Guide Renderer Page)
+Last session: 2026-03-27T14:40:00.000Z
+Stopped at: Completed 33-02-PLAN.md
+Resume: Phase 34 — PDF Export
