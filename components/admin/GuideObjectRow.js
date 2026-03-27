@@ -3,6 +3,23 @@
 import { useState } from 'react'
 import hubbleImages from '@/data/catalog/hubble-images.json'
 
+/**
+ * Convert "8:00 PM" or "20:00" to 24h format "20:00" for <input type="time">.
+ */
+function to24h(timeStr) {
+  if (!timeStr) return ''
+  // Already in 24h format (HH:MM)
+  if (/^\d{2}:\d{2}$/.test(timeStr)) return timeStr
+  const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i)
+  if (!match) return ''
+  let hours = parseInt(match[1], 10)
+  const mins = match[2]
+  const period = match[3].toUpperCase()
+  if (period === 'PM' && hours !== 12) hours += 12
+  if (period === 'AM' && hours === 12) hours = 0
+  return `${String(hours).padStart(2, '0')}:${mins}`
+}
+
 function getObjectImageUrl(objectId, catalog) {
   const hubbleId = hubbleImages[objectId]
   if (hubbleId) return `https://cdn.esahubble.org/archives/images/thumb300y/${hubbleId}.jpg`
@@ -260,7 +277,7 @@ export default function GuideObjectRow({
           {/* Row 2: optimal time */}
           <input
             type="time"
-            value={entry.optimalTime || ''}
+            value={to24h(entry.optimalTime)}
             onChange={(e) => handleChange('optimalTime', e.target.value)}
             className={`w-full ${inputClass}`}
           />

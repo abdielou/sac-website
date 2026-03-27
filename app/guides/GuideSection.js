@@ -52,16 +52,26 @@ function getDisplayName(entry) {
  */
 function parseTimeToMinutes(timeStr) {
   if (!timeStr) return 9999
-  const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i)
-  if (!match) return 9999
-  let hours = parseInt(match[1], 10)
-  const minutes = parseInt(match[2], 10)
-  const period = match[3].toUpperCase()
-  if (period === 'PM' && hours !== 12) hours += 12
-  if (period === 'AM' && hours === 12) hours = 0
-  // Shift AM times (0-6) to sort after PM times (treating them as next day)
-  if (hours < 7) hours += 24
-  return hours * 60 + minutes
+  // Handle 12h format: "8:00 PM", "12:30 AM"
+  const match12 = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i)
+  if (match12) {
+    let hours = parseInt(match12[1], 10)
+    const minutes = parseInt(match12[2], 10)
+    const period = match12[3].toUpperCase()
+    if (period === 'PM' && hours !== 12) hours += 12
+    if (period === 'AM' && hours === 12) hours = 0
+    if (hours < 7) hours += 24
+    return hours * 60 + minutes
+  }
+  // Handle 24h format: "20:00", "01:30"
+  const match24 = timeStr.match(/^(\d{1,2}):(\d{2})$/)
+  if (match24) {
+    let hours = parseInt(match24[1], 10)
+    const minutes = parseInt(match24[2], 10)
+    if (hours < 7) hours += 24
+    return hours * 60 + minutes
+  }
+  return 9999
 }
 
 function sortEntries(entries, sortField) {

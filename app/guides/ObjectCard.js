@@ -57,6 +57,25 @@ function Tag({ label, color }) {
   )
 }
 
+/**
+ * Format time for display. Handles both "8:00 PM" and "20:00" formats.
+ * Returns "8:00 PM" style output.
+ */
+function formatTime(timeStr) {
+  if (!timeStr) return ''
+  // Already in 12h format
+  if (/AM|PM/i.test(timeStr)) return timeStr
+  // Convert 24h to 12h
+  const match = timeStr.match(/^(\d{1,2}):(\d{2})$/)
+  if (!match) return timeStr
+  let hours = parseInt(match[1], 10)
+  const mins = match[2]
+  const period = hours >= 12 ? 'PM' : 'AM'
+  if (hours === 0) hours = 12
+  else if (hours > 12) hours -= 12
+  return `${hours}:${mins} ${period}`
+}
+
 function getSkyViewUrl(ra, dec, pixels = 150) {
   return `https://skyview.gsfc.nasa.gov/current/cgi/runquery.pl?Position=${ra},${dec}&Survey=DSS&Return=JPEG&Pixels=${pixels}`
 }
@@ -178,7 +197,7 @@ function ObjectModal({ entry, catalog, onClose }) {
               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
                 <p className="text-xs text-gray-500 dark:text-gray-400">Hora óptima</p>
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {entry.optimalTime}
+                  {formatTime(entry.optimalTime)}
                 </p>
               </div>
             )}
@@ -304,7 +323,7 @@ export default function ObjectCard({ entry }) {
         {/* Optimal time */}
         {entry.optimalTime && (
           <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
-            Hora optima: {entry.optimalTime}
+            Hora óptima: {formatTime(entry.optimalTime)}
           </p>
         )}
 
