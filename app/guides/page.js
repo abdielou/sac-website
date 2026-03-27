@@ -4,10 +4,10 @@ import GuideSection from './GuideSection'
 
 export const metadata = {
   title: 'Guias de Observacion - SAC',
-  description: 'Guias interactivas para observar objetos del cielo profundo desde Puerto Rico.',
+  description: 'Guias interactivas para observar objetos del cielo profundo desde el Caribe.',
   openGraph: {
     title: 'Guias de Observacion | SAC',
-    description: 'Guias interactivas para observar objetos del cielo profundo desde Puerto Rico.',
+    description: 'Guias interactivas para observar objetos del cielo profundo desde el Caribe.',
   },
 }
 
@@ -57,7 +57,7 @@ export default async function GuidesPage() {
             Guias de Observacion
           </h1>
           <p className="text-lg leading-7 text-gray-500 dark:text-gray-400">
-            Guias interactivas para observar objetos del cielo profundo desde Puerto Rico. Filtra
+            Guias interactivas para observar objetos del cielo profundo desde el Caribe. Filtra
             por equipo, dificultad y ubicacion.
           </p>
         </div>
