@@ -23,11 +23,6 @@ const securityHeaders = [
 ]
 
 module.exports = withBundleAnalyzer({
-  outputFileTracingIncludes: {
-    '/api/guides/public': ['./data/catalog/openngc-curated.json', './data/catalog/supplementary.json', './data/catalog/hubble-images.json'],
-    '/api/admin/catalog/search': ['./data/catalog/openngc-curated.json', './data/catalog/supplementary.json'],
-    '/guides': ['./data/catalog/openngc-curated.json', './data/catalog/supplementary.json'],
-  },
   serverExternalPackages: ['@react-pdf/renderer'],
   turbopack: {},
   reactStrictMode: true,
