@@ -14,9 +14,10 @@ const DIFFICULTY_OPTIONS = [
 
 const EQUIPMENT_OPTIONS = [
   { value: '', label: '-- Equipo --' },
-  { value: 'telefono_inteligente', label: 'Tel. inteligente' },
+  { value: 'telescopio_inteligente', label: 'Telescopio inteligente' },
   { value: 'equipo_pequeno', label: 'Equipo pequeño' },
   { value: 'telescopio_grande', label: 'Telescopio grande' },
+  { value: 'dslr', label: 'Cámara DSLR' },
 ]
 
 const LOCATION_OPTIONS = [

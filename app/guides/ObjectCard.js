@@ -3,17 +3,21 @@
 import { useState } from 'react'
 
 const EQUIPMENT_LABELS = {
-  telefono_inteligente: {
-    label: 'Tel. inteligente',
+  telescopio_inteligente: {
+    label: 'Telescopio inteligente',
     color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
   },
   equipo_pequeno: {
-    label: 'Equipo pequeno',
+    label: 'Equipo pequeño',
     color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
   },
   telescopio_grande: {
     label: 'Telescopio grande',
     color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+  },
+  dslr: {
+    label: 'Cámara DSLR',
+    color: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
   },
 }
 

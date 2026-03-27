@@ -7,9 +7,10 @@ const FILTER_DIMENSIONS = {
   equipment: {
     label: 'Equipo',
     options: [
-      { value: 'telefono_inteligente', label: 'Tel. inteligente' },
+      { value: 'telescopio_inteligente', label: 'Telescopio inteligente' },
       { value: 'equipo_pequeno', label: 'Equipo pequeño' },
       { value: 'telescopio_grande', label: 'Telescopio grande' },
+      { value: 'dslr', label: 'Cámara DSLR' },
     ],
   },
   difficulty: {
