@@ -99,7 +99,7 @@ export default function GuideSection({ type, editions, sectionTitle }) {
   const [guideData, setGuideData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [filters, setFilters] = useState({ equipment: [], difficulty: [], location: [] })
-  const [sortField, setSortField] = useState('nombre')
+  const [sortField, setSortField] = useState('hora')
   const [filtersOpen, setFiltersOpen] = useState(false)
 
   const fetchGuide = useCallback(async (slug) => {
