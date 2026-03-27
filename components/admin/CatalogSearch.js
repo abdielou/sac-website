@@ -1,6 +1,16 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
+import hubbleImages from '@/data/catalog/hubble-images.json'
+
+function getObjectImageUrl(objectId, catalog) {
+  const hubbleId = hubbleImages[objectId]
+  if (hubbleId) return `https://cdn.esahubble.org/archives/images/thumb300y/${hubbleId}.jpg`
+  if (catalog?.ra != null && catalog?.dec != null) {
+    return `https://skyview.gsfc.nasa.gov/current/cgi/runquery.pl?Position=${catalog.ra},${catalog.dec}&Survey=DSS&Return=JPEG&Pixels=80`
+  }
+  return null
+}
 
 /**
  * CatalogSearch - Search panel for the object catalog
@@ -144,6 +154,17 @@ export default function CatalogSearch({ onAddObject, addedObjectIds = new Set() 
                 key={obj.id}
                 className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
+                {(() => {
+                  const imgUrl = getObjectImageUrl(obj.id, obj)
+                  return imgUrl ? (
+                    <img
+                      src={imgUrl}
+                      alt={displayName(obj)}
+                      loading="lazy"
+                      className="flex-shrink-0 w-10 h-10 rounded object-cover bg-gray-100 dark:bg-gray-900"
+                    />
+                  ) : null
+                })()}
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                     {displayName(obj)}
