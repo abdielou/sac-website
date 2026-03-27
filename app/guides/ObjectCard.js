@@ -87,10 +87,10 @@ export default function ObjectCard({ entry }) {
 
   return (
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden flex flex-col sm:flex-row">
-      {/* SkyView thumbnail */}
+      {/* Object thumbnail — ESA/Hubble color if available, SkyView grayscale fallback */}
       <div className="flex-shrink-0 sm:w-[150px] sm:h-[150px] bg-gray-100 dark:bg-gray-900">
         <img
-          src={getSkyViewUrl(catalog.ra, catalog.dec)}
+          src={entry.imageUrl || getSkyViewUrl(catalog.ra, catalog.dec)}
           alt={`Vista de ${displayName}`}
           loading="lazy"
           className="w-full h-40 sm:w-[150px] sm:h-[150px] object-cover"

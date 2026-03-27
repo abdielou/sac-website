@@ -70,6 +70,40 @@ export default async function GuidesPage() {
               sectionTitle="Galaxias de la temporada"
             />
             <GuideSection type="objects" editions={objectEditions} sectionTitle="Objetos del mes" />
+
+            {/* Attribution */}
+            <div className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-400 dark:text-gray-500 space-y-1">
+              <p>
+                Datos del catálogo:{' '}
+                <a
+                  href="https://github.com/mattiaverga/OpenNGC"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  OpenNGC
+                </a>{' '}
+                (CC BY-SA 4.0). Imágenes a color: ESA/Hubble (
+                <a
+                  href="https://esahubble.org"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  esahubble.org
+                </a>
+                , CC BY 4.0). Imágenes en escala de grises:{' '}
+                <a
+                  href="https://skyview.gsfc.nasa.gov"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  NASA SkyView
+                </a>
+                .
+              </p>
+            </div>
           </div>
         ) : (
           <div className="py-12 text-center">

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { listGuides, getGuide } from '@/lib/guides'
 import { getObjectById } from '@/lib/catalog'
+import hubbleImages from '@/data/catalog/hubble-images.json'
 
 /**
  * GET /api/guides/public
@@ -93,6 +94,12 @@ async function handleSingleGuide(slug) {
   // Resolve catalog data for each entry
   const entries = (guide.entries || []).map((entry) => {
     const catalogObj = getObjectById(entry.objectId)
+    // Check for ESA/Hubble color image, fall back to SkyView grayscale
+    const hubbleId = hubbleImages[entry.objectId]
+    const imageUrl = hubbleId
+      ? `https://cdn.esahubble.org/archives/images/thumb700x/${hubbleId}.jpg`
+      : null
+
     return {
       objectId: entry.objectId,
       difficulty: entry.difficulty || null,
@@ -101,6 +108,7 @@ async function handleSingleGuide(slug) {
       optimalTime: entry.optimalTime || null,
       notes: entry.notes || null,
       catalog: catalogObj || null,
+      imageUrl,
     }
   })
 
