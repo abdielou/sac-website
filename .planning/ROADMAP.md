@@ -135,5 +135,5 @@ Plans:
 | 26-30 | v1.8 | 14/14 | Complete | 2026-03-02 |
 | 31. Catalog & Storage | 2/2 | Complete    | 2026-03-27 | - |
 | 32. Admin Guide Builder | 2/2 | Complete    | 2026-03-27 | - |
-| 33. Public Guides Page | 2/2 | Complete   | 2026-03-27 | - |
+| 33. Public Guides Page | 2/2 | Complete    | 2026-03-27 | - |
 | 34. PDF Export | v1.9 | 0/? | Not started | - |
