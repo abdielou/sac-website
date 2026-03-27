@@ -14,13 +14,9 @@ const DIFFICULTY_OPTIONS = [
 
 const EQUIPMENT_OPTIONS = [
   { value: '', label: '-- Equipo --' },
-  { value: 'tel. inteligente', label: 'Tel. inteligente' },
-  { value: 'equipo pequeno', label: 'Equipo pequeno' },
-  { value: 'tel. tradicional', label: 'Tel. tradicional' },
-  { value: 'tel. mediano', label: 'Tel. mediano' },
-  { value: 'tel. med-grande', label: 'Tel. med-grande' },
-  { value: 'tel. grande', label: 'Tel. grande' },
-  { value: 'telescopio grande', label: 'Telescopio grande' },
+  { value: 'telefono_inteligente', label: 'Tel. inteligente' },
+  { value: 'equipo_pequeno', label: 'Equipo pequeño' },
+  { value: 'telescopio_grande', label: 'Telescopio grande' },
 ]
 
 const LOCATION_OPTIONS = [

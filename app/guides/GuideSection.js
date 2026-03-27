@@ -8,24 +8,24 @@ const FILTER_DIMENSIONS = {
     label: 'Equipo',
     options: [
       { value: 'telefono_inteligente', label: 'Tel. inteligente' },
-      { value: 'equipo_pequeno', label: 'Equipo pequeno' },
+      { value: 'equipo_pequeno', label: 'Equipo pequeño' },
       { value: 'telescopio_grande', label: 'Telescopio grande' },
     ],
   },
   difficulty: {
     label: 'Dificultad',
     options: [
-      { value: 'facil', label: 'Facil' },
+      { value: 'facil', label: 'Fácil' },
       { value: 'intermedio', label: 'Intermedio' },
       { value: 'retante', label: 'Retante' },
     ],
   },
   location: {
-    label: 'Ubicacion',
+    label: 'Ubicación',
     options: [
       { value: 'ciudad', label: 'Ciudad' },
       { value: 'suburbios', label: 'Suburbios' },
-      { value: 'oscuro', label: 'Oscuro' },
+      { value: 'oscuro', label: 'Cielo oscuro' },
     ],
   },
 }
