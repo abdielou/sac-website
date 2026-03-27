@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import hubbleImages from '@/data/catalog/hubble-images.json'
 
 const EQUIPMENT_LABELS = {
   telescopio_inteligente: {
@@ -56,8 +57,168 @@ function Tag({ label, color }) {
   )
 }
 
-function getSkyViewUrl(ra, dec) {
-  return `https://skyview.gsfc.nasa.gov/current/cgi/runquery.pl?Position=${ra},${dec}&Survey=DSS&Return=JPEG&Pixels=150`
+function getSkyViewUrl(ra, dec, pixels = 150) {
+  return `https://skyview.gsfc.nasa.gov/current/cgi/runquery.pl?Position=${ra},${dec}&Survey=DSS&Return=JPEG&Pixels=${pixels}`
+}
+
+function getLargeImageUrl(objectId, catalog) {
+  const hubbleId = hubbleImages[objectId]
+  if (hubbleId) return `https://cdn.esahubble.org/archives/images/screen/${hubbleId}.jpg`
+  if (catalog?.ra != null && catalog?.dec != null) return getSkyViewUrl(catalog.ra, catalog.dec, 600)
+  return null
+}
+
+function ObjectModal({ entry, catalog, onClose }) {
+  const displayName = getDisplayName(catalog)
+  const catalogIds = getCatalogIds(catalog)
+  const largeImg = getLargeImageUrl(entry.objectId, catalog)
+  const hubbleId = hubbleImages[entry.objectId]
+
+  const handleKeyDown = useCallback(
+    (e) => {
+      if (e.key === 'Escape') onClose()
+    },
+    [onClose]
+  )
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = ''
+    }
+  }, [handleKeyDown])
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        {/* Large image */}
+        {largeImg && (
+          <div className="w-full aspect-[4/3] bg-black rounded-t-2xl overflow-hidden">
+            <img
+              src={largeImg}
+              alt={`Vista de ${displayName}`}
+              className="w-full h-full object-contain"
+            />
+          </div>
+        )}
+
+        {/* Details */}
+        <div className="p-6 space-y-4">
+          {/* Header */}
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{displayName}</h2>
+            {catalogIds && (
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{catalogIds}</p>
+            )}
+            {catalog.objectType && (
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">{catalog.objectType}</p>
+            )}
+          </div>
+
+          {/* Tags */}
+          <div className="flex flex-wrap gap-2">
+            {entry.difficulty && DIFFICULTY_LABELS[entry.difficulty] && (
+              <Tag {...DIFFICULTY_LABELS[entry.difficulty]} />
+            )}
+            {entry.equipment && EQUIPMENT_LABELS[entry.equipment] && (
+              <Tag {...EQUIPMENT_LABELS[entry.equipment]} />
+            )}
+            {entry.location && LOCATION_LABELS[entry.location] && (
+              <Tag {...LOCATION_LABELS[entry.location]} />
+            )}
+          </div>
+
+          {/* Data grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {catalog.magnitude != null && (
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Magnitud</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  {catalog.magnitude}
+                </p>
+              </div>
+            )}
+            {catalog.angularSize != null && (
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Tamaño angular</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  {typeof catalog.angularSize === 'object'
+                    ? `${catalog.angularSize.major}' × ${catalog.angularSize.minor}'`
+                    : `${catalog.angularSize}'`}
+                </p>
+              </div>
+            )}
+            {catalog.constellation && (
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Constelación</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  {catalog.constellation}
+                </p>
+              </div>
+            )}
+            {entry.optimalTime && (
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Hora óptima</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  {entry.optimalTime}
+                </p>
+              </div>
+            )}
+            {catalog.ra != null && catalog.dec != null && (
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 col-span-2 sm:col-span-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Coordenadas (RA / Dec)</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  {catalog.ra.toFixed(4)}° / {catalog.dec.toFixed(4)}°
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Notes */}
+          {entry.notes && (
+            <div>
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Notas</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300">{entry.notes}</p>
+            </div>
+          )}
+
+          {/* Image credit */}
+          {hubbleId && (
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              Imagen: ESA/Hubble (
+              <a
+                href={`https://esahubble.org/images/${hubbleId}/`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                {hubbleId}
+              </a>
+              , CC BY 4.0)
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function getDisplayName(catalog) {
@@ -74,6 +235,7 @@ function getCatalogIds(catalog) {
 
 export default function ObjectCard({ entry }) {
   const [expanded, setExpanded] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
   const { catalog } = entry
 
   // No catalog data — minimal card
@@ -90,7 +252,11 @@ export default function ObjectCard({ entry }) {
   const catalogIds = getCatalogIds(catalog)
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden flex flex-col sm:flex-row">
+    <>
+    <div
+      className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden flex flex-col sm:flex-row cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-md transition-all"
+      onClick={() => setModalOpen(true)}
+    >
       {/* Object thumbnail — ESA/Hubble color if available, SkyView grayscale fallback */}
       <div className="flex-shrink-0 sm:w-[150px] sm:h-[150px] bg-gray-100 dark:bg-gray-900">
         <img
@@ -162,5 +328,7 @@ export default function ObjectCard({ entry }) {
         )}
       </div>
     </div>
+    {modalOpen && <ObjectModal entry={entry} catalog={catalog} onClose={() => setModalOpen(false)} />}
+    </>
   )
 }
