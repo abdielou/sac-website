@@ -46,14 +46,32 @@ function getDisplayName(entry) {
   return c.commonNameEs || c.commonName || c.name || entry.objectId
 }
 
+/**
+ * Parse time string like "8:00 PM", "12:30 AM" into minutes since midnight for sorting.
+ * Evening times (PM) sort before early morning (AM) by treating AM as next day.
+ */
+function parseTimeToMinutes(timeStr) {
+  if (!timeStr) return 9999
+  const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i)
+  if (!match) return 9999
+  let hours = parseInt(match[1], 10)
+  const minutes = parseInt(match[2], 10)
+  const period = match[3].toUpperCase()
+  if (period === 'PM' && hours !== 12) hours += 12
+  if (period === 'AM' && hours === 12) hours = 0
+  // Shift AM times (0-6) to sort after PM times (treating them as next day)
+  if (hours < 7) hours += 24
+  return hours * 60 + minutes
+}
+
 function sortEntries(entries, sortField) {
   const sorted = [...entries]
   switch (sortField) {
     case 'nombre':
       return sorted.sort((a, b) => getDisplayName(a).localeCompare(getDisplayName(b), 'es'))
     case 'hora':
-      return sorted.sort((a, b) =>
-        (a.optimalTime || '99:99').localeCompare(b.optimalTime || '99:99')
+      return sorted.sort(
+        (a, b) => parseTimeToMinutes(a.optimalTime) - parseTimeToMinutes(b.optimalTime)
       )
     case 'dificultad':
       return sorted.sort(
