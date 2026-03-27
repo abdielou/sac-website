@@ -54,7 +54,7 @@ See .planning/milestones/v1.8-ROADMAP.md for full details.
 **Milestone Goal:** Bring SAC's astronomy observing guides to the website as interactive, filterable pages with admin management and branded PDF export.
 
 - [x] **Phase 31: Object Catalog & Storage** - OpenNGC catalog with Spanish names and S3 guide storage layer (completed 2026-03-27)
-- [ ] **Phase 32: Admin Guide Builder** - Dashboard CRUD for creating, curating, and publishing guides
+- [x] **Phase 32: Admin Guide Builder** - Dashboard CRUD for creating, curating, and publishing guides (completed 2026-03-27)
 - [ ] **Phase 33: Public Guides Page** - Interactive `/guides` page with filtering, sorting, and edition browsing
 - [ ] **Phase 34: PDF Export** - Branded PDF download per guide using @react-pdf/renderer
 
@@ -84,7 +84,7 @@ Plans:
   3. Admin can annotate each object in a guide with difficulty, equipment needed, location suitability, optimal viewing time, and freeform notes
   4. Admin can reorder, remove, and edit objects within a guide, then save as draft or publish
   5. Admin can edit existing guides and toggle between published and unpublished states
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 32-01-PLAN.md — API layer: guide business logic, permissions, catalog search and guide CRUD endpoints
@@ -134,6 +134,6 @@ Plans:
 | 23-25 | v1.7 | 5/5 | Complete | 2026-02-25 |
 | 26-30 | v1.8 | 14/14 | Complete | 2026-03-02 |
 | 31. Catalog & Storage | 2/2 | Complete    | 2026-03-27 | - |
-| 32. Admin Guide Builder | 1/2 | In Progress|  | - |
+| 32. Admin Guide Builder | 2/2 | Complete   | 2026-03-27 | - |
 | 33. Public Guides Page | v1.9 | 0/? | Not started | - |
 | 34. PDF Export | v1.9 | 0/? | Not started | - |
