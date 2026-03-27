@@ -136,7 +136,9 @@ export function MemberActions({ member, onAction }) {
               onClick={() => {
                 setIsOpen(false)
                 if (!member.photoFileId) {
-                  alert('Este miembro no tiene foto de perfil. Se requiere una foto para generar el carnet.')
+                  alert(
+                    'Este miembro no tiene foto de perfil. Se requiere una foto para generar el carnet.'
+                  )
                   return
                 }
                 window.open(

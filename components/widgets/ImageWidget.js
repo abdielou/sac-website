@@ -23,10 +23,24 @@ const ImageWidget = ({ name, imgSrc, fallbackSrc, href, width, height }) => {
       <div>
         {href ? (
           <a href={href} target="_blank" rel="noopener noreferrer">
-            <Image alt={name} src={src} width={width} height={height} unoptimized onError={handleError} />
+            <Image
+              alt={name}
+              src={src}
+              width={width}
+              height={height}
+              unoptimized
+              onError={handleError}
+            />
           </a>
         ) : (
-          <Image alt={name} src={src} width={width} height={height} unoptimized onError={handleError} />
+          <Image
+            alt={name}
+            src={src}
+            width={width}
+            height={height}
+            unoptimized
+            onError={handleError}
+          />
         )}
       </div>
     </div>
