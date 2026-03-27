@@ -89,16 +89,25 @@ export default function GuideObjectRow({
           {index + 1}
         </span>
 
-        {/* Thumbnail */}
+        {/* Thumbnail with hover preview */}
         {(() => {
           const imgUrl = getObjectImageUrl(entry.objectId, cat)
           return imgUrl ? (
-            <img
-              src={imgUrl}
-              alt={name}
-              loading="lazy"
-              className="flex-shrink-0 w-10 h-10 rounded object-cover bg-gray-100 dark:bg-gray-900"
-            />
+            <div className="relative flex-shrink-0 group">
+              <img
+                src={imgUrl}
+                alt={name}
+                loading="lazy"
+                className="w-10 h-10 rounded object-cover bg-gray-100 dark:bg-gray-900 cursor-pointer"
+              />
+              <div className="hidden group-hover:block absolute z-50 left-12 top-0 p-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl">
+                <img
+                  src={imgUrl}
+                  alt={name}
+                  className="w-48 h-48 rounded object-cover"
+                />
+              </div>
+            </div>
           ) : null
         })()}
 
