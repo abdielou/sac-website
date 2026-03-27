@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import hubbleImages from '@/data/catalog/hubble-images.json'
 
 function SearchResultThumb({ objectId, catalog, name }) {
@@ -80,12 +80,6 @@ export default function CatalogSearch({ onAddObject, addedObjectIds = new Set() 
   ]
 
   const doSearch = useCallback(async (q, type) => {
-    if (!q && !type) {
-      setResults([])
-      setHasSearched(false)
-      return
-    }
-
     setIsLoading(true)
     setHasSearched(true)
 
@@ -93,7 +87,7 @@ export default function CatalogSearch({ onAddObject, addedObjectIds = new Set() 
       const params = new URLSearchParams()
       if (q) params.set('q', q)
       if (type) params.set('type', type)
-      params.set('limit', '20')
+      params.set('limit', '25')
 
       const res = await fetch(`/api/admin/catalog/search?${params.toString()}`)
       if (res.ok) {
@@ -108,6 +102,11 @@ export default function CatalogSearch({ onAddObject, addedObjectIds = new Set() 
       setIsLoading(false)
     }
   }, [])
+
+  // Load initial results on mount
+  useEffect(() => {
+    doSearch('', '')
+  }, [doSearch])
 
   const handleQueryChange = (e) => {
     const value = e.target.value

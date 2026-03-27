@@ -1,6 +1,6 @@
 import { auth } from '../../../../../auth'
 import { NextResponse } from 'next/server'
-import { searchCatalog, getObjectById } from '@/lib/catalog'
+import { searchCatalog, getObjectById, browseCatalog } from '@/lib/catalog'
 
 /**
  * GET /api/admin/catalog/search
@@ -24,11 +24,10 @@ export const GET = auth(async function GET(req) {
     const type = searchParams.get('type') || undefined
     const limit = Math.min(50, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)))
 
+    // No query — browse catalog (brightest first, optionally filtered by type)
     if (!q || !q.trim()) {
-      return NextResponse.json(
-        { error: 'Parametro de busqueda requerido', details: 'Query parameter q is required' },
-        { status: 400 }
-      )
+      const results = browseCatalog({ type, limit })
+      return NextResponse.json({ results, total: results.length })
     }
 
     // Try exact ID lookup first, then fall back to text search
