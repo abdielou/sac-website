@@ -1,6 +1,6 @@
 import { auth } from '../../../../../auth'
 import { NextResponse } from 'next/server'
-import { searchCatalog } from '@/lib/catalog'
+import { searchCatalog, getObjectById } from '@/lib/catalog'
 
 /**
  * GET /api/admin/catalog/search
@@ -31,7 +31,15 @@ export const GET = auth(async function GET(req) {
       )
     }
 
-    const results = searchCatalog(q.trim(), { type, limit })
+    // Try exact ID lookup first, then fall back to text search
+    const exactMatch = getObjectById(q.trim())
+    const searchResults = searchCatalog(q.trim(), { type, limit })
+
+    // If exact match found and not already in search results, prepend it
+    let results = searchResults
+    if (exactMatch && !searchResults.some((r) => r.id === exactMatch.id)) {
+      results = [exactMatch, ...searchResults].slice(0, limit)
+    }
 
     return NextResponse.json({ results, total: results.length })
   } catch (error) {
