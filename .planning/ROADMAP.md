@@ -53,7 +53,7 @@ See .planning/milestones/v1.8-ROADMAP.md for full details.
 
 **Milestone Goal:** Bring SAC's astronomy observing guides to the website as interactive, filterable pages with admin management and branded PDF export.
 
-- [ ] **Phase 31: Object Catalog & Storage** - OpenNGC catalog with Spanish names and S3 guide storage layer
+- [x] **Phase 31: Object Catalog & Storage** - OpenNGC catalog with Spanish names and S3 guide storage layer (completed 2026-03-27)
 - [ ] **Phase 32: Admin Guide Builder** - Dashboard CRUD for creating, curating, and publishing guides
 - [ ] **Phase 33: Public Guides Page** - Interactive `/guides` page with filtering, sorting, and edition browsing
 - [ ] **Phase 34: PDF Export** - Branded PDF download per guide using @react-pdf/renderer
@@ -68,7 +68,7 @@ See .planning/milestones/v1.8-ROADMAP.md for full details.
   1. A script or build step produces a local JSON catalog from OpenNGC CSV containing RA/Dec, magnitude, angular size, object type, and Messier/NGC/IC cross-references for all 13K objects
   2. Deep-sky objects with common names display their Spanish name from Stellarium translations
   3. Guide JSON can be written to and read from S3 with an index file, following the same pattern as articles/{slug}.json
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 31-01-PLAN.md — OpenNGC catalog build script with Spanish names and search utilities
@@ -133,7 +133,7 @@ Plans:
 | 19-22 | v1.6 | 7/7 | Complete | 2026-02-17 |
 | 23-25 | v1.7 | 5/5 | Complete | 2026-02-25 |
 | 26-30 | v1.8 | 14/14 | Complete | 2026-03-02 |
-| 31. Catalog & Storage | 1/2 | In Progress|  | - |
+| 31. Catalog & Storage | 2/2 | Complete   | 2026-03-27 | - |
 | 32. Admin Guide Builder | v1.9 | 0/? | Not started | - |
 | 33. Public Guides Page | v1.9 | 0/? | Not started | - |
 | 34. PDF Export | v1.9 | 0/? | Not started | - |

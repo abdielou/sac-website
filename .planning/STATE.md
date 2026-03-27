@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Observing Guides
 status: executing
-stopped_at: Completed 31-02-PLAN.md
-last_updated: "2026-03-27T02:27:36Z"
+stopped_at: Completed 31-01-PLAN.md
+last_updated: "2026-03-27T02:32:17.238Z"
 last_activity: 2026-03-27 — Completed 31-02 Guide S3 Storage
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
   completed_plans: 2
   percent: 15
@@ -57,6 +57,7 @@ v1.9 decisions so far:
 - All objects share single data shape; free-form guide titling
 - SkyView: NASA thumbnail API, URL-based (no API key needed)
 - Guide S3 storage: own client singleton in guides-s3.js, same bucket as articles with guides/ prefix
+- [Phase 31]: Catalog uses fs.readFileSync for Node 24 compat; display names strip leading zeros
 
 ### Blockers/Concerns
 
@@ -64,6 +65,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-27
-Stopped at: Completed 31-02-PLAN.md
+Last session: 2026-03-27T02:32:17.236Z
+Stopped at: Completed 31-01-PLAN.md
 Resume: Execute Phase 32 (Guide Editor API)

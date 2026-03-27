@@ -9,8 +9,8 @@ Requirements for Observing Guides milestone. Each maps to roadmap phases.
 
 ### Data Layer
 
-- [ ] **DATA-01**: System provides a local object catalog from OpenNGC with RA/Dec, magnitude, angular size, object type, and Messier/NGC/IC cross-references
-- [ ] **DATA-02**: System maps deep-sky object common names to Spanish using Stellarium translations
+- [x] **DATA-01**: System provides a local object catalog from OpenNGC with RA/Dec, magnitude, angular size, object type, and Messier/NGC/IC cross-references
+- [x] **DATA-02**: System maps deep-sky object common names to Spanish using Stellarium translations
 - [x] **DATA-03**: Guides are stored as JSON in S3 with an index file, following the article storage pattern
 
 ### Public Experience
@@ -62,8 +62,8 @@ Deferred to future milestone. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Phase 31 | Pending |
-| DATA-02 | Phase 31 | Pending |
+| DATA-01 | Phase 31 | Complete |
+| DATA-02 | Phase 31 | Complete |
 | DATA-03 | Phase 31 | Complete |
 | PUB-01 | Phase 33 | Pending |
 | PUB-02 | Phase 33 | Pending |
