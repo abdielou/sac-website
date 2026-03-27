@@ -259,10 +259,9 @@ export default function GuideObjectRow({
 
           {/* Row 2: optimal time */}
           <input
-            type="text"
+            type="time"
             value={entry.optimalTime || ''}
             onChange={(e) => handleChange('optimalTime', e.target.value)}
-            placeholder="Ej: 9:00 PM - 11:00 PM"
             className={`w-full ${inputClass}`}
           />
 
