@@ -3,6 +3,46 @@
 import { useState, useRef, useCallback } from 'react'
 import hubbleImages from '@/data/catalog/hubble-images.json'
 
+function SearchResultThumb({ objectId, catalog, name }) {
+  const [showPreview, setShowPreview] = useState(false)
+  const hubbleId = hubbleImages[objectId]
+  const thumbUrl = getObjectImageUrl(objectId, catalog)
+  const previewUrl = hubbleId
+    ? `https://cdn.esahubble.org/archives/images/thumb700x/${hubbleId}.jpg`
+    : thumbUrl
+
+  if (!thumbUrl) return null
+
+  return (
+    <div
+      className="relative flex-shrink-0"
+      onMouseEnter={() => setShowPreview(true)}
+      onMouseLeave={() => setShowPreview(false)}
+    >
+      <img
+        src={thumbUrl}
+        alt={name}
+        loading="lazy"
+        className="w-10 h-10 rounded object-cover bg-gray-100 dark:bg-gray-900 cursor-pointer"
+      />
+      {showPreview && (
+        <div
+          className="fixed z-[9999] p-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-2xl pointer-events-none"
+          ref={(el) => {
+            if (el) {
+              const rect = el.previousElementSibling.getBoundingClientRect()
+              el.style.top = `${rect.top - 20}px`
+              el.style.left = `${rect.right + 8}px`
+            }
+          }}
+        >
+          <img src={previewUrl} alt={name} className="w-48 h-48 rounded object-cover" />
+        </div>
+      )}
+    </div>
+  )
+}
+
 function getObjectImageUrl(objectId, catalog) {
   const hubbleId = hubbleImages[objectId]
   if (hubbleId) return `https://cdn.esahubble.org/archives/images/thumb300y/${hubbleId}.jpg`
@@ -154,18 +194,8 @@ export default function CatalogSearch({ onAddObject, addedObjectIds = new Set() 
                 key={obj.id}
                 className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                {(() => {
-                  const imgUrl = getObjectImageUrl(obj.id, obj)
-                  return imgUrl ? (
-                    <img
-                      src={imgUrl}
-                      alt={displayName(obj)}
-                      loading="lazy"
-                      className="flex-shrink-0 w-10 h-10 rounded object-cover bg-gray-100 dark:bg-gray-900"
-                    />
-                  ) : null
-                })()}
-                <div className="min-w-0 flex-1">
+                <SearchResultThumb objectId={obj.id} catalog={obj} name={displayName(obj)} />
+                <div className="min-w-0 flex-1 ml-2">
                   <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                     {displayName(obj)}
                   </p>
