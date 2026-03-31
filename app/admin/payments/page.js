@@ -1,5 +1,6 @@
 'use client'
 
+import PermissionGate from '@/components/admin/PermissionGate'
 import { Suspense, useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams, usePathname, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -528,8 +529,10 @@ function PaymentsContent() {
  */
 export default function PaymentsPage() {
   return (
-    <Suspense fallback={<SkeletonTable rows={10} columns={7} />}>
-      <PaymentsContent />
-    </Suspense>
+    <PermissionGate permission="read_payments">
+      <Suspense fallback={<SkeletonTable rows={10} columns={7} />}>
+        <PaymentsContent />
+      </Suspense>
+    </PermissionGate>
   )
 }

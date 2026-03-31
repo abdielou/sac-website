@@ -1,5 +1,6 @@
 'use client'
 
+import PermissionGate from '@/components/admin/PermissionGate'
 import { Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useSearchParams, usePathname, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -782,8 +783,10 @@ function MembersContent() {
  */
 export default function MembersPage() {
   return (
-    <Suspense fallback={<SkeletonTable rows={10} columns={9} />}>
-      <MembersContent />
-    </Suspense>
+    <PermissionGate permission="read_members">
+      <Suspense fallback={<SkeletonTable rows={10} columns={9} />}>
+        <MembersContent />
+      </Suspense>
+    </PermissionGate>
   )
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import PermissionGate from '@/components/admin/PermissionGate'
 import { Suspense, useState, useEffect, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
@@ -244,8 +245,10 @@ function GuidesContent() {
  */
 export default function GuidesPage() {
   return (
-    <Suspense fallback={<SkeletonTable rows={5} columns={5} />}>
-      <GuidesContent />
-    </Suspense>
+    <PermissionGate permission="read_guides">
+      <Suspense fallback={<SkeletonTable rows={5} columns={5} />}>
+        <GuidesContent />
+      </Suspense>
+    </PermissionGate>
   )
 }
