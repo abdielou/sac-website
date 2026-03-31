@@ -74,6 +74,7 @@ export default function GuideObjectRow({
   onRemove,
   onMoveUp,
   onMoveDown,
+  readOnly = false,
 }) {
   const [expanded, setExpanded] = useState(true)
   const [showPreview, setShowPreview] = useState(false)
@@ -178,58 +179,47 @@ export default function GuideObjectRow({
           </div>
         )}
 
-        {/* Reorder buttons */}
-        <div className="flex flex-col gap-0.5 flex-shrink-0">
-          <button
-            type="button"
-            onClick={() => onMoveUp(index)}
-            disabled={index === 0}
-            className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
-            aria-label="Mover arriba"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 15l7-7 7 7"
-              />
-            </svg>
-          </button>
-          <button
-            type="button"
-            onClick={() => onMoveDown(index)}
-            disabled={index === total - 1}
-            className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
-            aria-label="Mover abajo"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </button>
-        </div>
+        {!readOnly && (
+          <>
+            {/* Reorder buttons */}
+            <div className="flex flex-col gap-0.5 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => onMoveUp(index)}
+                disabled={index === 0}
+                className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                aria-label="Mover arriba"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => onMoveDown(index)}
+                disabled={index === total - 1}
+                className="p-0.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                aria-label="Mover abajo"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
 
-        {/* Remove button */}
-        <button
-          type="button"
-          onClick={() => onRemove(index)}
-          className="flex-shrink-0 p-1 text-red-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-          aria-label="Eliminar objeto"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
+            {/* Remove button */}
+            <button
+              type="button"
+              onClick={() => onRemove(index)}
+              className="flex-shrink-0 p-1 text-red-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+              aria-label="Eliminar objeto"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </>
+        )}
       </div>
 
       {/* Expanded annotation fields */}
@@ -240,6 +230,7 @@ export default function GuideObjectRow({
             <select
               value={entry.difficulty || ''}
               onChange={(e) => handleChange('difficulty', e.target.value)}
+              disabled={readOnly}
               className={selectClass}
             >
               {DIFFICULTY_OPTIONS.map((o) => (
@@ -252,6 +243,7 @@ export default function GuideObjectRow({
             <select
               value={entry.equipment || ''}
               onChange={(e) => handleChange('equipment', e.target.value)}
+              disabled={readOnly}
               className={selectClass}
             >
               {EQUIPMENT_OPTIONS.map((o) => (
@@ -264,6 +256,7 @@ export default function GuideObjectRow({
             <select
               value={entry.location || ''}
               onChange={(e) => handleChange('location', e.target.value)}
+              disabled={readOnly}
               className={selectClass}
             >
               {LOCATION_OPTIONS.map((o) => (
@@ -279,6 +272,7 @@ export default function GuideObjectRow({
             type="time"
             value={to24h(entry.optimalTime)}
             onChange={(e) => handleChange('optimalTime', e.target.value)}
+            disabled={readOnly}
             className={`w-full ${inputClass}`}
           />
 
@@ -288,6 +282,7 @@ export default function GuideObjectRow({
             onChange={(e) => handleChange('notes', e.target.value)}
             placeholder="Notas sobre el objeto..."
             rows={2}
+            disabled={readOnly}
             className={`w-full ${inputClass} resize-none`}
           />
         </div>

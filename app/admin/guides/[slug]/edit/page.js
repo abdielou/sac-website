@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import GuideEditor from '@/components/admin/GuideEditor'
 
 /**
@@ -10,6 +11,8 @@ import GuideEditor from '@/components/admin/GuideEditor'
  */
 export default function EditGuidePage() {
   const { slug } = useParams()
+  const { data: session } = useSession()
+  const canWrite = (session?.user?.accessibleActions || []).includes('write_guides')
   const [guide, setGuide] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -93,7 +96,7 @@ export default function EditGuidePage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Editar Guia</h1>
-      <GuideEditor initialGuide={guide} />
+      <GuideEditor initialGuide={guide} readOnly={!canWrite} />
     </div>
   )
 }

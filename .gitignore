@@ -71,3 +71,4 @@ scripts/fb-yt-archive/registry.json
 .secrets/
 
 .vercel
+.playwright-mcp/

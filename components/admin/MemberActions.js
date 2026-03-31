@@ -15,8 +15,8 @@ export function MemberActions({ member, onAction }) {
   const accessibleActions = session?.user?.accessibleActions || []
 
   // Check if user has permission to edit members or payments
-  const canEditMember = accessibleActions.includes('edit_member')
-  const canEditPayment = accessibleActions.includes('edit_payment')
+  const canEditMember = accessibleActions.includes('write_members')
+  const canEditPayment = accessibleActions.includes('write_payments')
 
   // Initialize all hooks before any conditional returns
   const [isOpen, setIsOpen] = useState(false)

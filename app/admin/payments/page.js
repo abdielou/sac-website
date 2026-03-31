@@ -1,5 +1,6 @@
 'use client'
 
+import PermissionGate from '@/components/admin/PermissionGate'
 import { Suspense, useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams, usePathname, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -21,8 +22,8 @@ function PaymentsContent() {
   const { data: session } = useSession()
 
   const accessibleActions = session?.user?.accessibleActions || []
-  const canEditPayment = accessibleActions.includes('edit_payment')
-  const canDownloadCsv = accessibleActions.includes('download_csv_payments')
+  const canEditPayment = accessibleActions.includes('write_payments')
+  const canDownloadCsv = accessibleActions.includes('write_payments')
 
   // Read filters from URL params
   const ALL_SOURCES = ['ath_movil', 'paypal', 'manual']
@@ -528,8 +529,10 @@ function PaymentsContent() {
  */
 export default function PaymentsPage() {
   return (
-    <Suspense fallback={<SkeletonTable rows={10} columns={7} />}>
-      <PaymentsContent />
-    </Suspense>
+    <PermissionGate permission="read_payments">
+      <Suspense fallback={<SkeletonTable rows={10} columns={7} />}>
+        <PaymentsContent />
+      </Suspense>
+    </PermissionGate>
   )
 }

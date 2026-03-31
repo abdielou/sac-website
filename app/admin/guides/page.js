@@ -1,5 +1,6 @@
 'use client'
 
+import PermissionGate from '@/components/admin/PermissionGate'
 import { Suspense, useState, useEffect, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
@@ -21,7 +22,7 @@ function GuidesContent() {
   const { data: session } = useSession()
 
   const accessibleActions = session?.user?.accessibleActions || []
-  const canCreateGuide = accessibleActions.includes('create_guide')
+  const canCreateGuide = accessibleActions.includes('write_guides')
 
   const [guides, setGuides] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -244,8 +245,10 @@ function GuidesContent() {
  */
 export default function GuidesPage() {
   return (
-    <Suspense fallback={<SkeletonTable rows={5} columns={5} />}>
-      <GuidesContent />
-    </Suspense>
+    <PermissionGate permission="read_guides">
+      <Suspense fallback={<SkeletonTable rows={5} columns={5} />}>
+        <GuidesContent />
+      </Suspense>
+    </PermissionGate>
   )
 }

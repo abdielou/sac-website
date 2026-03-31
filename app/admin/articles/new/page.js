@@ -22,7 +22,7 @@ export default function NewArticlePage() {
   const router = useRouter()
 
   const accessibleActions = session?.user?.accessibleActions || []
-  const canCreateArticle = accessibleActions.includes('create_article')
+  const canCreateArticle = accessibleActions.includes('write_articles')
 
   // Initialize all hooks before any conditional returns
   const {

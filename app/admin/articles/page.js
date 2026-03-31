@@ -1,5 +1,6 @@
 'use client'
 
+import PermissionGate from '@/components/admin/PermissionGate'
 import { Suspense, useState, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams, usePathname, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -19,7 +20,7 @@ function ArticlesContent() {
   const { data: session } = useSession()
 
   const accessibleActions = session?.user?.accessibleActions || []
-  const canCreateArticle = accessibleActions.includes('create_article')
+  const canCreateArticle = accessibleActions.includes('write_articles')
 
   // Read filters from URL params
   const statusParam = searchParams.get('status') || 'all'
@@ -408,8 +409,10 @@ function ArticlesContent() {
  */
 export default function ArticlesPage() {
   return (
-    <Suspense fallback={<SkeletonTable rows={8} columns={5} />}>
-      <ArticlesContent />
-    </Suspense>
+    <PermissionGate permission="read_articles">
+      <Suspense fallback={<SkeletonTable rows={8} columns={5} />}>
+        <ArticlesContent />
+      </Suspense>
+    </PermissionGate>
   )
 }

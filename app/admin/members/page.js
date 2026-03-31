@@ -1,5 +1,6 @@
 'use client'
 
+import PermissionGate from '@/components/admin/PermissionGate'
 import { Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useSearchParams, usePathname, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -51,7 +52,7 @@ function MembersContent() {
   const { data: session } = useSession()
 
   const accessibleActions = session?.user?.accessibleActions || []
-  const canDownloadCsv = accessibleActions.includes('download_csv_members')
+  const canDownloadCsv = accessibleActions.includes('write_members')
 
   // Column customization
   const { visibleColumns, visibleColumnIds, toggleColumn, resetToDefault } = useColumnPreferences()
@@ -782,8 +783,10 @@ function MembersContent() {
  */
 export default function MembersPage() {
   return (
-    <Suspense fallback={<SkeletonTable rows={10} columns={9} />}>
-      <MembersContent />
-    </Suspense>
+    <PermissionGate permission="read_members">
+      <Suspense fallback={<SkeletonTable rows={10} columns={9} />}>
+        <MembersContent />
+      </Suspense>
+    </PermissionGate>
   )
 }
