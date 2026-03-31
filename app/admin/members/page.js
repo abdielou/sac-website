@@ -51,7 +51,7 @@ function MembersContent() {
   const { data: session } = useSession()
 
   const accessibleActions = session?.user?.accessibleActions || []
-  const canDownloadCsv = accessibleActions.includes('download_csv_members')
+  const canDownloadCsv = accessibleActions.includes('write_members')
 
   // Column customization
   const { visibleColumns, visibleColumnIds, toggleColumn, resetToDefault } = useColumnPreferences()

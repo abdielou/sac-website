@@ -21,8 +21,8 @@ function PaymentsContent() {
   const { data: session } = useSession()
 
   const accessibleActions = session?.user?.accessibleActions || []
-  const canEditPayment = accessibleActions.includes('edit_payment')
-  const canDownloadCsv = accessibleActions.includes('download_csv_payments')
+  const canEditPayment = accessibleActions.includes('write_payments')
+  const canDownloadCsv = accessibleActions.includes('write_payments')
 
   // Read filters from URL params
   const ALL_SOURCES = ['ath_movil', 'paypal', 'manual']

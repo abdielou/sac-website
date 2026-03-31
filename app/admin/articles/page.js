@@ -19,7 +19,7 @@ function ArticlesContent() {
   const { data: session } = useSession()
 
   const accessibleActions = session?.user?.accessibleActions || []
-  const canCreateArticle = accessibleActions.includes('create_article')
+  const canCreateArticle = accessibleActions.includes('write_articles')
 
   // Read filters from URL params
   const statusParam = searchParams.get('status') || 'all'

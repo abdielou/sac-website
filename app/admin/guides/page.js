@@ -21,7 +21,7 @@ function GuidesContent() {
   const { data: session } = useSession()
 
   const accessibleActions = session?.user?.accessibleActions || []
-  const canCreateGuide = accessibleActions.includes('create_guide')
+  const canCreateGuide = accessibleActions.includes('write_guides')
 
   const [guides, setGuides] = useState([])
   const [isLoading, setIsLoading] = useState(true)

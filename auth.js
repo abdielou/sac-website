@@ -1,41 +1,12 @@
 import NextAuth from 'next-auth'
 import Google from 'next-auth/providers/google'
-import { PermissionConfig, PermissionChecker, Role } from './lib/permissions.js'
-
-// Parse legacy AUTHORIZED_ADMIN_EMAILS (comma-separated, backward compatible)
-const legacyEmails = process.env.AUTHORIZED_ADMIN_EMAILS || ''
-const legacyUsers = legacyEmails
-  ? legacyEmails.split(',').map((email) => ({
-      email: email.trim().toLowerCase(),
-      role: null, // No role = read-only access
-      assignedFeatures: [],
-    }))
-  : []
-
-// Parse new ADMIN_ROLE_PERMISSIONS (semicolon-separated with roles/features)
-const roleBasedConfig = new PermissionConfig(process.env.ADMIN_ROLE_PERMISSIONS || '')
-
-// Merge configurations: role-based takes precedence over legacy
-const mergedUsers = [...roleBasedConfig.users]
-legacyUsers.forEach((legacyUser) => {
-  if (!mergedUsers.find((u) => u.email === legacyUser.email)) {
-    mergedUsers.push(legacyUser)
-  }
-})
-
-// Create merged config
-class MergedConfig extends PermissionConfig {
-  constructor() {
-    super('')
-    this.users = mergedUsers
-  }
-}
-
-const permissionConfig = new MergedConfig()
-const permissionChecker = new PermissionChecker(permissionConfig)
-
-// Get list of authorized emails for backward compatibility
-const AUTHORIZED_ADMIN_EMAILS = permissionConfig.users.map((u) => u.email)
+import {
+  canAccessDashboard,
+  getAccessibleFeatures,
+  getAllPermissions,
+  getUserRole,
+  isAdmin,
+} from './lib/permissions.js'
 
 /**
  * Check if an email is authorized to access the admin dashboard
@@ -43,7 +14,7 @@ const AUTHORIZED_ADMIN_EMAILS = permissionConfig.users.map((u) => u.email)
  * @returns {boolean}
  */
 function isAuthorizedEmail(email) {
-  return permissionChecker.canAccessDashboard(email)
+  return canAccessDashboard(email)
 }
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -150,10 +121,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       
       // Add user permissions to session for client-side access control
       if (session.user?.email) {
-        session.user.role = permissionChecker.getUserRole(session.user.email)
-        session.user.accessibleFeatures = permissionChecker.getAccessibleFeatures(session.user.email)
-        session.user.accessibleActions = permissionChecker.getAccessibleActions(session.user.email)
-        session.user.isAdmin = permissionChecker.canAccessDashboard(session.user.email)
+        session.user.role = getUserRole(session.user.email)
+        session.user.accessibleFeatures = getAccessibleFeatures(session.user.email)
+        session.user.accessibleActions = getAllPermissions(session.user.email)
+        session.user.isAdmin = canAccessDashboard(session.user.email)
+        session.user.isFullAdmin = isAdmin(session.user.email)
         // Member flag from JWT
         session.user.isMember = token.isMember || false
       }

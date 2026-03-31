@@ -24,9 +24,9 @@ export default function EditArticlePage() {
   const slug = params?.slug ? params.slug.join('/') : ''
 
   const accessibleActions = session?.user?.accessibleActions || []
-  const canEditArticle = accessibleActions.includes('edit_article')
-  const canDeleteArticle = accessibleActions.includes('delete_article')
-  const canPublishArticle = accessibleActions.includes('publish_article')
+  const canEditArticle = accessibleActions.includes('write_articles')
+  const canDeleteArticle = accessibleActions.includes('write_articles')
+  const canPublishArticle = accessibleActions.includes('write_articles')
 
   // Redirect if user doesn't have permission
   useEffect(() => {
