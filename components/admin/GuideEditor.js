@@ -10,7 +10,7 @@ import GuideObjectRow from './GuideObjectRow'
  *
  * @param {Object|null} initialGuide - null for create, guide object for edit
  */
-export default function GuideEditor({ initialGuide = null }) {
+export default function GuideEditor({ initialGuide = null, readOnly = false }) {
   const router = useRouter()
   const isEdit = !!initialGuide
 
@@ -248,6 +248,7 @@ export default function GuideEditor({ initialGuide = null }) {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Ej: Galaxias de Marzo 2026"
+            readOnly={readOnly}
             className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
@@ -258,6 +259,7 @@ export default function GuideEditor({ initialGuide = null }) {
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
+            disabled={readOnly}
             className="px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="galaxies">Galaxias</option>
@@ -268,10 +270,12 @@ export default function GuideEditor({ initialGuide = null }) {
 
       {/* Split layout: catalog search + entries */}
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-6">
-        {/* Left: catalog search */}
-        <div className="order-2 lg:order-1">
-          <CatalogSearch onAddObject={handleAddObject} addedObjectIds={addedObjectIds} />
-        </div>
+        {/* Left: catalog search (hidden in read-only mode) */}
+        {!readOnly && (
+          <div className="order-2 lg:order-1">
+            <CatalogSearch onAddObject={handleAddObject} addedObjectIds={addedObjectIds} />
+          </div>
+        )}
 
         {/* Right: entries */}
         <div className="order-1 lg:order-2">
@@ -316,6 +320,7 @@ export default function GuideEditor({ initialGuide = null }) {
                   onRemove={handleRemoveEntry}
                   onMoveUp={handleMoveUp}
                   onMoveDown={handleMoveDown}
+                  readOnly={readOnly}
                 />
               ))}
             </div>
@@ -325,55 +330,59 @@ export default function GuideEditor({ initialGuide = null }) {
 
       {/* Action bar */}
       <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-        {isEdit && initialGuide.status === 'published' ? (
+        {!readOnly && (
           <>
-            <button
-              type="button"
-              onClick={() => handleSave('published')}
-              disabled={isSaving}
-              className="px-4 py-2 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isSaving ? 'Guardando...' : 'Guardar cambios'}
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSave('draft')}
-              disabled={isSaving}
-              className="px-4 py-2 text-sm font-medium bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Despublicar
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={() => handleSave('draft')}
-              disabled={isSaving}
-              className="px-4 py-2 text-sm font-medium bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isSaving ? 'Guardando...' : 'Guardar borrador'}
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSave('published')}
-              disabled={isSaving}
-              className="px-4 py-2 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Publicar
-            </button>
-          </>
-        )}
+            {isEdit && initialGuide.status === 'published' ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleSave('published')}
+                  disabled={isSaving}
+                  className="px-4 py-2 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isSaving ? 'Guardando...' : 'Guardar cambios'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSave('draft')}
+                  disabled={isSaving}
+                  className="px-4 py-2 text-sm font-medium bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Despublicar
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleSave('draft')}
+                  disabled={isSaving}
+                  className="px-4 py-2 text-sm font-medium bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isSaving ? 'Guardando...' : 'Guardar borrador'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSave('published')}
+                  disabled={isSaving}
+                  className="px-4 py-2 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Publicar
+                </button>
+              </>
+            )}
 
-        {isEdit && (
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={isSaving}
-            className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            Eliminar
-          </button>
+            {isEdit && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isSaving}
+                className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Eliminar
+              </button>
+            )}
+          </>
         )}
 
         <button
