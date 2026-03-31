@@ -1,6 +1,7 @@
 import { auth } from '../../../../../auth'
 import { NextResponse } from 'next/server'
 import { searchCatalog, getObjectById, browseCatalog } from '@/lib/catalog'
+import { checkReadAccess } from '../../../../../lib/api-permissions'
 
 /**
  * GET /api/admin/catalog/search
@@ -17,6 +18,9 @@ export const GET = auth(async function GET(req) {
       { status: 401 }
     )
   }
+
+  const readError = checkReadAccess(req, 'guides')
+  if (readError) return readError
 
   try {
     const { searchParams } = new URL(req.url)

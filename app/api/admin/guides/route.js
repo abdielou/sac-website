@@ -1,7 +1,7 @@
 import { auth } from '../../../../auth'
 import { NextResponse } from 'next/server'
 import { listGuides, createGuide } from '@/lib/guides'
-import { checkPermission } from '../../../../lib/api-permissions'
+import { checkPermission, checkReadAccess } from '../../../../lib/api-permissions'
 import { Actions } from '../../../../lib/permissions'
 
 /**
@@ -17,6 +17,9 @@ export const GET = auth(async function GET(req) {
       { status: 401 }
     )
   }
+
+  const readError = checkReadAccess(req, 'guides')
+  if (readError) return readError
 
   try {
     const { searchParams } = new URL(req.url)

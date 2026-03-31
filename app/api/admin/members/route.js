@@ -2,7 +2,7 @@
 import { auth } from '../../../../auth'
 import { NextResponse } from 'next/server'
 import { getMembers } from '../../../../lib/google-sheets'
-import { checkPermission } from '../../../../lib/api-permissions'
+import { checkPermission, checkReadAccess } from '../../../../lib/api-permissions'
 import { Actions } from '../../../../lib/permissions'
 
 /**
@@ -16,13 +16,16 @@ import { Actions } from '../../../../lib/permissions'
  * - refresh: 'true' to bypass cache (optional)
  */
 export const GET = auth(async function GET(req) {
-  // Auth check - return 401 if not authenticated
+  // Auth + read permission check
   if (!req.auth) {
     return NextResponse.json(
       { error: 'No autenticado', details: 'Authentication required' },
       { status: 401 }
     )
   }
+
+  const readError = checkReadAccess(req, 'members')
+  if (readError) return readError
 
   try {
     const { searchParams } = new URL(req.url)
