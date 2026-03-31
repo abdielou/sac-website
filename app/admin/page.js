@@ -1,6 +1,8 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { useStats } from '@/lib/hooks/useStats'
 import { StatsCard } from '@/components/admin/StatsCard'
 import { ScanCard } from '@/components/admin/ScanCard'
@@ -8,11 +10,33 @@ import { SkeletonCard } from '@/components/admin/SkeletonCard'
 import { ErrorState } from '@/components/admin/ErrorState'
 import { formatNumber } from '@/lib/formatters'
 
+const FEATURE_ROUTES = {
+  members: '/admin/members',
+  payments: '/admin/payments',
+  articles: '/admin/articles',
+  guides: '/admin/guides',
+}
+
 export default function AdminPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
+  const router = useRouter()
   const perms = session?.user?.accessibleActions || []
   const canReadMembers = perms.includes('read_members')
   const { stats, isPending, isError, error } = useStats()
+
+  // Redirect users without dashboard access to their first accessible feature
+  useEffect(() => {
+    if (status !== 'authenticated') return
+    if (canReadMembers) return // Dashboard is available
+
+    const features = session?.user?.accessibleFeatures || []
+    for (const f of Object.keys(FEATURE_ROUTES)) {
+      if (features.includes(f)) {
+        router.replace(FEATURE_ROUTES[f])
+        return
+      }
+    }
+  }, [status, canReadMembers, session, router])
 
   // Loading state - show skeleton cards
   if (isPending) {
