@@ -1,6 +1,7 @@
 import { auth } from '../../../../auth'
 import { revalidatePath } from 'next/cache'
 import { NextResponse } from 'next/server'
+import { canAccessDashboard } from '../../../../lib/permissions'
 
 /**
  * POST /api/admin/revalidate
@@ -10,6 +11,7 @@ import { NextResponse } from 'next/server'
  *
  * If no paths provided, revalidates common blog paths (/blog, /tags, /feed.xml)
  * If specific paths provided, revalidates those paths + /blog and /tags
+ * Requires admin dashboard access.
  */
 export const POST = auth(async function POST(req) {
   // Auth check - return 401 if not authenticated
@@ -17,6 +19,14 @@ export const POST = auth(async function POST(req) {
     return NextResponse.json(
       { error: 'No autenticado', details: 'Authentication required' },
       { status: 401 }
+    )
+  }
+
+  // Permission check — only admins should trigger revalidation
+  if (!canAccessDashboard(req.auth.user?.email)) {
+    return NextResponse.json(
+      { error: 'Permiso denegado', details: 'Admin access required' },
+      { status: 403 }
     )
   }
 

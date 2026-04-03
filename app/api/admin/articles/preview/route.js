@@ -9,12 +9,14 @@ import rehypeSlug from 'rehype-slug'
 import rehypeAutolinkHeadings from 'rehype-autolink-headings'
 import rehypeKatex from 'rehype-katex'
 import rehypePrismPlus from 'rehype-prism-plus'
+import { checkReadAccess } from '../../../../../lib/api-permissions'
 
 /**
  * POST /api/admin/articles/preview
  *
  * Compile MDX content for live preview in the article editor.
  * Returns serialized MDX that the client-side MDXRemote can render.
+ * Requires read_articles permission.
  *
  * Body: { content: string }
  * Returns: { mdxSource } on success, { error: string } on compilation error
@@ -26,6 +28,10 @@ export const POST = auth(async function POST(req) {
       { status: 401 }
     )
   }
+
+  // Permission check — preview is part of the articles feature
+  const readError = checkReadAccess(req, 'articles')
+  if (readError) return readError
 
   try {
     const body = await req.json()

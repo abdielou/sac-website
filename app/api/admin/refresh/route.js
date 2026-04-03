@@ -2,12 +2,14 @@
 import { auth } from '../../../../auth'
 import { NextResponse } from 'next/server'
 import { invalidateCache } from '../../../../lib/cache'
+import { canAccessDashboard } from '../../../../lib/permissions'
 
 /**
  * POST /api/admin/refresh
  *
  * Clears server-side cache for members and payments.
  * Client should call this before invalidating TanStack Query cache.
+ * Requires admin dashboard access.
  */
 export const POST = auth(async function POST(req) {
   // Auth check
@@ -15,6 +17,14 @@ export const POST = auth(async function POST(req) {
     return NextResponse.json(
       { error: 'No autenticado', details: 'Authentication required' },
       { status: 401 }
+    )
+  }
+
+  // Permission check — only admins should flush cache
+  if (!canAccessDashboard(req.auth.user?.email)) {
+    return NextResponse.json(
+      { error: 'Permiso denegado', details: 'Admin access required' },
+      { status: 403 }
     )
   }
 
