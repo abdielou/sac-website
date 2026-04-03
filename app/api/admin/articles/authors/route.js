@@ -3,12 +3,14 @@ import { NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 import matter from 'gray-matter'
+import { checkReadAccess } from '../../../../../lib/api-permissions'
 
 /**
  * GET /api/admin/articles/authors
  *
  * Returns the list of available authors from data/authors/*.md files.
  * Each author has a slug (filename without extension) and name (from frontmatter).
+ * Requires read_articles permission.
  */
 export const GET = auth(async function GET(req) {
   if (!req.auth) {
@@ -17,6 +19,10 @@ export const GET = auth(async function GET(req) {
       { status: 401 }
     )
   }
+
+  // Permission check — authors list is part of the articles feature
+  const readError = checkReadAccess(req, 'articles')
+  if (readError) return readError
 
   try {
     const authorsDir = path.join(process.cwd(), 'data', 'authors')

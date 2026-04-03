@@ -2,13 +2,14 @@ import { auth } from '../../../../../auth'
 import { revalidatePath } from 'next/cache'
 import { NextResponse } from 'next/server'
 import { getArticle, updateArticle, deleteArticle } from '@/lib/articles'
-import { checkPermission } from '../../../../../lib/api-permissions'
+import { checkPermission, checkReadAccess } from '../../../../../lib/api-permissions'
 import { Actions } from '../../../../../lib/permissions'
 
 /**
  * GET /api/admin/articles/[...slug]
  *
  * Retrieve a single article by slug (e.g., 2024/01/15/my-article)
+ * Requires read_articles permission.
  */
 export const GET = auth(async function GET(req, { params }) {
   if (!req.auth) {
@@ -17,6 +18,10 @@ export const GET = auth(async function GET(req, { params }) {
       { status: 401 }
     )
   }
+
+  // Permission check — reading articles (including drafts) requires read_articles
+  const readError = checkReadAccess(req, 'articles')
+  if (readError) return readError
 
   try {
     const resolvedParams = await params

@@ -139,11 +139,7 @@ export default function GuideObjectRow({
                     }
                   }}
                 >
-                  <img
-                    src={previewUrl}
-                    alt={name}
-                    className="w-48 h-48 rounded object-cover"
-                  />
+                  <img src={previewUrl} alt={name} className="w-48 h-48 rounded object-cover" />
                 </div>
               )}
             </div>
@@ -191,7 +187,12 @@ export default function GuideObjectRow({
                 aria-label="Mover arriba"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 15l7-7 7 7"
+                  />
                 </svg>
               </button>
               <button
@@ -202,7 +203,12 @@ export default function GuideObjectRow({
                 aria-label="Mover abajo"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
                 </svg>
               </button>
             </div>
@@ -215,7 +221,12 @@ export default function GuideObjectRow({
               aria-label="Eliminar objeto"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </>

@@ -83,7 +83,8 @@ function getSkyViewUrl(ra, dec, pixels = 150) {
 function getLargeImageUrl(objectId, catalog) {
   const hubbleId = hubbleImages[objectId]
   if (hubbleId) return `https://cdn.esahubble.org/archives/images/screen/${hubbleId}.jpg`
-  if (catalog?.ra != null && catalog?.dec != null) return getSkyViewUrl(catalog.ra, catalog.dec, 600)
+  if (catalog?.ra != null && catalog?.dec != null)
+    return getSkyViewUrl(catalog.ra, catalog.dec, 600)
   return null
 }
 
@@ -124,7 +125,12 @@ function ObjectModal({ entry, catalog, onClose }) {
           className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
 
@@ -148,7 +154,9 @@ function ObjectModal({ entry, catalog, onClose }) {
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{catalogIds}</p>
             )}
             {catalog.objectType && (
-              <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">{catalog.objectType}</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-0.5">
+                {catalog.objectType}
+              </p>
             )}
           </div>
 
@@ -272,82 +280,84 @@ export default function ObjectCard({ entry }) {
 
   return (
     <>
-    <div
-      className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden flex flex-col sm:flex-row cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-md transition-all"
-      onClick={() => setModalOpen(true)}
-    >
-      {/* Object thumbnail — ESA/Hubble color if available, SkyView grayscale fallback */}
-      <div className="flex-shrink-0 sm:w-[150px] sm:h-[150px] bg-gray-100 dark:bg-gray-900">
-        <img
-          src={entry.imageUrl || getSkyViewUrl(catalog.ra, catalog.dec)}
-          alt={`Vista de ${displayName}`}
-          loading="lazy"
-          className="w-full h-40 sm:w-[150px] sm:h-[150px] object-cover"
-        />
-      </div>
-
-      {/* Content */}
-      <div className="p-3 flex-1 min-w-0">
-        {/* Name */}
-        <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{displayName}</h3>
-        {catalogIds && <p className="text-xs text-gray-500 dark:text-gray-400">{catalogIds}</p>}
-
-        {/* Key data */}
-        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-600 dark:text-gray-300">
-          {catalog.magnitude != null && <span>Mag: {catalog.magnitude}</span>}
-          {catalog.angularSize != null && (
-            <span>
-              Tam:{' '}
-              {typeof catalog.angularSize === 'object'
-                ? catalog.angularSize.major
-                : catalog.angularSize}
-              &apos;
-            </span>
-          )}
-          {catalog.constellation && <span>{catalog.constellation}</span>}
+      <div
+        className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden flex flex-col sm:flex-row cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-md transition-all"
+        onClick={() => setModalOpen(true)}
+      >
+        {/* Object thumbnail — ESA/Hubble color if available, SkyView grayscale fallback */}
+        <div className="flex-shrink-0 sm:w-[150px] sm:h-[150px] bg-gray-100 dark:bg-gray-900">
+          <img
+            src={entry.imageUrl || getSkyViewUrl(catalog.ra, catalog.dec)}
+            alt={`Vista de ${displayName}`}
+            loading="lazy"
+            className="w-full h-40 sm:w-[150px] sm:h-[150px] object-cover"
+          />
         </div>
 
-        {/* Tags */}
-        <div className="mt-2 flex flex-wrap gap-1">
-          {entry.equipment && EQUIPMENT_LABELS[entry.equipment] && (
-            <Tag {...EQUIPMENT_LABELS[entry.equipment]} />
-          )}
-          {entry.difficulty && DIFFICULTY_LABELS[entry.difficulty] && (
-            <Tag {...DIFFICULTY_LABELS[entry.difficulty]} />
-          )}
-          {entry.location && LOCATION_LABELS[entry.location] && (
-            <Tag {...LOCATION_LABELS[entry.location]} />
-          )}
-        </div>
+        {/* Content */}
+        <div className="p-3 flex-1 min-w-0">
+          {/* Name */}
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{displayName}</h3>
+          {catalogIds && <p className="text-xs text-gray-500 dark:text-gray-400">{catalogIds}</p>}
 
-        {/* Optimal time */}
-        {entry.optimalTime && (
-          <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
-            Hora óptima: {formatTime(entry.optimalTime)}
-          </p>
-        )}
+          {/* Key data */}
+          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-600 dark:text-gray-300">
+            {catalog.magnitude != null && <span>Mag: {catalog.magnitude}</span>}
+            {catalog.angularSize != null && (
+              <span>
+                Tam:{' '}
+                {typeof catalog.angularSize === 'object'
+                  ? catalog.angularSize.major
+                  : catalog.angularSize}
+                &apos;
+              </span>
+            )}
+            {catalog.constellation && <span>{catalog.constellation}</span>}
+          </div>
 
-        {/* Notes */}
-        {entry.notes && (
-          <div className="mt-1">
-            <p
-              className={`text-xs text-gray-500 dark:text-gray-400 ${!expanded ? 'line-clamp-2' : ''}`}
-            >
-              {entry.notes}
-            </p>
-            {entry.notes.length > 100 && (
-              <button
-                onClick={() => setExpanded(!expanded)}
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-0.5"
-              >
-                {expanded ? 'Ver menos' : 'Ver mas'}
-              </button>
+          {/* Tags */}
+          <div className="mt-2 flex flex-wrap gap-1">
+            {entry.equipment && EQUIPMENT_LABELS[entry.equipment] && (
+              <Tag {...EQUIPMENT_LABELS[entry.equipment]} />
+            )}
+            {entry.difficulty && DIFFICULTY_LABELS[entry.difficulty] && (
+              <Tag {...DIFFICULTY_LABELS[entry.difficulty]} />
+            )}
+            {entry.location && LOCATION_LABELS[entry.location] && (
+              <Tag {...LOCATION_LABELS[entry.location]} />
             )}
           </div>
-        )}
+
+          {/* Optimal time */}
+          {entry.optimalTime && (
+            <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
+              Hora óptima: {formatTime(entry.optimalTime)}
+            </p>
+          )}
+
+          {/* Notes */}
+          {entry.notes && (
+            <div className="mt-1">
+              <p
+                className={`text-xs text-gray-500 dark:text-gray-400 ${!expanded ? 'line-clamp-2' : ''}`}
+              >
+                {entry.notes}
+              </p>
+              {entry.notes.length > 100 && (
+                <button
+                  onClick={() => setExpanded(!expanded)}
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-0.5"
+                >
+                  {expanded ? 'Ver menos' : 'Ver mas'}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-    {modalOpen && <ObjectModal entry={entry} catalog={catalog} onClose={() => setModalOpen(false)} />}
+      {modalOpen && (
+        <ObjectModal entry={entry} catalog={catalog} onClose={() => setModalOpen(false)} />
+      )}
     </>
   )
 }

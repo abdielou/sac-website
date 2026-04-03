@@ -3,11 +3,13 @@ import { auth } from '../../../../../auth'
 import { NextResponse } from 'next/server'
 import { getMemberByEmail } from '../../../../../lib/google-sheets'
 import { getPhoto } from '../../../../../lib/google-drive'
+import { hasPermission } from '../../../../../lib/permissions'
 
 /**
  * GET /api/member/photo/[email]
  * Proxy a member's profile photo from Google Drive.
  * Requires authentication. Does NOT expose Drive file IDs or URLs to the client.
+ * Users can only access their own photo unless they have read_members permission.
  */
 export const GET = auth(async function GET(req, { params }) {
   if (!req.auth) {
@@ -20,6 +22,18 @@ export const GET = auth(async function GET(req, { params }) {
   try {
     const { email } = await params
     const decodedEmail = decodeURIComponent(email)
+
+    // Authorization: users can only access their own photo unless they have read_members
+    const requestingEmail = req.auth.user?.email?.toLowerCase()
+    if (
+      requestingEmail !== decodedEmail.toLowerCase() &&
+      !hasPermission(requestingEmail, 'read_members')
+    ) {
+      return NextResponse.json(
+        { error: 'Permiso denegado', details: 'You can only access your own photo' },
+        { status: 403 }
+      )
+    }
 
     // Look up the member to get their photoFileId
     const member = await getMemberByEmail(decodedEmail)
