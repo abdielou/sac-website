@@ -61,7 +61,9 @@ for (const row of rows) {
   members.push({ name, sacEmail: sacEmail || null })
 }
 
-console.log(`Found ${members.length} members, ${members.filter((m) => m.sacEmail).length} with SAC email`)
+console.log(
+  `Found ${members.length} members, ${members.filter((m) => m.sacEmail).length} with SAC email`
+)
 
 const outPath = join(__dirname, 'member-emails.json')
 writeFileSync(outPath, JSON.stringify(members, null, 2), 'utf8')
