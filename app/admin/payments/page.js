@@ -10,6 +10,9 @@ import { SkeletonTable } from '@/components/admin/SkeletonTable'
 import { ErrorState } from '@/components/admin/ErrorState'
 import { formatDate, formatCurrency } from '@/lib/formatters'
 import { toCsv, downloadCsvFile } from '@/lib/csv'
+import { PAYMENT_COLUMN_REGISTRY } from '@/lib/admin/paymentColumnRegistry'
+import { useColumnPreferences } from '@/lib/hooks/useColumnPreferences'
+import { ColumnSelector } from '@/components/admin/ColumnSelector'
 
 /**
  * PaymentsContent - Main content component for payments list
@@ -20,6 +23,11 @@ function PaymentsContent() {
   const pathname = usePathname()
   const router = useRouter()
   const { data: session } = useSession()
+
+  const { visibleColumns, visibleColumnIds, toggleColumn, resetToDefault } = useColumnPreferences({
+    storageKey: 'admin_payments_columns',
+    registry: PAYMENT_COLUMN_REGISTRY,
+  })
 
   const accessibleActions = session?.user?.accessibleActions || []
   const canEditPayment = accessibleActions.includes('write_payments')
@@ -125,15 +133,7 @@ function PaymentsContent() {
       const res = await fetch(`/api/admin/payments?${params.toString()}`)
       if (!res.ok) throw new Error('Export failed')
       const json = await res.json()
-      const columns = [
-        { key: 'date', label: 'Fecha' },
-        { key: 'email', label: 'Email' },
-        { key: 'phone', label: 'Telefono' },
-        { key: 'amount', label: 'Monto' },
-        { key: 'source', label: 'Fuente' },
-        { key: 'notes', label: 'Mensaje' },
-        { key: 'is_membership', label: 'Membresia' },
-      ]
+      const columns = visibleColumns.map((col) => ({ key: col.id, label: col.label }))
       const csv = toCsv(json.data, columns)
       downloadCsvFile(csv, `pagos-${new Date().toISOString().slice(0, 10)}`)
     } catch (err) {
@@ -141,7 +141,7 @@ function PaymentsContent() {
     } finally {
       setIsExporting(false)
     }
-  }, [source, searchParam])
+  }, [source, searchParam, visibleColumns])
 
   /**
    * Three-state cycling:
@@ -286,11 +286,21 @@ function PaymentsContent() {
             {isExporting ? 'Exportando...' : 'CSV'}
           </button>
         )}
+
+        {/* Column Selector */}
+        <div className="hidden md:block">
+          <ColumnSelector
+            visibleColumnIds={visibleColumnIds}
+            onColumnToggle={toggleColumn}
+            onReset={resetToDefault}
+            registry={PAYMENT_COLUMN_REGISTRY}
+          />
+        </div>
       </div>
 
       {/* Loading state - show skeleton table but keep filters visible */}
       {isPending ? (
-        <SkeletonTable rows={10} columns={7} />
+        <SkeletonTable rows={10} columns={visibleColumns.length || 7} />
       ) : (
         <>
           {/* Mobile card layout */}
@@ -375,34 +385,23 @@ function PaymentsContent() {
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Fecha
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Email
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Telefono
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Monto
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Fuente
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Mensaje
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Membresia
-                    </th>
+                    {visibleColumns.map((col) => (
+                      <th
+                        key={col.id}
+                        className={`px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${
+                          col.id === 'is_membership' ? 'text-center' : 'text-left'
+                        }`}
+                      >
+                        {col.label}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {payments.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={visibleColumns.length}
                         className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
                       >
                         No se encontraron pagos con los filtros seleccionados.
@@ -420,56 +419,66 @@ function PaymentsContent() {
                             ${rowErrors[payment.rowNumber] ? 'ring-2 ring-red-500 ring-inset' : ''}
                             ${isSaving ? 'opacity-50 pointer-events-none' : ''}`}
                         >
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            {formatDate(payment.date)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            {payment.email}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                            {payment.phone || '-'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            {formatCurrency(payment.amount)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <SourceBadge source={payment.source} />
-                          </td>
-                          <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
-                            {payment.notes || '-'}
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            {(() => {
+                          {visibleColumns.map((col) => {
+                            // Special rendering for source column
+                            if (col.id === 'source') {
+                              return (
+                                <td key={col.id} className="px-6 py-4 whitespace-nowrap">
+                                  <SourceBadge source={payment.source} />
+                                </td>
+                              )
+                            }
+                            // Special rendering for membership checkbox
+                            if (col.id === 'is_membership') {
                               const isManual = payment._sheetName === 'MANUAL_PAYMENTS'
                               const isUnderMinimum = payment.amount < 25
                               const isDisabled = isManual || isUnderMinimum || !canEditPayment
                               return (
-                                <div className="relative inline-flex items-center justify-center">
-                                  <input
-                                    type="checkbox"
-                                    checked={
-                                      isManual ||
-                                      (payment.is_membership_explicit && payment.is_membership)
-                                    }
-                                    disabled={isDisabled}
-                                    onChange={() => handleClassifyClick(payment)}
-                                    className={`h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${
-                                      isDisabled
-                                        ? 'opacity-50 cursor-not-allowed'
-                                        : !payment.is_membership_explicit
-                                          ? 'opacity-50 cursor-pointer'
-                                          : 'cursor-pointer'
-                                    }`}
-                                  />
-                                  {!payment.is_membership_explicit && !isDisabled && (
-                                    <span className="absolute -right-3 text-gray-400 text-xs">
-                                      ?
-                                    </span>
-                                  )}
-                                </div>
+                                <td key={col.id} className="px-6 py-4 text-center">
+                                  <div className="relative inline-flex items-center justify-center">
+                                    <input
+                                      type="checkbox"
+                                      checked={
+                                        isManual ||
+                                        (payment.is_membership_explicit && payment.is_membership)
+                                      }
+                                      disabled={isDisabled}
+                                      onChange={() => handleClassifyClick(payment)}
+                                      className={`h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${
+                                        isDisabled
+                                          ? 'opacity-50 cursor-not-allowed'
+                                          : !payment.is_membership_explicit
+                                            ? 'opacity-50 cursor-pointer'
+                                            : 'cursor-pointer'
+                                      }`}
+                                    />
+                                    {!payment.is_membership_explicit && !isDisabled && (
+                                      <span className="absolute -right-3 text-gray-400 text-xs">
+                                        ?
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
                               )
-                            })()}
-                          </td>
+                            }
+                            // Generic column rendering
+                            const value = col.accessor(payment)
+                            const displayValue = col.formatter ? col.formatter(value) : value || '-'
+                            return (
+                              <td
+                                key={col.id}
+                                className={`px-6 py-4 whitespace-nowrap text-sm ${
+                                  col.id === 'notes'
+                                    ? 'text-gray-500 dark:text-gray-400 max-w-xs truncate'
+                                    : col.id === 'phone'
+                                      ? 'text-gray-500 dark:text-gray-400'
+                                      : 'text-gray-900 dark:text-white'
+                                }`}
+                              >
+                                {displayValue}
+                              </td>
+                            )
+                          })}
                         </tr>
                       )
                     })

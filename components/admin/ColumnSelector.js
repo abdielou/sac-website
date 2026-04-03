@@ -13,8 +13,10 @@ import { COLUMN_REGISTRY } from '@/lib/admin/columnRegistry'
  * @param {string[]} props.visibleColumnIds - Array of currently visible column IDs
  * @param {Function} props.onColumnToggle - Callback to toggle column visibility (columnId) => void
  * @param {Function} props.onReset - Callback to reset to default columns
+ * @param {Array} [props.registry] - Column registry to use (defaults to COLUMN_REGISTRY)
  */
-export function ColumnSelector({ visibleColumnIds, onColumnToggle, onReset }) {
+export function ColumnSelector({ visibleColumnIds, onColumnToggle, onReset, registry }) {
+  const columns = registry || COLUMN_REGISTRY
   const [isOpen, setIsOpen] = useState(false)
   const buttonRef = useRef(null)
   const menuRef = useRef(null)
@@ -110,7 +112,7 @@ export function ColumnSelector({ visibleColumnIds, onColumnToggle, onReset }) {
             </div>
 
             <div className="py-1">
-              {COLUMN_REGISTRY.map((column) => {
+              {columns.map((column) => {
                 const isVisible = visibleColumnIds.includes(column.id)
                 const isLastVisible = isVisible && visibleCount === 1
 
