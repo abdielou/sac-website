@@ -126,9 +126,11 @@ export const POST = auth(async function POST(req) {
 
     const article = await createArticle(data)
 
-    // Revalidate aggregate pages
+    // Revalidate aggregate pages and homepage
     revalidatePath('/blog')
     revalidatePath('/tags')
+    revalidatePath('/')
+    revalidatePath('/feed.xml')
 
     return NextResponse.json({ article }, { status: 201 })
   } catch (error) {

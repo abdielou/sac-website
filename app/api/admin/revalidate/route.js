@@ -36,9 +36,11 @@ export const POST = auth(async function POST(req) {
       // Add provided paths
       providedPaths.forEach((path) => pathsToRevalidate.add(path))
 
-      // Always revalidate blog index and tags on any mutation
+      // Always revalidate blog index, tags, homepage, and feed on any mutation
       pathsToRevalidate.add('/blog')
       pathsToRevalidate.add('/tags')
+      pathsToRevalidate.add('/')
+      pathsToRevalidate.add('/feed.xml')
     }
 
     // Execute revalidation for each path

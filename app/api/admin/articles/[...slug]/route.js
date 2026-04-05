@@ -67,9 +67,11 @@ export const PUT = auth(async function PUT(req, { params }) {
 
     const article = await updateArticle(slug, updates)
 
-    // Revalidate aggregate pages and the specific article page
+    // Revalidate aggregate pages, homepage, and the specific article page
     revalidatePath('/blog')
     revalidatePath('/tags')
+    revalidatePath('/')
+    revalidatePath('/feed.xml')
     revalidatePath(`/blog/${slug}`)
 
     return NextResponse.json({ article })
@@ -110,9 +112,11 @@ export const DELETE = auth(async function DELETE(req, { params }) {
 
     await deleteArticle(slug)
 
-    // Revalidate aggregate pages
+    // Revalidate aggregate pages and homepage
     revalidatePath('/blog')
     revalidatePath('/tags')
+    revalidatePath('/')
+    revalidatePath('/feed.xml')
 
     return NextResponse.json({ deleted: true, slug })
   } catch (error) {
