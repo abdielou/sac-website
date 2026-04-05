@@ -115,7 +115,7 @@ export const POST = auth(async function POST(req) {
 
     // Construct public URL
     const region = process.env.AWS_REGION || 'us-east-1'
-    const url = `https://${bucketName}.s3.${region}.amazonaws.com/${key}`
+    const url = `https://${bucketName}.s3.amazonaws.com/${key}`
 
     return NextResponse.json({ url, key })
   } catch (error) {
