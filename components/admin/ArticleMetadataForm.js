@@ -120,6 +120,14 @@ export default function ArticleMetadataForm({ metadata, onUpdate, authors = [], 
 
         const { url } = await res.json()
         onUpdate('images', [url])
+
+        // Auto-detect image dimensions for article listings
+        const img = new window.Image()
+        img.onload = () => {
+          onUpdate('imgWidth', img.naturalWidth)
+          onUpdate('imgHeight', img.naturalHeight)
+        }
+        img.src = url
       } catch (err) {
         alert(err.message || 'Error al subir imagen')
       } finally {
@@ -306,7 +314,11 @@ export default function ArticleMetadataForm({ metadata, onUpdate, authors = [], 
             {metadata.images?.[0] && (
               <button
                 type="button"
-                onClick={() => onUpdate('images', [])}
+                onClick={() => {
+                  onUpdate('images', [])
+                  onUpdate('imgWidth', null)
+                  onUpdate('imgHeight', null)
+                }}
                 className="text-xs text-red-600 dark:text-red-400 hover:underline text-left"
               >
                 Eliminar imagen
