@@ -63,11 +63,13 @@ gallery-photos/
 # GSD planning docs (keep codebase/ committed)
 .planning/*
 !.planning/codebase/
-.claude/
+.claude/*
+!.claude/skills/
 
 # FB-YT Archive
 scripts/fb-yt-archive/**/*.zip
 scripts/fb-yt-archive/registry.json
+scripts/member-emails.json
 .secrets/
 
 .vercel
