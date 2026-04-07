@@ -60,8 +60,9 @@ function escapeCSV(value) {
  * POST /api/admin/whatsapp-audit
  *
  * Accepts a WhatsApp members CSV (FormData with 'file' field).
- * Normalizes phone numbers, performs outer join against SAC members,
- * returns a downloadable CSV with match_type: matched, unknown, or missing.
+ * Normalizes phone numbers, matches against SAC members,
+ * returns a downloadable CSV with match_type: matched or unknown.
+ * Only WhatsApp community members are included in the report.
  */
 export const POST = auth(async function POST(req) {
   if (!req.auth) {
@@ -99,24 +100,34 @@ export const POST = auth(async function POST(req) {
       )
     }
 
+    // Detect if sub_channels column exists
+    const headerFields = parseCSVLine(lines[0])
+    const hasSubChannels = headerFields.some(
+      (h) => h.toLowerCase().replace(/\s/g, '') === 'sub_channels'
+    )
+    const subChannelsIdx = hasSubChannels
+      ? headerFields.findIndex((h) => h.toLowerCase().replace(/\s/g, '') === 'sub_channels')
+      : -1
+
     // Skip header row, parse data rows
     const waEntries = []
     for (let i = 1; i < lines.length; i++) {
       const fields = parseCSVLine(lines[i])
       const phone = fields[0] || ''
       const displayName = fields[1] || ''
+      const subChannels = subChannelsIdx >= 0 ? fields[subChannelsIdx] || '' : ''
       if (!phone) continue
       waEntries.push({
         rawPhone: phone,
         normalizedPhone: normalizePhone(phone),
         displayName,
+        subChannels,
       })
     }
 
     // Fetch SAC members and build lookup map by normalized phone
     const { data: allMembers } = await getMembers()
     const sacByPhone = new Map()
-    const matchedSacPhones = new Set()
 
     for (const member of allMembers) {
       const np = normalizePhone(member.phone)
@@ -132,7 +143,6 @@ export const POST = auth(async function POST(req) {
     for (const wa of waEntries) {
       const sacMember = wa.normalizedPhone ? sacByPhone.get(wa.normalizedPhone) : null
       if (sacMember) {
-        matchedSacPhones.add(wa.normalizedPhone)
         resultRows.push({
           phone_normalized: wa.normalizedPhone,
           wa_display_name: wa.displayName,
@@ -140,6 +150,7 @@ export const POST = auth(async function POST(req) {
           member_email: sacMember.email || '',
           member_status: sacMember.status || '',
           match_type: 'matched',
+          sub_channels: wa.subChannels,
         })
       } else {
         resultRows.push({
@@ -149,39 +160,35 @@ export const POST = auth(async function POST(req) {
           member_email: '',
           member_status: '',
           match_type: 'unknown',
+          sub_channels: wa.subChannels,
         })
       }
     }
 
-    // Add SAC members missing from WA
-    for (const [np, member] of sacByPhone) {
-      if (!matchedSacPhones.has(np)) {
-        resultRows.push({
-          phone_normalized: np,
-          wa_display_name: '',
-          member_name: member.name || '',
-          member_email: member.email || '',
-          member_status: member.status || '',
-          match_type: 'missing',
-        })
-      }
-    }
+    // Sort: matched first (by member_status), then unknown
+    const statusOrder = { active: 0, 'expiring-soon': 1, expired: 2, applied: 3, '': 4 }
+    resultRows.sort((a, b) => {
+      if (a.match_type !== b.match_type) return a.match_type === 'matched' ? -1 : 1
+      const sa = statusOrder[a.member_status] ?? 4
+      const sb = statusOrder[b.member_status] ?? 4
+      return sa - sb
+    })
 
     // Build CSV output
-    const csvHeader =
-      'phone_normalized,wa_display_name,member_name,member_email,member_status,match_type'
+    const baseCols = 'phone_normalized,wa_display_name,member_name,member_email,member_status,match_type'
+    const csvHeader = hasSubChannels ? baseCols + ',sub_channels' : baseCols
     const csvLines = [csvHeader]
     for (const row of resultRows) {
-      csvLines.push(
-        [
-          escapeCSV(row.phone_normalized),
-          escapeCSV(row.wa_display_name),
-          escapeCSV(row.member_name),
-          escapeCSV(row.member_email),
-          escapeCSV(row.member_status),
-          escapeCSV(row.match_type),
-        ].join(',')
-      )
+      const cols = [
+        escapeCSV(row.phone_normalized),
+        escapeCSV(row.wa_display_name),
+        escapeCSV(row.member_name),
+        escapeCSV(row.member_email),
+        escapeCSV(row.member_status),
+        escapeCSV(row.match_type),
+      ]
+      if (hasSubChannels) cols.push(escapeCSV(row.sub_channels))
+      csvLines.push(cols.join(','))
     }
 
     const csvBody = csvLines.join('\n')

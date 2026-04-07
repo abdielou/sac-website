@@ -1,7 +1,7 @@
 ---
 name: whatsapp:extract-members
 description: Extract all community-level members from a WhatsApp Web community into a CSV file using agent-browser
-argument-hint: "<community_name> [output_path]"
+argument-hint: "[output_path]"
 ---
 
 # WhatsApp Community Member Extraction
@@ -27,14 +27,13 @@ If the command fails, instruct the user to install it with the command above and
 
 ## Argument Handling
 
-This skill accepts two arguments:
+This skill accepts one optional argument:
 
 | Argument         | Required | Default                        | Description                          |
 | ---------------- | -------- | ------------------------------ | ------------------------------------ |
-| `community_name` | Yes      | (prompt user if omitted)       | Exact name of the WhatsApp community |
 | `output_path`    | No       | User's Downloads folder        | Full path or directory for CSV output |
 
-**Community name:** If the user did not provide a community name, ask them before proceeding. Use the exact name as it appears in WhatsApp.
+**Community name:** Always use `Sociedad de Astronomía del Caribe`. This is hardcoded — do not ask the user.
 
 **Output path resolution:**
 - If `output_path` is provided, use it directly (if it is a directory, append the filename).
@@ -46,6 +45,19 @@ This skill accepts two arguments:
   - `{YYYY-MM-DD}` = current date
 
 Determine the output path early and confirm it to the user before starting extraction.
+
+## Sub-Channel Flagging
+
+After resolving arguments but before starting extraction, ask the user:
+
+> "Are there any sub-channels whose members should be flagged? Members of flagged sub-channels will get an extra column in the CSV so you can identify them during the audit. Enter sub-channel names separated by commas, or say **none** to skip."
+
+If the user provides sub-channel names:
+- Store them as a list (e.g., `["Comité de Viajes Astronómicos"]`)
+- After extracting all community-level members (Step 4), perform an additional extraction for each flagged sub-channel (Step 4c below)
+- Add a `sub_channels` column to the CSV output
+
+If the user says "none" or skips, omit the `sub_channels` column entirely.
 
 ## Extraction Workflow
 
@@ -246,6 +258,26 @@ Update the member's record with the retrieved phone number.
 
 **Optimization:** If many members are missing phones, batch the lookups efficiently. Clear the search field between lookups rather than closing and reopening the dialog.
 
+#### 4c. Extract flagged sub-channel members (only if sub-channels were specified)
+
+Skip this step if the user said "none" or didn't specify any sub-channels.
+
+For each flagged sub-channel name:
+
+1. **Navigate back to the community view** — click the "Back" button or navigate via Communities tab to return to the community's sub-group list.
+2. **Find the sub-channel** in the sub-groups list. Take a snapshot and look for a button matching the sub-channel name.
+3. **Click the sub-channel** to open it:
+   ```bash
+   agent-browser click @eN        # The sub-channel button
+   agent-browser wait 1500
+   ```
+4. **Open the sub-channel's member list** — click the sub-channel header, or use the navigation menu → "Group info" → members section. The exact UI path may differ from the community-level flow. Take snapshots to navigate.
+5. **Extract members** using the same JavaScript scroll technique from Step 4a, adapted for the sub-channel's member dialog.
+6. **Match extracted sub-channel members to the main member list** by normalized phone number. For each match, append the sub-channel name to that member's `sub_channels` field.
+7. **Close the sub-channel member list** and return to the community view before processing the next sub-channel.
+
+After processing all flagged sub-channels, each member in the main list will have a `sub_channels` field that is either empty or contains a comma-separated list of sub-channel names they belong to.
+
 ### Step 5: Close the Browser
 
 Always close the browser session when done (or on error):
@@ -273,7 +305,7 @@ Sort the final list alphabetically by `display_name` (case-insensitive).
 
 Write the CSV file using the **Write tool** (NOT agent-browser).
 
-**CSV format:**
+**CSV format (without sub-channel flagging):**
 ```csv
 phone,display_name
 +17875551234,Ana Rivera
@@ -281,10 +313,19 @@ phone,display_name
 ,Hidden User
 ```
 
+**CSV format (with sub-channel flagging):**
+```csv
+phone,display_name,sub_channels
++17875551234,Ana Rivera,Comité de Viajes Astronómicos
++17875559876,Carlos Lopez,
+,Hidden User,
+```
+
 **Rules:**
-- Header row: `phone,display_name`
+- Header row: `phone,display_name` (or `phone,display_name,sub_channels` if sub-channels were flagged)
 - Quote any field that contains commas using double quotes.
 - Empty phone numbers: leave the field empty (e.g., `,Display Name`). This should only happen if the profile lookup also failed to find a phone number.
+- `sub_channels`: comma-separated list of flagged sub-channel names the member belongs to, or empty. Only included if the user specified sub-channels to flag.
 
 Write the file to the output path determined during argument handling.
 
