@@ -53,14 +53,16 @@ Follow these steps sequentially. Use the `Bash` tool to run agent-browser comman
 
 ### Step 1: Open WhatsApp Web
 
+IMPORTANT: agent-browser runs **headless by default**. You MUST use `--headed` so the user can see the browser and scan the QR code. You also MUST override the user-agent string -- WhatsApp Web blocks the default agent-browser UA.
+
 ```bash
-agent-browser open "https://web.whatsapp.com"
+agent-browser open "https://web.whatsapp.com" --headed --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.7727.50 Safari/537.36"
 ```
 
-Wait 3 seconds for the page to load, then take a screenshot:
+Wait for the page to load, then take a screenshot:
 
 ```bash
-agent-browser wait 3000
+agent-browser wait 4000
 agent-browser screenshot "$TEMP/wa-qr.png"
 ```
 
@@ -77,117 +79,172 @@ agent-browser wait 3000
 agent-browser snapshot -i
 ```
 
-Check the snapshot output for chat list elements (e.g., conversation entries, a search bar, "Chats" heading). If login indicators are not present, take a screenshot and ask the user to verify. If WhatsApp shows "Use phone to verify" or a multi-device confirmation prompt, tell the user to approve it on their phone, wait, and retry.
+Check the snapshot output for chat list elements (e.g., a "Chats" button, conversation entries, a search bar). If login indicators are not present, take a screenshot and ask the user to verify. If WhatsApp shows "Use phone to verify" or a multi-device confirmation prompt, tell the user to approve it on their phone, wait, and retry.
 
 ### Step 2: Navigate to the Community
 
-Take a snapshot to see the current state:
+The correct navigation path is: **Communities tab -> Community entry -> Navigation menu -> View members**.
+
+First, click the **Communities** tab in the left sidebar. It is a button labeled "Communities" in the navigation banner:
 
 ```bash
 agent-browser snapshot -i
 ```
 
-Find the search input in the accessibility tree. It is typically near the top of the chat list. Click it and type the community name:
+Find the "Communities" button and click it:
 
 ```bash
-agent-browser click @eN        # Replace @eN with the search input ref from snapshot
-agent-browser fill @eN "{community_name}"
-agent-browser wait 2000
-```
-
-Take a snapshot to find the community in search results:
-
-```bash
+agent-browser click @eN        # The "Communities" button
+agent-browser wait 1500
 agent-browser snapshot -i
 ```
 
-Look for an entry whose text matches the community name. Click it:
+In the communities panel, look for a button labeled `"Community: {community_name}"` and click it:
 
 ```bash
-agent-browser click @eN        # Replace @eN with the community entry ref
-agent-browser wait 2000
+agent-browser click @eN        # The community entry button
+agent-browser wait 1500
 ```
 
-Take a snapshot to verify the community view is open. You should see the community header with the community name and a description or member count.
+Take a snapshot to verify the community view is open. You should see:
+- The community heading with the community name
+- A "Navigation menu" button
+- Sub-groups listed below
 
-If the community is not found in search results:
-- Clear the search and try again with a slightly different query (e.g., partial name).
-- If still not found, ask the user to verify the exact community name as it appears in WhatsApp.
+If the community is not found:
+- Scroll down in the communities panel to check for more entries.
+- Ask the user to verify the exact community name.
 
 ### Step 3: Open the Community Members List
 
-Click the community header/name area at the top of the chat to open the community info panel:
+Click the **"Navigation menu"** button (NOT the community heading -- clicking the heading does nothing):
 
 ```bash
 agent-browser snapshot -i
+agent-browser click @eN        # The "Navigation menu" button
+agent-browser wait 1000
+agent-browser snapshot -i
 ```
 
-Identify the community name or header element in the accessibility tree and click it:
+A dropdown menu will appear with options including **"View members"**. Click it:
 
 ```bash
-agent-browser click @eN        # The community header/title area
+agent-browser click @eN        # The "View members" button
 agent-browser wait 2000
 agent-browser snapshot -i
 ```
 
-In the info panel, look for a "Members" or "Miembros" section (the label depends on the user's WhatsApp language setting -- handle both English and Spanish). There should be a member count displayed (e.g., "45 members" or "45 miembros").
+A dialog will open showing **"Members (N)"** with the member count. Verify this dialog is visible. You should see:
+- A heading like "Members (187)"
+- A search input for filtering members
+- Individual member entries as `role=button` elements
 
-Click on the members count or the members section to open the full member list:
+Record the total member count from the heading for later verification.
+
+### Step 4: Extract All Members (JavaScript Scroll Loop)
+
+IMPORTANT: The member list is **virtualized** -- WhatsApp Web only renders members visible in the scroll viewport. Standard `agent-browser scroll` commands DO NOT work on this virtualized list. You MUST use `agent-browser eval` with JavaScript to scroll the container.
+
+#### 4a. Scroll and collect raw member data
+
+Run the following JavaScript via `agent-browser eval` to scroll through the entire list and extract all member data:
 
 ```bash
-agent-browser click @eN        # The members count/link
-agent-browser wait 2000
+agent-browser eval "
+(async function(){
+  const dialog = document.querySelector('[role=dialog]');
+  if (!dialog) return JSON.stringify({error: 'no dialog'});
+  let scroller = null;
+  for (const el of dialog.querySelectorAll('div')) {
+    const s = getComputedStyle(el);
+    if ((s.overflowY === 'auto' || s.overflowY === 'scroll') && el.scrollHeight > 5000) { scroller = el; break; }
+  }
+  if (!scroller) return JSON.stringify({error: 'no scroller'});
+  const allMembers = new Map();
+  let scrollPos = 0;
+  const step = 700;
+  for (let i = 0; i < 60 && scrollPos <= scroller.scrollHeight + step; i++) {
+    const btns = Array.from(dialog.querySelectorAll('[role=button]')).filter(b => b.className === '');
+    for (const btn of btns) {
+      const spans = btn.querySelectorAll('span');
+      let name = '';
+      let phone = '';
+      for (const sp of spans) {
+        const parts = Array.from(sp.childNodes).filter(n => n.nodeType === 3).map(n => n.textContent.trim()).join('');
+        if (!parts) continue;
+        const clean = parts.replace(/^~ /, '');
+        if (clean.match(/^\+?\d[\d\s\(\)\-]{7,}/)) { if (!phone) phone = clean; }
+        else if (clean === 'Community owner' || clean === 'Community admin') { continue; }
+        else if (clean.match(/^(Hey there|Available|Disponible|Modah ani|Loading|Busy|At work|At school|Sleeping|Urgent|At the gym|Battery about|I can)/i)) { continue; }
+        else if (!name && clean.length > 0 && clean !== 'You') { name = clean; }
+      }
+      if (!name && !phone) continue;
+      if (name === 'You') continue;
+      name = name.replace(/^Maybe /, '').trim();
+      const key = name + '|' + phone;
+      if (!allMembers.has(key)) { allMembers.set(key, {name, phone}); }
+    }
+    scrollPos += step;
+    scroller.scrollTop = scrollPos;
+    scroller.dispatchEvent(new Event('scroll', {bubbles: true}));
+    await new Promise(r => setTimeout(r, 250));
+  }
+  return JSON.stringify({total: allMembers.size, members: Array.from(allMembers.values())});
+})()
+"
+```
+
+Save the output (a JSON string) for processing. Parse it to get the members array.
+
+**Understanding the member data structure:**
+
+WhatsApp's member list shows different information depending on whether a member is in the admin's phone contacts:
+
+- **Contacts (in address book):** Shows contact name only. Phone number is NOT displayed in the list view.
+- **Non-contacts:** Shows phone number (and possibly a "Maybe" guessed name).
+
+This means after the scroll extraction, some members will have names but no phone numbers.
+
+#### 4b. Retrieve missing phone numbers
+
+For members extracted WITHOUT a phone number, you must click into each member's profile to retrieve their phone number. These are the admin's phone contacts whose numbers WhatsApp hides in the list view.
+
+After the scroll extraction completes, **close the members dialog** first:
+
+```bash
 agent-browser snapshot -i
+agent-browser click @eN        # The "Close" button on the Members dialog
+agent-browser wait 1000
 ```
 
-Verify the member list is now visible. You should see individual member entries with names and possibly phone numbers.
+Then for EACH member missing a phone number:
 
-### Step 4: Extract All Members (Scroll Loop)
+1. **Reopen the members dialog:** Navigate menu -> View members (same as Step 3)
+2. **Search for the member:** Use the search input in the members dialog:
+   ```bash
+   agent-browser snapshot -i
+   agent-browser click @eN        # The "Search members" textbox
+   agent-browser fill @eN "{member_name}"
+   agent-browser wait 1500
+   agent-browser snapshot -i
+   ```
+3. **Click on the member entry** to open their profile/info:
+   ```bash
+   agent-browser click @eN        # The member's button in search results
+   agent-browser wait 1500
+   agent-browser snapshot -i
+   ```
+4. **Extract the phone number** from the profile view. Look for a phone number in the accessibility tree (it appears as text with a phone icon, or in a "Phone" / "Teléfono" section).
+5. **Go back** to the members list:
+   ```bash
+   agent-browser click @eN        # Back button or close the profile
+   agent-browser wait 1000
+   ```
+6. **Clear the search** before searching for the next member.
 
-This is the critical extraction step. The member list is likely **virtualized** -- WhatsApp Web only renders members currently visible in the scroll viewport. You must scroll through the entire list to capture everyone.
+Update the member's record with the retrieved phone number.
 
-**Strategy:** Repeatedly snapshot, extract visible members, scroll down, and repeat until no new members appear across multiple consecutive cycles.
-
-Initialize an empty collection to store extracted members (track in-memory as you go).
-
-**Extraction loop:**
-
-```
-consecutive_no_new = 0
-all_members = {}  (keyed by display_name+phone to deduplicate)
-
-while consecutive_no_new < 3:
-    1. Run: agent-browser snapshot -i
-    2. Parse the accessibility tree output for member entries.
-       - Each member typically appears as a list item with:
-         - A display name (the primary text)
-         - A phone number (subtitle text, may be absent if the user has hidden it)
-       - Extract both fields for each visible member.
-    3. Count how many NEW members were found (not already in all_members).
-    4. If new_count == 0:
-         consecutive_no_new += 1
-       Else:
-         consecutive_no_new = 0
-         Add new members to all_members.
-    5. Scroll down within the member list container:
-       - Identify the scrollable container ref from the snapshot (the list/panel holding member entries).
-       - Run: agent-browser scroll down @eN  (where @eN is the scrollable container)
-       - If no specific scrollable ref is identifiable, use: agent-browser scroll down
-    6. Wait for new members to render:
-       Run: agent-browser wait 1500
-```
-
-**Important notes for extraction:**
-- Phone numbers appear in various formats (e.g., `+1 787 555 1234`, `+52 55 1234 5678`, `787-555-1234`). Extract them exactly as displayed.
-- Some members may show only a display name with no visible phone number. Record these with an empty phone field.
-- Community-level members ONLY. Do NOT drill into sub-groups or channels within the community.
-- If the scrollable member list container has a specific `@ref`, always scroll THAT element rather than the whole page.
-- If scrolling seems stuck (many consecutive no-new cycles but total count seems low compared to the member count shown in the header), try:
-  - Scrolling more aggressively: run `agent-browser scroll down @eN` multiple times in rapid succession.
-  - Taking a screenshot to visually debug the state.
-  - Scrolling up first, then back down.
-
-After the loop completes, report the total number of members extracted.
+**Optimization:** If many members are missing phones, batch the lookups efficiently. Clear the search field between lookups rather than closing and reopening the dialog.
 
 ### Step 5: Close the Browser
 
@@ -235,7 +292,7 @@ phone,display_name,duplicate
 - Header row: `phone,display_name,duplicate`
 - Quote any field that contains commas using double quotes.
 - `duplicate` column: `true` or `false`.
-- Empty phone numbers: leave the field empty (e.g., `,Display Name,false`).
+- Empty phone numbers: leave the field empty (e.g., `,Display Name,false`). This should only happen if the profile lookup also failed to find a phone number.
 
 Write the file to the output path determined during argument handling.
 
@@ -248,6 +305,7 @@ Extraction complete.
 - Total members extracted: {total}
 - Members with phone numbers: {with_phone}
 - Members without phone numbers: {without_phone}
+- Phone numbers retrieved via profile lookup: {profile_lookups}
 - Unique phone numbers: {unique_phones}
 - Duplicate phone numbers found: {duplicate_count}
 - CSV saved to: {output_path}
@@ -258,11 +316,14 @@ Extraction complete.
 | Error                                 | Action                                                                                        |
 | ------------------------------------- | --------------------------------------------------------------------------------------------- |
 | agent-browser not installed           | Tell user to run `npm install -g agent-browser && agent-browser install`                       |
+| WhatsApp blocks Chrome version        | Ensure `--user-agent` flag is set with a recent Chrome UA string                               |
 | QR code not visible                   | Wait longer, retry screenshot, ask user to refresh WhatsApp Web                                |
 | "Use phone to verify" prompt          | Tell user to approve on their phone, wait 5 seconds, retry snapshot                           |
-| Community not found in search         | Ask user to verify the exact community name; try partial name search                          |
-| Member list fails to load             | Wait 5 seconds, retry snapshot; if still empty, click back and re-enter community info        |
-| Scrolling yields no new members early | Try aggressive scrolling, scroll the specific container ref, take a debug screenshot           |
+| Community not found                   | Ask user to verify the exact community name; try searching from the Chats search bar           |
+| Member list dialog not opening        | Ensure you click "Navigation menu" then "View members", not the community heading              |
+| JS eval scroll returns no scroller    | Take a screenshot to debug; the dialog may have closed unexpectedly                            |
+| Scrolling yields fewer members than expected | Increase the loop iteration count (default 60); try smaller step sizes                   |
+| Profile lookup fails to show phone    | Member may have hidden their phone; record with empty phone field                              |
 | Unexpected page state                 | Take a screenshot, show it to the user, ask for guidance                                       |
 | Any unrecoverable error               | Always run `agent-browser close` before stopping                                               |
 
@@ -270,8 +331,10 @@ Extraction complete.
 
 - This skill performs **READ-ONLY** operations. No messages are sent, no members are added or removed.
 - WhatsApp Web uses the admin's real account. Standard WhatsApp Terms of Service considerations apply.
-- The accessibility tree from agent-browser is token-efficient (~200-400 tokens per snapshot), but large member lists may require many scroll iterations. This is expected.
+- agent-browser runs **headless by default**. Always use `--headed` so the user can see the browser window and interact with it (QR scan, etc.).
+- WhatsApp Web blocks older Chrome user-agent strings. Always provide a `--user-agent` flag with a recent Chrome version string.
+- The member list is **virtualized** and must be scrolled via JavaScript (`agent-browser eval`). Standard `agent-browser scroll` commands do not work on this list.
+- WhatsApp **hides phone numbers** for members who are in the admin's phone contacts. The skill must click into each such member's profile to retrieve their phone number (Step 4b).
 - Extract **community-level members only**. Do NOT navigate into sub-groups or channels within the community.
-- If the member list container has a scrollable `@ref`, scroll THAT element specifically rather than the whole page.
-- The extraction may take several minutes for communities with hundreds of members due to the scroll-and-snapshot cycle.
+- The extraction may take several minutes for communities with hundreds of members due to the scroll-and-snapshot cycle plus individual profile lookups.
 - Phone number formats vary by country and user settings. The skill extracts numbers exactly as displayed and normalizes them for duplicate detection only.
