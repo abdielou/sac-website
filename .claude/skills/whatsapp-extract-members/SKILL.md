@@ -6,7 +6,7 @@ argument-hint: "<community_name> [output_path]"
 
 # WhatsApp Community Member Extraction
 
-Extract all community-level members from a WhatsApp Web community into a CSV file with columns: `phone`, `display_name`, `duplicate`.
+Extract all community-level members from a WhatsApp Web community into a CSV file with columns: `phone`, `display_name`.
 
 This skill uses `agent-browser` (Vercel Labs Rust CLI) to drive a real Chrome session via CDP. The admin authenticates by scanning a QR code with their phone. The extraction is **read-only** -- no messages are sent, no members are added or removed.
 
@@ -265,12 +265,6 @@ For each phone number:
 2. Preserve the `+` prefix and country code (e.g., `+17875551234`).
 3. If no `+` prefix exists, keep the number as-is (do not guess the country code).
 
-### Duplicate Detection
-
-1. Group members by their normalized phone number.
-2. If a phone number appears more than once, mark ALL entries with that phone as `duplicate = true`.
-3. Members with empty phone numbers are never marked as duplicates of each other.
-
 ### Sorting
 
 Sort the final list alphabetically by `display_name` (case-insensitive).
@@ -281,18 +275,16 @@ Write the CSV file using the **Write tool** (NOT agent-browser).
 
 **CSV format:**
 ```csv
-phone,display_name,duplicate
-+17875551234,Ana Rivera,false
-+17875559876,Carlos Lopez,true
-+17875559876,Carlos L.,true
-,Hidden User,false
+phone,display_name
++17875551234,Ana Rivera
++17875559876,Carlos Lopez
+,Hidden User
 ```
 
 **Rules:**
-- Header row: `phone,display_name,duplicate`
+- Header row: `phone,display_name`
 - Quote any field that contains commas using double quotes.
-- `duplicate` column: `true` or `false`.
-- Empty phone numbers: leave the field empty (e.g., `,Display Name,false`). This should only happen if the profile lookup also failed to find a phone number.
+- Empty phone numbers: leave the field empty (e.g., `,Display Name`). This should only happen if the profile lookup also failed to find a phone number.
 
 Write the file to the output path determined during argument handling.
 
@@ -306,8 +298,6 @@ Extraction complete.
 - Members with phone numbers: {with_phone}
 - Members without phone numbers: {without_phone}
 - Phone numbers retrieved via profile lookup: {profile_lookups}
-- Unique phone numbers: {unique_phones}
-- Duplicate phone numbers found: {duplicate_count}
 - CSV saved to: {output_path}
 ```
 
