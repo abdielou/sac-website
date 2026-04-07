@@ -93,14 +93,7 @@ export function WhatsAppAuditCard() {
       fill="none"
       viewBox="0 0 24 24"
     >
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-      />
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path
         className="opacity-75"
         fill="currentColor"
@@ -121,9 +114,7 @@ export function WhatsAppAuditCard() {
       />
 
       {/* Label */}
-      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-        Auditoría WhatsApp
-      </p>
+      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Auditoría WhatsApp</p>
 
       {/* Status area */}
       <div className="mt-2 min-h-[1.75rem]">
@@ -146,9 +137,7 @@ export function WhatsAppAuditCard() {
           </p>
         )}
 
-        {status === 'error' && (
-          <p className="text-sm text-red-600 dark:text-red-400">{errorMsg}</p>
-        )}
+        {status === 'error' && <p className="text-sm text-red-600 dark:text-red-400">{errorMsg}</p>}
       </div>
 
       {/* Action button */}
