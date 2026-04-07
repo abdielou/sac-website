@@ -168,7 +168,8 @@ export const POST = auth(async function POST(req) {
     }
 
     // Build CSV output
-    const csvHeader = 'phone_normalized,wa_display_name,member_name,member_email,member_status,match_type'
+    const csvHeader =
+      'phone_normalized,wa_display_name,member_name,member_email,member_status,match_type'
     const csvLines = [csvHeader]
     for (const row of resultRows) {
       csvLines.push(
