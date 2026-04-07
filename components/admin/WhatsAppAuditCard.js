@@ -22,7 +22,9 @@ export function WhatsAppAuditCard() {
   const fileInputRef = useRef(null)
 
   const accessibleActions = session?.user?.accessibleActions || []
-  const canAudit = accessibleActions.includes('download_csv_members')
+  const canAudit =
+    accessibleActions.includes('write_members') ||
+    accessibleActions.includes('download_csv_members')
 
   if (!canAudit) {
     return null
@@ -125,10 +127,7 @@ export function WhatsAppAuditCard() {
         )}
 
         {status === 'uploading' && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 inline-flex items-center gap-2">
-            <Spinner />
-            Procesando archivo...
-          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Procesando archivo...</p>
         )}
 
         {status === 'success' && (
@@ -143,7 +142,7 @@ export function WhatsAppAuditCard() {
       {/* Action button */}
       <button
         onClick={handleButtonClick}
-        disabled={status === 'uploading' || status === 'success'}
+        disabled={status === 'uploading'}
         className="w-full mt-3 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {status === 'uploading' ? (
