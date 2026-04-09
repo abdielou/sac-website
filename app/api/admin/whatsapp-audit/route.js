@@ -175,7 +175,8 @@ export const POST = auth(async function POST(req) {
     })
 
     // Build CSV output
-    const baseCols = 'phone_normalized,wa_display_name,member_name,member_email,member_status,match_type'
+    const baseCols =
+      'phone_normalized,wa_display_name,member_name,member_email,member_status,match_type'
     const csvHeader = hasSubChannels ? baseCols + ',sub_channels' : baseCols
     const csvLines = [csvHeader]
     for (const row of resultRows) {
