@@ -29,7 +29,7 @@ Milestone: v1.9 — Observing Guides
 Phase: 33 of 34 (Public Guides Page)
 Plan: 2 of 2
 Status: Phase Complete
-Last activity: 2026-03-27 — Completed 33-02 Public Guides Page
+Last activity: 2026-04-07 — Completed quick task 2: WhatsApp Community Membership Audit
 
 Progress: [██████████] 100%
 
@@ -66,6 +66,13 @@ v1.9 decisions so far:
 ### Blockers/Concerns
 
 None.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | Add WhatsApp community member extraction skill | 2026-04-07 | a9a77d3 | [1-create-claude-code-skill-whatsapp-extrac](./quick/1-create-claude-code-skill-whatsapp-extrac/) |
+| 2 | Build WhatsApp Community Membership Audit in admin dashboard | 2026-04-07 | 6d0f527 | [2-build-whatsapp-community-membership-audi](./quick/2-build-whatsapp-community-membership-audi/) |
 
 ## Session Continuity
 
