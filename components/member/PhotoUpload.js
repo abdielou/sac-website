@@ -30,16 +30,6 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
   const streamRef = useRef(null)
   const objectUrlRef = useRef(null)
 
-  // Cleanup object URLs and camera stream on unmount
-  useEffect(() => {
-    return () => {
-      if (objectUrlRef.current) {
-        URL.revokeObjectURL(objectUrlRef.current)
-      }
-      stopCamera()
-    }
-  }, [])
-
   const stopCamera = () => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop())
@@ -47,6 +37,19 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
     }
     setCameraActive(false)
   }
+
+  // Cleanup object URLs and camera stream on unmount
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current)
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop())
+        streamRef.current = null
+      }
+    }
+  }, [])
 
   const startCamera = async () => {
     setCameraError(null)

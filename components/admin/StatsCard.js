@@ -10,6 +10,7 @@ const colorClasses = {
   green: 'text-green-600 dark:text-green-400',
   yellow: 'text-yellow-600 dark:text-yellow-400',
   red: 'text-red-600 dark:text-red-400',
+  purple: 'text-purple-600 dark:text-purple-400',
   gray: 'text-gray-900 dark:text-white',
 }
 
@@ -18,7 +19,7 @@ const colorClasses = {
  * @param {string} props.label - Spanish label text (e.g., "Miembros Activos")
  * @param {string} props.value - Pre-formatted value (already formatted with formatNumber/formatCurrency)
  * @param {string|Object} props.href - Link destination (string or { pathname, query })
- * @param {string} [props.color='gray'] - Value text color: 'green', 'yellow', 'red', 'gray'
+ * @param {string} [props.color='gray'] - Value text color: 'green', 'yellow', 'red', 'purple', 'gray'
  */
 export function StatsCard({ label, value, href, color = 'gray' }) {
   const valueColorClass = colorClasses[color] || colorClasses.gray

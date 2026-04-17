@@ -44,7 +44,8 @@ export default function AdminPage() {
     return (
       <div>
         <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Dashboard</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          <SkeletonCard />
           <SkeletonCard />
           <SkeletonCard />
           <SkeletonCard />
@@ -75,7 +76,7 @@ export default function AdminPage() {
       <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Dashboard</h2>
 
       {canReadMembers && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           <StatsCard
             label="Total Miembros"
             value={formatNumber(stats.total)}
@@ -99,6 +100,12 @@ export default function AdminPage() {
             value={formatNumber(stats.expired)}
             href={{ pathname: '/admin/members', query: { status: 'expired' } }}
             color="red"
+          />
+          <StatsCard
+            label="Aplicados"
+            value={formatNumber(stats.applied)}
+            href={{ pathname: '/admin/members', query: { status: 'applied' } }}
+            color="purple"
           />
         </div>
       )}
