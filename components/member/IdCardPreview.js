@@ -49,7 +49,7 @@ export function IdCardPreview({ profile }) {
       logo: '/static/images/sac-white-logo.png',
       photo: photoUrl,
       qr: qrDataUrl,
-      background: `/static/images/id-bg-${vigenciaYear}.png`,
+      element: '/static/images/sac-id-element.png',
     },
   })
 
