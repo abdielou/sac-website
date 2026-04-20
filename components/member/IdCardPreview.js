@@ -46,7 +46,7 @@ export function IdCardPreview({ profile }) {
   const cardData = buildCardData({
     member: profile,
     images: {
-      logo: '/static/images/sac-main-logo.png',
+      logo: '/static/images/sac-white-logo.png',
       photo: photoUrl,
       qr: qrDataUrl,
       background: `/static/images/id-bg-${vigenciaYear}.png`,
