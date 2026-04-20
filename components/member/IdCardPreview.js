@@ -19,7 +19,7 @@ export function IdCardPreview({ profile }) {
   useEffect(() => {
     if (!profile.verifyToken) return
     const url = `https://sociedadastronomia.com/verify/${profile.verifyToken}`
-    QRCode.toDataURL(url, { width: 200, margin: 1, errorCorrectionLevel: 'M' })
+    QRCode.toDataURL(url, { width: 800, margin: 1, errorCorrectionLevel: 'M' })
       .then(setQrDataUrl)
       .catch(() => {})
   }, [profile.verifyToken])
