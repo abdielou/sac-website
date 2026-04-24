@@ -1,7 +1,7 @@
 'use client'
 
 import PermissionGate from '@/components/admin/PermissionGate'
-import { Suspense, useState, useEffect, useRef, useCallback } from 'react'
+import { Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useSearchParams, usePathname, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { usePayments, useClassifyPayment } from '@/lib/hooks/useAdminData'
@@ -76,13 +76,31 @@ function PaymentsContent() {
     },
   })
 
-  // Fetch payments with current filters
-  const { data, isPending, isError, error, refetch } = usePayments({
+  const { data: apiData, isPending, isError, error, refetch } = usePayments({
     source: source || undefined,
-    search: searchParam || undefined,
-    page,
-    pageSize,
+    search: undefined,
+    page: 1,
+    pageSize: 5000,
   })
+
+  const filteredPayments = useMemo(() => {
+    if (!apiData?.data) return []
+    if (!searchParam) return apiData.data
+
+    const searchLower = searchParam.toLowerCase()
+    return apiData.data.filter((payment) =>
+      visibleColumns.some((col) => {
+        const value = col.accessor(payment)
+        if (value == null) return false
+        const displayValue = col.formatter ? col.formatter(value) : value
+        return String(displayValue).toLowerCase().includes(searchLower)
+      })
+    )
+  }, [apiData?.data, searchParam, visibleColumns])
+
+  const totalItems = filteredPayments.length
+  const totalPages = Math.ceil(totalItems / pageSize) || 1
+  const payments = filteredPayments.slice((page - 1) * pageSize, page * pageSize)
 
   /**
    * Update URL params when filter changes
@@ -126,22 +144,22 @@ function PaymentsContent() {
   const handleExportCsv = useCallback(async () => {
     setIsExporting(true)
     try {
-      const params = new URLSearchParams()
-      if (source) params.set('source', source)
-      if (searchParam) params.set('search', searchParam)
-      params.set('pageSize', 'all')
-      const res = await fetch(`/api/admin/payments?${params.toString()}`)
-      if (!res.ok) throw new Error('Export failed')
-      const json = await res.json()
-      const columns = visibleColumns.map((col) => ({ key: col.id, label: col.label }))
-      const csv = toCsv(json.data, columns)
+      const columns = visibleColumns.map((col) => ({
+        key: col.id,
+        label: col.label,
+        value: (row) => {
+          const value = col.accessor(row)
+          return col.formatter ? col.formatter(value) : value
+        },
+      }))
+      const csv = toCsv(filteredPayments, columns)
       downloadCsvFile(csv, `pagos-${new Date().toISOString().slice(0, 10)}`)
     } catch (err) {
       console.error('CSV export error:', err)
     } finally {
       setIsExporting(false)
     }
-  }, [source, searchParam, visibleColumns])
+  }, [filteredPayments, visibleColumns])
 
   /**
    * Three-state cycling:
@@ -185,10 +203,6 @@ function PaymentsContent() {
       </div>
     )
   }
-
-  const payments = data?.data || []
-  const totalPages = data?.pagination?.totalPages || 1
-  const totalItems = data?.pagination?.totalItems || 0
 
   return (
     <div>
@@ -243,7 +257,7 @@ function PaymentsContent() {
             type="text"
             value={searchInput}
             onChange={handleSearchChange}
-            placeholder="Buscar por email, monto o mensaje..."
+            placeholder="Buscar en columnas visibles..."
             className="w-full px-3 py-2 pr-8 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
           {searchInput && (
