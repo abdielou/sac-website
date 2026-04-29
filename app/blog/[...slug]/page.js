@@ -123,19 +123,21 @@ export default async function PostPage({ params }) {
   }
 
   return (
-    <LayoutWrapper>
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <BlogPost
-        source={article.content}
-        toc={toc}
-        frontMatter={frontMatter}
-        authorDetails={authorDetails}
-        prev={prev}
-        next={next}
-      />
-    </LayoutWrapper>
+      <LayoutWrapper>
+        <BlogPost
+          source={article.content}
+          toc={toc}
+          frontMatter={frontMatter}
+          authorDetails={authorDetails}
+          prev={prev}
+          next={next}
+        />
+      </LayoutWrapper>
+    </>
   )
 }

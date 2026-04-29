@@ -36,7 +36,7 @@ export function IdCardPreview({ profile }) {
   }, [])
 
   const photoUrl = profile.photoFileId
-    ? `/api/member/photo/${encodeURIComponent(profile.email)}?v=${profile.photoFileId}`
+    ? `/api/member/photo/${encodeURIComponent(profile.sacEmail)}?photoFileId=${profile.photoFileId}`
     : null
 
   const vigenciaYear = profile.expirationDate
