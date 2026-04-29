@@ -19,7 +19,10 @@ export const GET = auth(async function GET(req) {
   }
 
   try {
-    const email = req.auth.user.email?.toLowerCase()
+    // Prefer SAC email (stored in JWT at sign-in) over generic session email.
+    // This handles members who signed in with a personal Gmail account but are
+    // registered in the sheet under their SAC @sociedadastronomia.com email.
+    const email = req.auth.user?.sacEmail?.toLowerCase() || req.auth.user.email?.toLowerCase()
     if (!email) {
       return NextResponse.json(
         { error: 'No autenticado', details: 'No email in session' },
@@ -33,14 +36,16 @@ export const GET = auth(async function GET(req) {
     }
 
     // Build profile response, stripping internal fields
-    const { _raw, id, ...profileFields } = member
+    // Also strip 'sheetEmail' (sheet personal email) so clients always use sacEmail
+    const { _raw, id, email: sheetEmail, sacEmail: _memberSacEmail, ...profileFields } = member
     const photoUrl = member.photoFileId
-      ? `/api/member/photo/${encodeURIComponent(email)}?v=${encodeURIComponent(member.photoFileId)}`
+      ? `/api/member/photo/${encodeURIComponent(email)}?photoFileId=${encodeURIComponent(member.photoFileId)}`
       : null
 
     return NextResponse.json({
       ...profileFields,
       photoUrl,
+      sacEmail: email,
       verifyToken: generateVerifyToken(member.email),
     })
   } catch (error) {

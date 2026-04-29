@@ -10,6 +10,9 @@ import { hasPermission } from '../../../../../lib/permissions'
  * Proxy a member's profile photo from Google Drive.
  * Requires authentication. Does NOT expose Drive file IDs or URLs to the client.
  * Users can only access their own photo unless they have read_members permission.
+ *
+ * Query params:
+ *   - photoFileId (optional): pass directly to skip sheet lookup when accessing own photo
  */
 export const GET = auth(async function GET(req, { params }) {
   if (!req.auth) {
@@ -21,10 +24,11 @@ export const GET = auth(async function GET(req, { params }) {
 
   try {
     const { email } = await params
+    const { searchParams } = new URL(req.url)
     const decodedEmail = decodeURIComponent(email)
+    const requestingEmail = req.auth.user?.email?.toLowerCase()
 
     // Authorization: users can only access their own photo unless they have read_members
-    const requestingEmail = req.auth.user?.email?.toLowerCase()
     if (
       requestingEmail !== decodedEmail.toLowerCase() &&
       !hasPermission(requestingEmail, 'read_members')
@@ -35,19 +39,23 @@ export const GET = auth(async function GET(req, { params }) {
       )
     }
 
-    // Look up the member to get their photoFileId
-    const member = await getMemberByEmail(decodedEmail)
-    if (!member || !member.photoFileId) {
-      return NextResponse.json({ error: 'Foto no encontrada' }, { status: 404 })
+    let photoFileId = searchParams.get('photoFileId')
+
+    // Own photo: use passed photoFileId directly (avoids sheet lookup failures)
+    // Admins with read_members: also use passed photoFileId
+    if (!photoFileId) {
+      const member = await getMemberByEmail(decodedEmail)
+      if (!member || !member.photoFileId) {
+        return NextResponse.json({ error: 'Foto no encontrada' }, { status: 404 })
+      }
+      photoFileId = member.photoFileId
     }
 
-    // Fetch photo from Drive
-    const photo = await getPhoto(member.photoFileId)
+    const photo = await getPhoto(photoFileId)
     if (!photo) {
       return NextResponse.json({ error: 'Foto no encontrada' }, { status: 404 })
     }
 
-    // Return the photo binary with proper headers
     return new Response(photo.buffer, {
       headers: {
         'Content-Type': photo.mimeType,

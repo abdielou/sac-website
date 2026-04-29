@@ -19,7 +19,7 @@ export function IdCardPreview({ profile }) {
   useEffect(() => {
     if (!profile.verifyToken) return
     const url = `https://sociedadastronomia.com/verify/${profile.verifyToken}`
-    QRCode.toDataURL(url, { width: 200, margin: 1, errorCorrectionLevel: 'M' })
+    QRCode.toDataURL(url, { width: 800, margin: 1, errorCorrectionLevel: 'M' })
       .then(setQrDataUrl)
       .catch(() => {})
   }, [profile.verifyToken])
@@ -36,7 +36,7 @@ export function IdCardPreview({ profile }) {
   }, [])
 
   const photoUrl = profile.photoFileId
-    ? `/api/member/photo/${encodeURIComponent(profile.email)}?v=${profile.photoFileId}`
+    ? `/api/member/photo/${encodeURIComponent(profile.sacEmail)}?photoFileId=${profile.photoFileId}`
     : null
 
   const vigenciaYear = profile.expirationDate
@@ -46,10 +46,10 @@ export function IdCardPreview({ profile }) {
   const cardData = buildCardData({
     member: profile,
     images: {
-      logo: '/static/images/sac-main-logo.png',
+      logo: '/static/images/sac-white-logo.png',
       photo: photoUrl,
       qr: qrDataUrl,
-      background: `/static/images/id-bg-${vigenciaYear}.png`,
+      element: '/static/images/sac-id-element.png',
     },
   })
 

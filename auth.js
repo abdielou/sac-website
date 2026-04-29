@@ -73,6 +73,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.isMember = email?.endsWith('@sociedadastronomia.com') || false
         token.isAdmin = isAuthorizedEmail(email) || false
 
+        // For members, also store the sign-in email as their SAC email
+        // (members sign in with their SAC Google account, so this IS their SAC email)
+        if (token.isMember) {
+          token.sacEmail = email
+        }
+
         return token
       }
 
@@ -118,7 +124,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.id
       }
       session.accessToken = token.accessToken
-      
+
       // Add user permissions to session for client-side access control
       if (session.user?.email) {
         session.user.role = getUserRole(session.user.email)
@@ -126,10 +132,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.accessibleActions = getAllPermissions(session.user.email)
         session.user.isAdmin = canAccessDashboard(session.user.email)
         session.user.isFullAdmin = isAdmin(session.user.email)
-        // Member flag from JWT
+        // Member flag and SAC email from JWT
         session.user.isMember = token.isMember || false
+        session.user.sacEmail = token.sacEmail || session.user.email
       }
-      
+
       return session
     },
   },
@@ -142,4 +149,3 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     maxAge: 24 * 60 * 60, // 24 hours
   },
 })
-
