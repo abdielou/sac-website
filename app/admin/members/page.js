@@ -635,6 +635,13 @@ function MembersContent() {
                           )}
                         </div>
                       )}
+                      {member.phone && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-1">
+                          <a href={`tel:${member.phone}`} className="hover:underline">
+                            {member.phone}
+                          </a>
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <StatusBadge status={member.status} />
