@@ -34,17 +34,6 @@ export const POST = auth(async function POST(req) {
     return permissionError
   }
 
-  const accessToken = req.auth.accessToken
-  if (!accessToken) {
-    return NextResponse.json(
-      {
-        error: 'Sesion expirada',
-        details: 'No access token in session. Please sign out and sign in again.',
-      },
-      { status: 401 }
-    )
-  }
-
   try {
     const body = await req.json()
 
@@ -71,7 +60,7 @@ export const POST = auth(async function POST(req) {
       )
     }
 
-    const result = await callAppsScript(accessToken, 'create_workspace_account', {
+    const result = await callAppsScript(null, 'create_workspace_account', {
       email: body.email,
       firstName: body.firstName,
       initial: body.initial || '',

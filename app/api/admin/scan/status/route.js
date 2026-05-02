@@ -17,19 +17,8 @@ export const GET = auth(async function GET(req) {
     )
   }
 
-  const accessToken = req.auth.accessToken
-  if (!accessToken) {
-    return NextResponse.json(
-      {
-        error: 'Sesión expirada',
-        details: 'No access token in session. Please sign out and sign in again.',
-      },
-      { status: 401 }
-    )
-  }
-
   try {
-    const result = await callAppsScript(accessToken, 'scan_status', {}, { timeout: 10000 })
+    const result = await callAppsScript(null, 'scan_status', {}, { timeout: 10000 })
     return NextResponse.json(result)
   } catch (error) {
     return NextResponse.json(
