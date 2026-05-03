@@ -27,21 +27,7 @@ export const POST = auth(async function POST(req) {
     return permissionError
   }
 
-  const accessToken = req.auth.accessToken
-  if (!accessToken) {
-    return NextResponse.json(
-      {
-        error: 'Sesión expirada',
-        details: 'No access token in session. Please sign out and sign in again.',
-      },
-      { status: 401 }
-    )
-  }
-
-  // Fire and forget — kick off the Apps Script scan without awaiting the result.
-  // The HTTP request payload is small and sent immediately; Google processes it
-  // independently regardless of whether this function stays alive.
-  callAppsScript(accessToken, 'scan')
+  callAppsScript(null, 'scan')
     .then(() => invalidateCache())
     .catch(() => {})
 
