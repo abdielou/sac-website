@@ -99,6 +99,21 @@ const navItems = [
       </svg>
     ),
   },
+  {
+    href: '/admin/media',
+    label: 'Media',
+    feature: 'media',
+    icon: (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 20 20"
+        fill="currentColor"
+        className="w-5 h-5"
+      >
+        <path d="M18 3a2 2 0 00-2 2v14a2 2 0 002 2 2 2 0 002-2 2 2 0 00-2-2 2 2 0 00-2-2 2 2 0 00-2 2 2 2 0 002 2 2 2 0 002-2V5a2 2 0 002 2 2 2 0 002-2 2 2 0 00-2 2 2 2 0 00-2-2V5a2 2 0 002 2zm5.5 6l-6 3.87L9 9.87V12l7.5-4.5V9z" />
+      </svg>
+    ),
+  },
 ]
 
 /**
