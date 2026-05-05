@@ -55,9 +55,7 @@ export async function GET(request, { params }) {
     }
 
     // Full file
-    const result = await s3
-      .getObject({ Bucket: bucket, Key: entry.s3Key })
-      .promise()
+    const result = await s3.getObject({ Bucket: bucket, Key: entry.s3Key }).promise()
 
     return new NextResponse(result.Body, {
       status: 200,
