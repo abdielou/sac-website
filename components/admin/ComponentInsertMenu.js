@@ -44,6 +44,18 @@ const COMPONENTS = [
     placeholder: 'URL del tweet',
   },
   {
+    id: 'media',
+    label: 'Media',
+    icon: (
+      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M18 3a2 2 0 00-2 2v14a2 2 0 002 2 2 2 0 002-2 2 2 0 00-2-2 2 2 0 00-2-2 2 2 0 00-2 2 2 2 0 002 2 2 2 0 002-2V5a2 2 0 002 2 2 2 0 002-2 2 2 0 00-2 2 2 2 0 00-2-2V5a2 2 0 002 2zm5.5 6l-6 3.87L9 9.87V12l7.5-4.5V9z" />
+      </svg>
+    ),
+    needsUrl: true,
+    template: (url) => `<MediaPlayer url="${url}" />`,
+    placeholder: '/media/my-video',
+  },
+  {
     id: 'toc',
     label: 'Tabla de contenidos',
     icon: (

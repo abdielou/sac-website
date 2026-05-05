@@ -1,5 +1,7 @@
 'use client'
 
+import MediaPlayer from '@/components/MediaPlayer'
+
 function getYouTubeId(url) {
   // youtu.be/ID, youtube.com/watch?v=ID, youtube.com/embed/ID
   // prettier-ignore
@@ -45,6 +47,11 @@ const ResponsiveReactPlayer = ({ url }) => {
         />
       </div>
     )
+  }
+
+  // Internal media URLs
+  if (url.includes('/media/')) {
+    return <MediaPlayer url={url} />
   }
 
   // Fallback: link to the video
