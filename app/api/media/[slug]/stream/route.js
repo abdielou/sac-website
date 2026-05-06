@@ -28,28 +28,20 @@ export async function GET(request, { params }) {
 
   try {
     if (range) {
-      // Parse byte range: bytes=start-end
-      const match = range.match(/^bytes=(\d+)-(\d*)$/)
-      if (!match) {
-        return new NextResponse(null, { status: 416 })
-      }
-      const start = parseInt(match[1], 10)
-      const end = match[2] ? parseInt(match[2], 10) : undefined
-
+      // Forward the Range header to S3 and trust its response headers.
+      // This correctly handles partial content, open ranges (bytes=0-), and
+      // returns the proper Content-Range / Content-Length for the slice.
       const result = await s3
         .getObject({ Bucket: bucket, Key: entry.s3Key, Range: range })
         .promise()
-
-      const contentLength = end !== undefined ? end - start + 1 : result.ContentLength - start
-      const contentRange = `bytes ${start}-${end !== undefined ? end : result.ContentLength - 1}/${result.ContentLength}`
 
       return new NextResponse(result.Body, {
         status: 206,
         headers: {
           'Content-Type': result.ContentType || 'video/mp4',
           'Accept-Ranges': 'bytes',
-          'Content-Range': contentRange,
-          'Content-Length': contentLength,
+          'Content-Range': result.ContentRange,
+          'Content-Length': result.ContentLength,
         },
       })
     }
