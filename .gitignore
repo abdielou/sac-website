@@ -74,3 +74,4 @@ scripts/member-emails.json
 
 .vercel
 .playwright-mcp/
+docs/*
