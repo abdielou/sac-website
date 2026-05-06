@@ -24,7 +24,7 @@ function createThumbnailPreview(file) {
  */
 export default function MediaUploadZone({
   uploadUrl = '/api/admin/media/upload',
-  accept = 'image/*',
+  accept = 'video/*,image/*',
   onUpload,
 }) {
   const inputRef = useRef(null)
@@ -95,24 +95,57 @@ export default function MediaUploadZone({
           })
         }
 
-        // Build media entry (title from filename)
+        // Build title from filename (used for creation)
         const title = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ')
-        const slug = title
-          .toLowerCase()
-          .replace(/[^\w\s-]/g, '')
-          .replace(/\s+/g, '-')
-          .replace(/-+/g, '-')
-          .trim()
 
-        // Generate thumbnail from preview if image
-        const thumbnail = preview || null
+        // Create the persistent media entry on the server so it survives page reload
+        let mediaEntry
+        try {
+          const createRes = await fetch('/api/admin/media', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title,
+              s3Key: s3Key || file.name,
+              description: '',
+              thumbnail: preview || null,
+            }),
+          })
 
-        const mediaEntry = {
-          slug,
-          title,
-          description: '',
-          thumbnail,
-          s3Key: s3Key || file.name,
+          if (createRes.ok) {
+            const data = await createRes.json()
+            mediaEntry = data.entry
+          } else {
+            // Fallback to local entry if creation fails (keeps optimistic behavior)
+            const slug = title
+              .toLowerCase()
+              .replace(/[^\w\s-]/g, '')
+              .replace(/\s+/g, '-')
+              .replace(/-+/g, '-')
+              .trim()
+            mediaEntry = {
+              slug,
+              title,
+              description: '',
+              thumbnail: preview || null,
+              s3Key: s3Key || file.name,
+            }
+          }
+        } catch {
+          // Network error fallback
+          const slug = title
+            .toLowerCase()
+            .replace(/[^\w\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+            .trim()
+          mediaEntry = {
+            slug,
+            title,
+            description: '',
+            thumbnail: preview || null,
+            s3Key: s3Key || file.name,
+          }
         }
 
         window.dispatchEvent(new CustomEvent('media-uploaded', { detail: { media: mediaEntry } }))

@@ -168,7 +168,7 @@ function MediaContent() {
       {/* Upload zone (only for users with write_media) */}
       {canManage && (
         <div className="mb-8">
-          <MediaUploadZone uploadUrl="/api/admin/media/upload" accept="image/*" />
+          <MediaUploadZone uploadUrl="/api/admin/media/upload" accept="video/*,image/*" />
         </div>
       )}
 
