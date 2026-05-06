@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
+import { useSession } from 'next-auth/react'
 import PermissionGate from '@/components/admin/PermissionGate'
 import MediaCard from '@/components/admin/MediaCard'
 import MediaUploadZone from '@/components/admin/MediaUploadZone'
@@ -49,6 +50,9 @@ function ConfirmDialog({ isOpen, title, message, onConfirm, onCancel }) {
  * MediaContent - Main media manager content.
  */
 function MediaContent() {
+  const { data: session } = useSession()
+  const canManage = session?.user?.accessibleActions?.includes('write_media') ?? false
+
   const [media, setMedia] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -161,10 +165,12 @@ function MediaContent() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Multimedia</h1>
       </div>
 
-      {/* Upload zone */}
-      <div className="mb-8">
-        <MediaUploadZone uploadUrl="/api/admin/media/upload" accept="image/*" />
-      </div>
+      {/* Upload zone (only for users with write_media) */}
+      {canManage && (
+        <div className="mb-8">
+          <MediaUploadZone uploadUrl="/api/admin/media/upload" accept="image/*" />
+        </div>
+      )}
 
       {/* Error state */}
       {error && !isLoading && (
@@ -203,7 +209,9 @@ function MediaContent() {
             />
           </svg>
           <p className="text-gray-500 dark:text-gray-400">
-            No hay archivos multimedia. Sube una imagen para comenzar.
+            {canManage
+              ? 'No hay archivos multimedia. Sube un video para comenzar.'
+              : 'No hay archivos multimedia disponibles.'}
           </p>
         </div>
       ) : (
@@ -212,6 +220,7 @@ function MediaContent() {
             <MediaCard
               key={m.slug}
               media={m}
+              canManage={canManage}
               onEdit={() => handleEdit(m)}
               onDelete={() => handleDeleteClick(m)}
             />
@@ -247,10 +256,11 @@ function MediaContent() {
 
 /**
  * MediaPage - Main export with PermissionGate.
+ * Allows users with read_media (view-only) or write_media (full management).
  */
 export default function MediaPage() {
   return (
-    <PermissionGate permission="write_media">
+    <PermissionGate permission={['read_media', 'write_media']}>
       <MediaContent />
     </PermissionGate>
   )

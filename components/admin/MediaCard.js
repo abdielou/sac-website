@@ -26,10 +26,11 @@ function formatDate(dateStr) {
  *
  * @param {object} props
  * @param {object} props.media - Media entry { slug, title, description, thumbnail, publishedAt, s3Key }
+ * @param {boolean} [props.canManage] - Whether the user can edit/delete (defaults to true for backward compat)
  * @param {() => void} props.onEdit - Called when Edit is clicked
  * @param {() => void} props.onDelete - Called when Eliminar is clicked
  */
-export default function MediaCard({ media, onEdit, onDelete }) {
+export default function MediaCard({ media, canManage = true, onEdit, onDelete }) {
   const [copyLabel, setCopyLabel] = useState('Copiar link')
 
   const handleCopyLink = useCallback(async () => {
@@ -88,21 +89,23 @@ export default function MediaCard({ media, onEdit, onDelete }) {
 
       {/* Actions */}
       <div className="px-4 pb-4 flex gap-2">
-        <button
-          type="button"
-          onClick={onEdit}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-            />
-          </svg>
-          Editar
-        </button>
+        {canManage && (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              />
+            </svg>
+            Editar
+          </button>
+        )}
 
         <button
           type="button"
@@ -120,21 +123,23 @@ export default function MediaCard({ media, onEdit, onDelete }) {
           {copyLabel}
         </button>
 
-        <button
-          type="button"
-          onClick={onDelete}
-          className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-4v6m1-4V5a2 2 0 10-4 0v1h4z"
-            />
-          </svg>
-          Eliminar
-        </button>
+        {canManage && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-4v6m1-4V5a2 2 0 10-4 0v1h4z"
+              />
+            </svg>
+            Eliminar
+          </button>
+        )}
       </div>
     </div>
   )
