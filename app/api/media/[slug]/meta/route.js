@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getMediaEntry } from '@/lib/media-s3'
 
 export async function GET(request, { params }) {
-  const { slug } = params
+  const { slug } = await params
   const entry = await getMediaEntry(slug)
 
   if (!entry) {

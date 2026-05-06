@@ -15,7 +15,7 @@ function getBucket() {
 }
 
 export async function GET(request, { params }) {
-  const { slug } = params
+  const { slug } = await params
   const entry = await getMediaEntry(slug)
 
   if (!entry) {

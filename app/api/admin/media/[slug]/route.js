@@ -19,7 +19,7 @@ export const GET = auth(async function GET(req, { params }) {
   const readError = checkReadAccess(req, 'media')
   if (readError) return readError
 
-  const { slug } = params
+  const { slug } = await params
   const entry = await getMediaEntry(slug)
 
   if (!entry) {
@@ -47,7 +47,7 @@ export const PUT = auth(async function PUT(req, { params }) {
     return permissionError
   }
 
-  const { slug } = params
+  const { slug } = await params
   const existing = await getMediaEntry(slug)
 
   if (!existing) {
@@ -96,7 +96,7 @@ export const DELETE = auth(async function DELETE(req, { params }) {
     return permissionError
   }
 
-  const { slug } = params
+  const { slug } = await params
   const existing = await getMediaEntry(slug)
 
   if (!existing) {

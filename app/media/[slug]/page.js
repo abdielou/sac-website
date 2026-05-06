@@ -2,7 +2,8 @@ import { getMediaEntry } from '@/lib/media-s3'
 import MediaPlayer from '@/components/MediaPlayer'
 
 export async function generateMetadata({ params }) {
-  const entry = await getMediaEntry(params.slug)
+  const { slug } = await params
+  const entry = await getMediaEntry(slug)
   if (!entry) {
     return { title: 'Video no encontrado' }
   }
@@ -13,7 +14,8 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function MediaPage({ params }) {
-  const entry = await getMediaEntry(params.slug)
+  const { slug } = await params
+  const entry = await getMediaEntry(slug)
 
   if (!entry) {
     return (
