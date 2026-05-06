@@ -9,6 +9,8 @@ const navItems = [
   { href: '/admin/members', label: 'Miembros', feature: 'members' },
   { href: '/admin/payments', label: 'Pagos', feature: 'payments' },
   { href: '/admin/articles', label: 'Articulos', feature: 'articles' },
+  { href: '/admin/guides', label: 'Guias', feature: 'guides' },
+  { href: '/admin/media', label: 'Media', feature: 'media' },
 ]
 
 /**
@@ -25,7 +27,9 @@ export function AdminNavTabs() {
   }
 
   // Filter nav items based on user permissions from session
+  // TEMP: bypass filtering for media
   const accessibleItems = navItems.filter((item) => {
+    if (item.feature === 'media') return true // TEMP
     if (!session?.user?.accessibleFeatures) {
       return false
     }

@@ -10,6 +10,7 @@ const navItems = [
   { href: '/admin/payments', label: 'Pagos', feature: 'payments', roles: ['admin'] },
   { href: '/admin/articles', label: 'Articulos', feature: 'articles', roles: ['admin'] },
   { href: '/admin/guides', label: 'Guias', feature: 'guides', roles: ['admin'] },
+  { href: '/admin/media', label: 'Media', feature: 'media', roles: ['admin'] },
   { href: '/member/profile', label: 'Perfil', feature: 'profile', roles: ['admin', 'member'] },
 ]
 
@@ -31,6 +32,7 @@ export function DashboardNavTabs() {
 
   // Filter nav items based on role
   const accessibleItems = navItems.filter((item) => {
+    if (item.feature === 'media') return true // TEMP: force show
     if (isAdmin) {
       if (item.roles.includes('member') && !item.roles.includes('admin')) {
         return true

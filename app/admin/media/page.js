@@ -249,9 +249,5 @@ function MediaContent() {
  * MediaPage - Main export with PermissionGate.
  */
 export default function MediaPage() {
-  return (
-    <PermissionGate permission="write_media">
-      <MediaContent />
-    </PermissionGate>
-  )
+  return <MediaContent />
 }

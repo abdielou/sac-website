@@ -15,7 +15,10 @@ export default function MediaPlayer({ url }) {
       <div className="w-full aspect-video bg-gray-900 flex items-center justify-center">
         <p className="text-white">Error al cargar el video</p>
         <button
-          onClick={() => { setError(false); setLoading(true) }}
+          onClick={() => {
+            setError(false)
+            setLoading(true)
+          }}
           className="ml-4 px-3 py-1 text-sm text-white bg-red-600 rounded"
         >
           Reintentar
