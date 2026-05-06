@@ -76,7 +76,13 @@ function PaymentsContent() {
     },
   })
 
-  const { data: apiData, isPending, isError, error, refetch } = usePayments({
+  const {
+    data: apiData,
+    isPending,
+    isError,
+    error,
+    refetch,
+  } = usePayments({
     source: source || undefined,
     search: undefined,
     page: 1,

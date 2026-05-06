@@ -38,7 +38,9 @@ export default function P() {
       <p style={{ textAlign: 'center', marginBottom: 20, fontSize: 14 }}>
         Longest name in DB: <strong>Maria de los Angeles Medina Garcia</strong>
       </p>
-      <div style={{ width: CARD.WIDTH_PT * scale, height: CARD.HEIGHT_PT * scale, margin: '0 auto' }}>
+      <div
+        style={{ width: CARD.WIDTH_PT * scale, height: CARD.HEIGHT_PT * scale, margin: '0 auto' }}
+      >
         <div
           style={{
             width: CARD.WIDTH_PT,
