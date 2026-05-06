@@ -32,7 +32,6 @@ export function DashboardNavTabs() {
 
   // Filter nav items based on role
   const accessibleItems = navItems.filter((item) => {
-    if (item.feature === 'media') return true // TEMP: force show
     if (isAdmin) {
       if (item.roles.includes('member') && !item.roles.includes('admin')) {
         return true

@@ -4,7 +4,6 @@ import {
   canAccessDashboard,
   getAccessibleFeatures,
   getAllPermissions,
-  getUserRole,
   isAdmin,
 } from './lib/permissions.js'
 
@@ -127,7 +126,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
       // Add user permissions to session for client-side access control
       if (session.user?.email) {
-        session.user.role = getUserRole(session.user.email)
         session.user.accessibleFeatures = getAccessibleFeatures(session.user.email)
         session.user.accessibleActions = getAllPermissions(session.user.email)
         session.user.isAdmin = canAccessDashboard(session.user.email)

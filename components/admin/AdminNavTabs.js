@@ -27,9 +27,7 @@ export function AdminNavTabs() {
   }
 
   // Filter nav items based on user permissions from session
-  // TEMP: bypass filtering for media
   const accessibleItems = navItems.filter((item) => {
-    if (item.feature === 'media') return true // TEMP
     if (!session?.user?.accessibleFeatures) {
       return false
     }

@@ -116,7 +116,7 @@ const navItems = [
         fill="currentColor"
         className="w-5 h-5"
       >
-        <path d="M18 3a2 2 0 00-2 2v14a2 2 0 002 2 2 2 0 002-2 2 2 0 00-2-2 2 2 0 00-2-2 2 2 0 00-2 2 2 2 0 002 2 2 2 0 002-2V5a2 2 0 002 2 2 2 0 002-2 2 2 0 00-2 2 2 2 0 00-2-2V5a2 2 0 002 2zm5.5 6l-6 3.87L9 9.87V12l7.5-4.5V9z" />
+        <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
       </svg>
     ),
   },
@@ -162,7 +162,6 @@ export function DashboardSidebar() {
 
   // Filter nav items based on role
   const accessibleItems = navItems.filter((item) => {
-    if (item.feature === 'media') return true // TEMP: force show
     if (isAdmin) {
       // Admin: show admin-only items filtered by accessibleFeatures, plus shared items
       if (item.roles.includes('member') && !item.roles.includes('admin')) {
