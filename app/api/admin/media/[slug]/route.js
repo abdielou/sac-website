@@ -1,6 +1,14 @@
 import { auth } from '../../../../../auth'
 import { NextResponse } from 'next/server'
-import { getMediaEntry, putMediaEntry, deleteMediaEntry } from '../../../../../lib/media-s3'
+import {
+  getMediaEntry,
+  putMediaEntry,
+  deleteMediaEntry,
+  deleteMediaAssetObjects,
+  deleteReplacedMediaThumbnail,
+  renameMediaEntry,
+} from '../../../../../lib/media-s3'
+import { slugifyMediaName } from '../../../../../lib/media-slug'
 import { checkPermission, checkReadAccess } from '../../../../../lib/api-permissions'
 import { Actions } from '../../../../../lib/permissions'
 import { revalidatePath } from 'next/cache'
@@ -32,7 +40,11 @@ export const GET = auth(async function GET(req, { params }) {
 /**
  * PUT /api/admin/media/[slug]
  *
- * Body: { title, description, thumbnail, duration, publishedAt }
+ * Body: { title, description, thumbnail, duration, publishedAt, slug }
+ *
+ * If `body.slug` is provided and (after sanitizing) differs from the path
+ * slug, the S3 video object is moved to a new key in the same directory and
+ * the public permalink changes. The old `/media/<slug>` URL stops working.
  */
 export const PUT = auth(async function PUT(req, { params }) {
   if (!req.auth) {
@@ -56,19 +68,47 @@ export const PUT = auth(async function PUT(req, { params }) {
 
   try {
     const body = await req.json()
+
+    let workingEntry = existing
+    let didRename = false
+    if (typeof body.slug === 'string' && body.slug.trim()) {
+      const requestedSlug = slugifyMediaName(body.slug)
+      if (!requestedSlug) {
+        return NextResponse.json(
+          { error: 'El nombre de archivo solicitado no es valido' },
+          { status: 400 }
+        )
+      }
+      if (requestedSlug !== existing.slug) {
+        try {
+          workingEntry = await renameMediaEntry(existing.slug, requestedSlug)
+          didRename = true
+        } catch (renameError) {
+          const message = renameError?.message || 'No se pudo renombrar el archivo'
+          const status = /ya existe/i.test(message) ? 409 : 500
+          return NextResponse.json({ error: message }, { status })
+        }
+      }
+    }
+
     const updated = {
-      ...existing,
-      title: body.title?.trim() || existing.title,
-      description: body.description?.trim() || existing.description,
-      thumbnail: body.thumbnail?.trim() || existing.thumbnail,
-      duration: body.duration !== undefined ? body.duration : existing.duration,
-      publishedAt: body.publishedAt || existing.publishedAt,
+      ...workingEntry,
+      title: body.title?.trim() || workingEntry.title,
+      description: body.description?.trim() || workingEntry.description,
+      thumbnail: body.thumbnail?.trim() || workingEntry.thumbnail,
+      duration: body.duration !== undefined ? body.duration : workingEntry.duration,
+      publishedAt: body.publishedAt || workingEntry.publishedAt,
     }
 
     await putMediaEntry(updated)
+    await deleteReplacedMediaThumbnail(existing, updated)
 
     revalidatePath('/media')
     revalidatePath('/')
+    if (didRename) {
+      revalidatePath(`/media/${existing.slug}`)
+      revalidatePath(`/media/${updated.slug}`)
+    }
 
     return NextResponse.json({ entry: updated })
   } catch (error) {
@@ -104,6 +144,7 @@ export const DELETE = auth(async function DELETE(req, { params }) {
   }
 
   try {
+    await deleteMediaAssetObjects(existing)
     await deleteMediaEntry(slug)
 
     revalidatePath('/media')

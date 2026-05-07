@@ -119,11 +119,14 @@ function MediaContent() {
   }, [])
 
   // Save edited media
-  const handleSaveEdit = useCallback(async ({ slug, title, description, thumbnail }) => {
+  const handleSaveEdit = useCallback(async ({ slug, title, description, thumbnail, newSlug }) => {
     try {
       const body = { title, description }
       if (thumbnail?.trim()) {
         body.thumbnail = thumbnail.trim()
+      }
+      if (newSlug?.trim()) {
+        body.slug = newSlug.trim()
       }
       const res = await fetch(`/api/admin/media/${slug}`, {
         method: 'PUT',
@@ -136,7 +139,7 @@ function MediaContent() {
         throw new Error(body.error || 'Error al guardar')
       }
       const { entry } = await res.json()
-      setMedia((prev) => prev.map((m) => (m.slug === slug ? { ...m, ...entry } : m)))
+      setMedia((prev) => prev.map((m) => (m.slug === slug ? entry : m)))
       setEditIsOpen(false)
       setEditTarget(null)
     } catch (err) {

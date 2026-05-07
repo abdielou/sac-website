@@ -9,7 +9,12 @@ import os from 'os'
 
 import { checkPermission } from '../../../../../lib/api-permissions'
 import { Actions } from '../../../../../lib/permissions'
-import { getMediaEntry, putMediaEntry, getMediaS3Client } from '../../../../../lib/media-s3'
+import {
+  getMediaEntry,
+  putMediaEntry,
+  getMediaS3Client,
+  deleteReplacedMediaThumbnail,
+} from '../../../../../lib/media-s3'
 import { uploadPosterJpegBytes } from '../../../../../lib/media-poster-s3'
 import { extractFrameToJpegFile, isFfmpegAvailable } from '../../../../../lib/video-poster-ffmpeg'
 import { revalidatePath } from 'next/cache'
@@ -110,6 +115,7 @@ export const POST = auth(async function POST(req) {
 
     const updated = { ...entry, thumbnail: url }
     await putMediaEntry(updated)
+    await deleteReplacedMediaThumbnail(entry, updated)
 
     revalidatePath('/media')
     revalidatePath('/')

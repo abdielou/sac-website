@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
+import { slugifyMediaName } from '@/lib/media-slug'
 
 const inputClasses =
   'w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
@@ -73,6 +74,7 @@ function resizePosterFile(file) {
 export default function MediaEditModal({ isOpen, onClose, media, onSave }) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [filename, setFilename] = useState('')
   const [posterPick, setPosterPick] = useState(null)
   const [posterError, setPosterError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
@@ -82,6 +84,7 @@ export default function MediaEditModal({ isOpen, onClose, media, onSave }) {
     if (!isOpen || !media) return
     setTitle(media.title || '')
     setDescription(media.description || '')
+    setFilename(media.slug || '')
     setPosterPick((prev) => {
       if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl)
       return null
@@ -90,6 +93,12 @@ export default function MediaEditModal({ isOpen, onClose, media, onSave }) {
     setIsSaving(false)
     setPosterGenBusy(false)
   }, [isOpen, media])
+
+  const sanitizedFilename = useMemo(() => slugifyMediaName(filename), [filename])
+  const slugChanged = Boolean(
+    media?.slug && sanitizedFilename && sanitizedFilename !== media.slug
+  )
+  const filenameInvalid = Boolean(filename.trim()) && !sanitizedFilename
 
   useEffect(() => {
     return () => {
@@ -151,6 +160,10 @@ export default function MediaEditModal({ isOpen, onClose, media, onSave }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!title.trim()) return
+    if (filenameInvalid) {
+      setPosterError('El nombre de archivo no es valido')
+      return
+    }
 
     const pick = posterPick
     setIsSaving(true)
@@ -177,6 +190,7 @@ export default function MediaEditModal({ isOpen, onClose, media, onSave }) {
         title: title.trim(),
         description: description.trim(),
         ...(thumbnail ? { thumbnail } : {}),
+        ...(slugChanged ? { newSlug: sanitizedFilename } : {}),
       })
 
       if (pick?.previewUrl) {
@@ -276,6 +290,34 @@ export default function MediaEditModal({ isOpen, onClose, media, onSave }) {
               />
             </div>
 
+            {/* Filename / permalink */}
+            <div>
+              <label className={labelClasses}>Nombre de archivo (enlace permanente)</label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                Define la URL publica: <code>/media/{sanitizedFilename || media?.slug}</code>
+              </p>
+              <input
+                type="text"
+                value={filename}
+                onChange={(e) => setFilename(e.target.value)}
+                className={inputClasses}
+                placeholder="nombre-del-archivo"
+                maxLength={120}
+              />
+              {filenameInvalid && (
+                <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                  El nombre debe contener letras, numeros o guiones.
+                </p>
+              )}
+              {slugChanged && (
+                <div className="mt-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                  <p className="text-xs text-amber-800 dark:text-amber-200">
+                    <strong>Aviso:</strong> al guardar, el enlace antiguo dejara de funcionar.
+                  </p>
+                </div>
+              )}
+            </div>
+
             {/* Description */}
             <div>
               <label className={labelClasses}>Descripcion</label>
@@ -304,7 +346,7 @@ export default function MediaEditModal({ isOpen, onClose, media, onSave }) {
             </button>
             <button
               type="submit"
-              disabled={isSaving || !title.trim()}
+              disabled={isSaving || !title.trim() || filenameInvalid}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
             >
               {isSaving && (
