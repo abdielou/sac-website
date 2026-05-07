@@ -10,6 +10,7 @@ const navItems = [
   { href: '/admin/payments', label: 'Pagos', feature: 'payments', roles: ['admin'] },
   { href: '/admin/articles', label: 'Articulos', feature: 'articles', roles: ['admin'] },
   { href: '/admin/guides', label: 'Guias', feature: 'guides', roles: ['admin'] },
+  { href: '/admin/media', label: 'Media', feature: 'media', roles: ['admin'] },
   { href: '/member/profile', label: 'Perfil', feature: 'profile', roles: ['admin', 'member'] },
 ]
 

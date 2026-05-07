@@ -9,6 +9,8 @@ const navItems = [
   { href: '/admin/members', label: 'Miembros', feature: 'members' },
   { href: '/admin/payments', label: 'Pagos', feature: 'payments' },
   { href: '/admin/articles', label: 'Articulos', feature: 'articles' },
+  { href: '/admin/guides', label: 'Guias', feature: 'guides' },
+  { href: '/admin/media', label: 'Media', feature: 'media' },
 ]
 
 /**

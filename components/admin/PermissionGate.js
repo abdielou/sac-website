@@ -8,7 +8,7 @@ import { useEffect } from 'react'
  * PermissionGate - Client-side route guard for admin feature pages.
  * Redirects to /admin if user lacks the required permission.
  *
- * @param {string} permission - Required permission (e.g., 'read_members', 'write_guides')
+ * @param {string | string[]} permission - Required permission (e.g., 'read_members') or array of allowed permissions (any match)
  * @param {React.ReactNode} children - Page content to render if permitted
  */
 export default function PermissionGate({ permission, children }) {
@@ -16,7 +16,8 @@ export default function PermissionGate({ permission, children }) {
   const router = useRouter()
 
   const perms = session?.user?.accessibleActions || []
-  const hasPermission = perms.includes(permission)
+  const allowed = Array.isArray(permission) ? permission : [permission]
+  const hasPermission = allowed.some((p) => perms.includes(p))
 
   useEffect(() => {
     if (status === 'authenticated' && !hasPermission) {
