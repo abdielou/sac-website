@@ -101,9 +101,7 @@ function MediaContent() {
     const handlePosterReady = (e) => {
       const entry = e.detail?.media
       if (!entry?.slug) return
-      setMedia((prev) =>
-        prev.map((m) => (m.slug === entry.slug ? { ...m, ...entry } : m))
-      )
+      setMedia((prev) => prev.map((m) => (m.slug === entry.slug ? { ...m, ...entry } : m)))
       setEditTarget((prev) => (prev?.slug === entry.slug ? { ...prev, ...entry } : prev))
     }
     window.addEventListener('media-poster-ready', handlePosterReady)

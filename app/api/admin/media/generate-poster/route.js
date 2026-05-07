@@ -39,7 +39,8 @@ export const POST = auth(async function POST(req) {
     return NextResponse.json(
       {
         error: 'FFmpeg no disponible',
-        details: 'Configura FFmpeg en PATH o define FFMPEG_PATH para generar miniaturas en servidor',
+        details:
+          'Configura FFmpeg en PATH o define FFMPEG_PATH para generar miniaturas en servidor',
       },
       { status: 503 }
     )
@@ -70,7 +71,10 @@ export const POST = auth(async function POST(req) {
 
   const bucket = getBucket()
   if (!bucket) {
-    return NextResponse.json({ error: 'S3_IMAGES_BUCKET_NAME no esta configurado' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'S3_IMAGES_BUCKET_NAME no esta configurado' },
+      { status: 500 }
+    )
   }
 
   let tmpDir = null
@@ -82,7 +86,10 @@ export const POST = auth(async function POST(req) {
     const length = typeof head.ContentLength === 'number' ? head.ContentLength : 0
     if (length > MAX_DOWNLOAD_BYTES) {
       return NextResponse.json(
-        { error: 'El archivo de video es demasiado grande para procesar aqui', details: `${length}b` },
+        {
+          error: 'El archivo de video es demasiado grande para procesar aqui',
+          details: `${length}b`,
+        },
         { status: 413 }
       )
     }

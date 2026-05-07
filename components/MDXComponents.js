@@ -5,6 +5,7 @@ import TOCInline from './TOCInline'
 import Pre from './Pre'
 import ResponsiveReactPlayer from './ResponsiveReactPlayer'
 import TwitterEmbed from './TwitterEmbed'
+import MediaPlayer from './MediaPlayer'
 
 export const MDXComponents = {
   Image,
@@ -14,6 +15,7 @@ export const MDXComponents = {
   pre: Pre,
   ResponsiveReactPlayer,
   TwitterEmbed,
+  MediaPlayer,
 }
 
 export default MDXComponents

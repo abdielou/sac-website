@@ -519,8 +519,9 @@ export default function MediaUploadZone({
                 Arrastra un video aqui
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto leading-relaxed">
-                Si falta vista previa, el servidor usa <span className="text-gray-700 dark:text-gray-300">FFmpeg</span>{' '}
-                (cuando existe en PATH). Recomendado: MP4 con H.264.
+                Si falta vista previa, el servidor usa{' '}
+                <span className="text-gray-700 dark:text-gray-300">FFmpeg</span> (cuando existe en
+                PATH). Recomendado: MP4 con H.264.
               </p>
             </div>
           </div>

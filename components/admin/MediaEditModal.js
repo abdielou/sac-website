@@ -8,6 +8,59 @@ const inputClasses =
 
 const labelClasses = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'
 
+const POSTER_MAX_WIDTH = 640
+const POSTER_MAX_HEIGHT = 360
+const POSTER_QUALITY = 0.82
+const POSTER_MAX_INPUT_SIZE = 25 * 1024 * 1024
+
+function resizePosterFile(file) {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+    const objectUrl = URL.createObjectURL(file)
+
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl)
+
+      const scale = Math.min(
+        1,
+        POSTER_MAX_WIDTH / image.naturalWidth,
+        POSTER_MAX_HEIGHT / image.naturalHeight
+      )
+      const width = Math.max(1, Math.round(image.naturalWidth * scale))
+      const height = Math.max(1, Math.round(image.naturalHeight * scale))
+
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        reject(new Error('No se pudo procesar la imagen'))
+        return
+      }
+
+      ctx.drawImage(image, 0, 0, width, height)
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error('No se pudo procesar la imagen'))
+            return
+          }
+          resolve(new File([blob], 'poster.jpg', { type: 'image/jpeg' }))
+        },
+        'image/jpeg',
+        POSTER_QUALITY
+      )
+    }
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error('No se pudo leer la imagen'))
+    }
+
+    image.src = objectUrl
+  })
+}
+
 /**
  * MediaEditModal - Modal dialog for editing media entry metadata.
  *
@@ -47,19 +100,25 @@ export default function MediaEditModal({ isOpen, onClose, media, onSave }) {
     }
   }, [])
 
-  const handlePosterInput = (e) => {
+  const handlePosterInput = async (e) => {
     const f = e.target.files?.[0]
     e.target.value = ''
     setPosterError('')
     if (!f || !f.type.startsWith('image/')) return
-    if (f.size > 3 * 1024 * 1024) {
-      setPosterError('La imagen no puede pesar mas de 3MB')
+    if (f.size > POSTER_MAX_INPUT_SIZE) {
+      setPosterError('La imagen no puede pesar mas de 25MB')
       return
     }
-    setPosterPick((prev) => {
-      if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl)
-      return { file: f, previewUrl: URL.createObjectURL(f) }
-    })
+
+    try {
+      const resized = await resizePosterFile(f)
+      setPosterPick((prev) => {
+        if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl)
+        return { file: resized, previewUrl: URL.createObjectURL(resized) }
+      })
+    } catch (err) {
+      setPosterError(err.message || 'No se pudo procesar la imagen')
+    }
   }
 
   const handleFfmpegPoster = async () => {
@@ -78,7 +137,9 @@ export default function MediaEditModal({ isOpen, onClose, media, onSave }) {
         throw new Error(body.error || body.details || `Error ${res.status}`)
       }
       if (body.entry) {
-        window.dispatchEvent(new CustomEvent('media-poster-ready', { detail: { media: body.entry } }))
+        window.dispatchEvent(
+          new CustomEvent('media-poster-ready', { detail: { media: body.entry } })
+        )
       }
     } catch (err) {
       setPosterError(err.message || 'Error al generar miniatura')
@@ -178,7 +239,7 @@ export default function MediaEditModal({ isOpen, onClose, media, onSave }) {
             <div>
               <label className={labelClasses}>Miniatura en la lista (opcional)</label>
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                JPEG o PNG, maximo 3MB. Usa esta opcion si no hay vista previa o quieres reemplazarla.
+                JPEG/PNG/WebP. Se reduce automaticamente a 640x360 antes de subir.
               </p>
               <input
                 type="file"
