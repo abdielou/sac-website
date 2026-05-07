@@ -22,28 +22,31 @@ function formatDate(dateStr) {
 
 /**
  * MediaCard - Card component displaying a media item with thumbnail, title, date,
- * and action buttons: Edit, Copiar link, Eliminar.
+ * and action buttons (short labels so they fit narrow cards).
  *
  * @param {object} props
  * @param {object} props.media - Media entry { slug, title, description, thumbnail, publishedAt, s3Key }
  * @param {boolean} [props.canManage] - Whether the user can edit/delete (defaults to true for backward compat)
- * @param {() => void} props.onEdit - Called when Edit is clicked
- * @param {() => void} props.onDelete - Called when Eliminar is clicked
+ * @param {() => void} props.onEdit - Called when Editar is clicked
+ * @param {() => void} props.onDelete - Called when Borrar is clicked
  */
 export default function MediaCard({ media, canManage = true, onEdit, onDelete }) {
-  const [copyLabel, setCopyLabel] = useState('Copiar link')
+  const [copyLabel, setCopyLabel] = useState('Copiar')
 
   const handleCopyLink = useCallback(async () => {
     const url = `${window.location.origin}/media/${media.slug}`
     try {
       await navigator.clipboard.writeText(url)
-      setCopyLabel('Copiado')
-      setTimeout(() => setCopyLabel('Copiar link'), 2000)
+      setCopyLabel('Listo')
+      setTimeout(() => setCopyLabel('Copiar'), 2000)
     } catch {
       setCopyLabel('Error')
-      setTimeout(() => setCopyLabel('Copiar link'), 2000)
+      setTimeout(() => setCopyLabel('Copiar'), 2000)
     }
   }, [media.slug])
+
+  const actionBtn =
+    'flex-1 min-w-0 inline-flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap'
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
@@ -88,12 +91,13 @@ export default function MediaCard({ media, canManage = true, onEdit, onDelete })
       </div>
 
       {/* Actions */}
-      <div className="px-4 pb-4 flex gap-2">
+      <div className="px-3 pb-3 flex gap-1.5">
         {canManage && (
           <button
             type="button"
             onClick={onEdit}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+            aria-label={`Editar: ${media.title}`}
+            className={`${actionBtn} text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600`}
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -110,7 +114,9 @@ export default function MediaCard({ media, canManage = true, onEdit, onDelete })
         <button
           type="button"
           onClick={handleCopyLink}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+          title="Copiar enlace público del video"
+          aria-label="Copiar enlace público"
+          className={`${actionBtn} text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30`}
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -127,7 +133,8 @@ export default function MediaCard({ media, canManage = true, onEdit, onDelete })
           <button
             type="button"
             onClick={onDelete}
-            className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+            aria-label={`Eliminar: ${media.title}`}
+            className={`${actionBtn} text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30`}
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -137,7 +144,7 @@ export default function MediaCard({ media, canManage = true, onEdit, onDelete })
                 d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-4v6m1-4V5a2 2 0 10-4 0v1h4z"
               />
             </svg>
-            Eliminar
+            Borrar
           </button>
         )}
       </div>

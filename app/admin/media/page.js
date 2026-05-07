@@ -98,7 +98,19 @@ function MediaContent() {
       }
     }
     window.addEventListener('media-uploaded', handleMediaUploaded)
-    return () => window.removeEventListener('media-uploaded', handleMediaUploaded)
+    const handlePosterReady = (e) => {
+      const entry = e.detail?.media
+      if (!entry?.slug) return
+      setMedia((prev) =>
+        prev.map((m) => (m.slug === entry.slug ? { ...m, ...entry } : m))
+      )
+      setEditTarget((prev) => (prev?.slug === entry.slug ? { ...prev, ...entry } : prev))
+    }
+    window.addEventListener('media-poster-ready', handlePosterReady)
+    return () => {
+      window.removeEventListener('media-uploaded', handleMediaUploaded)
+      window.removeEventListener('media-poster-ready', handlePosterReady)
+    }
   }, [])
 
   // Open edit modal
@@ -109,12 +121,17 @@ function MediaContent() {
   }, [])
 
   // Save edited media
-  const handleSaveEdit = useCallback(async ({ slug, title, description }) => {
+  const handleSaveEdit = useCallback(async ({ slug, title, description, thumbnail }) => {
     try {
+      const body = { title, description }
+      if (thumbnail?.trim()) {
+        body.thumbnail = thumbnail.trim()
+      }
       const res = await fetch(`/api/admin/media/${slug}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, description }),
+        credentials: 'same-origin',
+        body: JSON.stringify(body),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))

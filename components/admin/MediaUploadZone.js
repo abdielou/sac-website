@@ -1,8 +1,6 @@
 'use client'
 
 import { useRef, useCallback, useState } from 'react'
-import { createPortal } from 'react-dom'
-
 /**
  * Generate a client-side thumbnail preview URL for an image file.
  * @param {File} file
@@ -10,6 +8,193 @@ import { createPortal } from 'react-dom'
  */
 function createThumbnailPreview(file) {
   return URL.createObjectURL(file)
+}
+
+/**
+ * Grab a JPEG thumbnail from early in the timeline (polling + decode fallbacks).
+ */
+function captureVideoPosterAsBlob(file, maxWidth = 640, quality = 0.82) {
+  return new Promise((resolve) => {
+    if (!file?.type?.startsWith('video/') || typeof document === 'undefined') {
+      resolve(null)
+      return
+    }
+
+    const url = URL.createObjectURL(file)
+    const video = document.createElement('video')
+    video.muted = true
+    video.playsInline = true
+    video.setAttribute('playsinline', '')
+    video.preload = 'metadata'
+    video.src = url
+
+    let settled = false
+    let pollTimerId = null
+    let fallbackSeekTimerId = null
+    let playKickTimerId = null
+    let drawing = false
+
+    const settle = (blob) => {
+      if (settled) return
+      settled = true
+      window.clearTimeout(failTimerId)
+      if (pollTimerId != null) window.clearInterval(pollTimerId)
+      if (fallbackSeekTimerId != null) window.clearTimeout(fallbackSeekTimerId)
+      if (playKickTimerId != null) window.clearTimeout(playKickTimerId)
+      URL.revokeObjectURL(url)
+      video.removeAttribute('src')
+      video.load()
+      resolve(blob)
+    }
+
+    const failTimerId = window.setTimeout(() => settle(null), 25000)
+
+    const finishWithCanvas = (canvas) => {
+      if (settled || !canvas) return
+      canvas.toBlob(
+        (blob) => {
+          if (settled || !blob) return
+          settle(blob)
+        },
+        'image/jpeg',
+        quality
+      )
+    }
+
+    const drawPoster = async () => {
+      if (settled || drawing) return
+      try {
+        const vw = video.videoWidth
+        const vh = video.videoHeight
+        if (!vw || !vh) return
+
+        drawing = true
+        const scale = Math.min(1, maxWidth / vw)
+        const cw = Math.round(vw * scale)
+        const ch = Math.round(vh * scale)
+
+        try {
+          if (typeof createImageBitmap === 'function') {
+            const bmp = await createImageBitmap(video)
+            try {
+              const canvas = document.createElement('canvas')
+              canvas.width = cw
+              canvas.height = ch
+              const ctx = canvas.getContext('2d')
+              if (!ctx) return
+              ctx.drawImage(bmp, 0, 0, cw, ch)
+              finishWithCanvas(canvas)
+              return
+            } finally {
+              bmp.close()
+            }
+          }
+        } catch {
+          /* fall through to drawImage(video) */
+        }
+
+        const canvas = document.createElement('canvas')
+        canvas.width = cw
+        canvas.height = ch
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+        ctx.drawImage(video, 0, 0, cw, ch)
+        finishWithCanvas(canvas)
+      } catch {
+        /* keep polling until timeout */
+      } finally {
+        drawing = false
+      }
+    }
+
+    video.onerror = () => settle(null)
+
+    video.onloadedmetadata = () => {
+      const d = video.duration
+      let t = 0
+      if (Number.isFinite(d) && d > 0) {
+        t = Math.min(1, Math.max(d * 0.05, 0.02))
+      }
+
+      pollTimerId = window.setInterval(() => {
+        void drawPoster()
+      }, 120)
+
+      const kickDecode = () => {
+        try {
+          const p = video.play()
+          if (p !== undefined && typeof p.then === 'function') {
+            p.then(() => {
+              try {
+                video.pause()
+              } catch {}
+              void drawPoster()
+            }).catch(() => {})
+          }
+        } catch {
+          /* noop */
+        }
+      }
+
+      try {
+        video.currentTime = t
+      } catch {}
+
+      video.addEventListener('seeked', () => void drawPoster(), { once: true })
+      video.addEventListener('loadeddata', () => void drawPoster(), { once: true })
+
+      fallbackSeekTimerId = window.setTimeout(() => {
+        if (settled) return
+        try {
+          if (video.currentTime > 0.01) {
+            video.currentTime = 0
+          }
+        } catch {}
+      }, 700)
+
+      playKickTimerId = window.setTimeout(() => {
+        if (settled) return
+        kickDecode()
+      }, 950)
+    }
+  })
+}
+
+/**
+ * @returns {Promise<{ url: string | null, failure: 'capture' | 'upload' | null }>}
+ */
+async function posterUrlIfVideo(file) {
+  if (!file?.type?.startsWith('video/')) {
+    return { url: null, failure: null }
+  }
+  const blob = await captureVideoPosterAsBlob(file)
+  if (!blob) {
+    return { url: null, failure: 'capture' }
+  }
+  const upload = await uploadMediaPoster(blob)
+  if (!upload.url) {
+    return { url: null, failure: 'upload' }
+  }
+  return { url: upload.url, failure: null }
+}
+
+async function uploadMediaPoster(blob) {
+  const mime =
+    blob && typeof blob.type === 'string' && blob.type.startsWith('image/')
+      ? blob.type
+      : 'image/jpeg'
+  const formData = new FormData()
+  formData.append('file', new File([blob], 'poster.jpg', { type: mime }))
+  const res = await fetch('/api/admin/media/poster', {
+    method: 'POST',
+    body: formData,
+    credentials: 'same-origin',
+  })
+  if (!res.ok) {
+    return { url: null }
+  }
+  const data = await res.json().catch(() => ({}))
+  return { url: data.url || null }
 }
 
 /**
@@ -31,6 +216,7 @@ export default function MediaUploadZone({
   const [isDragOver, setIsDragOver] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState(null)
+  const [posterHint, setPosterHint] = useState(null)
   const [preview, setPreview] = useState(null)
   const [progress, setProgress] = useState(0)
 
@@ -51,8 +237,11 @@ export default function MediaUploadZone({
   const handleFile = useCallback(
     async (file) => {
       setError(null)
+      setPosterHint(null)
       setIsUploading(true)
       setProgress(0)
+
+      const thumbnailPromise = posterUrlIfVideo(file)
 
       try {
         let s3Key
@@ -60,12 +249,11 @@ export default function MediaUploadZone({
         if (onUpload) {
           s3Key = await onUpload(file)
         } else {
-          // Upload via fetch
           const formData = new FormData()
           formData.append('file', file)
 
           const xhr = new XMLHttpRequest()
-          await new Promise((resolve, reject) => {
+          s3Key = await new Promise((resolve, reject) => {
             xhr.upload.addEventListener('progress', (e) => {
               if (e.lengthComputable) {
                 setProgress(Math.round((e.loaded / e.total) * 100))
@@ -75,8 +263,7 @@ export default function MediaUploadZone({
               if (xhr.status >= 200 && xhr.status < 300) {
                 try {
                   const data = JSON.parse(xhr.responseText)
-                  s3Key = data.s3Key || data.key || data.url
-                  resolve()
+                  resolve(data.s3Key || data.key || data.url)
                 } catch {
                   reject(new Error('Respuesta invalida del servidor'))
                 }
@@ -91,28 +278,34 @@ export default function MediaUploadZone({
             })
             xhr.addEventListener('error', () => reject(new Error('Error de red')))
             xhr.open('POST', uploadUrl)
+            xhr.withCredentials = true
             xhr.send(formData)
           })
         }
+
+        const { url: thumbnailUrl } = await thumbnailPromise
 
         // Build title from filename (used for creation)
         const title = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ')
 
         // Create the persistent media entry on the server so it survives page reload
         let mediaEntry
+        let createdOnServer = false
         try {
           const createRes = await fetch('/api/admin/media', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify({
               title,
               s3Key: s3Key || file.name,
               description: '',
-              thumbnail: preview || null,
+              thumbnail: thumbnailUrl,
             }),
           })
 
           if (createRes.ok) {
+            createdOnServer = true
             const data = await createRes.json()
             mediaEntry = data.entry
           } else {
@@ -127,7 +320,7 @@ export default function MediaUploadZone({
               slug,
               title,
               description: '',
-              thumbnail: preview || null,
+              thumbnail: thumbnailUrl,
               s3Key: s3Key || file.name,
             }
           }
@@ -143,9 +336,38 @@ export default function MediaUploadZone({
             slug,
             title,
             description: '',
-            thumbnail: preview || null,
+            thumbnail: thumbnailUrl,
             s3Key: s3Key || file.name,
           }
+        }
+
+        if (
+          createdOnServer &&
+          file.type.startsWith('video/') &&
+          mediaEntry?.slug &&
+          !mediaEntry.thumbnail
+        ) {
+          try {
+            const genRes = await fetch('/api/admin/media/generate-poster', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin',
+              body: JSON.stringify({ slug: mediaEntry.slug }),
+            })
+            if (genRes.ok) {
+              const data = await genRes.json()
+              if (data.entry) {
+                mediaEntry = data.entry
+              }
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+
+        setPosterHint(null)
+        if (file.type.startsWith('video/') && !mediaEntry.thumbnail) {
+          setPosterHint('No se genero miniatura. Sube una imagen en «Editar».')
         }
 
         window.dispatchEvent(new CustomEvent('media-uploaded', { detail: { media: mediaEntry } }))
@@ -157,7 +379,7 @@ export default function MediaUploadZone({
         setProgress(0)
       }
     },
-    [uploadUrl, onUpload, preview]
+    [uploadUrl, onUpload]
   )
 
   const handleDrop = useCallback(
@@ -294,10 +516,11 @@ export default function MediaUploadZone({
             </svg>
             <div>
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Arrastra una imagen aqui
+                Arrastra un video aqui
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                o haz clic para seleccionar
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-sm mx-auto leading-relaxed">
+                Si falta vista previa, el servidor usa <span className="text-gray-700 dark:text-gray-300">FFmpeg</span>{' '}
+                (cuando existe en PATH). Recomendado: MP4 con H.264.
               </p>
             </div>
           </div>
@@ -309,6 +532,9 @@ export default function MediaUploadZone({
           </p>
         )}
       </div>
+      {posterHint && (
+        <p className="text-xs text-amber-800 dark:text-amber-200/90 mt-2 px-1">{posterHint}</p>
+      )}
     </>
   )
 }

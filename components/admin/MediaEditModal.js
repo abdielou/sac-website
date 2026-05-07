@@ -15,32 +15,115 @@ const labelClasses = 'block text-sm font-medium text-gray-700 dark:text-gray-300
  * @param {boolean} props.isOpen
  * @param {() => void} props.onClose
  * @param {object} props.media - Current media entry { slug, title, description }
- * @param {(data: { slug: string, title: string, description: string }) => void} props.onSave - Called with updated data on save
+ * @param {(data: { slug: string, title: string, description: string, thumbnail?: string }) => void} props.onSave - Called with updated data on save
  */
 export default function MediaEditModal({ isOpen, onClose, media, onSave }) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [posterPick, setPosterPick] = useState(null)
+  const [posterError, setPosterError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [posterGenBusy, setPosterGenBusy] = useState(false)
 
   useEffect(() => {
-    if (isOpen && media) {
-      setTitle(media.title || '')
-      setDescription(media.description || '')
-      setIsSaving(false)
-    }
+    if (!isOpen || !media) return
+    setTitle(media.title || '')
+    setDescription(media.description || '')
+    setPosterPick((prev) => {
+      if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl)
+      return null
+    })
+    setPosterError('')
+    setIsSaving(false)
+    setPosterGenBusy(false)
   }, [isOpen, media])
+
+  useEffect(() => {
+    return () => {
+      setPosterPick((prev) => {
+        if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl)
+        return null
+      })
+    }
+  }, [])
+
+  const handlePosterInput = (e) => {
+    const f = e.target.files?.[0]
+    e.target.value = ''
+    setPosterError('')
+    if (!f || !f.type.startsWith('image/')) return
+    if (f.size > 3 * 1024 * 1024) {
+      setPosterError('La imagen no puede pesar mas de 3MB')
+      return
+    }
+    setPosterPick((prev) => {
+      if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl)
+      return { file: f, previewUrl: URL.createObjectURL(f) }
+    })
+  }
+
+  const handleFfmpegPoster = async () => {
+    if (!media?.slug) return
+    setPosterGenBusy(true)
+    setPosterError('')
+    try {
+      const res = await fetch('/api/admin/media/generate-poster', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ slug: media.slug, force: Boolean(media.thumbnail) }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(body.error || body.details || `Error ${res.status}`)
+      }
+      if (body.entry) {
+        window.dispatchEvent(new CustomEvent('media-poster-ready', { detail: { media: body.entry } }))
+      }
+    } catch (err) {
+      setPosterError(err.message || 'Error al generar miniatura')
+    } finally {
+      setPosterGenBusy(false)
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!title.trim()) return
 
+    const pick = posterPick
     setIsSaving(true)
+    setPosterError('')
     try {
+      let thumbnail
+      if (pick?.file) {
+        const formData = new FormData()
+        formData.append('file', pick.file)
+        const res = await fetch('/api/admin/media/poster', {
+          method: 'POST',
+          body: formData,
+          credentials: 'same-origin',
+        })
+        const body = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          throw new Error(body.error || 'No se pudo subir imagen miniatura')
+        }
+        thumbnail = body.url
+      }
+
       await onSave({
         slug: media.slug,
         title: title.trim(),
         description: description.trim(),
+        ...(thumbnail ? { thumbnail } : {}),
       })
+
+      if (pick?.previewUrl) {
+        URL.revokeObjectURL(pick.previewUrl)
+        setPosterPick(null)
+      }
+    } catch (err) {
+      setPosterError(err.message || 'Error')
     } finally {
       setIsSaving(false)
     }
@@ -80,15 +163,43 @@ export default function MediaEditModal({ isOpen, onClose, media, onSave }) {
         <form onSubmit={handleSubmit}>
           <div className="px-6 py-4 space-y-4">
             {/* Thumbnail preview */}
-            {media?.thumbnail && (
+            {(posterPick?.previewUrl || media.thumbnail) && (
               <div className="rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
                 <img
-                  src={media.thumbnail}
-                  alt={media.title}
+                  src={posterPick?.previewUrl || media.thumbnail}
+                  alt=""
                   className="w-full max-h-40 object-contain"
                 />
               </div>
             )}
+
+            {posterError && <p className="text-sm text-red-600 dark:text-red-400">{posterError}</p>}
+
+            <div>
+              <label className={labelClasses}>Miniatura en la lista (opcional)</label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                JPEG o PNG, maximo 3MB. Usa esta opcion si no hay vista previa o quieres reemplazarla.
+              </p>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handlePosterInput}
+                className={`${inputClasses} py-2 text-xs file:mr-3 file:text-sm`}
+              />
+              <button
+                type="button"
+                onClick={() => void handleFfmpegPoster()}
+                disabled={posterGenBusy}
+                title="Requiere FFmpeg en PATH o variable FFMPEG_PATH en la maquina que corre esta app."
+                className="mt-3 w-full px-4 py-2 text-sm font-medium rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {posterGenBusy
+                  ? 'Generando fotograma...'
+                  : media.thumbnail
+                    ? 'Volver a generar miniatura (FFmpeg)'
+                    : 'Generar miniatura desde video (FFmpeg)'}
+              </button>
+            </div>
 
             {/* Title */}
             <div>
