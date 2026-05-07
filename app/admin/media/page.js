@@ -10,34 +10,77 @@ import MediaEditModal from '@/components/admin/MediaEditModal'
 import { SkeletonCard } from '@/components/admin/SkeletonCard'
 
 /**
- * Confirm dialog rendered via portal.
+ * Confirm dialog rendered via portal (above admin chrome).
  */
-function ConfirmDialog({ isOpen, title, message, onConfirm, onCancel }) {
+function ConfirmDialog({ isOpen, title, message, onConfirm, onCancel, isBusy = false }) {
   if (!isOpen) return null
   return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      role="presentation"
+      className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4"
       onClick={(e) => {
-        if (e.target === e.currentTarget) onCancel()
+        if (!isBusy && e.target === e.currentTarget) onCancel()
       }}
     >
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-sm w-full p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{title}</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">{message}</p>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="media-delete-confirm-title"
+        aria-describedby="media-delete-confirm-desc"
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl ring-1 ring-black/5 dark:ring-white/10 max-w-sm w-full p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3
+          id="media-delete-confirm-title"
+          className="text-lg font-semibold text-gray-900 dark:text-white mb-2"
+        >
+          {title}
+        </h3>
+        <p id="media-delete-confirm-desc" className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+          {message}
+        </p>
         <div className="flex justify-end gap-3">
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            disabled={isBusy}
+            className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:pointer-events-none"
           >
             Cancelar
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+            disabled={isBusy}
+            className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-70 disabled:pointer-events-none flex items-center gap-2 min-w-[7rem] justify-center"
           >
-            Eliminar
+            {isBusy ? (
+              <>
+                <svg
+                  className="animate-spin w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  />
+                </svg>
+                Eliminando...
+              </>
+            ) : (
+              'Eliminar'
+            )}
           </button>
         </div>
       </div>
@@ -260,10 +303,12 @@ function MediaContent() {
       {/* Delete confirm dialog */}
       <ConfirmDialog
         isOpen={deleteIsOpen}
-        title="Eliminar medio"
-        message={`Estas seguro de eliminar "${deleteTarget?.title}"? Esta accion no se puede deshacer.`}
+        title="Eliminar video"
+        message={`¿Eliminar "${deleteTarget?.title ?? ''}"? No podras recuperarlo.`}
+        isBusy={isDeleting}
         onConfirm={handleConfirmDelete}
         onCancel={() => {
+          if (isDeleting) return
           setDeleteIsOpen(false)
           setDeleteTarget(null)
         }}
