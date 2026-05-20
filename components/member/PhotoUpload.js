@@ -34,31 +34,34 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
   const rawImageUrlRef = useRef(null)
   const originalImageSrcRef = useRef(null)
 
-  const revokeRawImageUrl = () => {
+  const revokeRawImageUrl = useCallback(() => {
     if (rawImageUrlRef.current) {
       URL.revokeObjectURL(rawImageUrlRef.current)
       rawImageUrlRef.current = null
     }
-  }
+  }, [])
 
-  const openCropWithSrc = (src, { trackAsOriginal = false, ownsObjectUrl = false } = {}) => {
-    revokeRawImageUrl()
-    if (ownsObjectUrl && !trackAsOriginal) {
-      rawImageUrlRef.current = src
-    }
-    if (trackAsOriginal) {
-      if (
-        originalImageSrcRef.current &&
-        originalImageSrcRef.current !== src &&
-        originalImageSrcRef.current.startsWith('blob:')
-      ) {
-        URL.revokeObjectURL(originalImageSrcRef.current)
+  const openCropWithSrc = useCallback(
+    (src, { trackAsOriginal = false, ownsObjectUrl = false } = {}) => {
+      revokeRawImageUrl()
+      if (ownsObjectUrl && !trackAsOriginal) {
+        rawImageUrlRef.current = src
       }
-      originalImageSrcRef.current = src
-    }
-    setRawImageSrc(src)
-    setCropModalOpen(true)
-  }
+      if (trackAsOriginal) {
+        if (
+          originalImageSrcRef.current &&
+          originalImageSrcRef.current !== src &&
+          originalImageSrcRef.current.startsWith('blob:')
+        ) {
+          URL.revokeObjectURL(originalImageSrcRef.current)
+        }
+        originalImageSrcRef.current = src
+      }
+      setRawImageSrc(src)
+      setCropModalOpen(true)
+    },
+    [revokeRawImageUrl]
+  )
 
   const stopCamera = () => {
     if (streamRef.current) {
@@ -83,7 +86,7 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
         streamRef.current = null
       }
     }
-  }, [])
+  }, [revokeRawImageUrl])
 
   const startCamera = async () => {
     setCameraError(null)
@@ -128,19 +131,22 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
     openCropWithSrc(dataUrl, { trackAsOriginal: true })
   }
 
-  const handleFileSelected = useCallback((e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const handleFileSelected = useCallback(
+    (e) => {
+      const file = e.target.files?.[0]
+      if (!file) return
 
-    const reader = new FileReader()
-    reader.onload = () => {
-      openCropWithSrc(reader.result, { trackAsOriginal: true })
-    }
-    reader.readAsDataURL(file)
+      const reader = new FileReader()
+      reader.onload = () => {
+        openCropWithSrc(reader.result, { trackAsOriginal: true })
+      }
+      reader.readAsDataURL(file)
 
-    // Reset input so same file can be selected again
-    e.target.value = ''
-  }, [])
+      // Reset input so same file can be selected again
+      e.target.value = ''
+    },
+    [openCropWithSrc]
+  )
 
   const adjustExistingPhoto = useCallback(async () => {
     if (disabled || adjustLoading) return
@@ -170,7 +176,7 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
     } finally {
       setAdjustLoading(false)
     }
-  }, [adjustLoading, currentPhotoUrl, disabled])
+  }, [adjustLoading, currentPhotoUrl, disabled, openCropWithSrc])
 
   const handleCropConfirm = useCallback(
     (blob) => {
@@ -187,14 +193,14 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
       setRawImageSrc(null)
       revokeRawImageUrl()
     },
-    [onPhotoCropped]
+    [onPhotoCropped, revokeRawImageUrl]
   )
 
   const handleCropCancel = useCallback(() => {
     setCropModalOpen(false)
     setRawImageSrc(null)
     revokeRawImageUrl()
-  }, [])
+  }, [revokeRawImageUrl])
 
   const displayUrl = stagedPhotoUrl || currentPhotoUrl || DEFAULT_AVATAR
   const hasAdjustablePhoto = Boolean(stagedPhotoUrl || currentPhotoUrl)
