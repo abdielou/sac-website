@@ -95,9 +95,7 @@ export default function MediaEditModal({ isOpen, onClose, media, onSave }) {
   }, [isOpen, media])
 
   const sanitizedFilename = useMemo(() => slugifyMediaName(filename), [filename])
-  const slugChanged = Boolean(
-    media?.slug && sanitizedFilename && sanitizedFilename !== media.slug
-  )
+  const slugChanged = Boolean(media?.slug && sanitizedFilename && sanitizedFilename !== media.slug)
   const filenameInvalid = Boolean(filename.trim()) && !sanitizedFilename
 
   useEffect(() => {
