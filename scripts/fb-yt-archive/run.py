@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 import pickle
 from google.auth.transport.requests import Request
 import socket
+import re
 
 # Optional colored output (graceful degradation if colorama not installed)
 try:
@@ -78,7 +79,17 @@ def print_status(message, status='info'):
     print(f"{color}{message}{reset}")
 
 
-def print_summary(uploaded_titles, skipped, errors, error_messages=None):
+def print_summary(
+    uploaded_titles,
+    skipped,
+    errors,
+    error_messages=None,
+    zip_files_read=None,
+    inbox_zip_files=None,
+    processed_zip_files=None,
+    queued_zip_files=None,
+    retry_zip_files=None,
+):
     """Print concise processing summary.
 
     Args:
@@ -86,10 +97,57 @@ def print_summary(uploaded_titles, skipped, errors, error_messages=None):
         skipped: Count of skipped videos
         errors: Count of errors
         error_messages: Optional list of brief error messages
+        zip_files_read: If not None, list of inbox zip basenames opened in this run (in order)
+        inbox_zip_files: If not None, all zip basenames found in inbox
+        processed_zip_files: If not None, inbox zip basenames skipped because registry says processed
+        queued_zip_files: If not None, inbox zip basenames eligible for this run
+        retry_zip_files: If not None, read zip basenames not marked processed so they can be retried
     """
     print(f"\n{'='*40}")
     print("SUMMARY")
     print(f"{'='*40}")
+
+    if inbox_zip_files is not None:
+        print(f"Inbox zip files ({len(inbox_zip_files)}):")
+        if inbox_zip_files:
+            for name in inbox_zip_files:
+                print(f"  - {name}")
+        else:
+            print("  (none)")
+
+    if processed_zip_files:
+        print(f"Skipped by registry ({len(processed_zip_files)}):")
+        for name in processed_zip_files:
+            print(f"  - {name}")
+
+    if queued_zip_files is not None:
+        print(f"Queued zip files ({len(queued_zip_files)}):")
+        if queued_zip_files:
+            for name in queued_zip_files:
+                print(f"  - {name}")
+        else:
+            print("  (none)")
+
+    if zip_files_read is not None:
+        print(f"Zip files read ({len(zip_files_read)}):")
+        if zip_files_read:
+            for name in zip_files_read:
+                print(f"  - {name}")
+        else:
+            print("  (none)")
+
+    if queued_zip_files is not None and zip_files_read is not None:
+        read_set = set(zip_files_read)
+        unread_zip_files = [name for name in queued_zip_files if name not in read_set]
+        if unread_zip_files:
+            print(f"Queued but not read this run ({len(unread_zip_files)}):")
+            for name in unread_zip_files:
+                print(f"  - {name}")
+
+    if retry_zip_files:
+        print(f"Left retryable (not marked processed) ({len(retry_zip_files)}):")
+        for name in retry_zip_files:
+            print(f"  - {name}")
 
     # Uploaded videos (list titles)
     if uploaded_titles:
@@ -142,6 +200,62 @@ def fix_facebook_encoding(text):
     except (UnicodeDecodeError, UnicodeEncodeError):
         # If conversion fails, return original text
         return text
+
+
+def normalize_fbid(fbid):
+    """Return the stable numeric Facebook video id from an export filename/id."""
+    if not fbid:
+        return None
+    stem = os.path.splitext(str(fbid).split('/')[-1])[0]
+    suffix = stem.rsplit('_', 1)[-1]
+    return suffix if suffix.isdigit() else stem
+
+
+def normalize_fbid_list(fbids):
+    """Normalize fbids while preserving first-seen order."""
+    normalized = []
+    seen = set()
+    for fbid in fbids or []:
+        stable_id = normalize_fbid(fbid)
+        if stable_id and stable_id not in seen:
+            normalized.append(stable_id)
+            seen.add(stable_id)
+    return normalized
+
+
+def video_signature(entry):
+    """Build a conservative duplicate signature from date + normalized title."""
+    timestamp = extract_creation_timestamp(entry)
+    title = extract_video_title(entry)
+    if not timestamp or not title:
+        return None
+    title_key = re.sub(r'[^a-z0-9]+', '', title.lower())
+    if not title_key:
+        return None
+    return (timestamp.strftime('%Y-%m-%d'), title_key)
+
+
+def select_largest_video_per_signature(entries, videos_dir):
+    """For same-date/same-title duplicates in one export, keep only the largest file."""
+    selected = {}
+    for entry in entries:
+        signature = video_signature(entry)
+        filename = extract_video_filename(entry)
+        if not signature or not filename:
+            continue
+        video_path = os.path.join(videos_dir, filename)
+        try:
+            size = os.path.getsize(video_path)
+        except OSError:
+            continue
+        current = selected.get(signature)
+        if current is None or size > current["size"]:
+            selected[signature] = {
+                "fbid": extract_fbid(entry),
+                "filename": filename,
+                "size": size,
+            }
+    return selected
 
 
 # Ensure inbox directory exists
@@ -259,7 +373,7 @@ def load_registry(registry_file):
         # Migration: if loaded data is a list (old format), convert to new format
         if isinstance(data, list):
             return {
-                "uploaded_fbids": data,  # Old format was list of filenames, treat as fbids
+                "uploaded_fbids": normalize_fbid_list(data),  # Old format was list of filenames/ids
                 "processed_zips": [],
                 "daily_uploads": {}
             }
@@ -267,6 +381,7 @@ def load_registry(registry_file):
         # Ensure all keys exist
         if "uploaded_fbids" not in data:
             data["uploaded_fbids"] = []
+        data["uploaded_fbids"] = normalize_fbid_list(data["uploaded_fbids"])
         if "processed_zips" not in data:
             data["processed_zips"] = []
         if "daily_uploads" not in data:
@@ -558,10 +673,9 @@ def extract_fbid(entry):
     uri = video_lv['media'][0].get('uri')
     if not uri:
         return None
-    # Extract fbid from filename (e.g., "123456789.mp4" -> "123456789")
+    # Extract stable fbid from filename (e.g., "prefix_123.mp4" -> "123")
     filename = uri.split('/')[-1]
-    fbid = filename.replace('.mp4', '').replace('.MP4', '')
-    return fbid if fbid else None
+    return normalize_fbid(filename)
 
 
 def extract_creation_timestamp(entry):
@@ -902,6 +1016,8 @@ def process_inbox(dry_run=False, verbose=False, limit=None, force=False):
     total_skipped = 0
     total_errors = 0
     run_upload_count = 0  # Track uploads in this run for --limit enforcement
+    zip_files_read = []  # Inbox zip basenames we opened this run (summary / audit)
+    retry_zip_files = []  # Real-run zips left unprocessed so failed/missed videos retry later
 
     # Load registry
     if verbose:
@@ -913,11 +1029,28 @@ def process_inbox(dry_run=False, verbose=False, limit=None, force=False):
     # Scan inbox for unprocessed zips
     if verbose:
         print_status(f"Scanning inbox: {INBOX_PATH}", 'info')
+    try:
+        ensure_inbox_exists()
+        inbox_zip_files = sorted(f for f in os.listdir(INBOX_PATH) if f.lower().endswith('.zip'))
+    except OSError:
+        inbox_zip_files = []
+    processed_zip_files = [f for f in inbox_zip_files if f in processed_zips]
     pending_zips = scan_inbox(INBOX_PATH, processed_zips)
+    queued_zip_files = [os.path.basename(path) for path in pending_zips]
 
     if not pending_zips:
         print_status("No unprocessed zip files found in inbox.", 'info')
-        print_summary(uploaded_titles, total_skipped, total_errors, error_messages)
+        print_summary(
+            uploaded_titles,
+            total_skipped,
+            total_errors,
+            error_messages,
+            zip_files_read=zip_files_read,
+            inbox_zip_files=inbox_zip_files,
+            processed_zip_files=processed_zip_files,
+            queued_zip_files=queued_zip_files,
+            retry_zip_files=retry_zip_files,
+        )
         return
 
     print_status(f"Found {len(pending_zips)} zip file(s) to process", 'info')
@@ -925,7 +1058,17 @@ def process_inbox(dry_run=False, verbose=False, limit=None, force=False):
     # Check if we can upload today before authenticating (skip check in dry-run or force)
     if not dry_run and not force and not can_upload_today(registry, max_videos_per_run):
         print_status("Daily upload limit already reached. Use --force to override.", 'warning')
-        print_summary(uploaded_titles, total_skipped, total_errors, error_messages)
+        print_summary(
+            uploaded_titles,
+            total_skipped,
+            total_errors,
+            error_messages,
+            zip_files_read=zip_files_read,
+            inbox_zip_files=inbox_zip_files,
+            processed_zip_files=processed_zip_files,
+            queued_zip_files=queued_zip_files,
+            retry_zip_files=retry_zip_files,
+        )
         return
 
     # Authenticate with YouTube (skip in dry-run mode)
@@ -940,7 +1083,9 @@ def process_inbox(dry_run=False, verbose=False, limit=None, force=False):
     # Process each zip file
     for zip_path in pending_zips:
         zip_name = os.path.basename(zip_path)
+        zip_files_read.append(zip_name)
         print_status(f"\nProcessing: {zip_name}", 'info')
+        zip_errors = 0
 
         try:
             with extract_zip(zip_path) as temp_dir:
@@ -948,7 +1093,10 @@ def process_inbox(dry_run=False, verbose=False, limit=None, force=False):
                 metadata_path = find_metadata_in_extracted(temp_dir)
                 if not metadata_path:
                     error_messages.append(f"{zip_name}: no metadata found")
+                    zip_errors += 1
                     total_errors += 1
+                    if not dry_run:
+                        retry_zip_files.append(zip_name)
                     if verbose:
                         print_status(f"  No live_videos.json found in {zip_name}", 'error')
                     continue
@@ -957,7 +1105,10 @@ def process_inbox(dry_run=False, verbose=False, limit=None, force=False):
                 videos_dir = find_videos_dir_in_extracted(temp_dir)
                 if not videos_dir:
                     error_messages.append(f"{zip_name}: no videos found")
+                    zip_errors += 1
                     total_errors += 1
+                    if not dry_run:
+                        retry_zip_files.append(zip_name)
                     if verbose:
                         print_status(f"  No video files found in {zip_name}", 'error')
                     continue
@@ -970,12 +1121,12 @@ def process_inbox(dry_run=False, verbose=False, limit=None, force=False):
                 )
                 if verbose:
                     print_status(f"  Found {len(entries)} video entries in metadata (sorted oldest first)", 'info')
+                largest_by_signature = select_largest_video_per_signature(entries, videos_dir)
 
                 # Track intra-zip duplicates
                 seen_fbids_in_zip = set()
                 zip_uploaded = 0
                 zip_skipped = 0
-                zip_errors = 0
 
                 # Process each entry
                 for entry in entries:
@@ -984,9 +1135,21 @@ def process_inbox(dry_run=False, verbose=False, limit=None, force=False):
                         print_status(f"\nLimit of {effective_limit} video(s) reached.", 'warning')
                         if not dry_run:
                             save_registry_atomic(REGISTRY_PATH, registry)
+                            if zip_name not in retry_zip_files:
+                                retry_zip_files.append(zip_name)
                         total_skipped += zip_skipped
                         total_errors += zip_errors
-                        print_summary(uploaded_titles, total_skipped, total_errors, error_messages)
+                        print_summary(
+                            uploaded_titles,
+                            total_skipped,
+                            total_errors,
+                            error_messages,
+                            zip_files_read=zip_files_read,
+                            inbox_zip_files=inbox_zip_files,
+                            processed_zip_files=processed_zip_files,
+                            queued_zip_files=queued_zip_files,
+                            retry_zip_files=retry_zip_files,
+                        )
                         return
 
                     # Extract fbid for deduplication
@@ -995,6 +1158,18 @@ def process_inbox(dry_run=False, verbose=False, limit=None, force=False):
                         if verbose:
                             print_status(f"  Skipping entry: no fbid found", 'warning')
                         zip_errors += 1
+                        continue
+
+                    signature = video_signature(entry)
+                    selected_duplicate = largest_by_signature.get(signature) if signature else None
+                    if selected_duplicate and selected_duplicate["fbid"] != fbid:
+                        if verbose:
+                            print_status(
+                                f"  Skipping {fbid}: smaller same-date/same-title duplicate "
+                                f"(keeping {selected_duplicate['fbid']})",
+                                'warning'
+                            )
+                        zip_skipped += 1
                         continue
 
                     # Check for cross-zip duplicate (already uploaded)
@@ -1073,28 +1248,62 @@ def process_inbox(dry_run=False, verbose=False, limit=None, force=False):
         except zipfile.BadZipFile:
             error_messages.append(f"{zip_name}: corrupted zip")
             total_errors += 1
+            if not dry_run:
+                retry_zip_files.append(zip_name)
             print_status(f"  Invalid or corrupted zip file: {zip_name}", 'error')
             continue
         except Exception as e:
             error_messages.append(f"{zip_name}: {str(e)[:40]}")
             total_errors += 1
+            if not dry_run:
+                retry_zip_files.append(zip_name)
             print_status(f"  Error processing {zip_name}: {str(e)[:100]}", 'error')
             continue
 
-        # Mark zip as processed (only after successful processing, skip in dry-run)
+        # Mark zip as processed only if the zip completed without entry/upload errors.
         if not dry_run:
-            registry["processed_zips"].append(zip_name)
-            save_registry_atomic(REGISTRY_PATH, registry)
-            if verbose:
-                print_status(f"  Marked {zip_name} as processed", 'success')
+            if zip_errors == 0:
+                if zip_name not in registry["processed_zips"]:
+                    registry["processed_zips"].append(zip_name)
+                save_registry_atomic(REGISTRY_PATH, registry)
+                if verbose:
+                    print_status(f"  Marked {zip_name} as processed", 'success')
+            else:
+                if zip_name not in retry_zip_files:
+                    retry_zip_files.append(zip_name)
+                save_registry_atomic(REGISTRY_PATH, registry)
+                print_status(
+                    f"  Not marking {zip_name} as processed ({zip_errors} error(s)); it will retry next run.",
+                    'warning'
+                )
 
     # Final summary
     if dry_run:
         print_status("\n=== DRY RUN COMPLETE ===", 'warning')
-        print_summary(uploaded_titles, total_skipped, total_errors, error_messages)
+        print_summary(
+            uploaded_titles,
+            total_skipped,
+            total_errors,
+            error_messages,
+            zip_files_read=zip_files_read,
+            inbox_zip_files=inbox_zip_files,
+            processed_zip_files=processed_zip_files,
+            queued_zip_files=queued_zip_files,
+            retry_zip_files=retry_zip_files,
+        )
         print_status("Run without --dry-run to actually upload", 'info')
     else:
-        print_summary(uploaded_titles, total_skipped, total_errors, error_messages)
+        print_summary(
+            uploaded_titles,
+            total_skipped,
+            total_errors,
+            error_messages,
+            zip_files_read=zip_files_read,
+            inbox_zip_files=inbox_zip_files,
+            processed_zip_files=processed_zip_files,
+            queued_zip_files=queued_zip_files,
+            retry_zip_files=retry_zip_files,
+        )
 
 
 def main():
