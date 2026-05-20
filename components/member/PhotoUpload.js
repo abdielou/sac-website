@@ -25,10 +25,40 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
   const [rawImageSrc, setRawImageSrc] = useState(null)
   const [cameraActive, setCameraActive] = useState(false)
   const [cameraError, setCameraError] = useState(null)
+  const [adjustLoading, setAdjustLoading] = useState(false)
+  const [adjustError, setAdjustError] = useState(null)
   const fileInputRef = useRef(null)
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const objectUrlRef = useRef(null)
+  const rawImageUrlRef = useRef(null)
+  const originalImageSrcRef = useRef(null)
+
+  const revokeRawImageUrl = () => {
+    if (rawImageUrlRef.current) {
+      URL.revokeObjectURL(rawImageUrlRef.current)
+      rawImageUrlRef.current = null
+    }
+  }
+
+  const openCropWithSrc = (src, { trackAsOriginal = false, ownsObjectUrl = false } = {}) => {
+    revokeRawImageUrl()
+    if (ownsObjectUrl && !trackAsOriginal) {
+      rawImageUrlRef.current = src
+    }
+    if (trackAsOriginal) {
+      if (
+        originalImageSrcRef.current &&
+        originalImageSrcRef.current !== src &&
+        originalImageSrcRef.current.startsWith('blob:')
+      ) {
+        URL.revokeObjectURL(originalImageSrcRef.current)
+      }
+      originalImageSrcRef.current = src
+    }
+    setRawImageSrc(src)
+    setCropModalOpen(true)
+  }
 
   const stopCamera = () => {
     if (streamRef.current) {
@@ -43,6 +73,10 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
     return () => {
       if (objectUrlRef.current) {
         URL.revokeObjectURL(objectUrlRef.current)
+      }
+      revokeRawImageUrl()
+      if (originalImageSrcRef.current?.startsWith('blob:')) {
+        URL.revokeObjectURL(originalImageSrcRef.current)
       }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop())
@@ -91,8 +125,7 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
     ctx.drawImage(video, 0, 0)
     const dataUrl = canvas.toDataURL('image/jpeg', 0.9)
     stopCamera()
-    setRawImageSrc(dataUrl)
-    setCropModalOpen(true)
+    openCropWithSrc(dataUrl, { trackAsOriginal: true })
   }
 
   const handleFileSelected = useCallback((e) => {
@@ -101,14 +134,43 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
 
     const reader = new FileReader()
     reader.onload = () => {
-      setRawImageSrc(reader.result)
-      setCropModalOpen(true)
+      openCropWithSrc(reader.result, { trackAsOriginal: true })
     }
     reader.readAsDataURL(file)
 
     // Reset input so same file can be selected again
     e.target.value = ''
   }, [])
+
+  const adjustExistingPhoto = useCallback(async () => {
+    if (disabled || adjustLoading) return
+
+    setAdjustError(null)
+
+    if (originalImageSrcRef.current) {
+      openCropWithSrc(originalImageSrcRef.current)
+      return
+    }
+
+    const photoUrl = currentPhotoUrl
+    if (!photoUrl) return
+
+    setAdjustLoading(true)
+    try {
+      const res = await fetch(photoUrl, { credentials: 'include' })
+      if (!res.ok) {
+        throw new Error(`Failed to load photo (${res.status})`)
+      }
+      const blob = await res.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      openCropWithSrc(objectUrl, { trackAsOriginal: true, ownsObjectUrl: true })
+    } catch (err) {
+      console.error('Failed to load existing photo for cropping:', err)
+      setAdjustError('No se pudo cargar la foto para ajustar')
+    } finally {
+      setAdjustLoading(false)
+    }
+  }, [adjustLoading, currentPhotoUrl, disabled])
 
   const handleCropConfirm = useCallback(
     (blob) => {
@@ -123,6 +185,7 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
       onPhotoCropped(blob, previewUrl)
       setCropModalOpen(false)
       setRawImageSrc(null)
+      revokeRawImageUrl()
     },
     [onPhotoCropped]
   )
@@ -130,9 +193,11 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
   const handleCropCancel = useCallback(() => {
     setCropModalOpen(false)
     setRawImageSrc(null)
+    revokeRawImageUrl()
   }, [])
 
   const displayUrl = stagedPhotoUrl || currentPhotoUrl || DEFAULT_AVATAR
+  const hasAdjustablePhoto = Boolean(stagedPhotoUrl || currentPhotoUrl)
 
   return (
     <div className="flex flex-col items-center gap-3">
@@ -195,8 +260,19 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
             >
               Tomar foto
             </button>
+            {hasAdjustablePhoto && (
+              <button
+                type="button"
+                onClick={adjustExistingPhoto}
+                disabled={disabled || adjustLoading}
+                className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {adjustLoading ? 'Cargando...' : 'Ajustar foto'}
+              </button>
+            )}
           </div>
           {cameraError && <p className="text-xs text-red-500 dark:text-red-400">{cameraError}</p>}
+          {adjustError && <p className="text-xs text-red-500 dark:text-red-400">{adjustError}</p>}
         </div>
       )}
 
@@ -212,6 +288,7 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
 
       {/* Crop Modal */}
       <CropModal
+        key={rawImageSrc || 'closed'}
         open={cropModalOpen}
         imageSrc={rawImageSrc}
         onConfirm={handleCropConfirm}
