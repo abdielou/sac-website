@@ -13,6 +13,7 @@ import { PaymentTooltip } from '@/components/admin/PaymentTooltip'
 import { MemberActions } from '@/components/admin/MemberActions'
 import { ManualPaymentModal } from '@/components/admin/ManualPaymentModal'
 import { WorkspaceAccountModal } from '@/components/admin/WorkspaceAccountModal'
+import { MemberPhotoUploadModal } from '@/components/admin/MemberPhotoUploadModal'
 import { toCsv, downloadCsvFile } from '@/lib/csv'
 import { COLUMN_REGISTRY } from '@/lib/admin/columnRegistry'
 import { useColumnPreferences } from '@/lib/hooks/useColumnPreferences'
@@ -161,6 +162,7 @@ function MembersContent() {
   const [copiedEmail, setCopiedEmail] = useState(null)
   const [modalState, setModalState] = useState({ isOpen: false, member: null, paymentType: null })
   const [workspaceModalState, setWorkspaceModalState] = useState({ isOpen: false, member: null })
+  const [photoModalState, setPhotoModalState] = useState({ isOpen: false, member: null })
   const [isExporting, setIsExporting] = useState(false)
   const [photoFilter, setPhotoFilter] = useState(null) // null | 'with' | 'without'
   const [viewMode, setViewMode] = useState('grid')
@@ -203,6 +205,14 @@ function MembersContent() {
 
   const handleCloseWorkspaceModal = () => {
     setWorkspaceModalState({ isOpen: false, member: null })
+  }
+
+  const handleUploadPhoto = (member) => {
+    setPhotoModalState({ isOpen: true, member })
+  }
+
+  const handleClosePhotoModal = () => {
+    setPhotoModalState({ isOpen: false, member: null })
   }
 
   // Sync local state when URL param changes externally
@@ -645,7 +655,11 @@ function MembersContent() {
                     </div>
                     <div className="flex items-center gap-2">
                       <StatusBadge status={member.status} />
-                      <MemberActions member={member} onAction={handleAction} />
+                      <MemberActions
+                        member={member}
+                        onAction={handleAction}
+                        onUploadPhoto={handleUploadPhoto}
+                      />
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-sm">
@@ -717,7 +731,11 @@ function MembersContent() {
                           </td>
                         ))}
                         <td className="px-3 py-4 text-center">
-                          <MemberActions member={member} onAction={handleAction} />
+                          <MemberActions
+                            member={member}
+                            onAction={handleAction}
+                            onUploadPhoto={handleUploadPhoto}
+                          />
                         </td>
                       </tr>
                     ))
@@ -780,6 +798,12 @@ function MembersContent() {
         isOpen={workspaceModalState.isOpen}
         onClose={handleCloseWorkspaceModal}
         member={workspaceModalState.member}
+      />
+
+      <MemberPhotoUploadModal
+        isOpen={photoModalState.isOpen}
+        onClose={handleClosePhotoModal}
+        member={photoModalState.member}
       />
     </div>
   )

@@ -90,7 +90,7 @@ export const PUT = auth(async function PUT(req) {
   }
 
   try {
-    const email = req.auth.user.email?.toLowerCase()
+    const email = req.auth.user?.sacEmail?.toLowerCase() || req.auth.user.email?.toLowerCase()
     if (!email) {
       return NextResponse.json(
         { error: 'No autenticado', details: 'No email in session' },
@@ -131,10 +131,13 @@ export const PUT = auth(async function PUT(req) {
         return NextResponse.json({ error: 'El archivo debe ser una imagen' }, { status: 400 })
       }
 
-      // Upload photo to Drive
+      // Upload photo to Drive (backup existing photoFileId before replacing)
+      const member = await getMemberByEmail(email)
       const arrayBuffer = await photoFile.arrayBuffer()
       const buffer = Buffer.from(arrayBuffer)
-      const fileId = await uploadPhoto(email, buffer, photoMime)
+      const fileId = await uploadPhoto(email, buffer, photoMime, {
+        currentPhotoFileId: member?.photoFileId || undefined,
+      })
 
       // Include photoFileId in the fields to update
       fields.photoFileId = fileId

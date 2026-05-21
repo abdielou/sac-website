@@ -10,9 +10,7 @@ import { hasPermission } from '../../../../../lib/permissions'
  * Proxy a member's profile photo from Google Drive.
  * Requires authentication. Does NOT expose Drive file IDs or URLs to the client.
  * Users can only access their own photo unless they have read_members permission.
- *
- * Query params:
- *   - photoFileId (optional): pass directly to skip sheet lookup when accessing own photo
+ * photoFileId is always resolved from the member record (query params are cache-busters only).
  */
 export const GET = auth(async function GET(req, { params }) {
   if (!req.auth) {
@@ -25,33 +23,34 @@ export const GET = auth(async function GET(req, { params }) {
   try {
     const { email } = await params
     const { searchParams } = new URL(req.url)
-    const decodedEmail = decodeURIComponent(email)
+    const decodedEmail = decodeURIComponent(email).toLowerCase()
     const requestingEmail = req.auth.user?.email?.toLowerCase()
+    const requestingSacEmail = req.auth.user?.sacEmail?.toLowerCase()
 
-    // Authorization: users can only access their own photo unless they have read_members
-    if (
-      requestingEmail !== decodedEmail.toLowerCase() &&
-      !hasPermission(requestingEmail, 'read_members')
-    ) {
+    const isOwnPhoto =
+      requestingEmail === decodedEmail ||
+      (requestingSacEmail && requestingSacEmail === decodedEmail)
+
+    // Authorization: own photo or read_members (server-side permission map)
+    if (!isOwnPhoto && !hasPermission(requestingEmail, 'read_members')) {
       return NextResponse.json(
         { error: 'Permiso denegado', details: 'You can only access your own photo' },
         { status: 403 }
       )
     }
 
-    let photoFileId = searchParams.get('photoFileId')
-
-    // Own photo: use passed photoFileId directly (avoids sheet lookup failures)
-    // Admins with read_members: also use passed photoFileId
-    if (!photoFileId) {
-      const member = await getMemberByEmail(decodedEmail)
-      if (!member || !member.photoFileId) {
-        return NextResponse.json({ error: 'Foto no encontrada' }, { status: 404 })
-      }
-      photoFileId = member.photoFileId
+    const member = await getMemberByEmail(decodedEmail)
+    if (!member?.photoFileId) {
+      return NextResponse.json({ error: 'Foto no encontrada' }, { status: 404 })
     }
 
-    const photo = await getPhoto(photoFileId)
+    // Reject mismatched cache-buster / client-supplied IDs (prevents Drive file IDOR)
+    const requestedId = searchParams.get('photoFileId') || searchParams.get('v')
+    if (requestedId && requestedId !== member.photoFileId) {
+      return NextResponse.json({ error: 'Foto no encontrada' }, { status: 404 })
+    }
+
+    const photo = await getPhoto(member.photoFileId)
     if (!photo) {
       return NextResponse.json({ error: 'Foto no encontrada' }, { status: 404 })
     }
@@ -65,9 +64,6 @@ export const GET = auth(async function GET(req, { params }) {
     })
   } catch (error) {
     console.error('Error fetching member photo:', error)
-    return NextResponse.json(
-      { error: 'Error al obtener foto', details: error.message },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Error al obtener foto' }, { status: 500 })
   }
 })

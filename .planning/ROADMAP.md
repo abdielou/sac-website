@@ -56,7 +56,8 @@ See .planning/milestones/v1.8-ROADMAP.md for full details.
 - [x] **Phase 31: Object Catalog & Storage** - OpenNGC catalog with Spanish names and S3 guide storage layer (completed 2026-03-27)
 - [x] **Phase 32: Admin Guide Builder** - Dashboard CRUD for creating, curating, and publishing guides (completed 2026-03-27)
 - [x] **Phase 33: Public Guides Page** - Interactive `/guides` page with filtering, sorting, and edition browsing (completed 2026-03-27)
-- [ ] **Phase 34: PDF Export** - Branded PDF download per guide using @react-pdf/renderer
+- [x] **Phase 34: Admin Member Photo Upload** - Admins can upload profile photos for members who need ID cards (completed 2026-05-20)
+- [ ] **Phase 35: PDF Export** - Branded PDF download per guide using @react-pdf/renderer
 
 ## Phase Details
 
@@ -106,9 +107,23 @@ Plans:
 - [ ] 33-01-PLAN.md — Public API route for published guides with catalog data + nav link
 - [ ] 33-02-PLAN.md — Interactive /guides page with sections, filtering, sorting, edition browsing, SkyView thumbnails
 
-### Phase 34: PDF Export
-**Goal**: Users can download branded PDF versions of observing guides
+### Phase 34: Admin Member Photo Upload
+**Goal**: Admins can upload profile photos for members who need ID cards
 **Depends on**: Phase 33
+**Requirements**: ADMIN-07
+**Success Criteria** (what must be TRUE):
+  1. Admin can click "Subir foto" in MemberActions dropdown for any member
+  2. Photo upload modal reuses PhotoUpload/CropModal from member profile: file upload, adjust/re-crop existing photo, and crop/pan — but no camera capture
+  3. Cropped photo is uploaded to Google Drive and photoFileId is updated in Google Sheets
+  4. After upload, member's row in the admin grid reflects the new photoFileId
+**Plans:** 1/1 plans complete
+
+Plans:
+- [x] 34-01 — Admin photo upload API, PhotoUpload allowCamera, MemberPhotoUploadModal, MemberActions wiring
+
+### Phase 35: PDF Export
+**Goal**: Users can download branded PDF versions of observing guides
+**Depends on**: Phase 34
 **Requirements**: PUB-05
 **Success Criteria** (what must be TRUE):
   1. User can click a download button on any guide section and receive a branded PDF with SAC design
@@ -116,11 +131,11 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 34-01: TBD
+- [ ] 35-01: TBD
 
 ## Progress
 
-**Execution Order:** 31 → 32 → 33 → 34
+**Execution Order:** 31 → 32 → 33 → 34 → 35
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -136,4 +151,5 @@ Plans:
 | 31. Catalog & Storage | 2/2 | Complete    | 2026-03-27 | - |
 | 32. Admin Guide Builder | 2/2 | Complete    | 2026-03-27 | - |
 | 33. Public Guides Page | 2/2 | Complete    | 2026-03-27 | - |
-| 34. PDF Export | v1.9 | 0/? | Not started | - |
+| 34. Admin Member Photo | v1.9 | 1/1 | Complete | 2026-05-20 |
+| 35. PDF Export | v1.9 | 0/? | Not started | - |
