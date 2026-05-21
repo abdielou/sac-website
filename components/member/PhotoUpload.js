@@ -19,8 +19,15 @@ const DEFAULT_AVATAR =
  * @param {string|null} props.stagedPhotoUrl - Preview URL of newly cropped (unsaved) photo
  * @param {(blob: Blob, previewUrl: string) => void} props.onPhotoCropped - Called after crop confirms
  * @param {boolean} props.disabled - Disable buttons during save
+ * @param {boolean} [props.allowCamera=true] - Show camera capture (disabled for admin upload)
  */
-export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, disabled }) {
+export function PhotoUpload({
+  currentPhotoUrl,
+  stagedPhotoUrl,
+  onPhotoCropped,
+  disabled,
+  allowCamera = true,
+}) {
   const [cropModalOpen, setCropModalOpen] = useState(false)
   const [rawImageSrc, setRawImageSrc] = useState(null)
   const [cameraActive, setCameraActive] = useState(false)
@@ -218,7 +225,7 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
       </div>
 
       {/* Camera viewfinder */}
-      {cameraActive && (
+      {allowCamera && cameraActive && (
         <div className="flex flex-col items-center gap-2">
           <video
             ref={videoRef}
@@ -247,7 +254,7 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
       )}
 
       {/* Upload buttons */}
-      {!cameraActive && (
+      {(!allowCamera || !cameraActive) && (
         <div className="flex flex-col items-center gap-2">
           <div className="flex gap-2">
             <button
@@ -258,14 +265,16 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
             >
               Subir foto
             </button>
-            <button
-              type="button"
-              onClick={startCamera}
-              disabled={disabled}
-              className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Tomar foto
-            </button>
+            {allowCamera && (
+              <button
+                type="button"
+                onClick={startCamera}
+                disabled={disabled}
+                className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Tomar foto
+              </button>
+            )}
             {hasAdjustablePhoto && (
               <button
                 type="button"
@@ -277,7 +286,9 @@ export function PhotoUpload({ currentPhotoUrl, stagedPhotoUrl, onPhotoCropped, d
               </button>
             )}
           </div>
-          {cameraError && <p className="text-xs text-red-500 dark:text-red-400">{cameraError}</p>}
+          {allowCamera && cameraError && (
+            <p className="text-xs text-red-500 dark:text-red-400">{cameraError}</p>
+          )}
           {adjustError && <p className="text-xs text-red-500 dark:text-red-400">{adjustError}</p>}
         </div>
       )}

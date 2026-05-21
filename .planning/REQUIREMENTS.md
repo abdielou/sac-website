@@ -30,6 +30,7 @@ Requirements for Observing Guides milestone. Each maps to roadmap phases.
 - [x] **ADMIN-04**: Admin can reorder, remove, and edit objects within a guide
 - [x] **ADMIN-05**: Admin can save guide as draft or publish to public
 - [x] **ADMIN-06**: Admin can edit and unpublish existing guides
+- [x] **ADMIN-07**: Admin can upload or re-crop a member profile photo from the members dashboard (file upload and adjust only; no camera)
 
 ## Future Requirements
 
@@ -69,7 +70,8 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | PUB-02 | Phase 33 | Complete |
 | PUB-03 | Phase 33 | Complete |
 | PUB-04 | Phase 33 | Complete |
-| PUB-05 | Phase 34 | Pending |
+| PUB-05 | Phase 35 | Pending |
+| ADMIN-07 | Phase 34 | Complete |
 | PUB-06 | Phase 33 | Complete |
 | ADMIN-01 | Phase 32 | Complete |
 | ADMIN-02 | Phase 32 | Complete |
@@ -79,10 +81,10 @@ Deferred to future milestone. Tracked but not in current roadmap.
 | ADMIN-06 | Phase 32 | Complete |
 
 **Coverage:**
-- v1.9 requirements: 15 total
+- v1.9 requirements: 16 total
 - Mapped to phases: 15
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-26*
-*Last updated: 2026-03-26 after roadmap creation*
+*Last updated: 2026-05-20 after Phase 34 admin member photo upload*
