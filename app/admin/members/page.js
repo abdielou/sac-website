@@ -14,6 +14,7 @@ import { MemberActions } from '@/components/admin/MemberActions'
 import { ManualPaymentModal } from '@/components/admin/ManualPaymentModal'
 import { WorkspaceAccountModal } from '@/components/admin/WorkspaceAccountModal'
 import { MemberPhotoUploadModal } from '@/components/admin/MemberPhotoUploadModal'
+import { MemberIdCardPreviewModal } from '@/components/admin/MemberIdCardPreviewModal'
 import { toCsv, downloadCsvFile } from '@/lib/csv'
 import { COLUMN_REGISTRY } from '@/lib/admin/columnRegistry'
 import { useColumnPreferences } from '@/lib/hooks/useColumnPreferences'
@@ -163,6 +164,7 @@ function MembersContent() {
   const [modalState, setModalState] = useState({ isOpen: false, member: null, paymentType: null })
   const [workspaceModalState, setWorkspaceModalState] = useState({ isOpen: false, member: null })
   const [photoModalState, setPhotoModalState] = useState({ isOpen: false, member: null })
+  const [idCardPreviewState, setIdCardPreviewState] = useState({ isOpen: false, member: null })
   const [isExporting, setIsExporting] = useState(false)
   const [photoFilter, setPhotoFilter] = useState(null) // null | 'with' | 'without'
   const [viewMode, setViewMode] = useState('grid')
@@ -213,6 +215,14 @@ function MembersContent() {
 
   const handleClosePhotoModal = () => {
     setPhotoModalState({ isOpen: false, member: null })
+  }
+
+  const handlePreviewIdCard = (member) => {
+    setIdCardPreviewState({ isOpen: true, member })
+  }
+
+  const handleCloseIdCardPreview = () => {
+    setIdCardPreviewState({ isOpen: false, member: null })
   }
 
   // Sync local state when URL param changes externally
@@ -659,6 +669,7 @@ function MembersContent() {
                         member={member}
                         onAction={handleAction}
                         onUploadPhoto={handleUploadPhoto}
+                        onPreviewIdCard={handlePreviewIdCard}
                       />
                     </div>
                   </div>
@@ -735,6 +746,7 @@ function MembersContent() {
                             member={member}
                             onAction={handleAction}
                             onUploadPhoto={handleUploadPhoto}
+                            onPreviewIdCard={handlePreviewIdCard}
                           />
                         </td>
                       </tr>
@@ -804,6 +816,12 @@ function MembersContent() {
         isOpen={photoModalState.isOpen}
         onClose={handleClosePhotoModal}
         member={photoModalState.member}
+      />
+
+      <MemberIdCardPreviewModal
+        isOpen={idCardPreviewState.isOpen}
+        onClose={handleCloseIdCardPreview}
+        member={idCardPreviewState.member}
       />
     </div>
   )

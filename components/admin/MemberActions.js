@@ -8,9 +8,9 @@ import { useSession } from 'next-auth/react'
  * Kebab menu (vertical three dots) with dropdown actions for a member row.
  * Dropdown rendered via portal to document.body so it floats above overflow containers.
  *
- * @param {{ member: { email: string, phone?: string, name?: string, sacEmail?: string, photoFileId?: string }, onAction: (member, paymentType: 'GIFT'|'MANUAL'|'WORKSPACE') => void, onUploadPhoto?: (member) => void }} props
+ * @param {{ member: { email: string, phone?: string, name?: string, sacEmail?: string, photoFileId?: string }, onAction: (member, paymentType: 'GIFT'|'MANUAL'|'WORKSPACE') => void, onUploadPhoto?: (member) => void, onPreviewIdCard?: (member) => void }} props
  */
-export function MemberActions({ member, onAction, onUploadPhoto }) {
+export function MemberActions({ member, onAction, onUploadPhoto, onPreviewIdCard }) {
   const { data: session } = useSession()
   const accessibleActions = session?.user?.accessibleActions || []
 
@@ -151,13 +151,39 @@ export function MemberActions({ member, onAction, onUploadPhoto }) {
                 {member.photoFileId ? 'Editar foto de perfil' : 'Subir foto'}
               </button>
             )}
+            {onPreviewIdCard && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false)
+                  onPreviewIdCard(member)
+                }}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                  />
+                </svg>
+                Vista previa del ID
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
                 setIsOpen(false)
                 if (!member.photoFileId) {
                   alert(
-                    'Este miembro no tiene foto de perfil. Se requiere una foto para generar el carnet.'
+                    'Este miembro no tiene foto de perfil. Se requiere una foto para generar el ID digital.'
                   )
                   return
                 }
@@ -173,7 +199,7 @@ export function MemberActions({ member, onAction, onUploadPhoto }) {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0"
+                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                 />
               </svg>
               Descargar ID

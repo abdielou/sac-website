@@ -3609,7 +3609,7 @@ const EMAIL_TEMPLATES = {
       `Pasos:\n` +
       `1) Accede con tu cuenta SAC (correo @sociedadastronomia.com)\n` +
       `2) Sube tu foto de perfil\n` +
-      `3) Tu carnet digital estara disponible en tu perfil\n\n` +
+      `3) Tu ID digital estará disponible en tu perfil\n\n` +
       `Gracias,\n` +
       `-- SAC`,
   },
