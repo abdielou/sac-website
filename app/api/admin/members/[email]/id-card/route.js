@@ -1,6 +1,7 @@
 import { auth } from '../../../../../../auth'
 import { getMemberByEmail } from '../../../../../../lib/google-sheets'
 import { generateIdCardPdf } from '../../../../../../lib/id-card/generateIdCard'
+import { checkReadAccess } from '../../../../../../lib/api-permissions'
 
 /**
  * GET /api/admin/members/[email]/id-card
@@ -16,12 +17,8 @@ export const GET = auth(async function GET(req, { params }) {
     )
   }
 
-  if (!req.auth.user?.isAdmin) {
-    return Response.json(
-      { error: 'Acceso denegado', details: 'Admin access required' },
-      { status: 403 }
-    )
-  }
+  const readError = checkReadAccess(req, 'members')
+  if (readError) return readError
 
   const { email } = await params
   const decodedEmail = decodeURIComponent(email)
@@ -56,12 +53,6 @@ export const GET = auth(async function GET(req, { params }) {
     })
   } catch (error) {
     console.error('ID card generation error:', error)
-    return Response.json(
-      {
-        error: 'Error al generar tarjeta de identificacion',
-        details: error.message,
-      },
-      { status: 500 }
-    )
+    return Response.json({ error: 'Error al generar tarjeta de identificacion' }, { status: 500 })
   }
 })

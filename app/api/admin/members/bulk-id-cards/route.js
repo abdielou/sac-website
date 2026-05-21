@@ -1,6 +1,7 @@
 import { auth } from '../../../../../auth'
 import { getMembers } from '../../../../../lib/google-sheets'
 import { generateBulkIdCardsPdf } from '../../../../../lib/id-card/generateBulkIdCards'
+import { checkReadAccess } from '../../../../../lib/api-permissions'
 
 export const maxDuration = 60
 
@@ -19,12 +20,8 @@ export const GET = auth(async function GET(req) {
     )
   }
 
-  if (!req.auth.user?.isAdmin) {
-    return Response.json(
-      { error: 'Acceso denegado', details: 'Admin access required' },
-      { status: 403 }
-    )
-  }
+  const readError = checkReadAccess(req, 'members')
+  if (readError) return readError
 
   try {
     const { data: members } = await getMembers()
@@ -53,12 +50,6 @@ export const GET = auth(async function GET(req) {
     })
   } catch (error) {
     console.error('Bulk ID card generation error:', error)
-    return Response.json(
-      {
-        error: 'Error al generar carnets',
-        details: error.message,
-      },
-      { status: 500 }
-    )
+    return Response.json({ error: 'Error al generar carnets' }, { status: 500 })
   }
 })

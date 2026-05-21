@@ -59,13 +59,15 @@ export const POST = auth(async function POST(req, { params }) {
     const arrayBuffer = await photo.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
     const sheetEmail = member.email || decodedEmail
-    const fileId = await uploadPhoto(sheetEmail, buffer, mimeType)
+    const fileId = await uploadPhoto(sheetEmail, buffer, mimeType, {
+      currentPhotoFileId: member.photoFileId || undefined,
+    })
 
     await updateMemberProfile(sheetEmail, { photoFileId: fileId })
 
     return NextResponse.json({ success: true, photoFileId: fileId })
   } catch (e) {
     console.error('Admin member photo upload failed:', e)
-    return NextResponse.json({ error: 'Error al subir foto', details: e?.message }, { status: 500 })
+    return NextResponse.json({ error: 'Error al subir foto' }, { status: 500 })
   }
 })
