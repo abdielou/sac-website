@@ -1,81 +1,57 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.9
-milestone_name: Observing Guides
-status: completed
-stopped_at: Completed 33-02-PLAN.md
-last_updated: "2026-03-27T14:41:41.175Z"
-last_activity: 2026-03-27 — Completed 33-02 Public Guides Page
+milestone: none
+milestone_name: none
+status: between_milestones
+stopped_at: Milestone v1.9 archived
+last_updated: "2026-05-26T00:00:00.000Z"
+last_activity: 2026-05-26 — Archived v1.9 Observing Guides milestone
 progress:
-  total_phases: 5
-  completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
-  percent: 60
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-26)
+See: .planning/PROJECT.md (updated 2026-05-26)
 
 **Core value:** Admins can accurately track membership status and payments so that no member falls through the cracks.
-**Current focus:** Phase 34 — PDF Export
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Milestone: v1.9 — Observing Guides
-Phase: 33 of 35 (Public Guides Page)
-Plan: 2 of 2
-Status: Phase Complete
-Last activity: 2026-04-07 — Completed quick task 2: WhatsApp Community Membership Audit
+Milestone: none (v1.9 shipped 2026-05-26)
+Phase: —
+Status: Between milestones
+Last activity: 2026-05-26 — Archived v1.9 Observing Guides
 
-Progress: [██████████] 100%
+## Deferred Items
 
-## Performance Metrics
+Items acknowledged and deferred at milestone close on 2026-05-26:
 
-**Velocity:**
-- Total plans completed: 68 (across v1.0-v1.8)
-- Average duration: ~30 min
-- Total execution time: ~28 hours
-- v1.8 (phases 26-30): 14 plans in 5 days
-
-**Recent Trend (v1.8):**
-- 14 plans across 5 phases in 5 days
-- Trend: Accelerating
+| Category | Item | Status |
+|----------|------|--------|
+| todo | Automated membership expiration reminders | pending |
+| todo | Migrate AWS SDK v2 to v3 | pending |
+| requirement | PUB-05 branded PDF guide export | dropped from v1.9 |
 
 ## Accumulated Context
 
 ### Decisions
 
-All prior decisions archived to PROJECT.md Key Decisions table.
-v1.9 decisions so far:
-- Object catalog: OpenNGC CSV (13K objects) + Stellarium Spanish names
-- Storage: JSON in S3, same pattern as articles (guides/{slug}.json with index)
-- Guide type is metadata on the guide (galaxies vs objects), not a data model distinction
-- All objects share single data shape; free-form guide titling
-- SkyView: NASA thumbnail API, URL-based (no API key needed)
-- Guide S3 storage: own client singleton in guides-s3.js, same bucket as articles with guides/ prefix
-- [Phase 31]: Catalog uses fs.readFileSync for Node 24 compat; display names strip leading zeros
-- [Phase 32]: Guide slug uses NFD normalization + timestamp; blog_admin gets full guide permissions; guide types validated at API level
-- [Phase 32-02]: Catalog data resolved at edit-load time via search API; split-panel editor layout (search 40% + entries 60%); annotations use Spanish label dropdowns
-- [Phase 33-01]: Public API reuses lib/guides.js business layer; catalog resolved server-side for SkyView RA/Dec
-- [Phase 33-02]: SkyView 150px thumbnails with lazy loading; filter AND across dimensions, OR within; server-side index fetch; nav label in Spanish
+All v1.9 decisions archived to `.planning/milestones/v1.9-ROADMAP.md` and PROJECT.md Key Decisions table.
 
 ### Blockers/Concerns
 
 None.
 
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 1 | Add WhatsApp community member extraction skill | 2026-04-07 | a9a77d3 | [1-create-claude-code-skill-whatsapp-extrac](./quick/1-create-claude-code-skill-whatsapp-extrac/) |
-| 2 | Build WhatsApp Community Membership Audit in admin dashboard | 2026-04-07 | 6d0f527 | [2-build-whatsapp-community-membership-audi](./quick/2-build-whatsapp-community-membership-audi/) |
-
 ## Session Continuity
 
-Last session: 2026-03-27T14:40:00.000Z
-Stopped at: Completed 33-02-PLAN.md
-Resume: Phase 34 — Admin Member Photo Upload
+Last session: 2026-05-26
+Stopped at: v1.9 milestone archived
+Resume: `/gsd-new-milestone` to start next cycle
