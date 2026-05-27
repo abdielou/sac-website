@@ -142,12 +142,16 @@ class TestRun(unittest.TestCase):
         mock_credentials = Mock()
         mock_youtube_client = Mock()
         mock_discovery_build.return_value = mock_youtube_client
-        
+
         # Act
         result = run.build_youtube_client(mock_credentials)
-        
+
         # Assert
-        mock_discovery_build.assert_called_once_with("youtube", "v3", credentials=mock_credentials)
+        mock_discovery_build.assert_called_once()
+        args, kwargs = mock_discovery_build.call_args
+        self.assertEqual(args, ("youtube", "v3"))
+        self.assertFalse(kwargs["http"].http.follow_redirects)
+        self.assertFalse(kwargs["cache_discovery"])
         self.assertEqual(result, mock_youtube_client)
 
 
@@ -342,13 +346,13 @@ class TestRun(unittest.TestCase):
         result = run.make_upload_request(mock_youtube, media_file, title)
         
         # Assert
-        mock_media_upload.assert_called_once_with(media_file, chunksize=-1, resumable=True)
+        mock_media_upload.assert_called_once_with(media_file, chunksize=8 * 1024 * 1024, resumable=True)
         mock_youtube.videos.assert_called_once()
         mock_youtube.videos.return_value.insert.assert_called_once_with(
             part="snippet,status",
             body={
                 "snippet": {"categoryId": run.youtube_category_id, "title": title},
-                "status": {"privacyStatus": "public"}
+                "status": {"privacyStatus": run.youtube_privacy_status}
             },
             media_body=mock_media_body
         )
