@@ -167,7 +167,7 @@ export default function GuideSection({ type, editions, sectionTitle }) {
 
   return (
     <section className="py-6">
-      {/* Header with title, dropdown, and PDF button */}
+      {/* Header with title and edition dropdown */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{sectionTitle}</h2>
         <div className="flex items-center gap-2">
@@ -182,7 +182,6 @@ export default function GuideSection({ type, editions, sectionTitle }) {
               </option>
             ))}
           </select>
-          {/* PDF download button — deferred to future milestone */}
         </div>
       </div>
 

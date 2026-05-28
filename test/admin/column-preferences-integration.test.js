@@ -134,11 +134,13 @@ describe('Column Preferences Integration', () => {
         'firstName',
         'initial',
         'lastName',
+        'phone',
+        'familyMembers',
         'expirationDate',
         'status',
         'lastPayment',
       ])
-      expect(defaultIds).toHaveLength(8)
+      expect(defaultIds).toHaveLength(10)
     })
   })
 

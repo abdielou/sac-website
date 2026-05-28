@@ -15,6 +15,7 @@ import pickle
 from google.auth.transport.requests import Request
 import socket
 import re
+import time
 
 # Optional colored output (graceful degradation if colorama not installed)
 try:
@@ -740,8 +741,11 @@ def build_youtube_client(credentials):
     import httplib2
     from google_auth_httplib2 import AuthorizedHttp
     
-    # Create HTTP client with longer timeout and authorize it with credentials
+    # Create HTTP client with longer timeout and authorize it with credentials.
+    # Resumable uploads use HTTP 308 as progress, so googleapiclient must see
+    # that response instead of httplib2 treating it as a redirect.
     http = httplib2.Http(timeout=300)  # 5 minutes timeout
+    http.follow_redirects = False
     authorized_http = AuthorizedHttp(credentials, http=http)
     
     youtube = discovery.build(
@@ -880,26 +884,68 @@ def get_pending_videos(videos_dir, uploaded_list, title_map):
     return pending
 
 # Upload a single video and print progress
+def get_effective_upload_chunk_size():
+    """Return a resumable upload chunk size; -1 is too fragile for large videos."""
+    if upload_chunk_size and upload_chunk_size > 0:
+        return upload_chunk_size
+    return 8 * 1024 * 1024
+
+
+def is_retryable_upload_error(error):
+    """Return True for transient upload errors worth retrying."""
+    if isinstance(error, googleapiclient.errors.HttpError):
+        return error.resp.status in [500, 502, 503, 504]
+    return isinstance(error, (TimeoutError, socket.timeout, OSError))
+
+
 def make_upload_request(youtube, media_file, title):
     body = {
         "snippet": {"categoryId": youtube_category_id, "title": title},
         "status": {"privacyStatus": youtube_privacy_status}
     }
-    
-    # Use non-resumable upload to avoid redirect issues
+
+    # Resumable uploads keep the same YouTube upload session across transient
+    # network failures, preventing timeout retries from creating duplicates.
     media_body = googleapiclient.http.MediaFileUpload(
-        media_file, 
-        resumable=False
+        media_file,
+        chunksize=get_effective_upload_chunk_size(),
+        resumable=True
     )
     return youtube.videos().insert(part="snippet,status", body=body, media_body=media_body)
+
+
+def perform_resumable_upload(request, title, max_retries=5):
+    response = None
+    retry_count = 0
+
+    while response is None:
+        try:
+            status, response = request.next_chunk()
+            retry_count = 0
+            if status:
+                print(f"Uploading '{title}': {int(status.progress() * 100)}%")
+        except Exception as e:
+            if not is_retryable_upload_error(e):
+                raise
+
+            retry_count += 1
+            if retry_count > max_retries:
+                raise
+
+            sleep_seconds = min(2 ** retry_count, 60)
+            print(f"Retrying upload for '{title}' after transient error: {str(e)[:100]}...")
+            time.sleep(sleep_seconds)
+
+    return response
+
 
 def upload_single_video(youtube, media_file, title):
     try:
         request = make_upload_request(youtube, media_file, title)
-        response = request.execute()
-        
+        response = perform_resumable_upload(request, title)
+
         if response and 'id' in response:
-            print(f"✅ Uploaded '{title}' with ID: {response['id']}")
+            print(f"Uploaded '{title}' with ID: {response['id']}")
             return True
     except Exception as e:
         print(f"⚠️  Upload failed: {str(e)[:100]}...")

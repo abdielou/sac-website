@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { getMemberByEmail, updateMemberProfile } from '../../../../lib/google-sheets'
 import { uploadPhoto } from '../../../../lib/google-drive'
 import { generateVerifyToken } from '../../../../lib/id-card/verifyToken'
+import { sanitizeMemberProfileFields } from '../../../../lib/member-profile-fields'
 
 /**
  * GET /api/member/profile
@@ -44,6 +45,8 @@ export const GET = auth(async function GET(req) {
 
     return NextResponse.json({
       ...profileFields,
+      familyMembers: member.familyMembers || [],
+      familyMemberPhotos: member.familyMemberPhotos || {},
       photoUrl,
       sacEmail: email,
       verifyToken: generateVerifyToken(member.email),
@@ -143,17 +146,18 @@ export const PUT = auth(async function PUT(req) {
       fields.photoFileId = fileId
     }
 
-    // Sanitize: only pass allowed fields (plus photoFileId from upload)
-    const sanitizedFields = {}
+    // Whitelist allowed keys, then sanitize all text values
+    const allowedPayload = {}
     for (const key of ALLOWED_FIELDS) {
       if (fields[key] !== undefined) {
-        sanitizedFields[key] = fields[key]
+        allowedPayload[key] = fields[key]
       }
     }
-    // photoFileId comes from Drive upload, not from body
     if (fields.photoFileId) {
-      sanitizedFields.photoFileId = fields.photoFileId
+      allowedPayload.photoFileId = fields.photoFileId
     }
+
+    const sanitizedFields = sanitizeMemberProfileFields(allowedPayload)
 
     // Check there's something to update
     if (Object.keys(sanitizedFields).length === 0) {

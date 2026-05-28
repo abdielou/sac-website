@@ -8,9 +8,15 @@ import { useSession } from 'next-auth/react'
  * Kebab menu (vertical three dots) with dropdown actions for a member row.
  * Dropdown rendered via portal to document.body so it floats above overflow containers.
  *
- * @param {{ member: { email: string, phone?: string, name?: string, sacEmail?: string, photoFileId?: string }, onAction: (member, paymentType: 'GIFT'|'MANUAL'|'WORKSPACE') => void, onUploadPhoto?: (member) => void, onPreviewIdCard?: (member) => void }} props
+ * @param {{ member: { email: string, phone?: string, name?: string, sacEmail?: string, photoFileId?: string, familyMembers?: string[], familyMemberPhotos?: Record<string, string> }, onAction: (member, paymentType: 'GIFT'|'MANUAL'|'WORKSPACE') => void, onUploadPhoto?: (member) => void, onPreviewIdCard?: (member) => void, onManageFamily?: (member) => void }} props
  */
-export function MemberActions({ member, onAction, onUploadPhoto, onPreviewIdCard }) {
+export function MemberActions({
+  member,
+  onAction,
+  onUploadPhoto,
+  onPreviewIdCard,
+  onManageFamily,
+}) {
   const { data: session } = useSession()
   const accessibleActions = session?.user?.accessibleActions || []
 
@@ -70,6 +76,10 @@ export function MemberActions({ member, onAction, onUploadPhoto, onPreviewIdCard
     setIsOpen(false)
     onAction(member, paymentType)
   }
+
+  const missingFamilyPhotos = (member.familyMembers || []).filter(
+    (name) => !member.familyMemberPhotos?.[name]
+  ).length
 
   // If user has no permissions, don't render the actions menu
   if (!canEditMember && !canEditPayment) {
@@ -149,6 +159,31 @@ export function MemberActions({ member, onAction, onUploadPhoto, onPreviewIdCard
                   />
                 </svg>
                 {member.photoFileId ? 'Editar foto de perfil' : 'Subir foto'}
+              </button>
+            )}
+            {canEditMember && onManageFamily && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false)
+                  onManageFamily(member)
+                }}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+                Editar familiares
+                {missingFamilyPhotos > 0 && (
+                  <span className="text-orange-600 dark:text-orange-400">
+                    ({missingFamilyPhotos} sin foto)
+                  </span>
+                )}
               </button>
             )}
             {onPreviewIdCard && (
