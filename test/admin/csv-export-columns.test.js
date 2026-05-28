@@ -59,13 +59,15 @@ describe('CSV Export with Column Customization', () => {
         },
       }))
 
-      expect(columns).toHaveLength(8)
+      expect(columns).toHaveLength(10)
       expect(columns.map((c) => c.key)).toEqual([
         'email',
         'sacEmail',
         'firstName',
         'initial',
         'lastName',
+        'phone',
+        'familyMembers',
         'expirationDate',
         'status',
         'lastPayment',

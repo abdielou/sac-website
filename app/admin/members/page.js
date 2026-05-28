@@ -139,6 +139,20 @@ function MembersContent() {
       )
     }
 
+    // Special rendering for familyMembers column (semicolon-separated list)
+    if (col.id === 'familyMembers') {
+      const names = member.familyMembers || []
+      if (names.length === 0) {
+        return <span className="text-gray-400">-</span>
+      }
+      const label = col.formatter ? col.formatter(names) : names.join('; ')
+      return (
+        <span className="text-sm leading-snug" title={label}>
+          {label}
+        </span>
+      )
+    }
+
     // Default rendering for all other columns
     return formattedValue || '-'
   }
@@ -746,7 +760,11 @@ function MembersContent() {
                           <td
                             key={col.id}
                             className={`px-6 py-4 ${
-                              col.id === 'lastPayment' ? 'text-center' : 'whitespace-nowrap'
+                              col.id === 'lastPayment'
+                                ? 'text-center'
+                                : col.id === 'familyMembers'
+                                  ? 'whitespace-normal max-w-xs'
+                                  : 'whitespace-nowrap'
                             } text-sm text-gray-900 dark:text-white`}
                           >
                             {renderCellContent(col, member)}
