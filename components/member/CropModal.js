@@ -2,23 +2,31 @@
 
 import { useState, useCallback } from 'react'
 import Cropper from 'react-easy-crop'
+import { ID_CARD_PHOTO_MAX_PX } from '@/lib/id-card/cardLayout'
+
+const CROP_JPEG_QUALITY = 0.85
 
 /**
  * Extract a cropped region from an image source and return it as a JPEG Blob.
- * Uses an offscreen canvas to draw only the cropped pixel area.
+ * Output is capped to ID card print dimensions so uploads stay small.
  *
  * @param {string} imageSrc - Data URL or object URL of the source image
  * @param {{ x: number, y: number, width: number, height: number }} pixelCrop - Crop area in pixels
- * @returns {Promise<Blob>} Cropped JPEG blob at 85% quality
+ * @param {number} [maxSize=ID_CARD_PHOTO_MAX_PX] - Max width/height of the output square
+ * @returns {Promise<Blob>} Cropped JPEG blob
  */
-function getCroppedImg(imageSrc, pixelCrop) {
+function getCroppedImg(imageSrc, pixelCrop, maxSize = ID_CARD_PHOTO_MAX_PX) {
   return new Promise((resolve, reject) => {
     const image = new Image()
     image.crossOrigin = 'anonymous'
     image.onload = () => {
+      const scale = Math.min(1, maxSize / pixelCrop.width, maxSize / pixelCrop.height)
+      const outputWidth = Math.max(1, Math.round(pixelCrop.width * scale))
+      const outputHeight = Math.max(1, Math.round(pixelCrop.height * scale))
+
       const canvas = document.createElement('canvas')
-      canvas.width = pixelCrop.width
-      canvas.height = pixelCrop.height
+      canvas.width = outputWidth
+      canvas.height = outputHeight
       const ctx = canvas.getContext('2d')
 
       ctx.drawImage(
@@ -29,8 +37,8 @@ function getCroppedImg(imageSrc, pixelCrop) {
         pixelCrop.height,
         0,
         0,
-        pixelCrop.width,
-        pixelCrop.height
+        outputWidth,
+        outputHeight
       )
 
       canvas.toBlob(
@@ -42,7 +50,7 @@ function getCroppedImg(imageSrc, pixelCrop) {
           }
         },
         'image/jpeg',
-        0.85
+        CROP_JPEG_QUALITY
       )
     }
     image.onerror = () => reject(new Error('Error al cargar imagen'))
