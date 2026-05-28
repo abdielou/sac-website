@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { PhotoUpload } from './PhotoUpload'
+import {
+  sanitizeMemberProfileField,
+  sanitizeMemberProfileFields,
+  MEMBER_PROFILE_FIELD_LIMITS,
+} from '@/lib/member-profile-fields'
 
 /**
  * Status badge configuration (inline, same as ProfileView).
@@ -118,19 +123,17 @@ export function ProfileForm({ profile, onCancel, onSave, isSaving }) {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    onSave(
-      {
-        firstName,
-        initial,
-        lastName,
-        town,
-        postalAddress,
-        zipcode,
-        telescopeModel,
-        otherEquipment,
-      },
-      stagedPhoto
-    )
+    const sanitized = sanitizeMemberProfileFields({
+      firstName,
+      initial,
+      lastName,
+      town,
+      postalAddress,
+      zipcode,
+      telescopeModel,
+      otherEquipment,
+    })
+    onSave(sanitized, stagedPhoto)
   }
 
   const statusCfg = statusConfig[profile.status] || statusConfig.expired
@@ -164,8 +167,10 @@ export function ProfileForm({ profile, onCancel, onSave, isSaving }) {
                 type="text"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
+                onBlur={() => setFirstName((v) => sanitizeMemberProfileField('firstName', v))}
                 disabled={isSaving}
                 className={inputClasses}
+                maxLength={MEMBER_PROFILE_FIELD_LIMITS.firstName}
                 placeholder="Nombre"
               />
             </div>
@@ -181,9 +186,10 @@ export function ProfileForm({ profile, onCancel, onSave, isSaving }) {
                 type="text"
                 value={initial}
                 onChange={(e) => setInitial(e.target.value)}
+                onBlur={() => setInitial((v) => sanitizeMemberProfileField('initial', v))}
                 disabled={isSaving}
                 className={inputClasses}
-                maxLength={1}
+                maxLength={MEMBER_PROFILE_FIELD_LIMITS.initial}
                 placeholder="Inicial"
               />
             </div>
@@ -199,8 +205,10 @@ export function ProfileForm({ profile, onCancel, onSave, isSaving }) {
                 type="text"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
+                onBlur={() => setLastName((v) => sanitizeMemberProfileField('lastName', v))}
                 disabled={isSaving}
                 className={inputClasses}
+                maxLength={MEMBER_PROFILE_FIELD_LIMITS.lastName}
                 placeholder="Apellidos"
               />
             </div>
@@ -238,8 +246,10 @@ export function ProfileForm({ profile, onCancel, onSave, isSaving }) {
               type="text"
               value={town}
               onChange={(e) => setTown(e.target.value)}
+              onBlur={() => setTown((v) => sanitizeMemberProfileField('town', v))}
               disabled={isSaving}
               className={inputClasses}
+              maxLength={MEMBER_PROFILE_FIELD_LIMITS.town}
               placeholder="San Juan"
             />
           </div>
@@ -255,8 +265,10 @@ export function ProfileForm({ profile, onCancel, onSave, isSaving }) {
               type="text"
               value={postalAddress}
               onChange={(e) => setPostalAddress(e.target.value)}
+              onBlur={() => setPostalAddress((v) => sanitizeMemberProfileField('postalAddress', v))}
               disabled={isSaving}
               className={inputClasses}
+              maxLength={MEMBER_PROFILE_FIELD_LIMITS.postalAddress}
               placeholder="Calle Principal #123"
             />
           </div>
@@ -272,8 +284,10 @@ export function ProfileForm({ profile, onCancel, onSave, isSaving }) {
               type="text"
               value={zipcode}
               onChange={(e) => setZipcode(e.target.value)}
+              onBlur={() => setZipcode((v) => sanitizeMemberProfileField('zipcode', v))}
               disabled={isSaving}
               className={inputClasses}
+              maxLength={MEMBER_PROFILE_FIELD_LIMITS.zipcode}
               placeholder="00901"
             />
           </div>
@@ -295,8 +309,12 @@ export function ProfileForm({ profile, onCancel, onSave, isSaving }) {
               type="text"
               value={telescopeModel}
               onChange={(e) => setTelescopeModel(e.target.value)}
+              onBlur={() =>
+                setTelescopeModel((v) => sanitizeMemberProfileField('telescopeModel', v))
+              }
               disabled={isSaving}
               className={inputClasses}
+              maxLength={MEMBER_PROFILE_FIELD_LIMITS.telescopeModel}
               placeholder="Celestron NexStar 8SE"
             />
           </div>
@@ -311,8 +329,12 @@ export function ProfileForm({ profile, onCancel, onSave, isSaving }) {
               id="otherEquipment"
               value={otherEquipment}
               onChange={(e) => setOtherEquipment(e.target.value)}
+              onBlur={() =>
+                setOtherEquipment((v) => sanitizeMemberProfileField('otherEquipment', v))
+              }
               disabled={isSaving}
               rows={3}
+              maxLength={MEMBER_PROFILE_FIELD_LIMITS.otherEquipment}
               className={inputClasses}
               placeholder="Binoculares, camara, filtros..."
             />

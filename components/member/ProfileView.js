@@ -1,6 +1,7 @@
 'use client'
 
 import { IdCardPreview } from '@/components/member/IdCardPreview'
+import { FamilySection } from '@/components/member/FamilySection'
 
 /**
  * Status badge configuration matching admin StatusBadge pattern.
@@ -177,6 +178,8 @@ export function ProfileView({ profile, onEdit }) {
             )}
           </dl>
         </Section>
+
+        <FamilySection profile={profile} />
       </div>
     </div>
   )

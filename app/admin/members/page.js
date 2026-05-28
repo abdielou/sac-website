@@ -15,6 +15,7 @@ import { ManualPaymentModal } from '@/components/admin/ManualPaymentModal'
 import { WorkspaceAccountModal } from '@/components/admin/WorkspaceAccountModal'
 import { MemberPhotoUploadModal } from '@/components/admin/MemberPhotoUploadModal'
 import { MemberIdCardPreviewModal } from '@/components/admin/MemberIdCardPreviewModal'
+import { AdminFamilyManagementModal } from '@/components/admin/AdminFamilyManagementModal'
 import { toCsv, downloadCsvFile } from '@/lib/csv'
 import { COLUMN_REGISTRY } from '@/lib/admin/columnRegistry'
 import { useColumnPreferences } from '@/lib/hooks/useColumnPreferences'
@@ -165,6 +166,7 @@ function MembersContent() {
   const [workspaceModalState, setWorkspaceModalState] = useState({ isOpen: false, member: null })
   const [photoModalState, setPhotoModalState] = useState({ isOpen: false, member: null })
   const [idCardPreviewState, setIdCardPreviewState] = useState({ isOpen: false, member: null })
+  const [familyModalState, setFamilyModalState] = useState({ isOpen: false, member: null })
   const [isExporting, setIsExporting] = useState(false)
   const [photoFilter, setPhotoFilter] = useState(null) // null | 'with' | 'without'
   const [viewMode, setViewMode] = useState('grid')
@@ -223,6 +225,14 @@ function MembersContent() {
 
   const handleCloseIdCardPreview = () => {
     setIdCardPreviewState({ isOpen: false, member: null })
+  }
+
+  const handleManageFamily = (member) => {
+    setFamilyModalState({ isOpen: true, member })
+  }
+
+  const handleCloseFamilyModal = () => {
+    setFamilyModalState({ isOpen: false, member: null })
   }
 
   // Sync local state when URL param changes externally
@@ -670,6 +680,7 @@ function MembersContent() {
                         onAction={handleAction}
                         onUploadPhoto={handleUploadPhoto}
                         onPreviewIdCard={handlePreviewIdCard}
+                        onManageFamily={handleManageFamily}
                       />
                     </div>
                   </div>
@@ -747,6 +758,7 @@ function MembersContent() {
                             onAction={handleAction}
                             onUploadPhoto={handleUploadPhoto}
                             onPreviewIdCard={handlePreviewIdCard}
+                            onManageFamily={handleManageFamily}
                           />
                         </td>
                       </tr>
@@ -822,6 +834,17 @@ function MembersContent() {
         isOpen={idCardPreviewState.isOpen}
         onClose={handleCloseIdCardPreview}
         member={idCardPreviewState.member}
+      />
+
+      <AdminFamilyManagementModal
+        isOpen={familyModalState.isOpen}
+        onClose={handleCloseFamilyModal}
+        member={
+          familyModalState.member
+            ? filteredMembers.find((m) => m.email === familyModalState.member.email) ||
+              familyModalState.member
+            : null
+        }
       />
     </div>
   )

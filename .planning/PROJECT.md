@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Website for Sociedad de Astronomia del Caribe (SAC) — a non-profit astronomy organization in Puerto Rico. Includes a public-facing site (blog, events, gallery, interactive observing guides) and an admin dashboard for membership management, payment tracking, workspace account generation, automated inbox scanning via Google Apps Script, article and guide management backed by AWS S3, and media hosting. Members sign in with their SAC Google accounts to view their profile, upload photos, and download printable ID cards.
+Website for Sociedad de Astronomia del Caribe (SAC) — a non-profit astronomy organization in Puerto Rico. Includes a public-facing site (blog, events, gallery, interactive observing guides) and an admin dashboard for membership management, payment tracking, workspace account generation, automated inbox scanning via Google Apps Script, article and guide management backed by AWS S3, and media hosting. Members sign in with their SAC Google accounts to view their profile, upload photos, download printable ID cards, and manage family member photos and Family Member ID cards.
 
 ## Core Value
 
@@ -63,11 +63,27 @@ Admins can accurately track membership status and payments so that no member fal
 
 <!-- Current scope. Building toward these. -->
 
-(none — run `/gsd-new-milestone` to define next scope)
+- [ ] Family member names stored in CLEAN sheet (`familyMembers` column, semicolon-separated, admin-editable)
+- [ ] Family member photo upload for admins and members
+- [ ] Family Member ID cards (similar design, labeled as family, QR verifies primary member)
+- [ ] Admin manages family names and photos via Member Actions menu
+- [ ] Member views family names read-only on profile; manages photos and downloads IDs from profile
+
+## Current Milestone: v1.10 Family Member IDs
+
+**Goal:** Enable admins and members to manage family member photos and download Family Member ID cards linked to the primary member's membership.
+
+**Target features:**
+- `familyMembers` column on CLEAN sheet (semicolon-separated names, admin-editable only)
+- `familyMemberPhotos` JSON column mapping name → Drive photoFileId
+- Family Member ID card template (reuse member ID design + "Familiar" label)
+- QR code on family card verifies the sponsoring member (same token as member ID)
+- Admin: edit family names, upload photos, preview/download family IDs via Member Actions
+- Member: view family names read-only, upload photos, preview/download family IDs from profile
 
 ## Next Milestone Goals
 
-Not yet defined. Run `/gsd-new-milestone` to start the next cycle (questioning → research → requirements → roadmap).
+(not applicable — v1.10 is current)
 
 <details>
 <summary>✅ v1.9 Observing Guides (Shipped 2026-05-26)</summary>
@@ -98,10 +114,19 @@ See `.planning/milestones/v1.9-ROADMAP.md` for full details.
 - Photo approval workflow — over-engineered for ~100 members; admins trust members
 - Member-to-member directory — privacy concerns, low value for small org
 - Branded PDF export for observing guides — dropped; interactive web page is sufficient
+- Family members editing their own names — admin-only per SAC policy
+- Separate membership accounts for family members — cards only, no portal login
 
 ## Current State
 
-Shipped v1.9. Full stack operational:
+Shipped v1.9. Milestone v1.10 in progress — Phases 35–36 complete:
+- Family member names and photo references stored in Google Sheets (`familyMembers`, `familyMemberPhotos` columns)
+- Parse/serialize utilities and admin APIs for updating names and uploading family photos
+- Family photos stored in Drive with `{email}_family_{slug}.jpg` filenames
+- Family Member ID cards extend shared `IdCard` with "Familiar" designation, primary-member QR/vigencia
+- Admin and member PDF/preview APIs for family ID cards
+
+Full stack operational:
 - Blog runs entirely from S3 (77 articles, 215 images, ~133 MB)
 - Admin dashboard: membership tracking, payment classification, workspace account generation
 - Article manager: CodeMirror editor, live MDX preview, image upload, component insert menu
@@ -178,4 +203,4 @@ Tech stack: Next.js 16 App Router, Google Sheets, Google Drive, Apps Script, Tan
 | Phase 35 PDF export dropped | Interactive web page covers use case; PDF added complexity | ✓ Good — scope trimmed at close |
 
 ---
-*Last updated: 2026-05-26 after v1.9 milestone archived*
+*Last updated: 2026-05-27 after Phase 36 completion*
