@@ -23,7 +23,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       authorization: {
         params: {
           access_type: 'offline',
-          prompt: 'consent',
+          // Always show Google's account picker so members logged into a personal
+          // Gmail in the browser can choose their @sociedadastronomia.com account.
+          prompt: 'select_account consent',
           scope: 'openid email profile',
         },
       },

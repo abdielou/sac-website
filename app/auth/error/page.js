@@ -8,7 +8,7 @@ import Link from 'next/link'
 function getErrorMessage(error) {
   switch (error) {
     case 'AccessDenied':
-      return 'No tienes permiso para acceder. Tu cuenta no esta autorizada.'
+      return 'No tienes permiso para acceder. Usa tu cuenta @sociedadastronomia.com, no un correo personal.'
     case 'Configuration':
       return 'Error de configuracion del servidor. Contacta al administrador.'
     case 'Verification':
@@ -53,6 +53,10 @@ export default async function AuthErrorPage({ searchParams }) {
           <div className="mb-6 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
             <p className="text-sm text-red-700 dark:text-red-300 text-center">
               {getErrorMessage(error)}
+            </p>
+            <p className="mt-2 text-sm text-red-700 dark:text-red-300 text-center">
+              Al volver a intentar, selecciona <strong>Usar otra cuenta</strong> y elige tu correo
+              SAC.
             </p>
           </div>
 
