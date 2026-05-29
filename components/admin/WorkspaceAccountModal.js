@@ -214,7 +214,7 @@ export function WorkspaceAccountModal({ isOpen, onClose, member }) {
                   />
                 </svg>
               )}
-              {isPending ? 'Creando...' : 'Crear Cuenta'}
+              {isPending ? 'Creando... (puede tomar un minuto)' : 'Crear Cuenta'}
             </button>
           </div>
         </form>

@@ -6,6 +6,8 @@ import { invalidateCache } from '../../../../lib/cache'
 import { checkPermission } from '../../../../lib/api-permissions'
 import { Actions } from '../../../../lib/permissions'
 
+export const maxDuration = 60
+
 /**
  * POST /api/admin/create-workspace-account
  *
@@ -60,7 +62,14 @@ export const POST = auth(async function POST(req) {
       )
     }
 
-    const result = await callAppsScript(null, 'create_workspace_account', {
+    const status = await callAppsScript(null, 'scan_status', {}, { timeout: 10000 })
+    if (status.scanning) {
+      return NextResponse.json({ error: 'OPERATION_IN_PROGRESS' }, { status: 409 })
+    }
+
+    // Fire-and-forget: Apps Script can take minutes (Workspace API + PDF emails).
+    // Client polls /api/admin/scan/status until the script lock is released.
+    callAppsScript(null, 'create_workspace_account', {
       email: body.email,
       firstName: body.firstName,
       initial: body.initial || '',
@@ -71,16 +80,15 @@ export const POST = auth(async function POST(req) {
       sendWelcome: body.sendWelcome === true,
       sendCredentials: body.sendCredentials === true,
     })
+      .then(() => invalidateCache())
+      .catch(() => {})
 
-    if (!result.success) {
-      const status = result.error === 'OPERATION_IN_PROGRESS' ? 409 : 500
-      return NextResponse.json({ error: result.error }, { status })
-    }
-
-    // Workspace account created - invalidate cache (member's sacEmail changed)
-    invalidateCache()
-
-    return NextResponse.json(result)
+    return NextResponse.json({
+      success: true,
+      started: true,
+      sacEmail: body.sacEmail,
+      message: 'Creación de cuenta iniciada',
+    })
   } catch (error) {
     const isTimeout = error.name === 'AbortError'
     return NextResponse.json(

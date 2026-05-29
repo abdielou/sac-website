@@ -2,10 +2,7 @@
 import { auth } from '../../../../../../auth'
 import { NextResponse } from 'next/server'
 import { getMemberByEmail, updateFamilyMembers } from '../../../../../../lib/google-sheets'
-import {
-  parseFamilyMembers,
-  sanitizeFamilyMemberNames,
-} from '../../../../../../lib/family-members'
+import { parseFamilyMembers, sanitizeFamilyMemberNames } from '../../../../../../lib/family-members'
 import { checkPermission } from '../../../../../../lib/api-permissions'
 import { Actions } from '../../../../../../lib/permissions'
 

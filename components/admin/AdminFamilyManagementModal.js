@@ -2,10 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import {
-  sanitizeFamilyMemberName,
-  sanitizeFamilyMemberNames,
-} from '@/lib/family-members'
+import { sanitizeFamilyMemberName, sanitizeFamilyMemberNames } from '@/lib/family-members'
 import { useUpdateFamilyMembers } from '@/lib/hooks/useAdminData'
 import { AdminFamilyPhotoUploadModal } from '@/components/admin/AdminFamilyPhotoUploadModal'
 import { AdminFamilyIdCardPreviewModal } from '@/components/admin/AdminFamilyIdCardPreviewModal'
@@ -112,8 +109,7 @@ export function AdminFamilyManagementModal({ isOpen, onClose, member }) {
 
   const photos = member.familyMemberPhotos || {}
   const hasUnsavedChanges =
-    JSON.stringify(sanitizeFamilyMemberNames(draftNames).names) !==
-    JSON.stringify(savedNames)
+    JSON.stringify(sanitizeFamilyMemberNames(draftNames).names) !== JSON.stringify(savedNames)
 
   return createPortal(
     <>
@@ -151,16 +147,19 @@ export function AdminFamilyManagementModal({ isOpen, onClose, member }) {
 
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Familiares
-                </h3>
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Familiares</h3>
                 <button
                   type="button"
                   onClick={handleAddName}
                   disabled={isPending}
                   className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded transition-colors disabled:opacity-50"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg
+                    className="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
