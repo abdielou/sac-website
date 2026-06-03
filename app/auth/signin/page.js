@@ -46,6 +46,15 @@ export default async function SignInPage({ searchParams }) {
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Acceso SAC</h1>
             <p className="text-gray-600 dark:text-gray-400">Sociedad de Astronomia del Caribe</p>
+            {!error && (
+              <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                Al elegir su cuenta en Google, use su correo institucional{' '}
+                <strong className="font-semibold text-gray-700 dark:text-gray-300">
+                  @sociedadastronomia.com
+                </strong>{' '}
+                (no un correo personal).
+              </p>
+            )}
           </div>
 
           {/* Error message */}
@@ -59,14 +68,6 @@ export default async function SignInPage({ searchParams }) {
               <p className="mt-2 text-sm text-red-700 dark:text-red-300">
                 Si intentaste con un correo personal, haz clic abajo y selecciona{' '}
                 <strong>Usar otra cuenta</strong> para entrar con tu correo SAC.
-              </p>
-            </div>
-          )}
-
-          {!error && (
-            <div className="mb-6 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                Iniciar sesion con su cuenta <strong>@sociedadastronomia.com</strong>
               </p>
             </div>
           )}
