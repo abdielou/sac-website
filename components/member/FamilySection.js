@@ -45,7 +45,7 @@ export function FamilySection({ profile }) {
 
   return (
     <>
-      <Section title="Familiares">
+      <Section title="IDs Familiares">
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
           Los nombres son administrados por la SAC.{' '}
           <span className="inline-flex px-1.5 py-0.5 text-xs font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded">
