@@ -53,4 +53,23 @@ describe('sanitizeMemberProfileFields', () => {
       photoFileId: 'drive-id-123',
     })
   })
+
+  it('sanitizes familyGroup as a single-line field (collapses spaces, strips newlines)', () => {
+    expect(
+      sanitizeMemberProfileFields({
+        familyGroup: '  Maria Lopez,  Juan Perez  ',
+      })
+    ).toEqual({
+      familyGroup: 'Maria Lopez, Juan Perez',
+    })
+    // Newlines are stripped as control chars, keeping the value single-line
+    expect(sanitizeMemberProfileFields({ familyGroup: 'Ana\nLuis' })).toEqual({
+      familyGroup: 'AnaLuis',
+    })
+  })
+
+  it('caps familyGroup at its max length', () => {
+    const out = sanitizeMemberProfileFields({ familyGroup: 'a'.repeat(2000) })
+    expect(out.familyGroup.length).toBe(MEMBER_PROFILE_FIELD_LIMITS.familyGroup)
+  })
 })
