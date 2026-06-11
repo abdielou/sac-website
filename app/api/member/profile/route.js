@@ -49,6 +49,7 @@ export const GET = auth(async function GET(req) {
       familyMemberPhotos: member.familyMemberPhotos || {},
       photoUrl,
       sacEmail: email,
+      isAdmin: req.auth.user?.isAdmin || false,
       verifyToken: generateVerifyToken(member.email),
     })
   } catch (error) {
@@ -76,6 +77,7 @@ const ALLOWED_FIELDS = [
   'zipcode',
   'telescopeModel',
   'otherEquipment',
+  'familyGroup',
 ]
 
 /**
@@ -183,6 +185,7 @@ export const PUT = auth(async function PUT(req) {
     return NextResponse.json({
       ...profileFields,
       photoUrl,
+      isAdmin: req.auth.user?.isAdmin || false,
     })
   } catch (error) {
     console.error('Error updating member profile:', error)
