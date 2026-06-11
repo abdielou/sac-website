@@ -347,15 +347,10 @@ export function ProfileForm({ profile, onCancel, onSave, isSaving }) {
       {/* Grupo familiar */}
       <Section title="Grupo familiar">
         <div>
-          <label
-            htmlFor="familyGroup"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-          >
-            Familiares (de tu solicitud)
-          </label>
           <input
             id="familyGroup"
             type="text"
+            aria-label="Grupo familiar"
             value={familyGroup}
             onChange={(e) => setFamilyGroup(e.target.value)}
             onBlur={() => setFamilyGroup((v) => sanitizeMemberProfileField('familyGroup', v))}
