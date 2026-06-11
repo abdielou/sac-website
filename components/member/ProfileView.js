@@ -179,7 +179,17 @@ export function ProfileView({ profile, onEdit }) {
           </dl>
         </Section>
 
-        <FamilySection profile={profile} />
+        {/* Grupo familiar (free-form, from membership application) */}
+        <Section title="Grupo familiar">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            Familiares indicados en tu solicitud de membresia. Puedes editarlo.
+          </p>
+          <p className="text-sm text-gray-900 dark:text-gray-100">{display(profile.familyGroup)}</p>
+        </Section>
+
+        {(profile.isAdmin || (profile.familyMembers?.length || 0) > 0) && (
+          <FamilySection profile={profile} />
+        )}
       </div>
     </div>
   )

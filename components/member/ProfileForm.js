@@ -98,6 +98,7 @@ export function ProfileForm({ profile, onCancel, onSave, isSaving }) {
   const [zipcode, setZipcode] = useState(profile.zipcode || '')
   const [telescopeModel, setTelescopeModel] = useState(profile.telescopeModel || '')
   const [otherEquipment, setOtherEquipment] = useState(profile.otherEquipment || '')
+  const [familyGroup, setFamilyGroup] = useState(profile.familyGroup || '')
   const [stagedPhoto, setStagedPhoto] = useState(null)
   const [stagedPhotoPreview, setStagedPhotoPreview] = useState(null)
   const previewUrlRef = useRef(null)
@@ -132,6 +133,7 @@ export function ProfileForm({ profile, onCancel, onSave, isSaving }) {
       zipcode,
       telescopeModel,
       otherEquipment,
+      familyGroup,
     })
     onSave(sanitized, stagedPhoto)
   }
@@ -339,6 +341,29 @@ export function ProfileForm({ profile, onCancel, onSave, isSaving }) {
               placeholder="Binoculares, camara, filtros..."
             />
           </div>
+        </div>
+      </Section>
+
+      {/* Grupo familiar */}
+      <Section title="Grupo familiar">
+        <div>
+          <label
+            htmlFor="familyGroup"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+          >
+            Familiares (de tu solicitud)
+          </label>
+          <input
+            id="familyGroup"
+            type="text"
+            value={familyGroup}
+            onChange={(e) => setFamilyGroup(e.target.value)}
+            onBlur={() => setFamilyGroup((v) => sanitizeMemberProfileField('familyGroup', v))}
+            disabled={isSaving}
+            className={inputClasses}
+            maxLength={MEMBER_PROFILE_FIELD_LIMITS.familyGroup}
+            placeholder="Esposa, dos hijos..."
+          />
         </div>
       </Section>
 
