@@ -357,7 +357,7 @@ export function ProfileForm({ profile, onCancel, onSave, isSaving }) {
             disabled={isSaving}
             className={inputClasses}
             maxLength={MEMBER_PROFILE_FIELD_LIMITS.familyGroup}
-            placeholder="Esposa, dos hijos..."
+            placeholder="Escribe los nombres de tus familiares"
           />
         </div>
       </Section>
