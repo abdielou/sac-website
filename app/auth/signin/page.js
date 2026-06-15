@@ -72,21 +72,23 @@ export default async function SignInPage({ searchParams }) {
             </div>
           )}
 
-          {/* Sign in form with Server Action */}
-          <form
-            action={async () => {
-              'use server'
-              await signIn('google', { redirectTo: callbackUrl })
-            }}
-          >
-            <button
-              type="submit"
-              className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-3 px-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors font-medium"
+          {/* Google sign-in — hidden when the dev bypass is active */}
+          {!devBypassEnabled && (
+            <form
+              action={async () => {
+                'use server'
+                await signIn('google', { redirectTo: callbackUrl })
+              }}
             >
-              <GoogleLogo />
-              Iniciar sesion con Google
-            </button>
-          </form>
+              <button
+                type="submit"
+                className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-3 px-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors font-medium"
+              >
+                <GoogleLogo />
+                Iniciar sesion con Google
+              </button>
+            </form>
+          )}
 
           {/* Dev-only bypass button — never rendered in production */}
           {devBypassEnabled && (
@@ -103,9 +105,6 @@ export default async function SignInPage({ searchParams }) {
               >
                 🔧 Entrar como dev (admin)
               </button>
-              <p className="mt-2 text-xs text-center text-amber-700 dark:text-amber-400">
-                Solo desarrollo local — omite Google. No disponible en produccion.
-              </p>
             </form>
           )}
 
