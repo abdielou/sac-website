@@ -121,6 +121,26 @@ const navItems = [
     ),
   },
   {
+    href: '/admin/ai',
+    label: 'AI',
+    feature: 'ai',
+    roles: ['admin'],
+    icon: (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 20 20"
+        fill="currentColor"
+        className="w-5 h-5"
+      >
+        <path
+          fillRule="evenodd"
+          d="M11.3 1.046a1 1 0 011.41 1.213l-1.07 3.46a1 1 0 00.96 1.28h3.46a1 1 0 01.7 1.71l-7.5 7.5a1 1 0 01-1.7-.92l1.07-3.46a1 1 0 00-.96-1.28H4.21a1 1 0 01-.7-1.71l7.5-7.5a1 1 0 01.29-.073z"
+          clipRule="evenodd"
+        />
+      </svg>
+    ),
+  },
+  {
     href: '/member/profile',
     label: 'Perfil',
     feature: 'profile',

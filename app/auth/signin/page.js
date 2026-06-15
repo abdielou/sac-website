@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { signIn, auth } from '../../../auth'
+import { signIn, auth, devBypassEnabled } from '../../../auth'
 
 /**
  * Google "G" logo SVG component
@@ -87,6 +87,27 @@ export default async function SignInPage({ searchParams }) {
               Iniciar sesion con Google
             </button>
           </form>
+
+          {/* Dev-only bypass button — never rendered in production */}
+          {devBypassEnabled && (
+            <form
+              action={async () => {
+                'use server'
+                await signIn('dev-bypass', { redirectTo: callbackUrl })
+              }}
+            >
+              <button
+                type="submit"
+                data-testid="dev-bypass-signin"
+                className="mt-3 w-full flex items-center justify-center gap-2 bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 py-3 px-4 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors font-medium"
+              >
+                🔧 Entrar como dev (admin)
+              </button>
+              <p className="mt-2 text-xs text-center text-amber-700 dark:text-amber-400">
+                Solo desarrollo local — omite Google. No disponible en produccion.
+              </p>
+            </form>
+          )}
 
           {/* Footer */}
           <p className="mt-6 text-xs text-center text-gray-500 dark:text-gray-400">
