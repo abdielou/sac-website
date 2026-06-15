@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { signIn, auth } from '../../../auth'
+import { signIn, auth, devBypassEnabled } from '../../../auth'
 
 /**
  * Google "G" logo SVG component
@@ -72,21 +72,41 @@ export default async function SignInPage({ searchParams }) {
             </div>
           )}
 
-          {/* Sign in form with Server Action */}
-          <form
-            action={async () => {
-              'use server'
-              await signIn('google', { redirectTo: callbackUrl })
-            }}
-          >
-            <button
-              type="submit"
-              className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-3 px-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors font-medium"
+          {/* Google sign-in — hidden when the dev bypass is active */}
+          {!devBypassEnabled && (
+            <form
+              action={async () => {
+                'use server'
+                await signIn('google', { redirectTo: callbackUrl })
+              }}
             >
-              <GoogleLogo />
-              Iniciar sesion con Google
-            </button>
-          </form>
+              <button
+                type="submit"
+                className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 py-3 px-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors font-medium"
+              >
+                <GoogleLogo />
+                Iniciar sesion con Google
+              </button>
+            </form>
+          )}
+
+          {/* Dev-only bypass button — never rendered in production */}
+          {devBypassEnabled && (
+            <form
+              action={async () => {
+                'use server'
+                await signIn('dev-bypass', { redirectTo: callbackUrl })
+              }}
+            >
+              <button
+                type="submit"
+                data-testid="dev-bypass-signin"
+                className="mt-3 w-full flex items-center justify-center gap-2 bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 py-3 px-4 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors font-medium"
+              >
+                🔧 Entrar como dev (admin)
+              </button>
+            </form>
+          )}
 
           {/* Footer */}
           <p className="mt-6 text-xs text-center text-gray-500 dark:text-gray-400">

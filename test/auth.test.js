@@ -12,9 +12,18 @@ jest.mock('next-auth', () => ({
 }))
 
 jest.mock('next-auth/providers/google', () => () => ({}))
+jest.mock('next-auth/providers/credentials', () => () => ({}))
 
 // Import the mocked module
-const { parseAuthorizedEmails, parseRoleFromEntry, parseFeaturesFromEntry, getUserRole, getUserFeatures, isAdmin, isAuthorizedEmail } = require('../auth')
+const {
+  parseAuthorizedEmails,
+  parseRoleFromEntry,
+  parseFeaturesFromEntry,
+  getUserRole,
+  getUserFeatures,
+  isAdmin,
+  isAuthorizedEmail,
+} = require('../auth')
 
 describe('parseAuthorizedEmails', () => {
   beforeEach(() => {
@@ -42,7 +51,11 @@ describe('parseAuthorizedEmails', () => {
     const { parseAuthorizedEmails } = require('../auth')
     const result = parseAuthorizedEmails('user@example.com,admin@test.com')
     expect(result).toHaveLength(2)
-    expect(result[0]).toEqual({ email: 'user@example.com', role: 'restricted', assignedFeatures: [] })
+    expect(result[0]).toEqual({
+      email: 'user@example.com',
+      role: 'restricted',
+      assignedFeatures: [],
+    })
     expect(result[1]).toEqual({ email: 'admin@test.com', role: 'restricted', assignedFeatures: [] })
   })
 
@@ -51,15 +64,29 @@ describe('parseAuthorizedEmails', () => {
     const result = parseAuthorizedEmails('user@example.com:admin;manager@test.com:restricted')
     expect(result).toHaveLength(2)
     expect(result[0]).toEqual({ email: 'user@example.com', role: 'admin', assignedFeatures: [] })
-    expect(result[1]).toEqual({ email: 'manager@test.com', role: 'restricted', assignedFeatures: [] })
+    expect(result[1]).toEqual({
+      email: 'manager@test.com',
+      role: 'restricted',
+      assignedFeatures: [],
+    })
   })
 
   test('parses email:role:features format', () => {
     const { parseAuthorizedEmails } = require('../auth')
-    const result = parseAuthorizedEmails('user@example.com:admin:dashboard,members;manager@test.com:restricted:payments,articles')
+    const result = parseAuthorizedEmails(
+      'user@example.com:admin:dashboard,members;manager@test.com:restricted:payments,articles'
+    )
     expect(result).toHaveLength(2)
-    expect(result[0]).toEqual({ email: 'user@example.com', role: 'admin', assignedFeatures: ['dashboard', 'members'] })
-    expect(result[1]).toEqual({ email: 'manager@test.com', role: 'restricted', assignedFeatures: ['payments', 'articles'] })
+    expect(result[0]).toEqual({
+      email: 'user@example.com',
+      role: 'admin',
+      assignedFeatures: ['dashboard', 'members'],
+    })
+    expect(result[1]).toEqual({
+      email: 'manager@test.com',
+      role: 'restricted',
+      assignedFeatures: ['payments', 'articles'],
+    })
   })
 
   test('normalizes emails to lowercase', () => {
@@ -73,7 +100,11 @@ describe('parseAuthorizedEmails', () => {
     const { parseAuthorizedEmails } = require('../auth')
     const result = parseAuthorizedEmails('  user@example.com  :  admin  :  dashboard  ')
     expect(result).toHaveLength(1)
-    expect(result[0]).toEqual({ email: 'user@example.com', role: 'admin', assignedFeatures: ['dashboard'] })
+    expect(result[0]).toEqual({
+      email: 'user@example.com',
+      role: 'admin',
+      assignedFeatures: ['dashboard'],
+    })
   })
 
   test('filters out empty entries', () => {
@@ -158,7 +189,9 @@ describe('parseFeaturesFromEntry', () => {
   })
 
   test('filters out invalid features', () => {
-    const result = parseFeaturesFromEntry('user@example.com:restricted:dashboard,invalidfeature,payments')
+    const result = parseFeaturesFromEntry(
+      'user@example.com:restricted:dashboard,invalidfeature,payments'
+    )
     expect(result).toEqual(['dashboard', 'payments'])
   })
 

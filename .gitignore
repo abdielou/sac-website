@@ -35,6 +35,8 @@ data/catalog/openngc.json
 
 # local env files
 .env
+.env.*
+!.env.template
 .env.local
 .env.development.local
 .env.test.local

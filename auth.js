@@ -1,11 +1,20 @@
 import NextAuth from 'next-auth'
 import Google from 'next-auth/providers/google'
+import Credentials from 'next-auth/providers/credentials'
 import {
   canAccessDashboard,
   getAccessibleFeatures,
   getAllPermissions,
   isAdmin,
 } from './lib/permissions.js'
+
+/**
+ * Dev-only auth bypass. Active ONLY in non-production with an explicit opt-in flag.
+ * Lets a local developer obtain an admin session without a real Google login.
+ * Fails closed: in production the provider is never registered, regardless of the flag.
+ */
+export const devBypassEnabled =
+  process.env.NODE_ENV !== 'production' && process.env.AUTH_DEV_BYPASS === 'true'
 
 /**
  * Check if an email is authorized to access the admin dashboard
@@ -15,27 +24,56 @@ import {
 function isAuthorizedEmail(email) {
   return canAccessDashboard(email)
 }
-export const { handlers, signIn, signOut, auth } = NextAuth({
-  providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      authorization: {
-        params: {
-          access_type: 'offline',
-          // Always show Google's account picker so members logged into a personal
-          // Gmail in the browser can choose their @sociedadastronomia.com account.
-          prompt: 'select_account consent',
-          scope: 'openid email profile',
-        },
+
+const providers = [
+  Google({
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    authorization: {
+      params: {
+        access_type: 'offline',
+        // Always show Google's account picker so members logged into a personal
+        // Gmail in the browser can choose their @sociedadastronomia.com account.
+        prompt: 'select_account consent',
+        scope: 'openid email profile',
       },
-    }),
-  ],
+    },
+  }),
+]
+
+if (devBypassEnabled) {
+  // Mock credentials provider: authorizes a single configurable dev identity.
+  // The user's permissions still flow through ADMIN_PERMISSIONS via the jwt/session
+  // callbacks. No real Google access token is issued (accessToken stays null), so any
+  // Apps Script / Drive call fails gracefully — reinforcing prod-data isolation.
+  providers.push(
+    Credentials({
+      id: 'dev-bypass',
+      name: 'Dev Bypass',
+      credentials: {},
+      authorize() {
+        return {
+          id: 'dev-bypass',
+          email: (process.env.AUTH_DEV_EMAIL || 'dev@local.test').toLowerCase(),
+          name: 'Dev Admin',
+        }
+      },
+    })
+  )
+}
+
+export const { handlers, signIn, signOut, auth } = NextAuth({
+  providers,
   callbacks: {
     /**
      * Control whether a user is allowed to sign in
      */
-    signIn({ user }) {
+    signIn({ user, account }) {
+      // Dev-only bypass: allow the mock provider when explicitly enabled.
+      if (devBypassEnabled && account?.provider === 'dev-bypass') {
+        return true
+      }
+
       const email = user.email?.toLowerCase()
 
       if (!email) {
