@@ -7,6 +7,11 @@ export const metadata = {
 }
 
 export default async function AdminAIPage() {
+  // Dev-only: the AI section is not exposed in production yet.
+  if (process.env.NODE_ENV === 'production') {
+    redirect('/admin')
+  }
+
   const session = await auth()
 
   // Feature gate: require read_ai/write_ai (surfaced as the 'ai' accessible feature).
