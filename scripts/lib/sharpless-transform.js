@@ -42,8 +42,8 @@ function parseAvedisovaTsv(text) {
 
 /** "NGC 6611" -> "NGC6611", "IC 10" -> "IC0010". Non-NGC/IC -> null. */
 function ngcIcNameToCatalogId(name) {
-  const m = name.match(/^(NGC|IC)\s*0*(\d+)/i)
-  if (!m) return null
+  const m = name.match(/^(NGC|IC)\s*0*(\d+)([A-Za-z]?)\s*$/i)
+  if (!m || m[3]) return null
   return `${m[1].toUpperCase()}${m[2].padStart(4, '0')}`
 }
 

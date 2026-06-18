@@ -66,6 +66,11 @@ describe('ngcIcNameToCatalogId', () => {
     expect(ngcIcNameToCatalogId('Gum 83')).toBeNull()
     expect(ngcIcNameToCatalogId('M 16')).toBeNull()
   })
+
+  test('returns null for suffixed NGC/IC names (avoids wrong cross-links)', () => {
+    expect(ngcIcNameToCatalogId('NGC 5194A')).toBeNull()
+    expect(ngcIcNameToCatalogId('IC 4628b')).toBeNull()
+  })
 })
 
 describe('buildSharplessToNgcIc', () => {
