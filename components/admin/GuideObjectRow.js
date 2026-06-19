@@ -84,9 +84,10 @@ export default function GuideObjectRow({
 
   const catalogIds = []
   if (cat.catalogIds) {
-    if (cat.catalogIds.messier) catalogIds.push(`M ${cat.catalogIds.messier}`)
-    if (cat.catalogIds.ngc) catalogIds.push(`NGC ${cat.catalogIds.ngc}`)
-    if (cat.catalogIds.ic) catalogIds.push(`IC ${cat.catalogIds.ic}`)
+    // Stored designations already include their prefix (e.g. "M 16", "NGC 6611").
+    if (cat.catalogIds.messier) catalogIds.push(cat.catalogIds.messier)
+    if (cat.catalogIds.ngc) catalogIds.push(cat.catalogIds.ngc)
+    if (cat.catalogIds.ic) catalogIds.push(cat.catalogIds.ic)
     if (cat.catalogIds.sharpless) catalogIds.push(cat.catalogIds.sharpless)
   }
   const idsStr = catalogIds.join(' / ') || entry.objectId
