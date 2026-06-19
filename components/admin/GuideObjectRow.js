@@ -87,6 +87,7 @@ export default function GuideObjectRow({
     if (cat.catalogIds.messier) catalogIds.push(`M ${cat.catalogIds.messier}`)
     if (cat.catalogIds.ngc) catalogIds.push(`NGC ${cat.catalogIds.ngc}`)
     if (cat.catalogIds.ic) catalogIds.push(`IC ${cat.catalogIds.ic}`)
+    if (cat.catalogIds.sharpless) catalogIds.push(cat.catalogIds.sharpless)
   }
   const idsStr = catalogIds.join(' / ') || entry.objectId
 

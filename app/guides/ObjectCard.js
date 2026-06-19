@@ -256,6 +256,8 @@ function getCatalogIds(catalog) {
   const ids = []
   if (catalog.catalogIds?.messier) ids.push(catalog.catalogIds.messier)
   if (catalog.catalogIds?.ngc) ids.push(catalog.catalogIds.ngc)
+  if (catalog.catalogIds?.ic) ids.push(catalog.catalogIds.ic)
+  if (catalog.catalogIds?.sharpless) ids.push(catalog.catalogIds.sharpless)
   if (ids.length === 0 && catalog.name) ids.push(catalog.name)
   return ids.join(' / ')
 }

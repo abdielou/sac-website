@@ -73,6 +73,7 @@ export default function CatalogSearch({ onAddObject, addedObjectIds = new Set() 
     'Globular Cluster',
     'Planetary Nebula',
     'Bright Nebula',
+    'HII Region',
     'Star',
     'Double Star',
     'Galaxy Pair',
@@ -140,6 +141,7 @@ export default function CatalogSearch({ onAddObject, addedObjectIds = new Set() 
       if (obj.catalogIds.messier) ids.push(`M ${obj.catalogIds.messier}`)
       if (obj.catalogIds.ngc) ids.push(`NGC ${obj.catalogIds.ngc}`)
       if (obj.catalogIds.ic) ids.push(`IC ${obj.catalogIds.ic}`)
+      if (obj.catalogIds.sharpless) ids.push(obj.catalogIds.sharpless)
     }
     return ids.join(' / ') || obj.id
   }
