@@ -1,0 +1,5986 @@
+{
+  "generated": "2026-06-19",
+  "source": "VizieR VII/20 (Sharpless 1959) + V/112A (Avedisova) cross-IDs",
+  "standalone": [
+    {
+      "id": "SH2-1",
+      "name": "Sh 2-1",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-1"
+      },
+      "ra": 239.713366,
+      "dec": -26.12052,
+      "magnitude": null,
+      "angularSize": {
+        "major": 150,
+        "minor": 150
+      },
+      "objectType": "HII Region",
+      "constellation": "Sco",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-2",
+      "name": "Sh 2-2",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-2"
+      },
+      "ra": 256.027602,
+      "dec": -38.14249,
+      "magnitude": null,
+      "angularSize": {
+        "major": 60,
+        "minor": 60
+      },
+      "objectType": "HII Region",
+      "constellation": "Sco",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-3",
+      "name": "Sh 2-3",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-3"
+      },
+      "ra": 258.437642,
+      "dec": -38.503106,
+      "magnitude": null,
+      "angularSize": {
+        "major": 12,
+        "minor": 12
+      },
+      "objectType": "HII Region",
+      "constellation": "Sco",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-4",
+      "name": "Sh 2-4",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-4"
+      },
+      "ra": 259.953265,
+      "dec": -39.338753,
+      "magnitude": null,
+      "angularSize": {
+        "major": 5,
+        "minor": 5
+      },
+      "objectType": "HII Region",
+      "constellation": "Sco",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-5",
+      "name": "Sh 2-5",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-5"
+      },
+      "ra": 260.01446,
+      "dec": -38.45477,
+      "magnitude": null,
+      "angularSize": {
+        "major": 100,
+        "minor": 100
+      },
+      "objectType": "HII Region",
+      "constellation": "Sco",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-6",
+      "name": "Sh 2-6",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-6"
+      },
+      "ra": 258.76714,
+      "dec": -37.116545,
+      "magnitude": null,
+      "angularSize": {
+        "major": 4,
+        "minor": 4
+      },
+      "objectType": "HII Region",
+      "constellation": "Sco",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-7",
+      "name": "Sh 2-7",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-7"
+      },
+      "ra": 240.082349,
+      "dec": -22.950642,
+      "magnitude": null,
+      "angularSize": {
+        "major": 240,
+        "minor": 240
+      },
+      "objectType": "HII Region",
+      "constellation": "Sco",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-9",
+      "name": "Sh 2-9",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-9"
+      },
+      "ra": 245.295389,
+      "dec": -25.589444,
+      "magnitude": null,
+      "angularSize": {
+        "major": 80,
+        "minor": 80
+      },
+      "objectType": "HII Region",
+      "constellation": "Sco",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-10",
+      "name": "Sh 2-10",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-10"
+      },
+      "ra": 259.750056,
+      "dec": -34.090316,
+      "magnitude": null,
+      "angularSize": {
+        "major": 60,
+        "minor": 60
+      },
+      "objectType": "HII Region",
+      "constellation": "Sco",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-12",
+      "name": "Sh 2-12",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-12"
+      },
+      "ra": 263.984075,
+      "dec": -32.599595,
+      "magnitude": null,
+      "angularSize": {
+        "major": 120,
+        "minor": 120
+      },
+      "objectType": "HII Region",
+      "constellation": "Sco",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-13",
+      "name": "Sh 2-13",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-13"
+      },
+      "ra": 262.619,
+      "dec": -31.562676,
+      "magnitude": null,
+      "angularSize": {
+        "major": 40,
+        "minor": 40
+      },
+      "objectType": "HII Region",
+      "constellation": "Sco",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-14",
+      "name": "Sh 2-14",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-14"
+      },
+      "ra": 262.576996,
+      "dec": -30.262997,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Sco",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-15",
+      "name": "Sh 2-15",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-15"
+      },
+      "ra": 267.643312,
+      "dec": -31.264091,
+      "magnitude": null,
+      "angularSize": {
+        "major": 30,
+        "minor": 30
+      },
+      "objectType": "HII Region",
+      "constellation": "Sco",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-16",
+      "name": "Sh 2-16",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-16"
+      },
+      "ra": 266.967541,
+      "dec": -29.303855,
+      "magnitude": null,
+      "angularSize": {
+        "major": 20,
+        "minor": 20
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-17",
+      "name": "Sh 2-17",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-17"
+      },
+      "ra": 266.536694,
+      "dec": -28.858004,
+      "magnitude": null,
+      "angularSize": {
+        "major": 25,
+        "minor": 25
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-18",
+      "name": "Sh 2-18",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-18"
+      },
+      "ra": 267.191969,
+      "dec": -29.251675,
+      "magnitude": null,
+      "angularSize": {
+        "major": 4,
+        "minor": 4
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-19",
+      "name": "Sh 2-19",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-19"
+      },
+      "ra": 267.340314,
+      "dec": -29.116895,
+      "magnitude": null,
+      "angularSize": {
+        "major": 12,
+        "minor": 12
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-20",
+      "name": "Sh 2-20",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-20"
+      },
+      "ra": 267.309613,
+      "dec": -28.667165,
+      "magnitude": null,
+      "angularSize": {
+        "major": 10,
+        "minor": 10
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-21",
+      "name": "Sh 2-21",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-21"
+      },
+      "ra": 267.912701,
+      "dec": -28.89466,
+      "magnitude": null,
+      "angularSize": {
+        "major": 5,
+        "minor": 5
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-22",
+      "name": "Sh 2-22",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-22"
+      },
+      "ra": 268.765749,
+      "dec": -25.036147,
+      "magnitude": null,
+      "angularSize": {
+        "major": 60,
+        "minor": 60
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-23",
+      "name": "Sh 2-23",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-23"
+      },
+      "ra": 243.352583,
+      "dec": -8.372276,
+      "magnitude": null,
+      "angularSize": {
+        "major": 50,
+        "minor": 50
+      },
+      "objectType": "HII Region",
+      "constellation": "Sco",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-24",
+      "name": "Sh 2-24",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-24"
+      },
+      "ra": 242.76586,
+      "dec": -7.077277,
+      "magnitude": null,
+      "angularSize": {
+        "major": 30,
+        "minor": 30
+      },
+      "objectType": "HII Region",
+      "constellation": "Oph",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-26",
+      "name": "Sh 2-26",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-26"
+      },
+      "ra": 269.745959,
+      "dec": -23.326526,
+      "magnitude": null,
+      "angularSize": {
+        "major": 20,
+        "minor": 20
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-27",
+      "name": "Sh 2-27",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-27"
+      },
+      "ra": 249.301709,
+      "dec": -10.569733,
+      "magnitude": null,
+      "angularSize": {
+        "major": 480,
+        "minor": 480
+      },
+      "objectType": "HII Region",
+      "constellation": "Oph",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-28",
+      "name": "Sh 2-28",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-28"
+      },
+      "ra": 270.674025,
+      "dec": -23.584187,
+      "magnitude": null,
+      "angularSize": {
+        "major": 40,
+        "minor": 40
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-29",
+      "name": "Sh 2-29",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-29"
+      },
+      "ra": 272.628815,
+      "dec": -23.998547,
+      "magnitude": null,
+      "angularSize": {
+        "major": 40,
+        "minor": 40
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-31",
+      "name": "Sh 2-31",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-31"
+      },
+      "ra": 272.82645,
+      "dec": -23.796616,
+      "magnitude": null,
+      "angularSize": {
+        "major": 8,
+        "minor": 8
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-32",
+      "name": "Sh 2-32",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-32"
+      },
+      "ra": 272.724732,
+      "dec": -23.647595,
+      "magnitude": null,
+      "angularSize": {
+        "major": 8,
+        "minor": 8
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-33",
+      "name": "Sh 2-33",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-33"
+      },
+      "ra": 239.96823,
+      "dec": -1.617448,
+      "magnitude": null,
+      "angularSize": {
+        "major": 35,
+        "minor": 35
+      },
+      "objectType": "HII Region",
+      "constellation": "Ser",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-34",
+      "name": "Sh 2-34",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-34"
+      },
+      "ra": 271.602081,
+      "dec": -21.658393,
+      "magnitude": null,
+      "angularSize": {
+        "major": 90,
+        "minor": 90
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-35",
+      "name": "Sh 2-35",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-35"
+      },
+      "ra": 273.961233,
+      "dec": -20.252068,
+      "magnitude": null,
+      "angularSize": {
+        "major": 20,
+        "minor": 20
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-36",
+      "name": "Sh 2-36",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-36"
+      },
+      "ra": 241.376397,
+      "dec": 0.394481,
+      "magnitude": null,
+      "angularSize": {
+        "major": 45,
+        "minor": 45
+      },
+      "objectType": "HII Region",
+      "constellation": "Ser",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-37",
+      "name": "Sh 2-37",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-37"
+      },
+      "ra": 274.4297,
+      "dec": -19.664158,
+      "magnitude": null,
+      "angularSize": {
+        "major": 20,
+        "minor": 20
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-38",
+      "name": "Sh 2-38",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-38"
+      },
+      "ra": 272.189772,
+      "dec": -18.269167,
+      "magnitude": null,
+      "angularSize": {
+        "major": 3,
+        "minor": 3
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-39",
+      "name": "Sh 2-39",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-39"
+      },
+      "ra": 274.193705,
+      "dec": -18.649727,
+      "magnitude": null,
+      "angularSize": {
+        "major": 3,
+        "minor": 3
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-40",
+      "name": "Sh 2-40",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-40"
+      },
+      "ra": 273.009094,
+      "dec": -17.744513,
+      "magnitude": null,
+      "angularSize": {
+        "major": 15,
+        "minor": 15
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-41",
+      "name": "Sh 2-41",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-41"
+      },
+      "ra": 273.964267,
+      "dec": -18.235265,
+      "magnitude": null,
+      "angularSize": {
+        "major": 90,
+        "minor": 90
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-42",
+      "name": "Sh 2-42",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-42"
+      },
+      "ra": 272.574219,
+      "dec": -16.815356,
+      "magnitude": null,
+      "angularSize": {
+        "major": 3,
+        "minor": 3
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-43",
+      "name": "Sh 2-43",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-43"
+      },
+      "ra": 274.10531,
+      "dec": -17.40052,
+      "magnitude": null,
+      "angularSize": {
+        "major": 15,
+        "minor": 15
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-44",
+      "name": "Sh 2-44",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-44"
+      },
+      "ra": 274.123225,
+      "dec": -16.733645,
+      "magnitude": null,
+      "angularSize": {
+        "major": 60,
+        "minor": 60
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-46",
+      "name": "Sh 2-46",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-46"
+      },
+      "ra": 271.546426,
+      "dec": -14.15854,
+      "magnitude": null,
+      "angularSize": {
+        "major": 25,
+        "minor": 25
+      },
+      "objectType": "HII Region",
+      "constellation": "Ser",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-47",
+      "name": "Sh 2-47",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-47"
+      },
+      "ra": 274.436407,
+      "dec": -15.613882,
+      "magnitude": null,
+      "angularSize": {
+        "major": 5,
+        "minor": 5
+      },
+      "objectType": "HII Region",
+      "constellation": "Ser",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-48",
+      "name": "Sh 2-48",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-48"
+      },
+      "ra": 275.600545,
+      "dec": -14.58588,
+      "magnitude": null,
+      "angularSize": {
+        "major": 10,
+        "minor": 10
+      },
+      "objectType": "HII Region",
+      "constellation": "Sct",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-50",
+      "name": "Sh 2-50",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-50"
+      },
+      "ra": 276.376704,
+      "dec": -14.711707,
+      "magnitude": null,
+      "angularSize": {
+        "major": 35,
+        "minor": 35
+      },
+      "objectType": "HII Region",
+      "constellation": "Sct",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-51",
+      "name": "Sh 2-51",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-51"
+      },
+      "ra": 280.194711,
+      "dec": -16.558348,
+      "magnitude": null,
+      "angularSize": {
+        "major": 35,
+        "minor": 35
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-52",
+      "name": "Sh 2-52",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-52"
+      },
+      "ra": 296.945185,
+      "dec": -23.087477,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-53",
+      "name": "Sh 2-53",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-53"
+      },
+      "ra": 276.31148,
+      "dec": -13.228931,
+      "magnitude": null,
+      "angularSize": {
+        "major": 15,
+        "minor": 15
+      },
+      "objectType": "HII Region",
+      "constellation": "Sct",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-55",
+      "name": "Sh 2-55",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-55"
+      },
+      "ra": 278.046277,
+      "dec": -11.762104,
+      "magnitude": null,
+      "angularSize": {
+        "major": 5,
+        "minor": 5
+      },
+      "objectType": "HII Region",
+      "constellation": "Sct",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-56",
+      "name": "Sh 2-56",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-56"
+      },
+      "ra": 277.775865,
+      "dec": -9.714613,
+      "magnitude": null,
+      "angularSize": {
+        "major": 7,
+        "minor": 7
+      },
+      "objectType": "HII Region",
+      "constellation": "Sct",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-57",
+      "name": "Sh 2-57",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-57"
+      },
+      "ra": 277.640006,
+      "dec": -8.615871,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Sct",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-58",
+      "name": "Sh 2-58",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-58"
+      },
+      "ra": 277.863475,
+      "dec": -8.463708,
+      "magnitude": null,
+      "angularSize": {
+        "major": 8,
+        "minor": 8
+      },
+      "objectType": "HII Region",
+      "constellation": "Sct",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-59",
+      "name": "Sh 2-59",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-59"
+      },
+      "ra": 279.254798,
+      "dec": -7.600271,
+      "magnitude": null,
+      "angularSize": {
+        "major": 20,
+        "minor": 20
+      },
+      "objectType": "HII Region",
+      "constellation": "Sct",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-60",
+      "name": "Sh 2-60",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-60"
+      },
+      "ra": 279.171028,
+      "dec": -6.701034,
+      "magnitude": null,
+      "angularSize": {
+        "major": 20,
+        "minor": 20
+      },
+      "objectType": "HII Region",
+      "constellation": "Sct",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-61",
+      "name": "Sh 2-61",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-61"
+      },
+      "ra": 278.229667,
+      "dec": -5.010015,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Sct",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-62",
+      "name": "Sh 2-62",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-62"
+      },
+      "ra": 276.893525,
+      "dec": -3.856186,
+      "magnitude": null,
+      "angularSize": {
+        "major": 4,
+        "minor": 4
+      },
+      "objectType": "HII Region",
+      "constellation": "Ser",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-63",
+      "name": "Sh 2-63",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-63"
+      },
+      "ra": 299.42993,
+      "dec": -14.115665,
+      "magnitude": null,
+      "angularSize": {
+        "major": 55,
+        "minor": 55
+      },
+      "objectType": "HII Region",
+      "constellation": "Sgr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-64",
+      "name": "Sh 2-64",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-64"
+      },
+      "ra": 277.899709,
+      "dec": -1.91305,
+      "magnitude": null,
+      "angularSize": {
+        "major": 25,
+        "minor": 25
+      },
+      "objectType": "HII Region",
+      "constellation": "Ser",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-65",
+      "name": "Sh 2-65",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-65"
+      },
+      "ra": 281.742181,
+      "dec": -3.742939,
+      "magnitude": null,
+      "angularSize": {
+        "major": 7,
+        "minor": 7
+      },
+      "objectType": "HII Region",
+      "constellation": "Aql",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-66",
+      "name": "Sh 2-66",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-66"
+      },
+      "ra": 281.375485,
+      "dec": -1.996359,
+      "magnitude": null,
+      "angularSize": {
+        "major": 8,
+        "minor": 8
+      },
+      "objectType": "HII Region",
+      "constellation": "Aql",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-67",
+      "name": "Sh 2-67",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-67"
+      },
+      "ra": 282.35387,
+      "dec": -2.353714,
+      "magnitude": null,
+      "angularSize": {
+        "major": 10,
+        "minor": 10
+      },
+      "objectType": "HII Region",
+      "constellation": "Aql",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-68",
+      "name": "Sh 2-68",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-68"
+      },
+      "ra": 276.297914,
+      "dec": 0.854944,
+      "magnitude": null,
+      "angularSize": {
+        "major": 8,
+        "minor": 8
+      },
+      "objectType": "HII Region",
+      "constellation": "Ser",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-69",
+      "name": "Sh 2-69",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-69"
+      },
+      "ra": 281.109098,
+      "dec": -0.282159,
+      "magnitude": null,
+      "angularSize": {
+        "major": 20,
+        "minor": 20
+      },
+      "objectType": "HII Region",
+      "constellation": "Aql",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-70",
+      "name": "Sh 2-70",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-70"
+      },
+      "ra": 273.662166,
+      "dec": 7.063032,
+      "magnitude": null,
+      "angularSize": {
+        "major": 5,
+        "minor": 5
+      },
+      "objectType": "HII Region",
+      "constellation": "Oph",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-71",
+      "name": "Sh 2-71",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-71"
+      },
+      "ra": 285.511295,
+      "dec": 2.159682,
+      "magnitude": null,
+      "angularSize": {
+        "major": 3,
+        "minor": 3
+      },
+      "objectType": "HII Region",
+      "constellation": "Aql",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-72",
+      "name": "Sh 2-72",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-72"
+      },
+      "ra": 285.959908,
+      "dec": 2.313897,
+      "magnitude": null,
+      "angularSize": {
+        "major": 25,
+        "minor": 25
+      },
+      "objectType": "HII Region",
+      "constellation": "Aql",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-73",
+      "name": "Sh 2-73",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-73"
+      },
+      "ra": 242.781771,
+      "dec": 21.874001,
+      "magnitude": null,
+      "angularSize": {
+        "major": 75,
+        "minor": 75
+      },
+      "objectType": "HII Region",
+      "constellation": "Her",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-74",
+      "name": "Sh 2-74",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-74"
+      },
+      "ra": 287.204253,
+      "dec": 5.609001,
+      "magnitude": null,
+      "angularSize": {
+        "major": 3,
+        "minor": 3
+      },
+      "objectType": "HII Region",
+      "constellation": "Aql",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-75",
+      "name": "Sh 2-75",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-75"
+      },
+      "ra": 284.814141,
+      "dec": 7.120011,
+      "magnitude": null,
+      "angularSize": {
+        "major": 10,
+        "minor": 10
+      },
+      "objectType": "HII Region",
+      "constellation": "Aql",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-76",
+      "name": "Sh 2-76",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-76"
+      },
+      "ra": 284.107244,
+      "dec": 7.813373,
+      "magnitude": null,
+      "angularSize": {
+        "major": 7,
+        "minor": 7
+      },
+      "objectType": "HII Region",
+      "constellation": "Aql",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-77",
+      "name": "Sh 2-77",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-77"
+      },
+      "ra": 297.072002,
+      "dec": 1.147923,
+      "magnitude": null,
+      "angularSize": {
+        "major": 8,
+        "minor": 8
+      },
+      "objectType": "HII Region",
+      "constellation": "Aql",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-78",
+      "name": "Sh 2-78",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-78"
+      },
+      "ra": 285.796388,
+      "dec": 14.129562,
+      "magnitude": null,
+      "angularSize": {
+        "major": 12,
+        "minor": 12
+      },
+      "objectType": "HII Region",
+      "constellation": "Aql",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-79",
+      "name": "Sh 2-79",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-79"
+      },
+      "ra": 290.826825,
+      "dec": 13.976087,
+      "magnitude": null,
+      "angularSize": {
+        "major": 40,
+        "minor": 40
+      },
+      "objectType": "HII Region",
+      "constellation": "Aql",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-80",
+      "name": "Sh 2-80",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-80"
+      },
+      "ra": 287.870583,
+      "dec": 16.865698,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Sge",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-81",
+      "name": "Sh 2-81",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-81"
+      },
+      "ra": 300.306158,
+      "dec": 11.792703,
+      "magnitude": null,
+      "angularSize": {
+        "major": 10,
+        "minor": 10
+      },
+      "objectType": "HII Region",
+      "constellation": "Aql",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-82",
+      "name": "Sh 2-82",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-82"
+      },
+      "ra": 292.586491,
+      "dec": 18.275551,
+      "magnitude": null,
+      "angularSize": {
+        "major": 9,
+        "minor": 9
+      },
+      "objectType": "HII Region",
+      "constellation": "Sge",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-83",
+      "name": "Sh 2-83",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-83"
+      },
+      "ra": 291.133967,
+      "dec": 20.795858,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Vul",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-84",
+      "name": "Sh 2-84",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-84"
+      },
+      "ra": 297.266643,
+      "dec": 18.400282,
+      "magnitude": null,
+      "angularSize": {
+        "major": 15,
+        "minor": 15
+      },
+      "objectType": "HII Region",
+      "constellation": "Sge",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-85",
+      "name": "Sh 2-85",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-85"
+      },
+      "ra": 285.821783,
+      "dec": 25.830382,
+      "magnitude": null,
+      "angularSize": {
+        "major": 6,
+        "minor": 6
+      },
+      "objectType": "HII Region",
+      "constellation": "Lyr",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-87",
+      "name": "Sh 2-87",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-87"
+      },
+      "ra": 296.602918,
+      "dec": 24.628112,
+      "magnitude": null,
+      "angularSize": {
+        "major": 10,
+        "minor": 10
+      },
+      "objectType": "HII Region",
+      "constellation": "Vul",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-88",
+      "name": "Sh 2-88",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-88"
+      },
+      "ra": 296.495115,
+      "dec": 25.343871,
+      "magnitude": null,
+      "angularSize": {
+        "major": 25,
+        "minor": 25
+      },
+      "objectType": "HII Region",
+      "constellation": "Vul",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-89",
+      "name": "Sh 2-89",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-89"
+      },
+      "ra": 297.510043,
+      "dec": 26.486076,
+      "magnitude": null,
+      "angularSize": {
+        "major": 5,
+        "minor": 5
+      },
+      "objectType": "HII Region",
+      "constellation": "Vul",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-90",
+      "name": "Sh 2-90",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-90"
+      },
+      "ra": 297.305456,
+      "dec": 26.867656,
+      "magnitude": null,
+      "angularSize": {
+        "major": 6,
+        "minor": 6
+      },
+      "objectType": "HII Region",
+      "constellation": "Vul",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-91",
+      "name": "Sh 2-91",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-91"
+      },
+      "ra": 293.891846,
+      "dec": 29.604452,
+      "magnitude": null,
+      "angularSize": {
+        "major": 120,
+        "minor": 120
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-92",
+      "name": "Sh 2-92",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-92"
+      },
+      "ra": 296.663784,
+      "dec": 28.245479,
+      "magnitude": null,
+      "angularSize": {
+        "major": 50,
+        "minor": 50
+      },
+      "objectType": "HII Region",
+      "constellation": "Vul",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-93",
+      "name": "Sh 2-93",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-93"
+      },
+      "ra": 298.755079,
+      "dec": 27.213485,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1,
+        "minor": 1
+      },
+      "objectType": "HII Region",
+      "constellation": "Vul",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-94",
+      "name": "Sh 2-94",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-94"
+      },
+      "ra": 291.965024,
+      "dec": 31.470599,
+      "magnitude": null,
+      "angularSize": {
+        "major": 25,
+        "minor": 25
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-95",
+      "name": "Sh 2-95",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-95"
+      },
+      "ra": 298.757176,
+      "dec": 29.296933,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1,
+        "minor": 1
+      },
+      "objectType": "HII Region",
+      "constellation": "Vul",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-96",
+      "name": "Sh 2-96",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-96"
+      },
+      "ra": 292.175217,
+      "dec": 32.689232,
+      "magnitude": null,
+      "angularSize": {
+        "major": 25,
+        "minor": 25
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-97",
+      "name": "Sh 2-97",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-97"
+      },
+      "ra": 299.02193,
+      "dec": 30.265907,
+      "magnitude": null,
+      "angularSize": {
+        "major": 10,
+        "minor": 10
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-98",
+      "name": "Sh 2-98",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-98"
+      },
+      "ra": 299.68552,
+      "dec": 31.421603,
+      "magnitude": null,
+      "angularSize": {
+        "major": 15,
+        "minor": 15
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-99",
+      "name": "Sh 2-99",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-99"
+      },
+      "ra": 300.21263,
+      "dec": 33.492825,
+      "magnitude": null,
+      "angularSize": {
+        "major": 5,
+        "minor": 5
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-100",
+      "name": "Sh 2-100",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-100"
+      },
+      "ra": 300.463213,
+      "dec": 33.511601,
+      "magnitude": null,
+      "angularSize": {
+        "major": 4,
+        "minor": 4
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-101",
+      "name": "Sh 2-101",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-101"
+      },
+      "ra": 299.989687,
+      "dec": 35.291038,
+      "magnitude": null,
+      "angularSize": {
+        "major": 20,
+        "minor": 20
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-102",
+      "name": "Sh 2-102",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-102"
+      },
+      "ra": 307.946129,
+      "dec": 30.605153,
+      "magnitude": null,
+      "angularSize": {
+        "major": 40,
+        "minor": 40
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-103",
+      "name": "Sh 2-103",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-103"
+      },
+      "ra": 312.6353,
+      "dec": 30.923446,
+      "magnitude": null,
+      "angularSize": {
+        "major": 210,
+        "minor": 210
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-104",
+      "name": "Sh 2-104",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-104"
+      },
+      "ra": 304.438086,
+      "dec": 36.744464,
+      "magnitude": null,
+      "angularSize": {
+        "major": 7,
+        "minor": 7
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-105",
+      "name": "Sh 2-105",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-105"
+      },
+      "ra": 303.011585,
+      "dec": 38.349646,
+      "magnitude": null,
+      "angularSize": {
+        "major": 18,
+        "minor": 18
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-106",
+      "name": "Sh 2-106",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-106"
+      },
+      "ra": 306.865302,
+      "dec": 37.397065,
+      "magnitude": null,
+      "angularSize": {
+        "major": 3,
+        "minor": 3
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-107",
+      "name": "Sh 2-107",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-107"
+      },
+      "ra": 310.695098,
+      "dec": 36.34282,
+      "magnitude": null,
+      "angularSize": {
+        "major": 5,
+        "minor": 5
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-108",
+      "name": "Sh 2-108",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-108"
+      },
+      "ra": 305.647837,
+      "dec": 40.254302,
+      "magnitude": null,
+      "angularSize": {
+        "major": 180,
+        "minor": 180
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-109",
+      "name": "Sh 2-109",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-109"
+      },
+      "ra": 308.410257,
+      "dec": 40.342476,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1080,
+        "minor": 1080
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-110",
+      "name": "Sh 2-110",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-110"
+      },
+      "ra": 320.203588,
+      "dec": 32.457864,
+      "magnitude": null,
+      "angularSize": {
+        "major": 50,
+        "minor": 50
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-111",
+      "name": "Sh 2-111",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-111"
+      },
+      "ra": 325.472051,
+      "dec": 30.105702,
+      "magnitude": null,
+      "angularSize": {
+        "major": 90,
+        "minor": 90
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-112",
+      "name": "Sh 2-112",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-112"
+      },
+      "ra": 308.459844,
+      "dec": 45.659808,
+      "magnitude": null,
+      "angularSize": {
+        "major": 15,
+        "minor": 15
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-113",
+      "name": "Sh 2-113",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-113"
+      },
+      "ra": 320.200743,
+      "dec": 38.091341,
+      "magnitude": null,
+      "angularSize": {
+        "major": 15,
+        "minor": 15
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-114",
+      "name": "Sh 2-114",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-114"
+      },
+      "ra": 320.295039,
+      "dec": 38.708617,
+      "magnitude": null,
+      "angularSize": {
+        "major": 9,
+        "minor": 9
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-115",
+      "name": "Sh 2-115",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-115"
+      },
+      "ra": 308.64168,
+      "dec": 46.877934,
+      "magnitude": null,
+      "angularSize": {
+        "major": 50,
+        "minor": 50
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-116",
+      "name": "Sh 2-116",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-116"
+      },
+      "ra": 308.080214,
+      "dec": 47.357009,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-118",
+      "name": "Sh 2-118",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-118"
+      },
+      "ra": 324.254718,
+      "dec": 40.215724,
+      "magnitude": null,
+      "angularSize": {
+        "major": 480,
+        "minor": 480
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-119",
+      "name": "Sh 2-119",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-119"
+      },
+      "ra": 319.607464,
+      "dec": 43.937802,
+      "magnitude": null,
+      "angularSize": {
+        "major": 160,
+        "minor": 160
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-120",
+      "name": "Sh 2-120",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-120"
+      },
+      "ra": 315.946288,
+      "dec": 49.880726,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1,
+        "minor": 1
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-121",
+      "name": "Sh 2-121",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-121"
+      },
+      "ra": 316.302917,
+      "dec": 49.64979,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1,
+        "minor": 1
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-122",
+      "name": "Sh 2-122",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-122"
+      },
+      "ra": 347.197052,
+      "dec": 14.92496,
+      "magnitude": null,
+      "angularSize": {
+        "major": 40,
+        "minor": 40
+      },
+      "objectType": "HII Region",
+      "constellation": "Peg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-123",
+      "name": "Sh 2-123",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-123"
+      },
+      "ra": 325.594953,
+      "dec": 44.540061,
+      "magnitude": null,
+      "angularSize": {
+        "major": 13,
+        "minor": 13
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-124",
+      "name": "Sh 2-124",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-124"
+      },
+      "ra": 324.590477,
+      "dec": 50.351297,
+      "magnitude": null,
+      "angularSize": {
+        "major": 70,
+        "minor": 70
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-126",
+      "name": "Sh 2-126",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-126"
+      },
+      "ra": 338.364627,
+      "dec": 38.582232,
+      "magnitude": null,
+      "angularSize": {
+        "major": 160,
+        "minor": 160
+      },
+      "objectType": "HII Region",
+      "constellation": "Lac",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-127",
+      "name": "Sh 2-127",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-127"
+      },
+      "ra": 322.174631,
+      "dec": 54.620754,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Cyg",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-128",
+      "name": "Sh 2-128",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-128"
+      },
+      "ra": 323.036769,
+      "dec": 55.859258,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1,
+        "minor": 1
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-129",
+      "name": "Sh 2-129",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-129"
+      },
+      "ra": 317.937184,
+      "dec": 59.961301,
+      "magnitude": null,
+      "angularSize": {
+        "major": 140,
+        "minor": 140
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-130",
+      "name": "Sh 2-130",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-130"
+      },
+      "ra": 310.748539,
+      "dec": 63.228471,
+      "magnitude": null,
+      "angularSize": {
+        "major": 3,
+        "minor": 3
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-132",
+      "name": "Sh 2-132",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-132"
+      },
+      "ra": 334.698644,
+      "dec": 56.134785,
+      "magnitude": null,
+      "angularSize": {
+        "major": 90,
+        "minor": 90
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-133",
+      "name": "Sh 2-133",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-133"
+      },
+      "ra": 322.249782,
+      "dec": 64.30521,
+      "magnitude": null,
+      "angularSize": {
+        "major": 80,
+        "minor": 80
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-134",
+      "name": "Sh 2-134",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-134"
+      },
+      "ra": 332.874496,
+      "dec": 59.410326,
+      "magnitude": null,
+      "angularSize": {
+        "major": 160,
+        "minor": 160
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-135",
+      "name": "Sh 2-135",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-135"
+      },
+      "ra": 335.548528,
+      "dec": 58.738369,
+      "magnitude": null,
+      "angularSize": {
+        "major": 15,
+        "minor": 15
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-136",
+      "name": "Sh 2-136",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-136"
+      },
+      "ra": 319.12366,
+      "dec": 68.253161,
+      "magnitude": null,
+      "angularSize": {
+        "major": 5,
+        "minor": 5
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-137",
+      "name": "Sh 2-137",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-137"
+      },
+      "ra": 329.27983,
+      "dec": 64.693635,
+      "magnitude": null,
+      "angularSize": {
+        "major": 90,
+        "minor": 90
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-138",
+      "name": "Sh 2-138",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-138"
+      },
+      "ra": 338.164725,
+      "dec": 58.481799,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1,
+        "minor": 1
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-139",
+      "name": "Sh 2-139",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-139"
+      },
+      "ra": 338.751593,
+      "dec": 58.217249,
+      "magnitude": null,
+      "angularSize": {
+        "major": 10,
+        "minor": 10
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-140",
+      "name": "Sh 2-140",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-140"
+      },
+      "ra": 334.782653,
+      "dec": 63.285379,
+      "magnitude": null,
+      "angularSize": {
+        "major": 30,
+        "minor": 30
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-141",
+      "name": "Sh 2-141",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-141"
+      },
+      "ra": 337.126936,
+      "dec": 61.644674,
+      "magnitude": null,
+      "angularSize": {
+        "major": 5,
+        "minor": 5
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-143",
+      "name": "Sh 2-143",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-143"
+      },
+      "ra": 342.562148,
+      "dec": 57.713043,
+      "magnitude": null,
+      "angularSize": {
+        "major": 4,
+        "minor": 4
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-144",
+      "name": "Sh 2-144",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-144"
+      },
+      "ra": 341.217368,
+      "dec": 59.892275,
+      "magnitude": null,
+      "angularSize": {
+        "major": 4,
+        "minor": 4
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-145",
+      "name": "Sh 2-145",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-145"
+      },
+      "ra": 336.390123,
+      "dec": 64.308586,
+      "magnitude": null,
+      "angularSize": {
+        "major": 90,
+        "minor": 90
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-146",
+      "name": "Sh 2-146",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-146"
+      },
+      "ra": 342.359759,
+      "dec": 59.92914,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-147",
+      "name": "Sh 2-147",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-147"
+      },
+      "ra": 343.873749,
+      "dec": 58.466813,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-148",
+      "name": "Sh 2-148",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-148"
+      },
+      "ra": 344.050895,
+      "dec": 58.5173,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-149",
+      "name": "Sh 2-149",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-149"
+      },
+      "ra": 344.101487,
+      "dec": 58.534105,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1,
+        "minor": 1
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-150",
+      "name": "Sh 2-150",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-150"
+      },
+      "ra": 337.799756,
+      "dec": 65.113988,
+      "magnitude": null,
+      "angularSize": {
+        "major": 40,
+        "minor": 40
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-151",
+      "name": "Sh 2-151",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-151"
+      },
+      "ra": 345.763959,
+      "dec": 57.071732,
+      "magnitude": null,
+      "angularSize": {
+        "major": 20,
+        "minor": 20
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-152",
+      "name": "Sh 2-152",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-152"
+      },
+      "ra": 344.65741,
+      "dec": 58.785598,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-153",
+      "name": "Sh 2-153",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-153"
+      },
+      "ra": 344.810201,
+      "dec": 58.735998,
+      "magnitude": null,
+      "angularSize": {
+        "major": 5,
+        "minor": 5
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-154",
+      "name": "Sh 2-154",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-154"
+      },
+      "ra": 342.852607,
+      "dec": 61.18062,
+      "magnitude": null,
+      "angularSize": {
+        "major": 60,
+        "minor": 60
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-155",
+      "name": "Sh 2-155",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-155"
+      },
+      "ra": 344.182428,
+      "dec": 62.617717,
+      "magnitude": null,
+      "angularSize": {
+        "major": 60,
+        "minor": 60
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-156",
+      "name": "Sh 2-156",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-156"
+      },
+      "ra": 346.293974,
+      "dec": 60.256376,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-157",
+      "name": "Sh 2-157",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-157"
+      },
+      "ra": 349.014861,
+      "dec": 60.045551,
+      "magnitude": null,
+      "angularSize": {
+        "major": 90,
+        "minor": 90
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-159",
+      "name": "Sh 2-159",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-159"
+      },
+      "ra": 348.929776,
+      "dec": 61.145395,
+      "magnitude": null,
+      "angularSize": {
+        "major": 7,
+        "minor": 7
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-160",
+      "name": "Sh 2-160",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-160"
+      },
+      "ra": 346.4487,
+      "dec": 64.67346,
+      "magnitude": null,
+      "angularSize": {
+        "major": 80,
+        "minor": 80
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-161",
+      "name": "Sh 2-161",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-161"
+      },
+      "ra": 348.872784,
+      "dec": 61.861956,
+      "magnitude": null,
+      "angularSize": {
+        "major": 55,
+        "minor": 55
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-163",
+      "name": "Sh 2-163",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-163"
+      },
+      "ra": 353.331682,
+      "dec": 60.785671,
+      "magnitude": null,
+      "angularSize": {
+        "major": 10,
+        "minor": 10
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-164",
+      "name": "Sh 2-164",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-164"
+      },
+      "ra": 354.606555,
+      "dec": 59.970418,
+      "magnitude": null,
+      "angularSize": {
+        "major": 3,
+        "minor": 3
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-165",
+      "name": "Sh 2-165",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-165"
+      },
+      "ra": 354.954495,
+      "dec": 61.937426,
+      "magnitude": null,
+      "angularSize": {
+        "major": 10,
+        "minor": 10
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-166",
+      "name": "Sh 2-166",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-166"
+      },
+      "ra": 355.543494,
+      "dec": 60.971286,
+      "magnitude": null,
+      "angularSize": {
+        "major": 10,
+        "minor": 10
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-167",
+      "name": "Sh 2-167",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-167"
+      },
+      "ra": 353.843639,
+      "dec": 64.852947,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-168",
+      "name": "Sh 2-168",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-168"
+      },
+      "ra": 358.26593,
+      "dec": 60.47298,
+      "magnitude": null,
+      "angularSize": {
+        "major": 7,
+        "minor": 7
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-169",
+      "name": "Sh 2-169",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-169"
+      },
+      "ra": 358.494924,
+      "dec": 60.373066,
+      "magnitude": null,
+      "angularSize": {
+        "major": 5,
+        "minor": 5
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-170",
+      "name": "Sh 2-170",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-170"
+      },
+      "ra": 0.426583,
+      "dec": 64.623442,
+      "magnitude": null,
+      "angularSize": {
+        "major": 20,
+        "minor": 20
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-172",
+      "name": "Sh 2-172",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-172"
+      },
+      "ra": 3.887204,
+      "dec": 61.255903,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1,
+        "minor": 1
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-173",
+      "name": "Sh 2-173",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-173"
+      },
+      "ra": 5.466227,
+      "dec": 61.738175,
+      "magnitude": null,
+      "angularSize": {
+        "major": 30,
+        "minor": 30
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-174",
+      "name": "Sh 2-174",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-174"
+      },
+      "ra": 356.705245,
+      "dec": 80.938866,
+      "magnitude": null,
+      "angularSize": {
+        "major": 10,
+        "minor": 10
+      },
+      "objectType": "HII Region",
+      "constellation": "Cep",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-175",
+      "name": "Sh 2-175",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-175"
+      },
+      "ra": 6.830055,
+      "dec": 64.703596,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-176",
+      "name": "Sh 2-176",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-176"
+      },
+      "ra": 7.913634,
+      "dec": 57.285703,
+      "magnitude": null,
+      "angularSize": {
+        "major": 10,
+        "minor": 10
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-177",
+      "name": "Sh 2-177",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-177"
+      },
+      "ra": 7.887834,
+      "dec": 62.469078,
+      "magnitude": null,
+      "angularSize": {
+        "major": 40,
+        "minor": 40
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-178",
+      "name": "Sh 2-178",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-178"
+      },
+      "ra": 334.734369,
+      "dec": 87.761599,
+      "magnitude": null,
+      "angularSize": {
+        "major": 420,
+        "minor": 420
+      },
+      "objectType": "HII Region",
+      "constellation": "UMi",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-179",
+      "name": "Sh 2-179",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-179"
+      },
+      "ra": 10.105818,
+      "dec": 62.866004,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1,
+        "minor": 1
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-180",
+      "name": "Sh 2-180",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-180"
+      },
+      "ra": 12.194548,
+      "dec": 62.929036,
+      "magnitude": null,
+      "angularSize": {
+        "major": 15,
+        "minor": 15
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-181",
+      "name": "Sh 2-181",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-181"
+      },
+      "ra": 12.319468,
+      "dec": 65.21215,
+      "magnitude": null,
+      "angularSize": {
+        "major": 15,
+        "minor": 15
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-182",
+      "name": "Sh 2-182",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-182"
+      },
+      "ra": 12.569468,
+      "dec": 64.744991,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-183",
+      "name": "Sh 2-183",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-183"
+      },
+      "ra": 13.499198,
+      "dec": 65.709768,
+      "magnitude": null,
+      "angularSize": {
+        "major": 35,
+        "minor": 35
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-185",
+      "name": "Sh 2-185",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-185"
+      },
+      "ra": 15.000065,
+      "dec": 60.989678,
+      "magnitude": null,
+      "angularSize": {
+        "major": 120,
+        "minor": 120
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-186",
+      "name": "Sh 2-186",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-186"
+      },
+      "ra": 17.212961,
+      "dec": 63.134072,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1,
+        "minor": 1
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-187",
+      "name": "Sh 2-187",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-187"
+      },
+      "ra": 20.782395,
+      "dec": 61.856646,
+      "magnitude": null,
+      "angularSize": {
+        "major": 10,
+        "minor": 10
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-188",
+      "name": "Sh 2-188",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-188"
+      },
+      "ra": 22.663966,
+      "dec": 58.366758,
+      "magnitude": null,
+      "angularSize": {
+        "major": 9,
+        "minor": 9
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-189",
+      "name": "Sh 2-189",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-189"
+      },
+      "ra": 33.035627,
+      "dec": 64.171696,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-191",
+      "name": "Sh 2-191",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-191"
+      },
+      "ra": 39.163884,
+      "dec": 59.637358,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-192",
+      "name": "Sh 2-192",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-192"
+      },
+      "ra": 41.809096,
+      "dec": 61.987958,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1,
+        "minor": 1
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-193",
+      "name": "Sh 2-193",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-193"
+      },
+      "ra": 41.885601,
+      "dec": 62.004143,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-194",
+      "name": "Sh 2-194",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-194"
+      },
+      "ra": 41.83301,
+      "dec": 61.937803,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-195",
+      "name": "Sh 2-195",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-195"
+      },
+      "ra": 40.025204,
+      "dec": 59.64883,
+      "magnitude": null,
+      "angularSize": {
+        "major": 3,
+        "minor": 3
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-196",
+      "name": "Sh 2-196",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-196"
+      },
+      "ra": 42.830044,
+      "dec": 62.231473,
+      "magnitude": null,
+      "angularSize": {
+        "major": 4,
+        "minor": 4
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-197",
+      "name": "Sh 2-197",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-197"
+      },
+      "ra": 40.480935,
+      "dec": 59.646042,
+      "magnitude": null,
+      "angularSize": {
+        "major": 5,
+        "minor": 5
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-198",
+      "name": "Sh 2-198",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-198"
+      },
+      "ra": 42.507607,
+      "dec": 59.69999,
+      "magnitude": null,
+      "angularSize": {
+        "major": 9,
+        "minor": 9
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-199",
+      "name": "Sh 2-199",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-199"
+      },
+      "ra": 43.639879,
+      "dec": 60.409384,
+      "magnitude": null,
+      "angularSize": {
+        "major": 120,
+        "minor": 120
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-200",
+      "name": "Sh 2-200",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-200"
+      },
+      "ra": 47.68781,
+      "dec": 62.815491,
+      "magnitude": null,
+      "angularSize": {
+        "major": 6,
+        "minor": 6
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-201",
+      "name": "Sh 2-201",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-201"
+      },
+      "ra": 45.793222,
+      "dec": 60.478346,
+      "magnitude": null,
+      "angularSize": {
+        "major": 5,
+        "minor": 5
+      },
+      "objectType": "HII Region",
+      "constellation": "Cas",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-202",
+      "name": "Sh 2-202",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-202"
+      },
+      "ra": 49.714745,
+      "dec": 59.633997,
+      "magnitude": null,
+      "angularSize": {
+        "major": 170,
+        "minor": 170
+      },
+      "objectType": "HII Region",
+      "constellation": "Cam",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-203",
+      "name": "Sh 2-203",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-203"
+      },
+      "ra": 50.504288,
+      "dec": 54.87779,
+      "magnitude": null,
+      "angularSize": {
+        "major": 45,
+        "minor": 45
+      },
+      "objectType": "HII Region",
+      "constellation": "Per",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-204",
+      "name": "Sh 2-204",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-204"
+      },
+      "ra": 58.940228,
+      "dec": 57.428936,
+      "magnitude": null,
+      "angularSize": {
+        "major": 40,
+        "minor": 40
+      },
+      "objectType": "HII Region",
+      "constellation": "Cam",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-205",
+      "name": "Sh 2-205",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-205"
+      },
+      "ra": 59.034023,
+      "dec": 53.194393,
+      "magnitude": null,
+      "angularSize": {
+        "major": 120,
+        "minor": 120
+      },
+      "objectType": "HII Region",
+      "constellation": "Cam",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-207",
+      "name": "Sh 2-207",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-207"
+      },
+      "ra": 65.020692,
+      "dec": 53.143657,
+      "magnitude": null,
+      "angularSize": {
+        "major": 4,
+        "minor": 4
+      },
+      "objectType": "HII Region",
+      "constellation": "Cam",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-208",
+      "name": "Sh 2-208",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-208"
+      },
+      "ra": 64.941256,
+      "dec": 52.977665,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1,
+        "minor": 1
+      },
+      "objectType": "HII Region",
+      "constellation": "Cam",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-209",
+      "name": "Sh 2-209",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-209"
+      },
+      "ra": 62.762542,
+      "dec": 51.162946,
+      "magnitude": null,
+      "angularSize": {
+        "major": 14,
+        "minor": 14
+      },
+      "objectType": "HII Region",
+      "constellation": "Per",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-210",
+      "name": "Sh 2-210",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-210"
+      },
+      "ra": 67.746229,
+      "dec": 52.55291,
+      "magnitude": null,
+      "angularSize": {
+        "major": 20,
+        "minor": 20
+      },
+      "objectType": "HII Region",
+      "constellation": "Per",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-211",
+      "name": "Sh 2-211",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-211"
+      },
+      "ra": 69.240842,
+      "dec": 50.939353,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Per",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-212",
+      "name": "Sh 2-212",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-212"
+      },
+      "ra": 70.157349,
+      "dec": 50.381015,
+      "magnitude": null,
+      "angularSize": {
+        "major": 5,
+        "minor": 5
+      },
+      "objectType": "HII Region",
+      "constellation": "Per",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-213",
+      "name": "Sh 2-213",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-213"
+      },
+      "ra": 65.179031,
+      "dec": 44.924881,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1,
+        "minor": 1
+      },
+      "objectType": "HII Region",
+      "constellation": "Per",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-214",
+      "name": "Sh 2-214",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-214"
+      },
+      "ra": 65.395441,
+      "dec": 44.372947,
+      "magnitude": null,
+      "angularSize": {
+        "major": 4,
+        "minor": 4
+      },
+      "objectType": "HII Region",
+      "constellation": "Per",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-215",
+      "name": "Sh 2-215",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-215"
+      },
+      "ra": 64.387309,
+      "dec": 42.614943,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Per",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-216",
+      "name": "Sh 2-216",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-216"
+      },
+      "ra": 71.237642,
+      "dec": 46.820848,
+      "magnitude": null,
+      "angularSize": {
+        "major": 80,
+        "minor": 80
+      },
+      "objectType": "HII Region",
+      "constellation": "Per",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-217",
+      "name": "Sh 2-217",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-217"
+      },
+      "ra": 74.697985,
+      "dec": 48.005693,
+      "magnitude": null,
+      "angularSize": {
+        "major": 9,
+        "minor": 9
+      },
+      "objectType": "HII Region",
+      "constellation": "Aur",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-218",
+      "name": "Sh 2-218",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-218"
+      },
+      "ra": 85.319055,
+      "dec": 52.188411,
+      "magnitude": null,
+      "angularSize": {
+        "major": 70,
+        "minor": 70
+      },
+      "objectType": "HII Region",
+      "constellation": "Aur",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-219",
+      "name": "Sh 2-219",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-219"
+      },
+      "ra": 74.033409,
+      "dec": 47.395149,
+      "magnitude": null,
+      "angularSize": {
+        "major": 3,
+        "minor": 3
+      },
+      "objectType": "HII Region",
+      "constellation": "Aur",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-221",
+      "name": "Sh 2-221",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-221"
+      },
+      "ra": 75.416721,
+      "dec": 46.34883,
+      "magnitude": null,
+      "angularSize": {
+        "major": 120,
+        "minor": 120
+      },
+      "objectType": "HII Region",
+      "constellation": "Aur",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-223",
+      "name": "Sh 2-223",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-223"
+      },
+      "ra": 79.299584,
+      "dec": 42.211837,
+      "magnitude": null,
+      "angularSize": {
+        "major": 70,
+        "minor": 70
+      },
+      "objectType": "HII Region",
+      "constellation": "Aur",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-224",
+      "name": "Sh 2-224",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-224"
+      },
+      "ra": 81.817178,
+      "dec": 42.971187,
+      "magnitude": null,
+      "angularSize": {
+        "major": 30,
+        "minor": 30
+      },
+      "objectType": "HII Region",
+      "constellation": "Aur",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-225",
+      "name": "Sh 2-225",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-225"
+      },
+      "ra": 81.751583,
+      "dec": 40.621623,
+      "magnitude": null,
+      "angularSize": {
+        "major": 10,
+        "minor": 10
+      },
+      "objectType": "HII Region",
+      "constellation": "Aur",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-226",
+      "name": "Sh 2-226",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-226"
+      },
+      "ra": 77.778436,
+      "dec": 37.99261,
+      "magnitude": null,
+      "angularSize": {
+        "major": 3,
+        "minor": 3
+      },
+      "objectType": "HII Region",
+      "constellation": "Aur",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-227",
+      "name": "Sh 2-227",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-227"
+      },
+      "ra": 79.971994,
+      "dec": 38.955179,
+      "magnitude": null,
+      "angularSize": {
+        "major": 20,
+        "minor": 20
+      },
+      "objectType": "HII Region",
+      "constellation": "Aur",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-228",
+      "name": "Sh 2-228",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-228"
+      },
+      "ra": 78.396354,
+      "dec": 37.453387,
+      "magnitude": null,
+      "angularSize": {
+        "major": 8,
+        "minor": 8
+      },
+      "objectType": "HII Region",
+      "constellation": "Aur",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-231",
+      "name": "Sh 2-231",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-231"
+      },
+      "ra": 84.831537,
+      "dec": 35.924953,
+      "magnitude": null,
+      "angularSize": {
+        "major": 12,
+        "minor": 12
+      },
+      "objectType": "HII Region",
+      "constellation": "Aur",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-232",
+      "name": "Sh 2-232",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-232"
+      },
+      "ra": 85.61121,
+      "dec": 36.200769,
+      "magnitude": null,
+      "angularSize": {
+        "major": 40,
+        "minor": 40
+      },
+      "objectType": "HII Region",
+      "constellation": "Aur",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-233",
+      "name": "Sh 2-233",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-233"
+      },
+      "ra": 84.679475,
+      "dec": 35.79308,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Aur",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-234",
+      "name": "Sh 2-234",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-234"
+      },
+      "ra": 82.032419,
+      "dec": 34.435144,
+      "magnitude": null,
+      "angularSize": {
+        "major": 12,
+        "minor": 12
+      },
+      "objectType": "HII Region",
+      "constellation": "Aur",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-235",
+      "name": "Sh 2-235",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-235"
+      },
+      "ra": 85.255827,
+      "dec": 35.854181,
+      "magnitude": null,
+      "angularSize": {
+        "major": 10,
+        "minor": 10
+      },
+      "objectType": "HII Region",
+      "constellation": "Aur",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-239",
+      "name": "Sh 2-239",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-239"
+      },
+      "ra": 67.822497,
+      "dec": 18.11669,
+      "magnitude": null,
+      "angularSize": {
+        "major": 5,
+        "minor": 5
+      },
+      "objectType": "HII Region",
+      "constellation": "Tau",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-240",
+      "name": "Sh 2-240",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-240"
+      },
+      "ra": 85.251383,
+      "dec": 28.103722,
+      "magnitude": null,
+      "angularSize": {
+        "major": 180,
+        "minor": 180
+      },
+      "objectType": "HII Region",
+      "constellation": "Tau",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-241",
+      "name": "Sh 2-241",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-241"
+      },
+      "ra": 91.030452,
+      "dec": 30.247783,
+      "magnitude": null,
+      "angularSize": {
+        "major": 10,
+        "minor": 10
+      },
+      "objectType": "HII Region",
+      "constellation": "Aur",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-242",
+      "name": "Sh 2-242",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-242"
+      },
+      "ra": 87.964076,
+      "dec": 27.010706,
+      "magnitude": null,
+      "angularSize": {
+        "major": 7,
+        "minor": 7
+      },
+      "objectType": "HII Region",
+      "constellation": "Tau",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-243",
+      "name": "Sh 2-243",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-243"
+      },
+      "ra": 84.843835,
+      "dec": 23.290721,
+      "magnitude": null,
+      "angularSize": {
+        "major": 6,
+        "minor": 6
+      },
+      "objectType": "HII Region",
+      "constellation": "Tau",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-244",
+      "name": "Sh 2-244",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-244"
+      },
+      "ra": 83.628056,
+      "dec": 21.952384,
+      "magnitude": null,
+      "angularSize": {
+        "major": 5,
+        "minor": 5
+      },
+      "objectType": "HII Region",
+      "constellation": "Tau",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-245",
+      "name": "Sh 2-245",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-245"
+      },
+      "ra": 60.639377,
+      "dec": 4.128584,
+      "magnitude": null,
+      "angularSize": {
+        "major": 720,
+        "minor": 720
+      },
+      "objectType": "HII Region",
+      "constellation": "Tau",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-246",
+      "name": "Sh 2-246",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-246"
+      },
+      "ra": 75.539968,
+      "dec": 14.095695,
+      "magnitude": null,
+      "angularSize": {
+        "major": 65,
+        "minor": 65
+      },
+      "objectType": "HII Region",
+      "constellation": "Ori",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-247",
+      "name": "Sh 2-247",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-247"
+      },
+      "ra": 92.126436,
+      "dec": 21.619964,
+      "magnitude": null,
+      "angularSize": {
+        "major": 9,
+        "minor": 9
+      },
+      "objectType": "HII Region",
+      "constellation": "Gem",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-248",
+      "name": "Sh 2-248",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-248"
+      },
+      "ra": 94.161165,
+      "dec": 22.500255,
+      "magnitude": null,
+      "angularSize": {
+        "major": 50,
+        "minor": 50
+      },
+      "objectType": "HII Region",
+      "constellation": "Gem",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-249",
+      "name": "Sh 2-249",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-249"
+      },
+      "ra": 95.242648,
+      "dec": 23.089801,
+      "magnitude": null,
+      "angularSize": {
+        "major": 80,
+        "minor": 80
+      },
+      "objectType": "HII Region",
+      "constellation": "Gem",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-250",
+      "name": "Sh 2-250",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-250"
+      },
+      "ra": 70.047178,
+      "dec": 7.362835,
+      "magnitude": null,
+      "angularSize": {
+        "major": 10,
+        "minor": 10
+      },
+      "objectType": "HII Region",
+      "constellation": "Tau",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-251",
+      "name": "Sh 2-251",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-251"
+      },
+      "ra": 68.207621,
+      "dec": 5.862733,
+      "magnitude": null,
+      "angularSize": {
+        "major": 35,
+        "minor": 35
+      },
+      "objectType": "HII Region",
+      "constellation": "Tau",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-253",
+      "name": "Sh 2-253",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-253"
+      },
+      "ra": 96.433015,
+      "dec": 20.028111,
+      "magnitude": null,
+      "angularSize": {
+        "major": 5,
+        "minor": 5
+      },
+      "objectType": "HII Region",
+      "constellation": "Gem",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-254",
+      "name": "Sh 2-254",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-254"
+      },
+      "ra": 93.0871,
+      "dec": 18.043776,
+      "magnitude": null,
+      "angularSize": {
+        "major": 11,
+        "minor": 11
+      },
+      "objectType": "HII Region",
+      "constellation": "Ori",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-255",
+      "name": "Sh 2-255",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-255"
+      },
+      "ra": 93.286347,
+      "dec": 17.975171,
+      "magnitude": null,
+      "angularSize": {
+        "major": 3,
+        "minor": 3
+      },
+      "objectType": "HII Region",
+      "constellation": "Ori",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-256",
+      "name": "Sh 2-256",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-256"
+      },
+      "ra": 93.161013,
+      "dec": 17.943053,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1,
+        "minor": 1
+      },
+      "objectType": "HII Region",
+      "constellation": "Ori",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-257",
+      "name": "Sh 2-257",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-257"
+      },
+      "ra": 93.211361,
+      "dec": 17.975899,
+      "magnitude": null,
+      "angularSize": {
+        "major": 3,
+        "minor": 3
+      },
+      "objectType": "HII Region",
+      "constellation": "Ori",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-258",
+      "name": "Sh 2-258",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-258"
+      },
+      "ra": 93.385791,
+      "dec": 17.924203,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1,
+        "minor": 1
+      },
+      "objectType": "HII Region",
+      "constellation": "Ori",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-259",
+      "name": "Sh 2-259",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-259"
+      },
+      "ra": 92.905707,
+      "dec": 17.445507,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Ori",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-260",
+      "name": "Sh 2-260",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-260"
+      },
+      "ra": 73.782806,
+      "dec": 5.661731,
+      "magnitude": null,
+      "angularSize": {
+        "major": 22,
+        "minor": 22
+      },
+      "objectType": "HII Region",
+      "constellation": "Ori",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-261",
+      "name": "Sh 2-261",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-261"
+      },
+      "ra": 92.238344,
+      "dec": 15.801905,
+      "magnitude": null,
+      "angularSize": {
+        "major": 45,
+        "minor": 45
+      },
+      "objectType": "HII Region",
+      "constellation": "Ori",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-262",
+      "name": "Sh 2-262",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-262"
+      },
+      "ra": 76.68849,
+      "dec": 6.167872,
+      "magnitude": null,
+      "angularSize": {
+        "major": 20,
+        "minor": 20
+      },
+      "objectType": "HII Region",
+      "constellation": "Ori",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-263",
+      "name": "Sh 2-263",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-263"
+      },
+      "ra": 80.43616,
+      "dec": 8.399039,
+      "magnitude": null,
+      "angularSize": {
+        "major": 22,
+        "minor": 22
+      },
+      "objectType": "HII Region",
+      "constellation": "Ori",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-264",
+      "name": "Sh 2-264",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-264"
+      },
+      "ra": 83.802219,
+      "dec": 9.933437,
+      "magnitude": null,
+      "angularSize": {
+        "major": 390,
+        "minor": 390
+      },
+      "objectType": "HII Region",
+      "constellation": "Ori",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-265",
+      "name": "Sh 2-265",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-265"
+      },
+      "ra": 79.651593,
+      "dec": 7.439821,
+      "magnitude": null,
+      "angularSize": {
+        "major": 70,
+        "minor": 70
+      },
+      "objectType": "HII Region",
+      "constellation": "Ori",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-266",
+      "name": "Sh 2-266",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-266"
+      },
+      "ra": 94.707668,
+      "dec": 15.277909,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1,
+        "minor": 1
+      },
+      "objectType": "HII Region",
+      "constellation": "Ori",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-267",
+      "name": "Sh 2-267",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-267"
+      },
+      "ra": 93.972275,
+      "dec": 14.268325,
+      "magnitude": null,
+      "angularSize": {
+        "major": 4,
+        "minor": 4
+      },
+      "objectType": "HII Region",
+      "constellation": "Ori",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-268",
+      "name": "Sh 2-268",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-268"
+      },
+      "ra": 92.562715,
+      "dec": 13.331964,
+      "magnitude": null,
+      "angularSize": {
+        "major": 60,
+        "minor": 60
+      },
+      "objectType": "HII Region",
+      "constellation": "Ori",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-269",
+      "name": "Sh 2-269",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-269"
+      },
+      "ra": 93.642694,
+      "dec": 13.821501,
+      "magnitude": null,
+      "angularSize": {
+        "major": 4,
+        "minor": 4
+      },
+      "objectType": "HII Region",
+      "constellation": "Ori",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-270",
+      "name": "Sh 2-270",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-270"
+      },
+      "ra": 92.557425,
+      "dec": 12.815323,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1,
+        "minor": 1
+      },
+      "objectType": "HII Region",
+      "constellation": "Ori",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-271",
+      "name": "Sh 2-271",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-271"
+      },
+      "ra": 93.727671,
+      "dec": 12.353937,
+      "magnitude": null,
+      "angularSize": {
+        "major": 2,
+        "minor": 2
+      },
+      "objectType": "HII Region",
+      "constellation": "Ori",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-272",
+      "name": "Sh 2-272",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-272"
+      },
+      "ra": 93.752498,
+      "dec": 12.337029,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1,
+        "minor": 1
+      },
+      "objectType": "HII Region",
+      "constellation": "Ori",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-274",
+      "name": "Sh 2-274",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-274"
+      },
+      "ra": 112.278753,
+      "dec": 13.261891,
+      "magnitude": null,
+      "angularSize": {
+        "major": 8,
+        "minor": 8
+      },
+      "objectType": "HII Region",
+      "constellation": "Gem",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-276",
+      "name": "Sh 2-276",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-276"
+      },
+      "ra": 81.867173,
+      "dec": -3.965242,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1200,
+        "minor": 1200
+      },
+      "objectType": "HII Region",
+      "constellation": "Ori",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-280",
+      "name": "Sh 2-280",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-280"
+      },
+      "ra": 98.580563,
+      "dec": 2.539868,
+      "magnitude": null,
+      "angularSize": {
+        "major": 40,
+        "minor": 40
+      },
+      "objectType": "HII Region",
+      "constellation": "Mon",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-282",
+      "name": "Sh 2-282",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-282"
+      },
+      "ra": 99.495686,
+      "dec": 1.514355,
+      "magnitude": null,
+      "angularSize": {
+        "major": 35,
+        "minor": 35
+      },
+      "objectType": "HII Region",
+      "constellation": "Mon",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-283",
+      "name": "Sh 2-283",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-283"
+      },
+      "ra": 99.662988,
+      "dec": 0.712711,
+      "magnitude": null,
+      "angularSize": {
+        "major": 3,
+        "minor": 3
+      },
+      "objectType": "HII Region",
+      "constellation": "Mon",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-284",
+      "name": "Sh 2-284",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-284"
+      },
+      "ra": 101.258422,
+      "dec": 0.230744,
+      "magnitude": null,
+      "angularSize": {
+        "major": 80,
+        "minor": 80
+      },
+      "objectType": "HII Region",
+      "constellation": "Mon",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-285",
+      "name": "Sh 2-285",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-285"
+      },
+      "ra": 103.8015,
+      "dec": -0.510139,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1,
+        "minor": 1
+      },
+      "objectType": "HII Region",
+      "constellation": "Mon",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-286",
+      "name": "Sh 2-286",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-286"
+      },
+      "ra": 103.638542,
+      "dec": -4.508777,
+      "magnitude": null,
+      "angularSize": {
+        "major": 6,
+        "minor": 6
+      },
+      "objectType": "HII Region",
+      "constellation": "Mon",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-287",
+      "name": "Sh 2-287",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-287"
+      },
+      "ra": 104.886023,
+      "dec": -4.803904,
+      "magnitude": null,
+      "angularSize": {
+        "major": 12,
+        "minor": 12
+      },
+      "objectType": "HII Region",
+      "constellation": "Mon",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-288",
+      "name": "Sh 2-288",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-288"
+      },
+      "ra": 107.141249,
+      "dec": -4.308344,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1,
+        "minor": 1
+      },
+      "objectType": "HII Region",
+      "constellation": "Mon",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-289",
+      "name": "Sh 2-289",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-289"
+      },
+      "ra": 101.48581,
+      "dec": -7.33844,
+      "magnitude": null,
+      "angularSize": {
+        "major": 11,
+        "minor": 11
+      },
+      "objectType": "HII Region",
+      "constellation": "Mon",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-290",
+      "name": "Sh 2-290",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-290"
+      },
+      "ra": 133.546186,
+      "dec": 8.921139,
+      "magnitude": null,
+      "angularSize": {
+        "major": 17,
+        "minor": 17
+      },
+      "objectType": "HII Region",
+      "constellation": "Cnc",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-291",
+      "name": "Sh 2-291",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-291"
+      },
+      "ra": 103.854898,
+      "dec": -8.027651,
+      "magnitude": null,
+      "angularSize": {
+        "major": 8,
+        "minor": 8
+      },
+      "objectType": "HII Region",
+      "constellation": "Mon",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-292",
+      "name": "Sh 2-292",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-292"
+      },
+      "ra": 106.107495,
+      "dec": -10.448963,
+      "magnitude": null,
+      "angularSize": {
+        "major": 21,
+        "minor": 21
+      },
+      "objectType": "HII Region",
+      "constellation": "Mon",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-293",
+      "name": "Sh 2-293",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-293"
+      },
+      "ra": 105.448781,
+      "dec": -11.309492,
+      "magnitude": null,
+      "angularSize": {
+        "major": 11,
+        "minor": 11
+      },
+      "objectType": "HII Region",
+      "constellation": "CMa",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-294",
+      "name": "Sh 2-294",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-294"
+      },
+      "ra": 109.143751,
+      "dec": -9.44379,
+      "magnitude": null,
+      "angularSize": {
+        "major": 7,
+        "minor": 7
+      },
+      "objectType": "HII Region",
+      "constellation": "Mon",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-295",
+      "name": "Sh 2-295",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-295"
+      },
+      "ra": 105.672419,
+      "dec": -11.461598,
+      "magnitude": null,
+      "angularSize": {
+        "major": 8,
+        "minor": 8
+      },
+      "objectType": "HII Region",
+      "constellation": "CMa",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-296",
+      "name": "Sh 2-296",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-296"
+      },
+      "ra": 106.450219,
+      "dec": -11.21887,
+      "magnitude": null,
+      "angularSize": {
+        "major": 200,
+        "minor": 200
+      },
+      "objectType": "HII Region",
+      "constellation": "CMa",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-297",
+      "name": "Sh 2-297",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-297"
+      },
+      "ra": 106.314262,
+      "dec": -12.334317,
+      "magnitude": null,
+      "angularSize": {
+        "major": 7,
+        "minor": 7
+      },
+      "objectType": "HII Region",
+      "constellation": "CMa",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-299",
+      "name": "Sh 2-299",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-299"
+      },
+      "ra": 112.665656,
+      "dec": -15.292796,
+      "magnitude": null,
+      "angularSize": {
+        "major": 1,
+        "minor": 1
+      },
+      "objectType": "HII Region",
+      "constellation": "Pup",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-300",
+      "name": "Sh 2-300",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-300"
+      },
+      "ra": 112.764623,
+      "dec": -15.410358,
+      "magnitude": null,
+      "angularSize": {
+        "major": 3,
+        "minor": 3
+      },
+      "objectType": "HII Region",
+      "constellation": "Pup",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-301",
+      "name": "Sh 2-301",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-301"
+      },
+      "ra": 107.453505,
+      "dec": -18.478562,
+      "magnitude": null,
+      "angularSize": {
+        "major": 9,
+        "minor": 9
+      },
+      "objectType": "HII Region",
+      "constellation": "CMa",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-302",
+      "name": "Sh 2-302",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-302"
+      },
+      "ra": 112.92453,
+      "dec": -16.978531,
+      "magnitude": null,
+      "angularSize": {
+        "major": 21,
+        "minor": 21
+      },
+      "objectType": "HII Region",
+      "constellation": "Pup",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-303",
+      "name": "Sh 2-303",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-303"
+      },
+      "ra": 103.507476,
+      "dec": -22.425061,
+      "magnitude": null,
+      "angularSize": {
+        "major": 90,
+        "minor": 90
+      },
+      "objectType": "HII Region",
+      "constellation": "CMa",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-304",
+      "name": "Sh 2-304",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-304"
+      },
+      "ra": 100.86086,
+      "dec": -24.133306,
+      "magnitude": null,
+      "angularSize": {
+        "major": 200,
+        "minor": 200
+      },
+      "objectType": "HII Region",
+      "constellation": "CMa",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-305",
+      "name": "Sh 2-305",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-305"
+      },
+      "ra": 112.533735,
+      "dec": -18.525085,
+      "magnitude": null,
+      "angularSize": {
+        "major": 4,
+        "minor": 4
+      },
+      "objectType": "HII Region",
+      "constellation": "Pup",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-306",
+      "name": "Sh 2-306",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-306"
+      },
+      "ra": 112.653022,
+      "dec": -19.109519,
+      "magnitude": null,
+      "angularSize": {
+        "major": 30,
+        "minor": 30
+      },
+      "objectType": "HII Region",
+      "constellation": "Pup",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-307",
+      "name": "Sh 2-307",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-307"
+      },
+      "ra": 113.883207,
+      "dec": -18.753859,
+      "magnitude": null,
+      "angularSize": {
+        "major": 6,
+        "minor": 6
+      },
+      "objectType": "HII Region",
+      "constellation": "Pup",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-308",
+      "name": "Sh 2-308",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-308"
+      },
+      "ra": 103.540528,
+      "dec": -23.942122,
+      "magnitude": null,
+      "angularSize": {
+        "major": 35,
+        "minor": 35
+      },
+      "objectType": "HII Region",
+      "constellation": "CMa",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-309",
+      "name": "Sh 2-309",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-309"
+      },
+      "ra": 113.025292,
+      "dec": -19.429546,
+      "magnitude": null,
+      "angularSize": {
+        "major": 12,
+        "minor": 12
+      },
+      "objectType": "HII Region",
+      "constellation": "Pup",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-312",
+      "name": "Sh 2-312",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-312"
+      },
+      "ra": 134.790511,
+      "dec": -25.688557,
+      "magnitude": null,
+      "angularSize": {
+        "major": 720,
+        "minor": 720
+      },
+      "objectType": "HII Region",
+      "constellation": "Pyx",
+      "commonName": null,
+      "commonNameEs": null
+    },
+    {
+      "id": "SH2-313",
+      "name": "Sh 2-313",
+      "catalogIds": {
+        "ngc": null,
+        "ic": null,
+        "messier": null,
+        "sharpless": "Sh 2-313"
+      },
+      "ra": 193.381821,
+      "dec": -22.859898,
+      "magnitude": null,
+      "angularSize": {
+        "major": 12,
+        "minor": 12
+      },
+      "objectType": "HII Region",
+      "constellation": "Hya",
+      "commonName": null,
+      "commonNameEs": null
+    }
+  ],
+  "crossLinks": [
+    {
+      "id": "NGC6334",
+      "sharpless": "Sh 2-8"
+    },
+    {
+      "id": "NGC6357",
+      "sharpless": "Sh 2-11"
+    },
+    {
+      "id": "NGC6523",
+      "sharpless": "Sh 2-25"
+    },
+    {
+      "id": "NGC6514",
+      "sharpless": "Sh 2-30"
+    },
+    {
+      "id": "NGC6618",
+      "sharpless": "Sh 2-45"
+    },
+    {
+      "id": "NGC6611",
+      "sharpless": "Sh 2-49"
+    },
+    {
+      "id": "NGC6604",
+      "sharpless": "Sh 2-54"
+    },
+    {
+      "id": "NGC6823",
+      "sharpless": "Sh 2-86"
+    },
+    {
+      "id": "IC5067",
+      "sharpless": "Sh 2-117"
+    },
+    {
+      "id": "IC5146",
+      "sharpless": "Sh 2-125"
+    },
+    {
+      "id": "IC1396",
+      "sharpless": "Sh 2-131"
+    },
+    {
+      "id": "NGC7380",
+      "sharpless": "Sh 2-142"
+    },
+    {
+      "id": "NGC7538",
+      "sharpless": "Sh 2-158"
+    },
+    {
+      "id": "NGC7635",
+      "sharpless": "Sh 2-162"
+    },
+    {
+      "id": "NGC7822",
+      "sharpless": "Sh 2-171"
+    },
+    {
+      "id": "NGC0281",
+      "sharpless": "Sh 2-184"
+    },
+    {
+      "id": "IC1795",
+      "sharpless": "Sh 2-190"
+    },
+    {
+      "id": "NGC1491",
+      "sharpless": "Sh 2-206"
+    },
+    {
+      "id": "NGC1499",
+      "sharpless": "Sh 2-220"
+    },
+    {
+      "id": "NGC1579",
+      "sharpless": "Sh 2-222"
+    },
+    {
+      "id": "IC0405",
+      "sharpless": "Sh 2-229"
+    },
+    {
+      "id": "NGC1907",
+      "sharpless": "Sh 2-230"
+    },
+    {
+      "id": "IC0410",
+      "sharpless": "Sh 2-236"
+    },
+    {
+      "id": "NGC1931",
+      "sharpless": "Sh 2-237"
+    },
+    {
+      "id": "NGC1554",
+      "sharpless": "Sh 2-238"
+    },
+    {
+      "id": "NGC2175",
+      "sharpless": "Sh 2-252"
+    },
+    {
+      "id": "NGC2264",
+      "sharpless": "Sh 2-273"
+    },
+    {
+      "id": "NGC2237",
+      "sharpless": "Sh 2-275"
+    },
+    {
+      "id": "IC0434",
+      "sharpless": "Sh 2-277"
+    },
+    {
+      "id": "NGC1788",
+      "sharpless": "Sh 2-278"
+    },
+    {
+      "id": "NGC1975",
+      "sharpless": "Sh 2-279"
+    },
+    {
+      "id": "NGC1976",
+      "sharpless": "Sh 2-281"
+    },
+    {
+      "id": "NGC2359",
+      "sharpless": "Sh 2-298"
+    },
+    {
+      "id": "NGC2362",
+      "sharpless": "Sh 2-310"
+    },
+    {
+      "id": "NGC2467",
+      "sharpless": "Sh 2-311"
+    }
+  ]
+}
