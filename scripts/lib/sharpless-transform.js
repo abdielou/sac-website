@@ -67,7 +67,7 @@ function buildSharplessToNgcIc(rows) {
       const id = ngcIcNameToCatalogId(n)
       if (id && !catIds.includes(id)) catIds.push(id)
     }
-    if (catIds.length === 0) continue
+    if (catIds.length === 0 || shNums.length !== 1) continue
     for (const num of shNums) {
       const existing = result.get(num) || []
       for (const id of catIds) if (!existing.includes(id)) existing.push(id)

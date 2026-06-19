@@ -89,6 +89,17 @@ describe('buildSharplessToNgcIc', () => {
     expect(map.get(37)).toEqual(['NGC6595', 'IC1283'])
     expect(map.has(1)).toBe(false) // no NGC/IC in its group
   })
+
+  test('does not cross-link when an SFR group has multiple Sharpless members', () => {
+    const rows = [
+      { name: 'S 292', sfr: '230.05+0.50' },
+      { name: 'S 293', sfr: '230.05+0.50' },
+      { name: 'IC 2177', sfr: '230.05+0.50' },
+    ]
+    const map = buildSharplessToNgcIc(rows)
+    expect(map.has(292)).toBe(false)
+    expect(map.has(293)).toBe(false)
+  })
 })
 
 describe('buildSharplessCatalog', () => {
