@@ -1,8 +1,9 @@
 // app/api/member/profile/route.js
 import { auth } from '../../../../auth'
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { getMemberByEmail, updateMemberProfile } from '../../../../lib/google-sheets'
 import { uploadPhoto } from '../../../../lib/google-drive'
+import { notifyPhotoUpload } from '../../../../lib/apps-script'
 import { generateVerifyToken } from '../../../../lib/id-card/verifyToken'
 import { sanitizeMemberProfileFields } from '../../../../lib/member-profile-fields'
 
@@ -105,6 +106,10 @@ export const PUT = auth(async function PUT(req) {
 
     let fields = {}
     let photoFile = null
+    // Track whether a photo was uploaded in THIS request, and whether it was the
+    // member's first photo — used to fire an admin notification after a successful save.
+    let photoUploaded = false
+    let isFirstUpload = false
 
     const contentType = req.headers.get('content-type') || ''
 
@@ -146,6 +151,10 @@ export const PUT = auth(async function PUT(req) {
 
       // Include photoFileId in the fields to update
       fields.photoFileId = fileId
+
+      // First upload vs. update is determined by whether a photo existed BEFORE this upload.
+      photoUploaded = true
+      isFirstUpload = !member?.photoFileId
     }
 
     // Whitelist allowed keys, then sanitize all text values
@@ -175,6 +184,22 @@ export const PUT = auth(async function PUT(req) {
     const updatedMember = await getMemberByEmail(email)
     if (!updatedMember) {
       return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
+    }
+
+    // Both the Drive upload and the sheet update succeeded — fire the admin
+    // notification only if a photo was part of this request. Best-effort: runs
+    // after the response is sent (via `after`) so it adds no latency and a failure
+    // can never break the member's save.
+    if (photoUploaded) {
+      const memberName =
+        [updatedMember.firstName, updatedMember.lastName].filter(Boolean).join(' ').trim() || email
+      after(async () => {
+        try {
+          await notifyPhotoUpload(memberName, isFirstUpload)
+        } catch (err) {
+          console.error('Photo upload notification failed (non-fatal):', err)
+        }
+      })
     }
 
     const { _raw, id, ...profileFields } = updatedMember
