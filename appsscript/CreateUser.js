@@ -1233,6 +1233,8 @@ function doPost(e) {
         return handleScanStatusAction()
       case 'manual_payment':
         return handleManualPaymentAction(payload.data)
+      case 'notify_photo_upload':
+        return handlePhotoUploadedAction(payload.data)
       case 'create_workspace_account':
         return handleCreateWorkspaceAccountAction(payload.data)
       default:
@@ -1282,6 +1284,30 @@ function handleScanStatusAction() {
     return jsonResponse({ success: true, scanning: false })
   }
   return jsonResponse({ success: true, scanning: true })
+}
+
+function handlePhotoUploadedAction(data) {
+  if (!data || !data.memberName) {
+    return jsonResponse({ success: false, error: 'Missing required field: memberName' })
+  }
+
+  // Initialize gmailApp + NOTIFICATION_EMAIL for sendTemplatedEmail.
+  setupServices({})
+
+  const isFirstUpload = data.isFirstUpload === true
+  const subject = isFirstUpload
+    ? 'New member profile photo uploaded'
+    : 'Member profile photo updated'
+
+  const result = sendTemplatedEmail(
+    'PHOTO_UPLOADED',
+    { memberName: data.memberName, isFirstUpload: isFirstUpload },
+    { subject: subject }
+  )
+
+  return jsonResponse(
+    result.success ? { success: true } : { success: false, error: result.error }
+  )
 }
 
 function handleManualPaymentAction(data) {
@@ -3596,6 +3622,21 @@ const EMAIL_TEMPLATES = {
 
       Please review this payment and contact the member if necessary.
     `,
+  },
+  PHOTO_UPLOADED: {
+    to: NOTIFICATION_EMAIL,
+    subject: 'Member profile photo uploaded',
+    bodyGenerator: (data) => {
+      const action = data.isFirstUpload
+        ? 'uploaded their profile picture for the first time'
+        : 'updated their profile picture'
+      return (
+        `Member ${data.memberName || '[unknown]'} has ${action}.\n\n` +
+        `This is an automated heads-up. No action is required automatically; you may ` +
+        `optionally print and mail a physical ID card to the member.\n\n` +
+        `-- SAC`
+      )
+    },
   },
   PROFILE_SETUP_NUDGE: {
     to: (data) => data.personalEmail,
