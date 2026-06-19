@@ -84,6 +84,9 @@ function buildSharplessCatalog({ sharplessObjs, shToCatalogIds, existingIds, con
 
   for (const sh of sharplessObjs) {
     const candidates = shToCatalogIds.get(sh.num) || []
+    // First existing candidate wins. When a Sharpless object shares its SFR
+    // group with several NGC/IC objects, only one receives the overlay; the
+    // co-region duplicates are intentionally not cross-linked.
     const matched = candidates.find((id) => existingIds.has(id))
 
     if (matched) {
