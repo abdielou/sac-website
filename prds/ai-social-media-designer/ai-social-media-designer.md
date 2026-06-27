@@ -16,6 +16,8 @@
 | **Publishing** | No automatic posting or scheduling. Users copy or download outputs and publish manually outside the dashboard. |
 | **RAG and video** | Future phases only. |
 | **Guideline management UI** | Included in Phase 1C so authorized communications users can maintain active guidelines. |
+| **Orchestration** | Vercel Workflows from Phase 1A for all validation and generation runs. |
+| **Storage (MVP)** | **S3 only for Guidelines** (Phase 1C, via existing SAC S3 pattern). Run state lives in Vercel Workflows; no separate database or S3 bucket for `AiRun`. |
 
 ---
 
@@ -23,7 +25,7 @@
 
 SAC needs **AI Social Media Designer**, an AI-assisted admin dashboard feature that helps the communications team create, validate, and improve social media content before publication. The feature supports two workflows: **validating** proposed posts and **generating** draft posts for X, Instagram, and Facebook.
 
-The MVP is guideline-driven, human-in-the-loop, and includes both validation and generation workflows. Phase 1 validates text plus uploaded images and includes guideline management. Phase 2 generates post text and images. The dashboard does not publish to social platforms; users copy or download generated outputs and take them to the platform or workflow where they need them. Future phases may add RAG over historical SAC posts, video validation, and analytics.
+The MVP is guideline-driven, human-in-the-loop, and includes both validation and generation workflows. Validation and generation execute as durable **Vercel Workflows** from Phase 1A; run state is managed by Vercel, with **S3 required only for guidelines** (Phase 1C). Phase 1 validates text plus uploaded images and includes guideline management. Phase 2 generates post text and images. The dashboard does not publish to social platforms; users copy or download generated outputs and take them to the platform or workflow where they need them. Future phases may add RAG over historical SAC posts, video validation, and analytics.
 
 ---
 
@@ -92,7 +94,7 @@ SAC must publish timely, accurate, and platform-appropriate content across multi
 - Video validation.
 - Image editing.
 - Social analytics integration.
-- Approval queues or workflow automation.
+- Editorial approval queues or publish automation (Vercel Workflows orchestration for AI runs is in scope).
 - Member-wide access (`/member/ai`).
 - Direct API integration with X, Instagram, or Facebook.
 - One-click cross-platform publishing from the dashboard.
@@ -180,14 +182,15 @@ The validation UI may use simpler labels that map to internal enums:
 ### Core AI behavior
 
 - Structured, schema-validated JSON responses.
-- Required inputs validated before model calls.
+- Required inputs validated before workflow start.
 - Active guidelines loaded at request time as a configurable behavior layer, not only static prompt context.
 - Validation and generation use global guidelines, selected platform guidelines, selected content-type guidelines, and user input.
 - Changing the active guideline version can change validator/generator behavior after activation.
 - Only activated guideline versions affect validator/generator behavior.
 - Safe error states on provider failure; user input preserved.
 - Server-side model calls only (no browser-direct provider access).
-- Basic audit logging (see Technical requirements).
+- Validation and generation run as durable Vercel Workflows from Phase 1A (see Technical architecture).
+- Basic audit logging via server logs and workflow metadata (see Technical requirements).
 
 ### Output and publishing model
 
@@ -333,14 +336,64 @@ Non-technical users edit guidelines in the dashboard with an active guidelines o
 
 - **UI:** `app/admin/ai/*` (existing dashboard shell).
 - **API:** `app/api/admin/ai/*` with `auth()` + permission checks.
-- **AI:** OpenRouter is the established provider direction. Use Vercel AI SDK with OpenRouter, or an equivalent OpenRouter-compatible provider abstraction, for synchronous validation and generation requests.
-- **Provider access:** All model calls are server-side. Provider keys must never be exposed to the browser.
-- **Image generation:** Server-side provider abstraction for generated post images in Phase 2; generated assets must remain downloadable/editable drafts, not published artifacts. Phase 2 image generation is gated on usage rights, retention policy, and monthly spend ceiling review.
-- **Uploads:** Server-side image handling for uploaded image validation only; enforce allowed MIME types, file size limits, and request image count limits before provider calls. Uploaded images may be sent to the AI provider only through server-side calls. Video uploads are out of scope for MVP.
-- **Guidelines:** `guidelines-store` abstraction backed by S3 versioned JSON or SAC's existing S3-backed content storage pattern in Phase 1C. Initial file-backed JSON may be used only as an implementation bootstrap.
-- **Audit:** Server logs with user, timestamp, mode, platforms, content type, image count, guideline version, outcome. Run persistence to S3 is optional; not required for MVP sign-off.
-- **Rate limiting:** Per-user request cap (simple in-memory or env-configured limit acceptable for MVP).
+- **Orchestration:** **Vercel Workflows** from Phase 1A. All validation and generation runs execute as durable workflows; guideline CRUD remains synchronous.
+- **AI:** OpenRouter is the established provider direction. Use Vercel AI SDK with OpenRouter, or an equivalent OpenRouter-compatible provider abstraction, inside workflow steps.
+- **Provider access:** All model calls are server-side workflow steps. Provider keys must never be exposed to the browser.
+- **Image generation:** Server-side provider abstraction for generated post images in Phase 2, executed as durable workflow steps; generated assets must remain downloadable/editable drafts, not published artifacts. Phase 2 image generation is gated on usage rights, retention policy, and monthly spend ceiling review.
+- **Uploads:** Server-side image handling for uploaded image validation only; enforce allowed MIME types, file size limits, and request image count limits before starting a workflow. Uploaded images may be sent to the AI provider only through server-side workflow steps. Video uploads are out of scope for MVP.
+- **Guidelines:** `guidelines-store` abstraction backed by S3 versioned JSON or SAC's existing S3-backed content storage pattern in Phase 1C. This is the **only mandatory S3 use** for MVP sign-off. Initial file-backed JSON may be used only as an implementation bootstrap.
+- **Run state:** Vercel Workflows managed persistence for validation and generation runs. No separate database or S3 bucket for `AiRun`.
+- **Audit:** Server logs plus workflow metadata (user, timestamp, mode, platforms, content type, image count, guideline version, workflow run id, status, and outcome). Vercel Workflows observability covers run tracing and step replay.
+- **Uploaded images:** Passed through workflow steps to the AI provider; not persisted to S3 in MVP.
+- **Generated images (Phase 2):** Retention model is a stakeholder review item (transient delivery, S3, or download-only); not a mandatory S3 commitment in MVP.
+- **Rate limiting:** Per-user workflow start cap (simple in-memory or env-configured limit acceptable for MVP).
 - **Production:** Remove current dev-only `NODE_ENV` gating on AI tab and page before launch.
+
+### Vercel Workflows orchestration
+
+Validation and generation use **Vercel Workflows** from the first implementation milestone. The dashboard does not call AI providers directly from route handlers.
+
+| Concern | MVP approach |
+|---------|----------------|
+| **Workflow functions** | `'use workflow'` functions under `workflows/admin/ai/*` coordinate each validation or generation run. |
+| **Steps** | `'use step'` functions isolate retriable work: input validation, guideline loading, provider calls, output schema validation, and image processing. |
+| **API pattern** | `POST /api/admin/ai/validate` and `POST /api/admin/ai/generate` authenticate, validate payloads, start a Vercel Workflow, and return `{ runId, status }` where `runId` is the workflow run id. `GET /api/admin/ai/runs/:runId` reads run status and result from Vercel Workflows (with auth checks against workflow input metadata). |
+| **Run state** | Vercel Workflows stores step inputs/outputs, status, and replay history. `AiRun` is the product/API view of that run, not a separate database or S3 record. |
+| **UI pattern** | Validate/Generate buttons start a run, show loading/progress, and poll run status until completion, failure, or timeout. Preserve user input if the run fails. |
+| **Retries** | Transient provider and image-processing failures retry at the step level with safe backoff; malformed model output retries once inside the workflow, then fails safely. |
+| **Durability** | Runs survive deploys and process crashes. A run interrupted mid-flight resumes from the last completed step instead of requiring the user to resubmit from scratch. |
+| **Observability** | Use Vercel Workflows run logs, metrics, and tracing for debugging provider failures and slow image steps. |
+| **Out of scope** | Sleep, hooks, and month-long pauses are not required for MVP. Guideline management APIs remain synchronous. |
+
+**Validation workflow steps (Phase 1):**
+
+1. Validate request payload and uploads.
+2. Load active guidelines via `getActiveGuidelines()`.
+3. Call the validation model (text and/or images).
+4. Validate structured output against schema.
+5. Return structured `AiValidationResult`; workflow metadata includes guideline version and initiating user for audit.
+
+**Generation workflow steps (Phase 2):**
+
+1. Validate request payload.
+2. Load active guidelines via `getActiveGuidelines()`.
+3. Generate platform text draft(s).
+4. Generate image prompt(s) when applicable.
+5. Generate image asset(s) when provider configuration is approved.
+6. Validate structured output and image metadata.
+7. Return structured `AiGenerationResult`; workflow metadata includes guideline version and initiating user for audit.
+
+### Storage boundaries (MVP)
+
+| Data | Storage | Required for MVP? |
+|------|---------|-------------------|
+| Workflow run state, step results, retries | **Vercel Workflows** (managed) | Yes — from Phase 1A |
+| Guidelines (draft, active, version history) | **S3** via `guidelines-store` | Yes — from Phase 1C sign-off |
+| Uploaded validation images | Workflow step payload / in-memory | Yes — no S3 required |
+| Generated images (Phase 2) | Stakeholder decision (see Review items) | Depends on retention choice |
+| Cross-run history, search, analytics | Database (future) | No — out of MVP scope |
+
+**Implication:** Do not provision a new S3 bucket or database for `AiRun`. Reuse SAC's existing S3-backed content pattern only for guidelines.
 
 ### Guideline storage and access
 
@@ -363,7 +416,7 @@ Only one guideline version is active at a time, and only activated versions affe
 
 ### Future stack
 
-Vercel Workflows is not required for initial synchronous validation or basic generation requests. It may be useful later for durable/background tasks such as long-running asset processing, ingestion, guideline extraction, historical post processing, RAG preparation, analytics, or other long-running jobs. Neon/pgvector and S3 may support future RAG, archives, and media workflows.
+Neon/pgvector may support future RAG and searchable run history for admins. Long-running ingestion jobs such as historical post processing, guideline extraction, and analytics may extend the existing Vercel Workflows foundation with additional workflows, sleep, and hooks. A future admin run-history UI would require a database; Vercel Workflows observability alone is sufficient for MVP engineering and support.
 
 ### RAG (future)
 
@@ -376,6 +429,27 @@ Deferred until SAC confirms rights to use historical posts. Intended for **style
 ### MVP entities
 
 `AiRun` · `AiValidationResult` · `AiGenerationResult` · `AiDraftVariant` · `AiGeneratedImage` · `AiIssue` · `AiImageInput` · `AiGuideline` · `AiGuidelineVersion` · `AiGuidelineDraft` · `AiGuidelineAuditEvent` · `AiGuidelineActivation`
+
+### `AiRun` (workflow-backed, no separate store)
+
+`AiRun` is the **product and API representation** of a validation or generation execution. It is backed by **Vercel Workflows managed persistence**, not by a separate database table or S3 object.
+
+Every validation and generation request starts a Vercel Workflow. The UI receives a `runId` (the workflow run id) and polls until the workflow reaches a terminal state. Step outputs carry the structured `AiValidationResult` or `AiGenerationResult`.
+
+| Field | Source | Notes |
+|-------|--------|-------|
+| `id` / `runId` | Vercel Workflows run id | Public id returned to the UI and used for polling |
+| `workflowRunId` | Same as `runId` | Alias for observability in logs and Vercel dashboard |
+| `mode` | Workflow input metadata | `validate` or `generate` |
+| `status` | Vercel Workflows run state | `queued` · `running` · `completed` · `failed` |
+| `userId` | Workflow input metadata | Initiating user; enforced on `GET /runs/:runId` |
+| `inputSnapshot` | Workflow input | Preserved request payload for replay/debug |
+| `guidelineVersion` | Workflow step output or input metadata | Active guideline version used by the run |
+| `result` | Final workflow step output | `AiValidationResult` or `AiGenerationResult` when complete |
+| `error` | Workflow failure state | Safe user-facing failure message when `failed` |
+| `startedAt` / `completedAt` | Vercel Workflows timestamps | Audit timestamps |
+
+**Not in MVP:** A separate `AiRun` table, S3 objects, or export of every run for long-term admin search. Server logs and Vercel Workflows observability cover MVP audit needs.
 
 ### Guideline entities
 
@@ -394,8 +468,9 @@ Deferred until SAC confirms rights to use historical posts. Intended for **style
 
 | Method | Route | Permission | Purpose |
 |--------|-------|------------|---------|
-| POST | `/api/admin/ai/validate` | `write_ai` | Validate text draft and optional images |
-| POST | `/api/admin/ai/generate` | `write_ai` | Generate post text and images (Phase 2) |
+| POST | `/api/admin/ai/validate` | `write_ai` | Start validation workflow; returns `{ runId, status }` |
+| POST | `/api/admin/ai/generate` | `write_ai` | Start generation workflow (Phase 2); returns `{ runId, status }` |
+| GET | `/api/admin/ai/runs/:runId` | `read_ai` | Read workflow run status and result from Vercel Workflows |
 | GET | `/api/admin/ai/guidelines` | `read_ai` | Return active guidelines |
 | GET | `/api/admin/ai/guidelines/versions` | `read_ai` | List guideline versions |
 | POST | `/api/admin/ai/guidelines/drafts` | `write_ai` | Create draft from active version |
@@ -409,15 +484,15 @@ Deferred until SAC confirms rights to use historical posts. Intended for **style
 
 | Permission | Capabilities |
 |------------|--------------|
-| `read_ai` | View AI tab, active guidelines, and guideline version history |
-| `write_ai` | All `read_ai` capabilities, plus run validation/generation, create guideline drafts, edit drafts, activate versions, and rollback |
+| `read_ai` | View AI tab, active guidelines, guideline version history, and own or authorized AI run status/results |
+| `write_ai` | All `read_ai` capabilities, plus start validation/generation workflows, create guideline drafts, edit drafts, activate versions, and rollback |
 
 **Security requirements:**
 
-- Server-side auth and permission checks on every AI route.
+- Server-side auth and permission checks on every AI route, including run status polling.
 - Provider keys server-only; no browser-direct AI calls.
 - No member PII in text or images sent to AI providers without explicit SAC approval.
-- Uploaded images are used for validation only and are not published, scheduled, or reused for training by SAC.
+- Uploaded images are used for validation only and are not published, scheduled, reused for training by SAC, or persisted to S3 in MVP.
 - Generated images are drafts only and must be reviewed before any use outside the dashboard.
 - Guideline changes must be logged with user, timestamp, previous version, new version, and action.
 - Invalid guideline structures cannot be saved or activated.
@@ -429,8 +504,8 @@ Deferred until SAC confirms rights to use historical posts. Intended for **style
 
 ## Human review workflow
 
-1. User submits draft, optional images, or generation brief.
-2. AI returns advisory result, generated text drafts, or generated image drafts.
+1. User submits draft, optional images, or generation brief; the API starts a durable workflow and returns a run id.
+2. UI polls run status until the workflow returns advisory results, generated text drafts, or generated image drafts.
 3. User edits output.
 4. User re-validates generated text and images before review.
 5. Communications lead reviews final text and any images.
@@ -457,13 +532,14 @@ Deferred until SAC confirms rights to use historical posts. Intended for **style
 
 | Condition | Behavior |
 |-----------|----------|
-| Missing required fields | Inline validation error; no model call |
+| Missing required fields | Inline validation error; no workflow start |
 | Unauthenticated | `401` or redirect to sign-in |
 | Unauthorized | `403` |
-| Provider timeout / failure | Recoverable error; preserve user input |
-| Malformed model output | Retry once; then safe failure |
+| Provider timeout / failure | Workflow step retries transient failures; run ends in `failed` with recoverable error; preserve user input |
+| Workflow run not found | `404` for unknown `runId`; `403` when user cannot access the run |
+| Malformed model output | Retry once inside workflow; then safe failure |
 | Guidelines unavailable | Warn user; do not claim full guideline compliance |
-| Unsupported image type or oversized upload | Inline validation error; no model call |
+| Unsupported image type or oversized upload | Inline validation error; no workflow start |
 | Image processing failure | Recoverable error; preserve text input and upload guidance |
 | Image generation unavailable | Return text draft when possible and explain that image generation is temporarily unavailable |
 
@@ -485,6 +561,8 @@ Deferred until SAC confirms rights to use historical posts. Intended for **style
 - Provider failure shows recoverable error.
 - Session expiry handled gracefully.
 - Duplicate submit does not corrupt state.
+- Validation and generation start durable workflows; UI polling returns `running`, then `completed` or `failed`.
+- Interrupted workflow runs can resume without forcing the user to re-enter the form.
 
 ### Curated AI test cases (minimum)
 
@@ -496,11 +574,13 @@ Deferred until SAC confirms rights to use historical posts. Intended for **style
 
 - Permission helpers (`read_ai`, `write_ai`).
 - API route auth and permission enforcement.
-- Input validation rejects bad payloads before model call.
-- Image upload validation rejects unsupported types, oversized files, and too many images before model call.
+- Input validation rejects bad payloads before workflow start.
+- Image upload validation rejects unsupported types, oversized files, and too many images before workflow start.
 - Output schema validation.
 - Phase 2 generated image metadata and asset references validate before returning to UI.
 - Provider failure returns safe error response.
+- Workflow start returns `runId`; run status endpoint reads from Vercel Workflows and enforces auth against workflow input metadata.
+- Terminal workflow states (`completed`, `failed`) return the expected result or safe error.
 
 ---
 
@@ -514,8 +594,12 @@ Deferred until SAC confirms rights to use historical posts. Intended for **style
 - [ ] Users with `write_ai` can run validation; unauthorized users cannot access the tab or API.
 - [ ] Validation UI includes platform selector, content type selector, draft text input, optional image upload, validate button, and loading/error/empty/result states.
 - [ ] User can submit text-only validation and text + uploaded image validation.
-- [ ] API validates required fields, unsupported file types, and oversized uploads before model call.
+- [ ] `POST /api/admin/ai/validate` starts a Vercel Workflow and returns `{ runId, status }`.
+- [ ] `GET /api/admin/ai/runs/:runId` returns run status and validation result when complete.
+- [ ] UI polls run status until completion, failure, or timeout.
+- [ ] API validates required fields, unsupported file types, and oversized uploads before workflow start.
 - [ ] Provider failure returns a safe recoverable error and preserves user input.
+- [ ] Failed or interrupted runs surface a safe error state via workflow polling; workflow run id is available in logs and Vercel observability.
 - [ ] Response conforms to expected schema and always includes `humanReviewRequired: true`.
 - [ ] Human review notice is always visible.
 - [ ] No publishing or scheduling actions exist.
@@ -534,8 +618,8 @@ Deferred until SAC confirms rights to use historical posts. Intended for **style
 - [ ] Missing event details, privacy leaks, overconfident astronomy claims, image-caption mismatch, and prompt injection attempts are handled according to guidelines.
 - [ ] The agent never claims to verify astronomy facts definitively or that content is approved/published.
 - [ ] Users can copy validation summary, issues, and suggested revision when provided.
-- [ ] P95 response time under 15 seconds for text-only validation in manual QA.
-- [ ] P95 response time under 30 seconds for image validation in manual QA.
+- [ ] P95 end-to-end workflow completion under 15 seconds for text-only validation in manual QA.
+- [ ] P95 end-to-end workflow completion under 30 seconds for image validation in manual QA.
 - [ ] Stakeholders approve validation behavior and limitations.
 
 #### Phase 1C — Guideline management UI
@@ -568,9 +652,13 @@ Deferred until SAC confirms rights to use historical posts. Intended for **style
 
 - [ ] Users with `write_ai` can access and run generation; users without `write_ai` cannot run generation.
 - [ ] Generation UI includes platform selector, content type selector, intent/topic input, optional event details, tone/style direction, image style direction, image constraints, generate button, and loading/error/empty/result states.
-- [ ] `POST /api/admin/ai/generate` connects server-side to OpenRouter through Vercel AI SDK or equivalent OpenRouter-compatible provider abstraction.
-- [ ] Required fields are validated before model call.
+- [ ] `POST /api/admin/ai/generate` starts a Vercel Workflow and returns `{ runId, status }`.
+- [ ] `GET /api/admin/ai/runs/:runId` returns generation status and result when complete.
+- [ ] Generation UI polls run status until completion, failure, or timeout.
+- [ ] Required fields are validated before workflow start.
+- [ ] Provider calls run inside durable workflow steps connected to OpenRouter through Vercel AI SDK or equivalent OpenRouter-compatible provider abstraction.
 - [ ] Provider failure returns a safe recoverable error and preserves user input.
+- [ ] Failed or interrupted runs surface a safe error state via workflow polling; workflow run id is available in logs and Vercel observability.
 - [ ] Response conforms to expected schema, includes `humanReviewRequired: true`, and never claims content is approved or published.
 - [ ] Basic audit logging is in place.
 - [ ] No publishing or scheduling actions exist.
@@ -604,6 +692,7 @@ Deferred until SAC confirms rights to use historical posts. Intended for **style
 
 - [ ] Image generation is gated on approved provider configuration, usage rights, retention policy, and spend ceiling.
 - [ ] Workflow can return generated image assets or fall back to image prompts only.
+- [ ] Image generation and image metadata validation run as durable workflow steps.
 - [ ] If image generation fails or is unavailable, text draft and image prompt are preserved.
 - [ ] Generated image metadata validates before returning to UI, including asset id, prompt used, status, rationale, and guideline version.
 - [ ] Generated image asset is marked as draft and never marked approved or published.
@@ -623,11 +712,14 @@ Deferred until SAC confirms rights to use historical posts. Intended for **style
 ### Technical (both phases)
 
 - [ ] Routes under `app/api/admin/ai/*` with server-side auth.
-- [ ] Required fields validated before model calls.
-- [ ] Structured output schema-validated before returning to UI.
-- [ ] Provider failures return safe errors.
+- [ ] Validation and generation orchestrated with Vercel Workflows from Phase 1A.
+- [ ] Workflow steps isolate provider calls, guideline loading, and schema validation.
+- [ ] Required fields validated before workflow start.
+- [ ] Structured output schema-validated inside the workflow before returning to UI.
+- [ ] Run status and results are read from Vercel Workflows; no separate database or S3 store for `AiRun`.
+- [ ] Provider failures return safe errors after workflow retry policy is exhausted.
 - [ ] Basic audit logging in place.
-- [ ] Per-user rate limiting in place.
+- [ ] Per-user workflow start rate limiting in place.
 
 ### MVP sign-off
 
@@ -644,9 +736,9 @@ Deferred until SAC confirms rights to use historical posts. Intended for **style
 
 ### Phase 0: Alignment and setup
 
-**Goal:** Align stakeholders on the implementation plan, collect initial guidelines or source posts, configure provider environment, and prepare development tasks.
+**Goal:** Align stakeholders on the implementation plan, collect initial guidelines or source posts, configure provider environment, set up Vercel Workflows locally and in preview, and prepare development tasks.
 
-**Exit criteria:** Stakeholders review the plan, requested changes are incorporated, and implementation can begin.
+**Exit criteria:** Stakeholders review the plan, requested changes are incorporated, Vercel Workflows is available in the development environment, and implementation can begin.
 
 **Out of scope:** Code.
 
@@ -656,7 +748,7 @@ Deferred until SAC confirms rights to use historical posts. Intended for **style
 
 **Goal:** Text and image validation for authorized comms users.
 
-**Includes:** `/admin/ai` validate workflow · `POST /api/admin/ai/validate` · text validation · uploaded image validation · structured pass/warning/fail output · guideline-aware prompts · permissions · error states · remove dev-only gating.
+**Includes:** `/admin/ai` validate workflow · `POST /api/admin/ai/validate` · `GET /api/admin/ai/runs/:runId` · Vercel Workflows orchestration · text validation · uploaded image validation · structured pass/warning/fail output · guideline-aware prompts · permissions · error states · remove dev-only gating.
 
 **Out of scope for Phase 1:** Generation, video, RAG, publishing, image generation/editing.
 
@@ -666,9 +758,9 @@ Deferred until SAC confirms rights to use historical posts. Intended for **style
 
 **Goal:** Build the validation UI and connect it to the AI provider.
 
-**Includes:** `/admin/ai` validation UI · platform selector · content type selector · draft text input · optional uploaded image input · validate button · loading/error/empty/result states · server-side API route connected to OpenRouter through Vercel AI SDK or equivalent OpenRouter-compatible provider abstraction · structured JSON response · auth and permission checks · basic audit logging · placeholder or minimal baseline prompt.
+**Includes:** `/admin/ai` validation UI · platform selector · content type selector · draft text input · optional uploaded image input · validate button · loading/error/empty/result states · Vercel Workflows validation orchestration · `POST /api/admin/ai/validate` returns workflow run id · `GET /api/admin/ai/runs/:runId` polling against Vercel Workflows · workflow steps connected to OpenRouter through Vercel AI SDK or equivalent OpenRouter-compatible provider abstraction · structured JSON response · auth and permission checks · basic audit logging · placeholder or minimal baseline prompt.
 
-**Completion checks:** authorized user can access validation UI · unauthorized user cannot access UI or API · user can submit text validation · user can submit text + image validation · API validates required fields before model call · API rejects unsupported file types and oversized uploads before model call · provider failure returns safe recoverable error · response conforms to expected schema · UI preserves user input on error · human review notice is always visible · no publishing or scheduling actions exist.
+**Completion checks:** authorized user can access validation UI · unauthorized user cannot access UI or API · user can submit text validation · user can submit text + image validation · API validates required fields before workflow start · API rejects unsupported file types and oversized uploads before workflow start · validate request returns run id and UI polls until completion · provider failure returns safe recoverable error · failed run surfaces safe error via workflow polling · response conforms to expected schema · UI preserves user input on error · human review notice is always visible · no publishing or scheduling actions exist · no separate database or S3 bucket provisioned for run state.
 
 **Phase 1B — Guideline-based validation**
 
@@ -694,7 +786,7 @@ Deferred until SAC confirms rights to use historical posts. Intended for **style
 
 **Goal:** Platform-specific text and image generation with send-to-validation.
 
-**Includes:** Generate workflow · `POST /api/admin/ai/generate` · platform-specific text drafts · generated post images or image prompts · assumptions/missing info · regeneration · guardrails · send generated text and images to validation.
+**Includes:** Generate workflow · `POST /api/admin/ai/generate` · `GET /api/admin/ai/runs/:runId` · Vercel Workflows orchestration · platform-specific text drafts · generated post images or image prompts · assumptions/missing info · regeneration · guardrails · send generated text and images to validation.
 
 **Gate:** Image generation implementation uses the server-side OpenRouter-compatible provider abstraction and requires usage rights, retention policy, and spend ceiling review.
 
@@ -706,9 +798,9 @@ Deferred until SAC confirms rights to use historical posts. Intended for **style
 
 **Goal:** Build the generation UI and connect it to the AI provider.
 
-**Includes:** `/admin/ai` generation workflow · platform selector · content type selector · intent/topic input · optional event details fields · tone or style direction · image style direction and image constraints · generate button · loading/error/empty/result states · `POST /api/admin/ai/generate` · server-side OpenRouter calls through Vercel AI SDK or equivalent OpenRouter-compatible provider abstraction · structured JSON response · auth and permission checks · basic audit logging · no publishing or scheduling actions.
+**Includes:** `/admin/ai` generation workflow · platform selector · content type selector · intent/topic input · optional event details fields · tone or style direction · image style direction and image constraints · generate button · loading/error/empty/result states · Vercel Workflows generation orchestration · `POST /api/admin/ai/generate` returns workflow run id · `GET /api/admin/ai/runs/:runId` polling against Vercel Workflows · workflow steps with server-side OpenRouter calls through Vercel AI SDK or equivalent OpenRouter-compatible provider abstraction · structured JSON response · auth and permission checks · basic audit logging · no publishing or scheduling actions.
 
-**Completion checks:** users with `write_ai` can run generation · users without `write_ai` cannot run generation · required fields validate before model call · provider failure returns safe recoverable error · response conforms to expected schema · UI preserves user input on error · output always includes `humanReviewRequired: true` · output never claims approval or publication · no publishing or scheduling actions exist.
+**Completion checks:** users with `write_ai` can run generation · users without `write_ai` cannot run generation · required fields validate before workflow start · generate request returns run id and UI polls until completion · provider failure returns safe recoverable error · failed run surfaces safe error via workflow polling · response conforms to expected schema · UI preserves user input on error · output always includes `humanReviewRequired: true` · output never claims approval or publication · no publishing or scheduling actions exist.
 
 **Phase 2B — Guideline-based text generation**
 
@@ -730,7 +822,7 @@ Deferred until SAC confirms rights to use historical posts. Intended for **style
 
 **Goal:** Generate downloadable draft image assets when OpenRouter-compatible provider configuration, usage rights, retention policy, and spending limits are ready.
 
-**Includes:** provider abstraction for image generation · generated image assets or fallback to image prompts only · generated image metadata including asset id, prompt used, status, rationale, and guideline version · download action for generated image drafts · draft-only labeling · send generated images into validation · graceful fallback when image generation is unavailable.
+**Includes:** provider abstraction for image generation inside durable workflow steps · generated image assets or fallback to image prompts only · generated image metadata including asset id, prompt used, status, rationale, and guideline version · download action for generated image drafts · draft-only labeling · send generated images into validation · graceful fallback when image generation is unavailable.
 
 **Completion checks:** image generation is gated on approved OpenRouter-compatible provider configuration · image generation failure preserves text draft and image prompt · metadata validates before UI response · asset is marked draft · user can download image draft · image can be sent into validation · image is never marked approved or published.
 
@@ -758,7 +850,7 @@ Video validation with caption-video coherence checks.
 
 ### Future: Analytics and feedback
 
-Run history, user feedback, issue trends, approval metrics.
+Searchable run history, user feedback, issue trends, and approval metrics. Requires a database beyond Vercel Workflows observability; out of MVP scope.
 
 ---
 
@@ -773,14 +865,17 @@ Optional direct publishing or scheduling integrations for X, Instagram, Facebook
 ### Confirmed implementation decisions
 
 - MVP access is admin/comms-only at `/admin/ai`; member-facing access is out of scope.
+- Validation and generation run as durable **Vercel Workflows** from Phase 1A; guideline management remains synchronous.
 - OpenRouter is the established AI provider direction.
-- Server-side model calls use Vercel AI SDK with OpenRouter, or an equivalent OpenRouter-compatible provider abstraction.
+- Server-side model calls use Vercel AI SDK with OpenRouter, or an equivalent OpenRouter-compatible provider abstraction, inside workflow steps.
 - Provider calls remain server-side, and provider keys are never exposed to the browser.
-- Editable guidelines use S3-backed versioned JSON, or SAC's existing S3-backed content storage pattern, through a backend `guidelines-store` abstraction.
+- `POST /api/admin/ai/validate` and `POST /api/admin/ai/generate` start Vercel Workflows and return workflow run ids; `GET /api/admin/ai/runs/:runId` reads status and result from Vercel Workflows with auth checks.
+- `AiRun` is a product/API concept backed by Vercel Workflows managed persistence; no separate database or S3 bucket for run state in MVP.
+- **S3 is required only for guidelines** (Phase 1C), reusing SAC's existing S3-backed content pattern through `guidelines-store`.
 - Guidelines are a configurable behavior layer with global, platform, and content-type scopes.
 - Communications users edit guidelines only through dashboard forms/cards, not GitHub, raw JSON, S3, or infrastructure tools.
 - Validation and generation use `getActiveGuidelines()` as the guideline access layer at request time.
-- Uploaded images are allowed as validation inputs and are sent to the AI provider only through server-side calls.
+- Uploaded images are allowed as validation inputs and are sent to the AI provider only through server-side workflow steps; they are not persisted to S3 in MVP.
 - Phase 2 generation includes text generation plus image generation or image prompts.
 - No automatic publishing, scheduling, social platform OAuth, posting APIs, or one-click cross-platform publishing are included in MVP.
 - Human review is always required before any generated or validated content is used.
@@ -794,7 +889,7 @@ These items are proposed defaults for stakeholder approval, rejection, or modifi
 | Production permissions | Confirm who receives `read_ai` and `write_ai` in production. |
 | Guideline activation | Confirm who can activate guideline versions. |
 | Spend ceiling | Confirm monthly spend ceiling for OpenRouter and image generation usage. |
-| Generated image retention | Confirm whether generated image outputs should be stored temporarily, stored permanently, or downloaded immediately without persistence. |
+| Generated image retention | Confirm whether generated image outputs should be stored temporarily in S3, stored permanently, or delivered for immediate download without file persistence. This is the only optional S3 use beyond guidelines. |
 | Activation governance | Confirm whether guideline activation requires one authorized editor or a second reviewer. |
 | Initial guideline source | Confirm whether initial guidelines should be drafted from existing SAC posts before communications edits them. |
 
@@ -815,12 +910,14 @@ This PRD presents the current implementation plan. Items marked for review are p
 | Users treat generated content as ready to publish | Draft labels; human review notice; send-to-validation flow; no publishing actions |
 | Overconfident astronomy claims published | Flag uncertainty for human review; do not claim fact-checking |
 | Permission leakage | Server-side checks on every route |
-| Provider failure | Safe errors; preserve input; manual workflow continues |
+| Provider failure | Workflow step retries; safe errors; preserve input; manual communications workflow continues |
+| Deploy or process crash during AI run | Vercel Workflows resume from last completed step; user does not need to resubmit form input |
 | Guidelines stored only in GitHub make communications dependent on engineering | Move guidelines to dashboard-managed, S3-backed, versioned storage through a backend abstraction |
 | Bad guideline edit degrades AI behavior | Draft/active separation; schema validation; preview with sample post; audit log; rollback |
 | Invalid platform or content-type configuration causes inconsistent AI behavior | Backend schema validation; safe MVP defaults; preview before activation; only activated versions affect validator/generator behavior |
 | Config-driven guidelines are mistaken for unlimited MVP platform support | Document X, Instagram, Facebook, and current content types as MVP defaults; treat future additions as validated guideline configuration after MVP scope is stable |
-| Storage decision becomes overengineered | Reuse SAC's existing S3-backed content pattern and hide infrastructure behind `getActiveGuidelines()` |
+| Storage decision becomes overengineered | Vercel Workflows owns run state; S3 is used only for guidelines (and optionally for generated images per stakeholder review); reuse SAC's existing S3-backed content pattern and hide infrastructure behind `getActiveGuidelines()` |
+| Run history mistaken for MVP requirement | Document that searchable cross-run history requires a future database; MVP uses Vercel Workflows polling and observability only |
 | Project scope too broad | Phase 1 and Phase 2 committed; no RAG/video/image editing |
 | RAG rights issues | Deferred until explicit stakeholder approval |
 
