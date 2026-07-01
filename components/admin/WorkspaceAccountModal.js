@@ -27,8 +27,8 @@ export function WorkspaceAccountModal({ isOpen, onClose, member }) {
   })
 
   const existingSacEmails = useMemo(() => {
-    if (!allMembersData?.members) return new Set()
-    return new Set(allMembersData.members.map((m) => m.sacEmail).filter(Boolean))
+    if (!allMembersData?.data) return new Set()
+    return new Set(allMembersData.data.map((m) => m.sacEmail).filter(Boolean))
   }, [allMembersData])
 
   const [selectedEmail, setSelectedEmail] = useState('')
