@@ -12,6 +12,7 @@
 | **MVP scope** | **Phase 1:** Validation (text + images). **Phase 2:** Generation (text + images). **Phase 3:** Guideline management. |
 | **Publishing** | None. Users copy/download outputs and publish manually. |
 | **RAG / video** | Future phases. |
+| **Generation→validation loop** | Future phase (post-MVP). Users copy/download and validate manually in MVP. |
 | **Guidelines UI** | Phase 3 — comms users maintain active guidelines in dashboard. |
 | **Orchestration** | Vercel Workflows from Phase 1A (backend); validation UI in 1B; generation UI in 2B; guidelines UI in Phase 3. |
 | **Storage** | S3 only for guidelines (Phase 3). Run state in Vercel Workflows — no DB or S3 for `AiRun`. |
@@ -217,7 +218,7 @@ Guidelines are the editable layer between comms stakeholders and AI workflows. P
 
 ### Future
 
-Neon/pgvector for RAG and run history. RAG deferred until SAC confirms rights to historical posts — style/tone reference only, not factual verification.
+Generation→validation loop (2F): pre-fill validation from generated text/images; editable before validate; never bypasses human review. Neon/pgvector for RAG and run history. RAG deferred until SAC confirms rights to historical posts — style/tone reference only, not factual verification.
 
 ---
 
@@ -345,17 +346,13 @@ Server-side auth on every route. Provider keys server-only. No member PII withou
 **2C — Guideline-based text**
 - [ ] `getActiveGuidelines()`; Spanish default; one draft per platform
 - [ ] Assumptions, missing info, fact preservation; no invented details; no approval claims
-- [ ] Send-to-validation pre-fills form
 
 **2D — Image prompts**
 - [ ] `imagePrompt` + `imageRationale`; safety constraints; no unprovided facts or identifiable people
 
 **2E — Image assets**
 - [ ] Gated on provider config, rights, retention, spend ceiling
-- [ ] Downloadable draft images; fallback to prompts on failure; send to validation
-
-**2F — Generation-to-validation loop**
-- [ ] Generated text/images sent to validation pre-filled; editable before validate; never bypasses human review
+- [ ] Downloadable draft images; fallback to prompts on failure
 
 ### Phase 3 — Guideline management
 
@@ -370,7 +367,7 @@ Server-side auth on every route. Provider keys server-only. No member PII withou
 - [ ] No separate DB/S3 for `AiRun`; per-user rate limiting; audit logging
 
 ### MVP sign-off
-- [ ] Validator E2E (text + images) · generator E2E · generation→validation loop · guideline management E2E (Phase 3) · copy/download · stakeholder acceptance of limitations
+- [ ] Validator E2E (text + images) · generator E2E · guideline management E2E (Phase 3) · copy/download · stakeholder acceptance of limitations
 
 ---
 
@@ -386,13 +383,12 @@ Server-side auth on every route. Provider keys server-only. No member PII withou
 | **1C** | Guideline-based validation | `getActiveGuidelines()`, validation categories, test set |
 | **2A** | Generation backend + provider | Generate API routes, Vercel Workflow, polling, schema validation |
 | **2B** | Generation UI | Generation form, workflow polling, result display, human-review messaging |
-| **2C** | Guideline-based text generation | Platform drafts, guardrails, send-to-validation |
+| **2C** | Guideline-based text generation | Platform drafts, guardrails |
 | **2D** | Image prompts | Safe prompts with constraints |
 | **2E** | Image assets | Provider abstraction, download, fallback |
-| **2F** | Generation→validation loop | Pre-filled validation from generated content |
 | **3** | Guideline management | `guidelines-store`, S3, draft/active/rollback UI |
 
-**Future:** RAG (style/tone, rights-gated) · video validation · analytics/run history (requires DB) · publishing integrations (low priority).
+**Future:** Generation→validation loop (2F) — generated text/images pre-fill validation form; editable before validate; never bypasses human review · RAG (style/tone, rights-gated) · video validation · analytics/run history (requires DB) · publishing integrations (low priority).
 
 ---
 
@@ -418,7 +414,7 @@ Server-side auth on every route. Provider keys server-only. No member PII withou
 | Risk | Mitigation |
 |------|------------|
 | Vague guidelines | Phase 0 gate; AI states incomplete coverage |
-| Invented facts (text/image) | Missing-info output; guardrails; validation loop |
+| Invented facts (text/image) | Missing-info output; guardrails; manual re-validation |
 | Provider cost | Rate limits; spend ceiling; usage logging |
 | Users treat output as final | Draft labels; human review notice; no publish actions |
 | Overconfident astronomy | Flag for review; no fact-checking claims |
