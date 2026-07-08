@@ -168,23 +168,37 @@ async function callOpenRouterStep(input, guidelines) {
     }
   }
 
-  const model = process.env.OPENROUTER_MODEL || '~openai/gpt-4o-mini'
+  const model = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini'
   const siteUrl = process.env.OPENROUTER_SITE_URL
   const openRouterTitle = process.env.OPENROUTER_TITLE
 
   const systemPrompt = `Eres un validador de publicaciones para SAC.
-Devuelve EXACTAMENTE un JSON que cumpla el esquema solicitado (sin texto adicional).
+Devuelve EXACTAMENTE un objeto JSON (sin texto adicional, sin markdown) con esta forma:
+
+{
+  "overallOutcome": "pass" | "warning" | "fail",
+  "approvalRecommendation": "ready_for_review" | "needs_edits" | "do_not_publish",
+  "summary": string,
+  "issues": [
+    {
+      "severity": "minor" | "major" | "critical",
+      "category": "brand_voice" | "guideline_compliance" | "platform_fit" | "clarity" | "completeness" | "uncertainty_factual_risk" | "accessibility" | "safety" | "formatting" | "privacy" | "image_text_alignment" | "image_suitability",
+      "message": string,
+      "suggestedFix": string (opcional),
+      "affectedPlatform": string (opcional)
+    }
+  ],
+  "platformNotes": string (opcional),
+  "imageNotes": string (opcional),
+  "suggestedRevision": string (opcional),
+  "humanReviewRequired": true
+}
 
 Reglas:
+- Usa EXACTAMENTE esas claves y esos valores permitidos. "humanReviewRequired" debe ser siempre true.
+- "issues" siempre es un arreglo (usa [] si no hay problemas).
 - No inventes datos no provistos (fechas, lugares, costos, enlaces, hechos científicos verificables).
 - Astronomía: NO verificas hechos; si hay riesgo de afirmaciones no verificables, marca uncertainty_factual_risk.
-- Si falla, sigue devolviendo el esquema válido y asegúrate de humanReviewRequired=true.
-
-Categorías permitidas (category):
-brand_voice, guideline_compliance, platform_fit, clarity, completeness, uncertainty_factual_risk, accessibility, safety, formatting, privacy, image_text_alignment, image_suitability
-
-Severidad permitida (severity):
-minor, major, critical
 `
 
   const userText = {
@@ -240,6 +254,7 @@ Input (JSON): ${JSON.stringify(userText)}`,
         model,
         messages,
         temperature: 0.2,
+        response_format: { type: 'json_object' },
       }),
     })
 
@@ -290,4 +305,3 @@ export async function validateAiWorkflow(input) {
   const modelResult = await callOpenRouterStep(validatedInput, guidelines)
   return modelResult.result
 }
-

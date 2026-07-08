@@ -24,7 +24,15 @@ const securityHeaders = [
 ]
 
 const baseConfig = withBundleAnalyzer({
-  serverExternalPackages: ['@react-pdf/renderer'],
+  serverExternalPackages: [
+    '@react-pdf/renderer',
+    // Workflow's Vercel world pulls in these Node-only packages. Bundling them
+    // with webpack breaks xdg-app-paths (require.main/process.argv are undefined
+    // in the bundle), so keep them external and let Node require them natively.
+    '@vercel/oidc',
+    '@vercel/cli-config',
+    'xdg-app-paths',
+  ],
   turbopack: {},
   reactStrictMode: true,
   pageExtensions: ['js', 'jsx', 'md', 'mdx'],

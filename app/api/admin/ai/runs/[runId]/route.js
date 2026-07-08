@@ -1,7 +1,8 @@
-import { auth } from '../../../../../auth'
+import { auth } from '../../../../../../auth'
 import { NextResponse } from 'next/server'
-import { checkReadAccess } from '../../../../../lib/api-permissions'
-import { getWorld, getRun } from 'workflow/runtime'
+import { checkReadAccess } from '../../../../../../lib/api-permissions'
+import { getWorld } from 'workflow/runtime'
+import { getRun } from 'workflow/api'
 import { hydrateResourceIO, observabilityRevivers } from 'workflow/observability'
 
 function extractOwnerFromHydratedInput(hydrated) {
@@ -64,7 +65,8 @@ export const GET = auth(async function GET(req, { params }) {
     )
   }
 
-  const runId = params?.runId
+  const resolvedParams = await params
+  const runId = resolvedParams?.runId
   if (!runId || typeof runId !== 'string') {
     return NextResponse.json({ error: 'runId requerido' }, { status: 400 })
   }
