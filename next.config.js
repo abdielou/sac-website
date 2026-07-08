@@ -1,6 +1,7 @@
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 })
+const { withWorkflow } = require('workflow/next')
 
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -22,7 +23,7 @@ const securityHeaders = [
   },
 ]
 
-module.exports = withBundleAnalyzer({
+const baseConfig = withBundleAnalyzer({
   serverExternalPackages: ['@react-pdf/renderer'],
   turbopack: {},
   reactStrictMode: true,
@@ -68,3 +69,5 @@ module.exports = withBundleAnalyzer({
     ],
   },
 })
+
+module.exports = withWorkflow(baseConfig)
