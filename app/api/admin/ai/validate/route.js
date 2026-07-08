@@ -8,6 +8,8 @@ const MAX_IMAGES = 4
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024 // 5MB
 const WORKFLOW_START_WINDOW_MS = 60 * 1000
 const MAX_WORKFLOWS_PER_WINDOW = 5
+const VALIDATE_WORKFLOW_ID =
+  'workflow//./workflows/ai-social-media-designer/validation/validateAiWorkflow//validateAiWorkflow'
 
 // MVP: in-memory rate limiting. For multi-instance production, replace with a shared store.
 const startTimestampsByUser = new Map() // Map<string, number[]>
@@ -206,7 +208,12 @@ export const POST = auth(async function POST(req) {
       images,
     }
 
-    const run = await start(validateAiWorkflow, [workflowInput])
+    const workflowTarget =
+      validateAiWorkflow && typeof validateAiWorkflow.workflowId === 'string'
+        ? validateAiWorkflow
+        : { workflowId: VALIDATE_WORKFLOW_ID }
+
+    const run = await start(workflowTarget, [workflowInput])
     const status = await run.status
 
     return NextResponse.json({ runId: run.runId, status }, { status: 202 })
