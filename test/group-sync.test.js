@@ -128,16 +128,24 @@ describe('computeGroupDiff — missing sacEmail', () => {
 })
 
 describe('computeGroupDiff — already in sync', () => {
-  it('returns empty diffs when groups match the roster', () => {
+  it('returns empty diffs and lists in-sync members when groups match the roster', () => {
     const diff = computeGroupDiff([member({})], {
       [GROUP_MIEMBROS]: [{ email: 'user@sociedadastronomia.com', role: 'MEMBER', type: 'USER' }],
-      [GROUP_PERSONAL]: [{ email: 'personal@example.com', role: 'MEMBER', type: 'USER' }],
+      [GROUP_PERSONAL]: [{ email: 'personal@example.com', role: 'OWNER', type: 'USER' }],
     })
     expect(diff.groups[GROUP_MIEMBROS].toAdd).toEqual([])
     expect(diff.groups[GROUP_MIEMBROS].toRemove).toEqual([])
     expect(diff.groups[GROUP_PERSONAL].toAdd).toEqual([])
     expect(diff.groups[GROUP_PERSONAL].toRemove).toEqual([])
     expect(diff.missingSacEmail).toEqual([])
+    expect(diff.groups[GROUP_MIEMBROS].inSync).toEqual([
+      { email: 'user@sociedadastronomia.com', name: 'Test User', role: 'MEMBER' },
+    ])
+    // A desired member holding OWNER is simply in sync, not "protected"
+    expect(diff.groups[GROUP_PERSONAL].inSync).toEqual([
+      { email: 'personal@example.com', name: 'Test User', role: 'OWNER' },
+    ])
+    expect(diff.groups[GROUP_PERSONAL].protectedOwners).toEqual([])
   })
 
   it('handles missing group listings gracefully (treated as empty)', () => {

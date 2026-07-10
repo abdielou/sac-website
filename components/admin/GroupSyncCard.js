@@ -73,6 +73,19 @@ export function GroupSyncCard() {
     })
   }
 
+  // Select/unselect an entire section (group + op) at once
+  const setSection = (group, op, emails, select) => {
+    setUnchecked((prev) => {
+      const next = new Set(prev)
+      for (const email of emails) {
+        const key = checkboxKey(group, op, email)
+        if (select) next.delete(key)
+        else next.add(key)
+      }
+      return next
+    })
+  }
+
   const buildPayload = () => {
     const groups = {}
     for (const group of [GROUP_MIEMBROS, GROUP_PERSONAL]) {
@@ -179,7 +192,7 @@ export function GroupSyncCard() {
               if (e.target === e.currentTarget) closeModal()
             }}
           >
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
               {/* Header */}
               <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -210,7 +223,7 @@ export function GroupSyncCard() {
                   </div>
                 )}
 
-                {diff && !isEmpty && (
+                {diff && (
                   <div className="grid gap-6 lg:grid-cols-2">
                     {[GROUP_MIEMBROS, GROUP_PERSONAL].map((group) => (
                       <GroupPanel
@@ -219,6 +232,7 @@ export function GroupSyncCard() {
                         data={diff.groups[group]}
                         unchecked={unchecked}
                         onToggle={toggle}
+                        onSetSection={setSection}
                       />
                     ))}
                   </div>
@@ -276,49 +290,75 @@ export function GroupSyncCard() {
   )
 }
 
-function GroupPanel({ group, data, unchecked, onToggle }) {
+function GroupPanel({ group, data, unchecked, onToggle, onSetSection }) {
+  const isChecked = (op, email) => !unchecked.has(checkboxKey(group, op, email))
+
   return (
     <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
       <h3 className="font-semibold text-gray-900 dark:text-white mb-3 break-all">{group}</h3>
 
-      <Section
-        title={`Añadir (${data.toAdd.length})`}
+      <SyncTable
+        title="Añadir"
         emptyText="Nada que añadir"
         items={data.toAdd}
-        renderItem={(item) => (
-          <CheckboxRow
-            key={item.email}
-            checked={!unchecked.has(checkboxKey(group, 'add', item.email))}
-            onChange={() => onToggle(checkboxKey(group, 'add', item.email))}
-          >
-            <span className="text-gray-900 dark:text-gray-100">{item.email}</span>
-            <span className="text-gray-500 dark:text-gray-400 ml-2">{item.name}</span>
-          </CheckboxRow>
+        headers={['Correo', 'Nombre']}
+        isChecked={(item) => isChecked('add', item.email)}
+        onToggle={(item) => onToggle(checkboxKey(group, 'add', item.email))}
+        onSelectAll={(select) =>
+          onSetSection(
+            group,
+            'add',
+            data.toAdd.map((i) => i.email),
+            select
+          )
+        }
+        renderCells={(item) => (
+          <>
+            <td className="px-3 py-2 text-sm text-gray-900 dark:text-gray-100 break-all">
+              {item.email}
+            </td>
+            <td className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">{item.name}</td>
+          </>
         )}
       />
 
-      <Section
-        title={`Remover (${data.toRemove.length})`}
+      <SyncTable
+        title="Remover"
         emptyText="Nada que remover"
         items={data.toRemove}
-        renderItem={(item) => (
-          <CheckboxRow
-            key={item.email}
-            checked={!unchecked.has(checkboxKey(group, 'remove', item.email))}
-            onChange={() => onToggle(checkboxKey(group, 'remove', item.email))}
-          >
-            <span className="text-gray-900 dark:text-gray-100">{item.email}</span>
-            <span className="text-gray-500 dark:text-gray-400 ml-2">
+        headers={['Correo', 'Razón', 'Rol']}
+        isChecked={(item) => isChecked('remove', item.email)}
+        onToggle={(item) => onToggle(checkboxKey(group, 'remove', item.email))}
+        onSelectAll={(select) =>
+          onSetSection(
+            group,
+            'remove',
+            data.toRemove.map((i) => i.email),
+            select
+          )
+        }
+        renderCells={(item) => (
+          <>
+            <td className="px-3 py-2 text-sm text-gray-900 dark:text-gray-100 break-all">
+              {item.email}
+            </td>
+            <td className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
               {reasonLabel(item.reason)}
-            </span>
-            {item.role !== 'MEMBER' && (
-              <span className="ml-2 px-1.5 py-0.5 text-xs font-semibold rounded bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300">
-                {item.role}
-              </span>
-            )}
-          </CheckboxRow>
+            </td>
+            <td className="px-3 py-2 text-sm">
+              {item.role !== 'MEMBER' ? (
+                <span className="px-1.5 py-0.5 text-xs font-semibold rounded bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300">
+                  {item.role}
+                </span>
+              ) : (
+                <span className="text-gray-400 dark:text-gray-500 text-xs">MEMBER</span>
+              )}
+            </td>
+          </>
         )}
       />
+
+      <InSyncTable items={data.inSync || []} />
 
       {data.protectedOwners && data.protectedOwners.length > 0 && (
         <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
@@ -330,30 +370,142 @@ function GroupPanel({ group, data, unchecked, onToggle }) {
   )
 }
 
-function Section({ title, emptyText, items, renderItem }) {
+function InSyncTable({ items }) {
   return (
-    <div className="mb-4">
-      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{title}</h4>
+    <details className="mb-2">
+      <summary className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+        Ya sincronizados ({items.length})
+      </summary>
       {items.length === 0 ? (
-        <p className="text-sm text-gray-400 dark:text-gray-500">{emptyText}</p>
+        <p className="mt-2 text-sm text-gray-400 dark:text-gray-500">Ninguno</p>
       ) : (
-        <ul className="space-y-1">{items.map(renderItem)}</ul>
+        <div className="mt-2 overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700/50">
+              <tr>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Correo
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Nombre
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Rol
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              {items.map((item) => (
+                <tr key={item.email}>
+                  <td className="px-3 py-2 text-sm text-gray-900 dark:text-gray-100 break-all">
+                    {item.email}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
+                    {item.name}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 text-xs">
+                    {item.role}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
-    </div>
+    </details>
   )
 }
 
-function CheckboxRow({ checked, onChange, children }) {
+function SyncTable({
+  title,
+  emptyText,
+  items,
+  headers,
+  isChecked,
+  onToggle,
+  onSelectAll,
+  renderCells,
+}) {
+  const selectedCount = items.filter(isChecked).length
+  const allSelected = items.length > 0 && selectedCount === items.length
+
   return (
-    <li className="flex items-start gap-2 text-sm">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onChange}
-        className="mt-0.5 rounded border-gray-300 dark:border-gray-600"
-      />
-      <span className="break-all">{children}</span>
-    </li>
+    <div className="mb-4">
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          {title} ({selectedCount}/{items.length})
+        </h4>
+        {items.length > 0 && (
+          <div className="flex items-center gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => onSelectAll(true)}
+              className="text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Marcar todos
+            </button>
+            <span className="text-gray-300 dark:text-gray-600">·</span>
+            <button
+              type="button"
+              onClick={() => onSelectAll(false)}
+              className="text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Desmarcar todos
+            </button>
+          </div>
+        )}
+      </div>
+
+      {items.length === 0 ? (
+        <p className="text-sm text-gray-400 dark:text-gray-500">{emptyText}</p>
+      ) : (
+        <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700/50">
+              <tr>
+                <th className="px-3 py-2 w-8">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={() => onSelectAll(!allSelected)}
+                    className="rounded border-gray-300 dark:border-gray-600"
+                    aria-label={`Seleccionar todos: ${title}`}
+                  />
+                </th>
+                {headers.map((h) => (
+                  <th
+                    key={h}
+                    className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              {items.map((item) => (
+                <tr
+                  key={item.email}
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer"
+                  onClick={() => onToggle(item)}
+                >
+                  <td className="px-3 py-2 w-8">
+                    <input
+                      type="checkbox"
+                      checked={isChecked(item)}
+                      onChange={() => onToggle(item)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="rounded border-gray-300 dark:border-gray-600"
+                    />
+                  </td>
+                  {renderCells(item)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   )
 }
 
