@@ -77,3 +77,7 @@ scripts/member-emails.json
 .vercel
 .playwright-mcp/
 docs/*
+/.swc
+
+# Group sync audit reports downloaded from the admin dashboard
+sync-grupos-*.csv
