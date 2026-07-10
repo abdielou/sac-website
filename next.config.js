@@ -1,6 +1,7 @@
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 })
+const { withWorkflow } = require('workflow/next')
 
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -22,8 +23,16 @@ const securityHeaders = [
   },
 ]
 
-module.exports = withBundleAnalyzer({
-  serverExternalPackages: ['@react-pdf/renderer'],
+const baseConfig = withBundleAnalyzer({
+  serverExternalPackages: [
+    '@react-pdf/renderer',
+    // Workflow's Vercel world pulls in these Node-only packages. Bundling them
+    // with webpack breaks xdg-app-paths (require.main/process.argv are undefined
+    // in the bundle), so keep them external and let Node require them natively.
+    '@vercel/oidc',
+    '@vercel/cli-config',
+    'xdg-app-paths',
+  ],
   turbopack: {},
   reactStrictMode: true,
   pageExtensions: ['js', 'jsx', 'md', 'mdx'],
@@ -68,3 +77,5 @@ module.exports = withBundleAnalyzer({
     ],
   },
 })
+
+module.exports = withWorkflow(baseConfig)
