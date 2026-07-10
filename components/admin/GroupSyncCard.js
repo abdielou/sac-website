@@ -308,11 +308,11 @@ export function GroupSyncCard() {
                 )}
 
                 {diff && diff.missingSacEmail.length > 0 && (
-                  <div className="mt-6 p-4 rounded-md bg-yellow-50 dark:bg-yellow-900/20">
-                    <h3 className="text-sm font-semibold text-yellow-800 dark:text-yellow-300 mb-2">
+                  <details className="mt-6 p-4 rounded-md bg-yellow-50 dark:bg-yellow-900/20">
+                    <summary className="text-sm font-semibold text-yellow-800 dark:text-yellow-300 cursor-pointer select-none">
                       Miembros activos sin cuenta de Workspace ({diff.missingSacEmail.length})
-                    </h3>
-                    <p className="text-xs text-yellow-700 dark:text-yellow-400 mb-2">
+                    </summary>
+                    <p className="mt-2 text-xs text-yellow-700 dark:text-yellow-400 mb-2">
                       No se pueden añadir a {GROUP_MIEMBROS} hasta que tengan cuenta.
                     </p>
                     <ul className="text-sm text-yellow-800 dark:text-yellow-300 list-disc pl-5">
@@ -322,7 +322,7 @@ export function GroupSyncCard() {
                         </li>
                       ))}
                     </ul>
-                  </div>
+                  </details>
                 )}
 
                 {applyResults && <ApplyResults results={applyResults} />}
