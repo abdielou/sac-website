@@ -1578,6 +1578,7 @@ function handleUpdateGroupMembersAction(data) {
   const remove = Array.isArray(data.remove) ? data.remove : []
   const added = []
   const removed = []
+  const skipped = []
   const failed = []
 
   add.forEach((email) => {
@@ -1596,15 +1597,29 @@ function handleUpdateGroupMembersAction(data) {
 
   remove.forEach((email) => {
     try {
+      // Safety: never remove a group OWNER, regardless of what the caller asks.
+      let existing = null
+      try {
+        existing = workspaceDirectory.Members.get(data.group, email)
+      } catch (e) {
+        // Idempotent: not a member counts as success
+        if (
+          e.message &&
+          (e.message.includes('Resource Not Found') || e.message.includes('notFound'))
+        ) {
+          removed.push(email)
+          return
+        }
+        throw e
+      }
+      if (existing && String(existing.role || '').toUpperCase() === 'OWNER') {
+        skipped.push({ email, reason: 'OWNER' })
+        return
+      }
       workspaceDirectory.Members.remove(data.group, email)
       removed.push(email)
     } catch (e) {
-      // Idempotent: not a member counts as success
-      if (e.message && (e.message.includes('Resource Not Found') || e.message.includes('notFound'))) {
-        removed.push(email)
-      } else {
-        failed.push({ email, op: 'remove', error: e.message })
-      }
+      failed.push({ email, op: 'remove', error: e.message })
     }
   })
 
@@ -1615,11 +1630,13 @@ function handleUpdateGroupMembersAction(data) {
       added.length +
       ', removed=' +
       removed.length +
+      ', skipped=' +
+      skipped.length +
       ', failed=' +
       failed.length
   )
 
-  return jsonResponse({ success: true, group: data.group, added, removed, failed })
+  return jsonResponse({ success: true, group: data.group, added, removed, skipped, failed })
 }
 
 function onFormSubmit(e) {

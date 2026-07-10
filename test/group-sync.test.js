@@ -73,13 +73,31 @@ describe('computeGroupDiff — removals', () => {
     const diff = computeGroupDiff([member({})], {
       [GROUP_MIEMBROS]: [
         { email: 'user@sociedadastronomia.com', role: 'MEMBER', type: 'USER' },
-        { email: 'presidente@sociedadastronomia.com', role: 'OWNER', type: 'USER' },
+        { email: 'secretaria@sociedadastronomia.com', role: 'MANAGER', type: 'USER' },
       ],
       [GROUP_PERSONAL]: [{ email: 'personal@example.com', role: 'MEMBER', type: 'USER' }],
     })
     expect(diff.groups[GROUP_MIEMBROS].toRemove).toEqual([
-      { email: 'presidente@sociedadastronomia.com', reason: 'unknown', role: 'OWNER' },
+      { email: 'secretaria@sociedadastronomia.com', reason: 'unknown', role: 'MANAGER' },
     ])
+  })
+
+  it('never proposes removing OWNERs — lists them as protected instead', () => {
+    const diff = computeGroupDiff([member({ status: 'expired' })], {
+      [GROUP_MIEMBROS]: [
+        { email: 'presidente@sociedadastronomia.com', role: 'OWNER', type: 'USER' },
+      ],
+      [GROUP_PERSONAL]: [
+        // Even an expired member's address is protected when it holds OWNER
+        { email: 'personal@example.com', role: 'OWNER', type: 'USER' },
+      ],
+    })
+    expect(diff.groups[GROUP_MIEMBROS].toRemove).toEqual([])
+    expect(diff.groups[GROUP_MIEMBROS].protectedOwners).toEqual([
+      { email: 'presidente@sociedadastronomia.com' },
+    ])
+    expect(diff.groups[GROUP_PERSONAL].toRemove).toEqual([])
+    expect(diff.groups[GROUP_PERSONAL].protectedOwners).toEqual([{ email: 'personal@example.com' }])
   })
 
   it("recognizes a member's sac email in the personal group (cross-email match) with their status as reason", () => {

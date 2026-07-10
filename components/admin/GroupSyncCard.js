@@ -319,6 +319,13 @@ function GroupPanel({ group, data, unchecked, onToggle }) {
           </CheckboxRow>
         )}
       />
+
+      {data.protectedOwners && data.protectedOwners.length > 0 && (
+        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          <span className="font-medium">Se conservan (OWNER):</span>{' '}
+          {data.protectedOwners.map((o) => o.email).join(', ')}
+        </div>
+      )}
     </div>
   )
 }
@@ -360,6 +367,11 @@ function ApplyResults({ results }) {
           <p className="text-sm text-gray-700 dark:text-gray-300">
             Añadidos: {r.added.length} · Removidos: {r.removed.length} · Fallidos: {r.failed.length}
           </p>
+          {r.skipped && r.skipped.length > 0 && (
+            <p className="mt-1 text-sm text-orange-700 dark:text-orange-400">
+              Omitidos (OWNER protegido): {r.skipped.map((s) => s.email).join(', ')}
+            </p>
+          )}
           {r.failed.length > 0 && (
             <ul className="mt-2 text-sm text-red-700 dark:text-red-400 list-disc pl-5">
               {r.failed.map((f) => (

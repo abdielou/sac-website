@@ -98,7 +98,7 @@ export const POST = auth(async function POST(req) {
         : []
 
       if (add.length === 0 && remove.length === 0) {
-        results[group] = { added: [], removed: [], failed: [] }
+        results[group] = { added: [], removed: [], skipped: [], failed: [] }
         continue
       }
 
@@ -109,6 +109,7 @@ export const POST = auth(async function POST(req) {
         results[group] = {
           added: [],
           removed: [],
+          skipped: [],
           failed: [
             ...add.map((email) => ({ email, op: 'add', error })),
             ...remove.map((email) => ({ email, op: 'remove', error })),
@@ -118,6 +119,7 @@ export const POST = auth(async function POST(req) {
         results[group] = {
           added: result.added || [],
           removed: result.removed || [],
+          skipped: result.skipped || [],
           failed: result.failed || [],
         }
       }
