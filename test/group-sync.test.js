@@ -1,6 +1,12 @@
 // Group sync diff logic tests
 
-import { computeGroupDiff, GROUP_MIEMBROS, GROUP_PERSONAL, SYNC_STATUSES } from '../lib/group-sync'
+import {
+  canonicalEmail,
+  computeGroupDiff,
+  GROUP_MIEMBROS,
+  GROUP_PERSONAL,
+  SYNC_STATUSES,
+} from '../lib/group-sync'
 
 const member = (overrides) => ({
   email: 'personal@example.com',
@@ -17,6 +23,21 @@ describe('constants', () => {
     expect(GROUP_MIEMBROS).toBe('miembros@sociedadastronomia.com')
     expect(GROUP_PERSONAL).toBe('members_personal@sociedadastronomia.com')
     expect(SYNC_STATUSES).toEqual(['active', 'expiring-soon'])
+  })
+})
+
+describe('canonicalEmail — gmail dot/plus/alias insensitivity', () => {
+  it('ignores dots and +suffixes in gmail local parts', () => {
+    expect(canonicalEmail('Omi.Barbosa@gmail.com')).toBe('omibarbosa@gmail.com')
+    expect(canonicalEmail('omibarbosa+sac@gmail.com')).toBe('omibarbosa@gmail.com')
+    expect(canonicalEmail('o.mi.bar.bosa@googlemail.com')).toBe('omibarbosa@gmail.com')
+  })
+
+  it('leaves other domains untouched (dots are significant there)', () => {
+    expect(canonicalEmail('john.doe@sociedadastronomia.com')).toBe(
+      'john.doe@sociedadastronomia.com'
+    )
+    expect(canonicalEmail('wilfredo1r@msn.com')).toBe('wilfredo1r@msn.com')
   })
 })
 
@@ -52,6 +73,22 @@ describe('computeGroupDiff — adds', () => {
     })
     expect(diff.groups[GROUP_MIEMBROS].toAdd).toEqual([])
     expect(diff.groups[GROUP_PERSONAL].toAdd).toEqual([])
+  })
+
+  it('matches gmail dot-variants as the same person (in sync, not add+remove)', () => {
+    const diff = computeGroupDiff(
+      [member({ email: 'omibarbosa@gmail.com', name: 'Luis Barbosa' })],
+      {
+        [GROUP_MIEMBROS]: [{ email: 'user@sociedadastronomia.com', role: 'MEMBER', type: 'USER' }],
+        [GROUP_PERSONAL]: [{ email: 'omi.barbosa@gmail.com', role: 'MEMBER', type: 'USER' }],
+      }
+    )
+    expect(diff.groups[GROUP_PERSONAL].toAdd).toEqual([])
+    expect(diff.groups[GROUP_PERSONAL].toRemove).toEqual([])
+    // in-sync entry preserves the address as it exists in the group
+    expect(diff.groups[GROUP_PERSONAL].inSync).toEqual([
+      { email: 'omi.barbosa@gmail.com', name: 'Luis Barbosa', role: 'MEMBER' },
+    ])
   })
 })
 
