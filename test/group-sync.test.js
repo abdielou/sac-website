@@ -1,11 +1,6 @@
 // Group sync diff logic tests
 
-import {
-  computeGroupDiff,
-  GROUP_MIEMBROS,
-  GROUP_PERSONAL,
-  SYNC_STATUSES,
-} from '../lib/group-sync'
+import { computeGroupDiff, GROUP_MIEMBROS, GROUP_PERSONAL, SYNC_STATUSES } from '../lib/group-sync'
 
 const member = (overrides) => ({
   email: 'personal@example.com',
