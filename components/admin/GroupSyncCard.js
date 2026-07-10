@@ -191,6 +191,17 @@ export function GroupSyncCard() {
         ;(r.skipped || []).forEach((s) =>
           rows.push([group, 'omitido_owner', s.email, '', s.reason, 'OWNER', ''])
         )
+        ;(r.resolved || []).forEach((x) =>
+          rows.push([
+            group,
+            'añadido_resuelto_como',
+            x.actual,
+            '',
+            `solicitado: ${x.requested}`,
+            '',
+            '',
+          ])
+        )
         r.failed.forEach((f) => rows.push([group, `fallido_${f.op}`, f.email, '', f.error, '', '']))
       }
     } else {
@@ -604,6 +615,21 @@ function ApplyResults({ results }) {
             <p className="mt-1 text-sm text-orange-700 dark:text-orange-400">
               Omitidos (OWNER protegido): {r.skipped.map((s) => s.email).join(', ')}
             </p>
+          )}
+          {r.resolved && r.resolved.length > 0 && (
+            <div className="mt-1 text-sm text-yellow-700 dark:text-yellow-400">
+              <p className="font-medium">
+                ⚠️ Google registró estas direcciones con otro correo (cuenta principal):
+              </p>
+              <ul className="list-disc pl-5">
+                {r.resolved.map((x) => (
+                  <li key={x.requested}>
+                    {x.requested} → {x.actual} — actualiza la hoja CLEAN con este correo o el sync
+                    lo propondrá de nuevo
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
           {r.failed.length > 0 && (
             <ul className="mt-2 text-sm text-red-700 dark:text-red-400 list-disc pl-5">

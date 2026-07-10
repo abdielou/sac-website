@@ -1580,11 +1580,19 @@ function handleUpdateGroupMembersAction(data) {
   const removed = []
   const skipped = []
   const failed = []
+  const resolved = []
 
   add.forEach((email) => {
     try {
-      workspaceDirectory.Members.insert({ email, role: 'MEMBER' }, data.group)
+      const inserted = workspaceDirectory.Members.insert({ email, role: 'MEMBER' }, data.group)
       added.push(email)
+      // Google resolves the address to the target Google account and the group
+      // lists the account's primary email — surface it when it differs so the
+      // admin can fix the roster instead of chasing a phantom member.
+      const actual = inserted && inserted.email ? String(inserted.email) : email
+      if (actual.toLowerCase() !== String(email).toLowerCase()) {
+        resolved.push({ requested: email, actual })
+      }
     } catch (e) {
       // Idempotent: already a member counts as success
       if (e.message && e.message.includes('Member already exists')) {
@@ -1636,7 +1644,7 @@ function handleUpdateGroupMembersAction(data) {
       failed.length
   )
 
-  return jsonResponse({ success: true, group: data.group, added, removed, skipped, failed })
+  return jsonResponse({ success: true, group: data.group, added, removed, skipped, failed, resolved })
 }
 
 function onFormSubmit(e) {

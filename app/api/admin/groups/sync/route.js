@@ -121,6 +121,7 @@ export const POST = auth(async function POST(req) {
           removed: result.removed || [],
           skipped: result.skipped || [],
           failed: result.failed || [],
+          resolved: result.resolved || [],
         }
       }
     }
