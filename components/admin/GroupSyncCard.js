@@ -143,6 +143,75 @@ export function GroupSyncCard() {
     setModalOpen(false)
   }
 
+  // CSV report for auditing: preview (with selections) before apply,
+  // actual per-email results after apply.
+  const downloadReport = () => {
+    const csvEscape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
+    const rows = [['grupo', 'seccion', 'correo', 'nombre', 'razon', 'rol', 'seleccionado']]
+
+    if (diff) {
+      for (const group of [GROUP_MIEMBROS, GROUP_PERSONAL]) {
+        const g = diff.groups[group]
+        g.toAdd.forEach((i) =>
+          rows.push([
+            group,
+            'añadir',
+            i.email,
+            i.name,
+            '',
+            'MEMBER',
+            unchecked.has(checkboxKey(group, 'add', i.email)) ? 'no' : 'sí',
+          ])
+        )
+        g.toRemove.forEach((i) =>
+          rows.push([
+            group,
+            'remover',
+            i.email,
+            '',
+            reasonLabel(i.reason),
+            i.role,
+            unchecked.has(checkboxKey(group, 'remove', i.email)) ? 'no' : 'sí',
+          ])
+        )
+        ;(g.inSync || []).forEach((i) =>
+          rows.push([group, 'sincronizado', i.email, i.name, '', i.role, ''])
+        )
+        ;(g.protectedOwners || []).forEach((i) =>
+          rows.push([group, 'owner_protegido', i.email, '', '', 'OWNER', ''])
+        )
+      }
+      ;(diff.missingSacEmail || []).forEach((i) =>
+        rows.push(['', 'sin_cuenta_workspace', i.email, i.name, '', '', ''])
+      )
+    } else if (applyResults) {
+      for (const [group, r] of Object.entries(applyResults)) {
+        r.added.forEach((email) => rows.push([group, 'añadido', email, '', '', '', '']))
+        r.removed.forEach((email) => rows.push([group, 'removido', email, '', '', '', '']))
+        ;(r.skipped || []).forEach((s) =>
+          rows.push([group, 'omitido_owner', s.email, '', s.reason, 'OWNER', ''])
+        )
+        r.failed.forEach((f) => rows.push([group, `fallido_${f.op}`, f.email, '', f.error, '', '']))
+      }
+    } else {
+      return
+    }
+
+    // BOM so Excel opens accents correctly
+    const bom = String.fromCharCode(0xfeff)
+    const csv = bom + rows.map((r) => r.map(csvEscape).join(',')).join('\r\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')
+    a.download = `${diff ? 'sync-grupos-preview' : 'sync-grupos-resultado'}-${stamp}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   const isEmpty =
     diff &&
     [GROUP_MIEMBROS, GROUP_PERSONAL].every(
@@ -260,7 +329,15 @@ export function GroupSyncCard() {
               </div>
 
               {/* Footer */}
-              <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+              <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={downloadReport}
+                  className="px-4 py-2 text-sm font-medium text-blue-700 dark:text-blue-400 border border-blue-300 dark:border-blue-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                >
+                  Descargar reporte
+                </button>
+                <div className="flex-1" />
                 <button
                   type="button"
                   onClick={closeModal}
@@ -430,31 +507,35 @@ function SyncTable({
   const allSelected = items.length > 0 && selectedCount === items.length
 
   return (
-    <div className="mb-4">
-      <div className="flex items-center justify-between mb-2">
-        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          {title} ({selectedCount}/{items.length})
-        </h4>
+    <details open className="mb-4">
+      <summary className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none mb-2">
+        {title} ({selectedCount}/{items.length})
         {items.length > 0 && (
-          <div className="flex items-center gap-2 text-xs">
+          <span className="ml-3 text-xs font-normal">
             <button
               type="button"
-              onClick={() => onSelectAll(true)}
+              onClick={(e) => {
+                e.preventDefault()
+                onSelectAll(true)
+              }}
               className="text-blue-600 dark:text-blue-400 hover:underline"
             >
               Marcar todos
             </button>
-            <span className="text-gray-300 dark:text-gray-600">·</span>
+            <span className="mx-1 text-gray-300 dark:text-gray-600">·</span>
             <button
               type="button"
-              onClick={() => onSelectAll(false)}
+              onClick={(e) => {
+                e.preventDefault()
+                onSelectAll(false)
+              }}
               className="text-blue-600 dark:text-blue-400 hover:underline"
             >
               Desmarcar todos
             </button>
-          </div>
+          </span>
         )}
-      </div>
+      </summary>
 
       {items.length === 0 ? (
         <p className="text-sm text-gray-400 dark:text-gray-500">{emptyText}</p>
@@ -505,7 +586,7 @@ function SyncTable({
           </table>
         </div>
       )}
-    </div>
+    </details>
   )
 }
 
