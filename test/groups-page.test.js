@@ -1,17 +1,33 @@
-// Smoke test: the Grupos admin page renders its initial UI shell
+// Smoke tests: GroupSyncCard renders on the dashboard and respects the
+// sync_groups action permission (same model as ScanCard / scan_inbox)
 
 import React from 'react'
 
 global.React = React
 
-import { renderToString } from 'react-dom/server'
-import GroupsAdminPage from '../app/admin/groups/page'
+jest.mock('next-auth/react', () => ({
+  useSession: jest.fn(),
+}))
 
-describe('Grupos admin page', () => {
-  test('renders the sync UI shell', () => {
-    const html = renderToString(React.createElement(GroupsAdminPage))
-    expect(html).toContain('Sincronización de grupos')
+import { renderToString } from 'react-dom/server'
+import { useSession } from 'next-auth/react'
+import { GroupSyncCard } from '../components/admin/GroupSyncCard'
+
+describe('GroupSyncCard', () => {
+  test('renders the card for a user with sync_groups permission', () => {
+    useSession.mockReturnValue({
+      data: { user: { accessibleActions: ['sync_groups'] } },
+    })
+    const html = renderToString(React.createElement(GroupSyncCard))
+    expect(html).toContain('Sincronizar Grupos')
     expect(html).toContain('Comparar grupos')
-    expect(html).toContain('Comparar (sin caché)')
+  })
+
+  test('renders nothing without the sync_groups permission', () => {
+    useSession.mockReturnValue({
+      data: { user: { accessibleActions: ['scan_inbox', 'write_members'] } },
+    })
+    const html = renderToString(React.createElement(GroupSyncCard))
+    expect(html).toBe('')
   })
 })

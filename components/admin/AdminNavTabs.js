@@ -11,7 +11,6 @@ const navItems = [
   { href: '/admin/articles', label: 'Articulos', feature: 'articles' },
   { href: '/admin/guides', label: 'Guias', feature: 'guides' },
   { href: '/admin/media', label: 'Media', feature: 'media' },
-  { href: '/admin/groups', label: 'Grupos', feature: 'groups' },
 ]
 
 /**

@@ -3,7 +3,8 @@ import { auth } from '../../../../../auth'
 import { NextResponse } from 'next/server'
 import { getMembers } from '../../../../../lib/google-sheets'
 import { callAppsScript } from '../../../../../lib/apps-script'
-import { checkPermission, checkReadAccess } from '../../../../../lib/api-permissions'
+import { checkPermission } from '../../../../../lib/api-permissions'
+import { Actions } from '../../../../../lib/permissions'
 import { computeGroupDiff, GROUP_MIEMBROS, GROUP_PERSONAL } from '../../../../../lib/group-sync'
 
 /**
@@ -24,8 +25,8 @@ export const GET = auth(async function GET(req) {
     )
   }
 
-  const readError = checkReadAccess(req, 'groups')
-  if (readError) return readError
+  const permissionError = checkPermission(req, Actions.SYNC_GROUPS)
+  if (permissionError) return permissionError
 
   try {
     const { searchParams } = new URL(req.url)
@@ -73,7 +74,7 @@ export const POST = auth(async function POST(req) {
     )
   }
 
-  const permissionError = checkPermission(req, 'write_groups')
+  const permissionError = checkPermission(req, Actions.SYNC_GROUPS)
   if (permissionError) return permissionError
 
   try {
