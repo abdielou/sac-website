@@ -1237,6 +1237,10 @@ function doPost(e) {
         return handlePhotoUploadedAction(payload.data)
       case 'create_workspace_account':
         return handleCreateWorkspaceAccountAction(payload.data)
+      case 'list_group_members':
+        return handleListGroupMembersAction(payload.data)
+      case 'update_group_members':
+        return handleUpdateGroupMembersAction(payload.data)
       default:
         return jsonResponse({ success: false, error: 'Unknown action: ' + payload.action })
     }
@@ -1527,6 +1531,95 @@ function handleCreateWorkspaceAccountAction(data) {
   } finally {
     lock.releaseLock()
   }
+}
+
+function handleListGroupMembersAction(data) {
+  if (!data || !Array.isArray(data.groups) || data.groups.length === 0) {
+    return jsonResponse({ success: false, error: 'Missing required field: groups' })
+  }
+
+  setupServices({})
+
+  try {
+    const result = {}
+    data.groups.forEach((group) => {
+      const members = []
+      let pageToken = null
+      do {
+        const options = { maxResults: 200 }
+        if (pageToken) options.pageToken = pageToken
+        const resp = workspaceDirectory.Members.list(group, options)
+        const page = (resp && resp.members) || []
+        page.forEach((m) => {
+          members.push({
+            email: m.email || '',
+            role: m.role || 'MEMBER',
+            type: m.type || 'USER',
+          })
+        })
+        pageToken = resp ? resp.nextPageToken : null
+      } while (pageToken)
+      result[group] = members
+    })
+    return jsonResponse({ success: true, groups: result })
+  } catch (e) {
+    return jsonResponse({ success: false, error: 'list_group_members failed: ' + e.message })
+  }
+}
+
+function handleUpdateGroupMembersAction(data) {
+  if (!data || !data.group) {
+    return jsonResponse({ success: false, error: 'Missing required field: group' })
+  }
+
+  setupServices({})
+
+  const add = Array.isArray(data.add) ? data.add : []
+  const remove = Array.isArray(data.remove) ? data.remove : []
+  const added = []
+  const removed = []
+  const failed = []
+
+  add.forEach((email) => {
+    try {
+      workspaceDirectory.Members.insert({ email, role: 'MEMBER' }, data.group)
+      added.push(email)
+    } catch (e) {
+      // Idempotent: already a member counts as success
+      if (e.message && e.message.includes('Member already exists')) {
+        added.push(email)
+      } else {
+        failed.push({ email, op: 'add', error: e.message })
+      }
+    }
+  })
+
+  remove.forEach((email) => {
+    try {
+      workspaceDirectory.Members.remove(data.group, email)
+      removed.push(email)
+    } catch (e) {
+      // Idempotent: not a member counts as success
+      if (e.message && (e.message.includes('Resource Not Found') || e.message.includes('notFound'))) {
+        removed.push(email)
+      } else {
+        failed.push({ email, op: 'remove', error: e.message })
+      }
+    }
+  })
+
+  logger.log(
+    'update_group_members ' +
+      data.group +
+      ': added=' +
+      added.length +
+      ', removed=' +
+      removed.length +
+      ', failed=' +
+      failed.length
+  )
+
+  return jsonResponse({ success: true, group: data.group, added, removed, failed })
 }
 
 function onFormSubmit(e) {
