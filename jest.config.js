@@ -5,6 +5,7 @@ module.exports = {
     '^@/components/(.*)$': '<rootDir>/components/$1',
     '^@/pages/(.*)$': '<rootDir>/pages/$1',
     '^@/lib/(.*)$': '<rootDir>/lib/$1',
+    '^.+\\.svg$': '<rootDir>/test/__mocks__/svgMock.js',
   },
   transform: {
     '^.+\\.(js|jsx|ts|tsx)$': [

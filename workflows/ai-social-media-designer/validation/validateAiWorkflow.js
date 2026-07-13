@@ -1,5 +1,8 @@
-import { fetch } from 'workflow'
+import { fetch, getWorkflowMetadata } from 'workflow'
 import { z } from 'zod'
+import { resolveGuidelinesForRequest } from '../../../lib/ai-guidelines'
+import { buildValidationHistoryRecord } from '../../../lib/ai-run-history'
+import { persistRunHistory } from '../../../lib/run-history-store'
 
 // ---------- Validation output schema (must match PRD) ----------
 
@@ -64,7 +67,6 @@ function extractFirstJsonObject(text) {
     .replace(/```/g, '')
     .trim()
 
-  // Grab the first {...} block in a forgiving way.
   const match = cleaned.match(/\{[\s\S]*\}/)
   if (!match) return null
 
@@ -75,7 +77,7 @@ function extractFirstJsonObject(text) {
   }
 }
 
-function buildFallbackResult(input, reason) {
+export function buildFallbackResult(input, reason) {
   return AiValidationResultSchema.parse({
     overallOutcome: 'fail',
     approvalRecommendation: 'do_not_publish',
@@ -130,45 +132,29 @@ async function validatePayloadStep(input) {
   return { ok: true, value: parsed.data }
 }
 
-async function loadGuidelinesStubStep(input) {
+async function loadGuidelinesStep(input) {
   'use step'
-  // Phase 1A: stub/default. Phase 3 will load versioned guidelines via guidelines-store.
-  const global = `Idioma: Español (prioridad). Puerto Rico first.
-Seguridad: no afirmar aprobaciones oficiales de SAC. No inventar fechas/horarios/lugares.
-Astronomía: no verificar hechos; si hay riesgo de afirmaciones no verificables, marcar uncertainty_factual_risk.
-Human-in-the-loop: humanReviewRequired siempre true. AI es asesoría.`
-
-  const platform = (() => {
-    switch (input.platform.toLowerCase()) {
-      case 'x':
-        return 'X: considerar límites de caracteres; hashtags/CTA deben ser consistentes.'
-      case 'instagram':
-        return 'Instagram: priorizar claridad del caption; validar alineación texto-imagen.'
-      case 'facebook':
-        return 'Facebook: revisar completitud de evento (nombre/fecha/hora/lugar/CTA) si aplica.'
-      default:
-        return 'Reglas generales de plataforma.'
-    }
-  })()
-
-  const contentType = `Content type: ${input.contentType}. Aplica reglas mínimas de completitud según el tipo.`
-
-  return { global, platform, contentType }
+  return resolveGuidelinesForRequest({
+    platform: input.platform,
+    contentType: input.contentType,
+  })
 }
 
 async function callOpenRouterStep(input, guidelines) {
   'use step'
 
   const apiKey = process.env.OPENROUTER_API_KEY
+  const model = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini'
+
   if (!apiKey) {
     return {
       ok: false,
       reason: 'Falta OPENROUTER_API_KEY',
+      model,
       result: buildFallbackResult(input, 'Falta configuración del provider'),
     }
   }
 
-  const model = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini'
   const siteUrl = process.env.OPENROUTER_SITE_URL
   const openRouterTitle = process.env.OPENROUTER_TITLE
 
@@ -224,7 +210,6 @@ Input (JSON): ${JSON.stringify(userText)}`,
     },
   ]
 
-  // If images were provided, include them as base64 data URLs for vision-capable models.
   if (input.images && input.images.length > 0) {
     for (const img of input.images) {
       messageContent.push({
@@ -278,15 +263,15 @@ Input (JSON): ${JSON.stringify(userText)}`,
     return validated
   }
 
-  // Retry once for transient provider errors and/or malformed outputs.
   try {
-    return { ok: true, result: await attempt() }
+    return { ok: true, model, result: await attempt() }
   } catch (err1) {
     try {
-      return { ok: true, result: await attempt() }
+      return { ok: true, model, result: await attempt() }
     } catch {
       return {
         ok: false,
+        model,
         reason: err1?.message || 'Fallo provider/modelo',
         result: buildFallbackResult(input, err1?.message || 'Fallo provider/modelo'),
       }
@@ -294,14 +279,73 @@ Input (JSON): ${JSON.stringify(userText)}`,
   }
 }
 
+async function persistHistoryStep({
+  input,
+  result,
+  guidelineVersion,
+  model,
+  workflowFailed,
+  errorMessage,
+}) {
+  'use step'
+
+  try {
+    const { workflowRunId, workflowStartedAt } = getWorkflowMetadata()
+    const completedAt = new Date().toISOString()
+    const startedAt = workflowStartedAt ? new Date(workflowStartedAt).toISOString() : completedAt
+
+    const record = buildValidationHistoryRecord({
+      input,
+      runId: workflowRunId,
+      status: workflowFailed ? 'failed' : 'completed',
+      result: workflowFailed ? undefined : result,
+      error: workflowFailed ? errorMessage : undefined,
+      startedAt,
+      completedAt,
+      guidelineVersion,
+      model,
+    })
+
+    await persistRunHistory(record)
+  } catch (err) {
+    console.error('persistHistoryStep: failed (non-fatal)', err)
+  }
+}
+
 export async function validateAiWorkflow(input) {
   'use workflow'
 
   const validatedInputResult = await validatePayloadStep(input)
-  if (!validatedInputResult.ok) return validatedInputResult.fallback
-  const validatedInput = validatedInputResult.value
+  if (!validatedInputResult.ok) {
+    const fallback = validatedInputResult.fallback
+    await persistHistoryStep({
+      input: {
+        userId: input?.userId || 'unknown',
+        userEmail: input?.userEmail,
+        platform: input?.platform,
+        contentType: input?.contentType,
+        draftText: input?.draftText || '',
+        images: input?.images,
+      },
+      result: fallback,
+      guidelineVersion: 'unknown',
+      model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
+      workflowFailed: false,
+    })
+    return fallback
+  }
 
-  const guidelines = await loadGuidelinesStubStep(validatedInput)
+  const validatedInput = validatedInputResult.value
+  const guidelines = await loadGuidelinesStep(validatedInput)
   const modelResult = await callOpenRouterStep(validatedInput, guidelines)
+
+  await persistHistoryStep({
+    input: validatedInput,
+    result: modelResult.result,
+    guidelineVersion: guidelines.version,
+    model: modelResult.model,
+    workflowFailed: false,
+  })
+
   return modelResult.result
 }

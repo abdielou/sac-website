@@ -72,6 +72,7 @@ gallery-photos/
 scripts/fb-yt-archive/**/*.zip
 scripts/fb-yt-archive/registry.json
 scripts/member-emails.json
+openrouter-usage.json
 .secrets/
 
 .vercel

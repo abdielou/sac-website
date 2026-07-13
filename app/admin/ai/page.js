@@ -1,39 +1,17 @@
-import { auth } from '../../../auth'
-import { redirect } from 'next/navigation'
+import { Suspense } from 'react'
+import AiDesignerShell from '@/components/admin/ai/AiDesignerShell'
 
 export const metadata = {
-  title: 'AI - SAC',
-  description: 'AI Social Media Designer',
+  title: 'AI Designer - SAC',
+  description: 'AI Social Media Designer — validación y generación de publicaciones',
 }
 
-export default async function AdminAIPage() {
-  // Dev-only: the AI section is not exposed in production yet.
-  if (process.env.NODE_ENV === 'production') {
-    redirect('/admin')
-  }
-
-  const session = await auth()
-
-  // Feature gate: require read_ai/write_ai (surfaced as the 'ai' accessible feature).
-  if (!session?.user?.accessibleFeatures?.includes('ai')) {
-    redirect('/admin')
-  }
-
+export default function AdminAIPage() {
   return (
-    <div className="max-w-3xl">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-        AI Social Media Designer
-      </h1>
-      <p className="text-gray-600 dark:text-gray-400">
-        Próximamente. Esta es la base de la nueva pestaña de IA para generar y validar publicaciones
-        de redes sociales.
-      </p>
-      <div
-        data-testid="ai-tab-placeholder"
-        className="mt-6 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center text-gray-500 dark:text-gray-400"
-      >
-        Punto de partida para la funcionalidad de IA.
-      </div>
-    </div>
+    <Suspense
+      fallback={<div className="max-w-6xl text-gray-500 dark:text-gray-400">Cargando...</div>}
+    >
+      <AiDesignerShell />
+    </Suspense>
   )
 }

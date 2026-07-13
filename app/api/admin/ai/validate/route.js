@@ -1,6 +1,7 @@
 import { auth } from '../../../../../auth'
 import { NextResponse } from 'next/server'
 import { checkPermission } from '../../../../../lib/api-permissions'
+import { contentTypeRequiresImages } from '../../../../../lib/ai-constants'
 import { start } from 'workflow/api'
 import { validateAiWorkflow } from '../../../../../workflows/ai-social-media-designer/validation/validateAiWorkflow'
 
@@ -187,6 +188,16 @@ export const POST = auth(async function POST(req) {
         {
           error: 'Campos requeridos',
           details: 'platform, contentType y draftText son obligatorios',
+        },
+        { status: 400 }
+      )
+    }
+
+    if (contentTypeRequiresImages(platform, contentType) && (!images || images.length === 0)) {
+      return NextResponse.json(
+        {
+          error: 'Imagen requerida',
+          details: 'Se requiere al menos una imagen para esta plataforma y tipo de contenido',
         },
         { status: 400 }
       )
