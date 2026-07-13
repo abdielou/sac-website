@@ -2837,29 +2837,42 @@ function createWorkspaceUser(userData, primaryEmail, passwordData) {
   }
 }
 
-function addUserToGroup(accountData) {
-  const group = 'miembros@sociedadastronomia.com'
-
-  var member = {
-    email: accountData.email,
-    role: 'MEMBER',
-  }
-
+function addEmailToGroup(email, group) {
   try {
-    // Attempt to add the user to the group
-    var addedMember = workspaceDirectory.Members.insert(member, group)
-
-    logger.log(`User ${addedMember.primaryEmail} successfully added to group ${group}.`)
+    workspaceDirectory.Members.insert({ email: email, role: 'MEMBER' }, group)
+    logger.log(`User ${email} successfully added to group ${group}.`)
     return { success: true }
   } catch (e) {
     if (e.message.includes('Member already exists')) {
-      logger.log(`User ${accountData.email} is already a member of group ${group}.`)
+      logger.log(`User ${email} is already a member of group ${group}.`)
       return { success: true }
-    } else {
-      logger.log(`Error adding user ${accountData.email} to group ${group}: ${e.message}`)
-      return { success: false, error: e.message }
     }
+    logger.log(`Error adding user ${email} to group ${group}: ${e.message}`)
+    return { success: false, error: e.message }
   }
+}
+
+function addUserToGroup(accountData) {
+  // Keep both member email lists in sync at account creation, matching the
+  // Admin > Sincronizar Grupos semantics: new workspace email → miembros@,
+  // member's personal email → members_personal@.
+  const sacResult = addEmailToGroup(accountData.email, 'miembros@sociedadastronomia.com')
+
+  const personalEmail = accountData.userData && accountData.userData.email
+  let personalResult = { success: true }
+  if (personalEmail) {
+    personalResult = addEmailToGroup(personalEmail, 'members_personal@sociedadastronomia.com')
+  } else {
+    logger.log(`No personal email for ${accountData.email}; skipped members_personal@ group add`)
+  }
+
+  if (sacResult.success && personalResult.success) {
+    return { success: true }
+  }
+  const errors = []
+  if (!sacResult.success) errors.push('miembros@: ' + sacResult.error)
+  if (!personalResult.success) errors.push('members_personal@: ' + personalResult.error)
+  return { success: false, error: errors.join('; ') }
 }
 
 function sendWelcomeEmail(accountData) {
