@@ -70,4 +70,33 @@ describe('buildValidationHistoryRecord', () => {
     expect(record.error.retryable).toBe(true)
     expect(record.validationOutcome).toBeUndefined()
   })
+
+  test('includes OpenRouter usage fields when provided', () => {
+    const record = buildValidationHistoryRecord({
+      input: { userId: 'u1', platform: 'instagram', contentType: 'caption', draftText: 'hola' },
+      runId: 'wrun_cost',
+      status: 'completed',
+      result: {
+        overallOutcome: 'pass',
+        approvalRecommendation: 'ready_for_review',
+        issues: [],
+      },
+      model: 'openai/gpt-4o-mini',
+      usage: {
+        openRouterGenerationId: 'gen-abc123',
+        model: 'openai/gpt-4o-mini',
+        promptTokens: 194,
+        completionTokens: 50,
+        totalTokens: 244,
+        cost: { amount: 0.0065, currency: 'USD' },
+      },
+    })
+
+    expect(record.openRouterGenerationId).toBe('gen-abc123')
+    expect(record.promptTokens).toBe(194)
+    expect(record.completionTokens).toBe(50)
+    expect(record.totalTokens).toBe(244)
+    expect(record.cost).toEqual({ amount: 0.0065, currency: 'USD' })
+    expect(record.model).toBe('openai/gpt-4o-mini')
+  })
 })
