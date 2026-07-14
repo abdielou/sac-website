@@ -1,11 +1,12 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useSession } from 'next-auth/react'
-import ValidationForm, { DEFAULT_FORM } from '@/components/admin/ai/ValidationForm'
+import ValidationForm from '@/components/admin/ai/ValidationForm'
 import ValidationResult from '@/components/admin/ai/ValidationResult'
 import { useAiValidationRun } from '@/lib/hooks/useAiValidationRun'
 import { useActiveGuidelines } from '@/lib/hooks/useActiveGuidelines'
+import { useValidationDraft } from '@/lib/hooks/useValidationDraft'
 import { listPlatformEntries } from '@/lib/ai-guidelines-draft'
 import { ErrorState } from '@/components/admin/ErrorState'
 
@@ -14,16 +15,17 @@ export default function AiValidationClient() {
   const accessibleActions = session?.user?.accessibleActions || []
   const canValidate = accessibleActions.includes('write_ai')
 
-  const { active, hydrated } = useActiveGuidelines()
+  const { active, hydrated: guidelinesHydrated } = useActiveGuidelines()
   const platforms = useMemo(() => listPlatformEntries(active), [active])
 
-  const [formState, setFormState] = useState(DEFAULT_FORM)
-  const [images, setImages] = useState([])
+  const { formState, setFormState, images, setImages, hydrated: draftHydrated } = useValidationDraft()
+  const formReady = guidelinesHydrated && draftHydrated
 
   const {
     phase,
     runId,
     result,
+    usage,
     error,
     isBusy,
     copyFeedback,
@@ -45,7 +47,7 @@ export default function AiValidationClient() {
 
       <ValidationForm
         canValidate={canValidate}
-        disabled={isBusy || !hydrated}
+        disabled={isBusy || !formReady}
         formState={formState}
         onFormChange={setFormState}
         images={images}
@@ -96,7 +98,7 @@ export default function AiValidationClient() {
 
       {result && phase === 'completed' && (
         <>
-          <ValidationResult result={result} onCopyFeedback={showCopyFeedback} />
+          <ValidationResult result={result} usage={usage} onCopyFeedback={showCopyFeedback} />
           <div className="mt-6">
             <button
               type="button"

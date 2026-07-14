@@ -9,25 +9,11 @@ import {
   MAX_VALIDATION_IMAGES,
   MAX_IMAGE_SIZE_BYTES,
 } from '@/lib/ai-constants'
+import { DEFAULT_FORM } from '@/lib/ai-validation-draft'
 
 const inputClass =
   'w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-60 disabled:cursor-not-allowed'
 const labelClass = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'
-
-const DEFAULT_FORM = {
-  platform: 'instagram',
-  contentType: 'regular_post',
-  draftText: '',
-  goal: '',
-  audience: '',
-  cta: '',
-  hashtags: '',
-  altText: '',
-  eventName: '',
-  eventDate: '',
-  eventTime: '',
-  eventLocation: '',
-}
 
 function validateImageFiles(files) {
   if (files.length > MAX_VALIDATION_IMAGES) {
@@ -167,22 +153,7 @@ export default function ValidationForm({
         </div>
       </div>
 
-      <div>
-        <label htmlFor="ai-draft-text" className={labelClass}>
-          Borrador <span className="text-red-500">*</span>
-        </label>
-        <textarea
-          id="ai-draft-text"
-          value={formState.draftText}
-          onChange={handleChange('draftText')}
-          disabled={formDisabled}
-          rows={8}
-          required
-          placeholder="Pega o escribe el texto de la publicación..."
-          className={inputClass}
-        />
-      </div>
-
+      {/* Media-first when images apply (Instagram compose flow: media → caption). */}
       {showImages && (
         <div>
           <label className={labelClass}>
@@ -237,6 +208,27 @@ export default function ValidationForm({
           )}
         </div>
       )}
+
+      <div>
+        <label htmlFor="ai-draft-text" className={labelClass}>
+          {showImages ? 'Pie de foto / texto' : 'Borrador'}{' '}
+          <span className="text-red-500">*</span>
+        </label>
+        <textarea
+          id="ai-draft-text"
+          value={formState.draftText}
+          onChange={handleChange('draftText')}
+          disabled={formDisabled}
+          rows={8}
+          required
+          placeholder={
+            showImages
+              ? 'Escribe el pie de foto o caption de la publicación...'
+              : 'Pega o escribe el texto de la publicación...'
+          }
+          className={inputClass}
+        />
+      </div>
 
       <details className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
         <summary className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
