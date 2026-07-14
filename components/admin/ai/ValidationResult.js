@@ -42,9 +42,10 @@ function formatIssuesForCopy(issues) {
 /**
  * @param {Object} props
  * @param {Object} props.result - AiValidationResult
+ * @param {Object} [props.usage] - OpenRouter usage metadata for this run
  * @param {Function} [props.onCopyFeedback]
  */
-export default function ValidationResult({ result, onCopyFeedback }) {
+export default function ValidationResult({ result, usage, onCopyFeedback }) {
   const sortedIssues = useMemo(() => {
     const issues = result?.issues || []
     return [...issues].sort(
@@ -56,6 +57,9 @@ export default function ValidationResult({ result, onCopyFeedback }) {
 
   const outcome = result.overallOutcome
   const outcomeStyle = OUTCOME_STYLES[outcome] || OUTCOME_STYLES.warning
+  const costAmount = usage?.cost?.amount
+  const hasCost = typeof costAmount === 'number'
+  const hasTokens = typeof usage?.totalTokens === 'number'
 
   const handleCopy = (text) => {
     copyToClipboard(text, onCopyFeedback)
@@ -71,6 +75,15 @@ export default function ValidationResult({ result, onCopyFeedback }) {
           {APPROVAL_LABELS[result.approvalRecommendation] || result.approvalRecommendation}
         </span>
       </div>
+
+      {(hasCost || hasTokens) && (
+        <p className="text-sm text-gray-500 dark:text-gray-400" data-testid="validation-run-cost">
+          {hasCost
+            ? `Costo estimado: $${costAmount.toFixed(4)}`
+            : 'Costo estimado: no disponible'}
+          {hasTokens ? ` · ${usage.totalTokens} tokens` : ''}
+        </p>
+      )}
 
       <div>
         <div className="flex items-center justify-between gap-2 mb-2">

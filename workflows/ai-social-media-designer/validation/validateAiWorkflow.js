@@ -1,8 +1,9 @@
-import { fetch, getWorkflowMetadata } from 'workflow'
+import { fetch } from 'workflow'
 import { z } from 'zod'
 import { resolveGuidelinesForRequest } from '../../../lib/ai-guidelines'
-import { buildValidationHistoryRecord } from '../../../lib/ai-run-history'
-import { persistRunHistory } from '../../../lib/run-history-store'
+
+// S3 run-history persistence (`persistRunHistory`) is deferred until Phase 3 —
+// we do not currently have the bucket write permissions required to store runs.
 
 // ---------- Validation output schema (must match PRD) ----------
 
@@ -140,6 +141,78 @@ async function loadGuidelinesStep(input) {
   })
 }
 
+/**
+ * Extract OpenRouter usage metadata from a chat/completions response.
+ * Returns null when the response has no usable usage fields.
+ */
+export function extractOpenRouterUsage(data, model) {
+  const usage = data?.usage
+  if (!usage || typeof usage !== 'object') return null
+
+  const promptTokens = typeof usage.prompt_tokens === 'number' ? usage.prompt_tokens : undefined
+  const completionTokens =
+    typeof usage.completion_tokens === 'number' ? usage.completion_tokens : undefined
+  const totalTokens = typeof usage.total_tokens === 'number' ? usage.total_tokens : undefined
+  const costAmount = typeof usage.cost === 'number' ? usage.cost : undefined
+
+  if (
+    promptTokens === undefined &&
+    completionTokens === undefined &&
+    totalTokens === undefined &&
+    costAmount === undefined
+  ) {
+    return null
+  }
+
+  return {
+    openRouterGenerationId: typeof data?.id === 'string' ? data.id : undefined,
+    model: typeof data?.model === 'string' ? data.model : model,
+    promptTokens,
+    completionTokens,
+    totalTokens,
+    cost:
+      costAmount !== undefined
+        ? {
+            amount: costAmount,
+            currency: 'USD',
+          }
+        : undefined,
+  }
+}
+
+/**
+ * Merge usage from multiple OpenRouter attempts (e.g. retries).
+ * Sums tokens/cost; keeps the latest successful generation id/model.
+ */
+export function mergeOpenRouterUsage(a, b) {
+  if (!a) return b || null
+  if (!b) return a
+
+  const sumOptional = (x, y) => {
+    if (typeof x !== 'number' && typeof y !== 'number') return undefined
+    return (typeof x === 'number' ? x : 0) + (typeof y === 'number' ? y : 0)
+  }
+
+  const amountA = a.cost?.amount
+  const amountB = b.cost?.amount
+  const mergedAmount = sumOptional(amountA, amountB)
+
+  return {
+    openRouterGenerationId: b.openRouterGenerationId || a.openRouterGenerationId,
+    model: b.model || a.model,
+    promptTokens: sumOptional(a.promptTokens, b.promptTokens),
+    completionTokens: sumOptional(a.completionTokens, b.completionTokens),
+    totalTokens: sumOptional(a.totalTokens, b.totalTokens),
+    cost:
+      mergedAmount !== undefined
+        ? {
+            amount: mergedAmount,
+            currency: b.cost?.currency || a.cost?.currency || 'USD',
+          }
+        : undefined,
+  }
+}
+
 async function callOpenRouterStep(input, guidelines) {
   'use step'
 
@@ -152,6 +225,7 @@ async function callOpenRouterStep(input, guidelines) {
       reason: 'Falta OPENROUTER_API_KEY',
       model,
       result: buildFallbackResult(input, 'Falta configuración del provider'),
+      usage: null,
     }
   }
 
@@ -249,66 +323,50 @@ Input (JSON): ${JSON.stringify(userText)}`,
     }
 
     const data = await res.json()
+    const usage = extractOpenRouterUsage(data, model)
     const assistantText = data?.choices?.[0]?.message?.content
     if (!assistantText || typeof assistantText !== 'string') {
-      throw new Error('Respuesta del provider sin contenido')
+      const err = new Error('Respuesta del provider sin contenido')
+      err.usage = usage
+      throw err
     }
 
     const json = extractFirstJsonObject(assistantText)
     if (!json) {
-      throw new Error('No se pudo extraer JSON del contenido')
+      const err = new Error('No se pudo extraer JSON del contenido')
+      err.usage = usage
+      throw err
     }
 
     const validated = AiValidationResultSchema.parse(json)
-    return validated
+    return { result: validated, usage }
   }
 
+  let accumulatedUsage = null
+
   try {
-    return { ok: true, model, result: await attempt() }
+    const first = await attempt()
+    return { ok: true, model, result: first.result, usage: first.usage }
   } catch (err1) {
+    accumulatedUsage = mergeOpenRouterUsage(accumulatedUsage, err1?.usage || null)
     try {
-      return { ok: true, model, result: await attempt() }
-    } catch {
+      const second = await attempt()
+      return {
+        ok: true,
+        model,
+        result: second.result,
+        usage: mergeOpenRouterUsage(accumulatedUsage, second.usage),
+      }
+    } catch (err2) {
+      accumulatedUsage = mergeOpenRouterUsage(accumulatedUsage, err2?.usage || null)
       return {
         ok: false,
         model,
         reason: err1?.message || 'Fallo provider/modelo',
         result: buildFallbackResult(input, err1?.message || 'Fallo provider/modelo'),
+        usage: accumulatedUsage,
       }
     }
-  }
-}
-
-async function persistHistoryStep({
-  input,
-  result,
-  guidelineVersion,
-  model,
-  workflowFailed,
-  errorMessage,
-}) {
-  'use step'
-
-  try {
-    const { workflowRunId, workflowStartedAt } = getWorkflowMetadata()
-    const completedAt = new Date().toISOString()
-    const startedAt = workflowStartedAt ? new Date(workflowStartedAt).toISOString() : completedAt
-
-    const record = buildValidationHistoryRecord({
-      input,
-      runId: workflowRunId,
-      status: workflowFailed ? 'failed' : 'completed',
-      result: workflowFailed ? undefined : result,
-      error: workflowFailed ? errorMessage : undefined,
-      startedAt,
-      completedAt,
-      guidelineVersion,
-      model,
-    })
-
-    await persistRunHistory(record)
-  } catch (err) {
-    console.error('persistHistoryStep: failed (non-fatal)', err)
   }
 }
 
@@ -317,35 +375,15 @@ export async function validateAiWorkflow(input) {
 
   const validatedInputResult = await validatePayloadStep(input)
   if (!validatedInputResult.ok) {
-    const fallback = validatedInputResult.fallback
-    await persistHistoryStep({
-      input: {
-        userId: input?.userId || 'unknown',
-        userEmail: input?.userEmail,
-        platform: input?.platform,
-        contentType: input?.contentType,
-        draftText: input?.draftText || '',
-        images: input?.images,
-      },
-      result: fallback,
-      guidelineVersion: 'unknown',
-      model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
-      workflowFailed: false,
-    })
-    return fallback
+    return { result: validatedInputResult.fallback, usage: null }
   }
 
   const validatedInput = validatedInputResult.value
   const guidelines = await loadGuidelinesStep(validatedInput)
   const modelResult = await callOpenRouterStep(validatedInput, guidelines)
 
-  await persistHistoryStep({
-    input: validatedInput,
+  return {
     result: modelResult.result,
-    guidelineVersion: guidelines.version,
-    model: modelResult.model,
-    workflowFailed: false,
-  })
-
-  return modelResult.result
+    usage: modelResult.usage ?? null,
+  }
 }
