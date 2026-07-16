@@ -14,7 +14,7 @@ export const metadata = {
 export default async function MemberLayout({ children }) {
   const session = await auth()
   if (!session) {
-    redirect('/auth/signin')
+    redirect('/auth/signin?callbackUrl=/member/profile')
   }
 
   return (
