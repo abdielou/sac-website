@@ -423,6 +423,35 @@ function manual_sendTestEmail() {
   }
 }
 
+function manual_sendTestWelcomeEmail() {
+  setupServices({})
+
+  const recipient = NOTIFICATION_EMAIL
+  if (!recipient) {
+    Logger.log('Test welcome email aborted: NOTIFICATION_EMAIL is not set')
+    return
+  }
+
+  // sendWelcomeEmail generates and attaches all member documents:
+  // membership certificate PDF + welcome letter PDF
+  const accountData = {
+    userData: {
+      firstName: 'Prueba',
+      initial: 'T',
+      lastName: 'Bienvenida',
+      slastName: 'SAC',
+      email: recipient,
+    },
+  }
+
+  const result = sendWelcomeEmail(accountData)
+  if (result.success) {
+    Logger.log(`Test welcome email sent to ${recipient}`)
+  } else {
+    Logger.log(`Test welcome email failed: ${result.error}`)
+  }
+}
+
 function manual_reprocessRawSheet() {
   setupServices({})
 
