@@ -2,18 +2,14 @@ import { auth } from '../../../../../auth'
 import { NextResponse } from 'next/server'
 import { checkPermission } from '../../../../../lib/api-permissions'
 import { contentTypeRequiresImages } from '../../../../../lib/ai-constants'
+import { checkWorkflowStartRateLimit } from '../../../../../lib/ai-rate-limit'
 import { start } from 'workflow/api'
 import { validateAiWorkflow } from '../../../../../workflows/ai-social-media-designer/validation/validateAiWorkflow'
 
 const MAX_IMAGES = 4
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024 // 5MB
-const WORKFLOW_START_WINDOW_MS = 60 * 1000
-const MAX_WORKFLOWS_PER_WINDOW = 5
 const VALIDATE_WORKFLOW_ID =
   'workflow//./workflows/ai-social-media-designer/validation/validateAiWorkflow//validateAiWorkflow'
-
-// MVP: in-memory rate limiting. For multi-instance production, replace with a shared store.
-const startTimestampsByUser = new Map() // Map<string, number[]>
 
 function parseStringArray(value) {
   if (value === undefined || value === null) return undefined
@@ -75,18 +71,8 @@ export const POST = auth(async function POST(req) {
     )
   }
 
-  // Rate limiting (per authenticated user)
-  const now = Date.now()
-  const timestamps = startTimestampsByUser.get(userEmail) || []
-  const recent = timestamps.filter((ts) => now - ts < WORKFLOW_START_WINDOW_MS)
-  recent.push(now)
-  if (recent.length > MAX_WORKFLOWS_PER_WINDOW) {
-    return NextResponse.json(
-      { error: 'Demasiadas solicitudes', details: 'Rate limit excedido' },
-      { status: 429 }
-    )
-  }
-  startTimestampsByUser.set(userEmail, recent)
+  const rateLimitError = checkWorkflowStartRateLimit(userEmail)
+  if (rateLimitError) return rateLimitError
 
   try {
     const contentTypeHeader = req.headers.get('content-type') || ''

@@ -1,6 +1,9 @@
 import { fetch } from 'workflow'
 import { z } from 'zod'
 import { resolveGuidelinesForRequest } from '../../../lib/ai-guidelines'
+import { buildOpenRouterChatBody, extractOpenRouterUsage, mergeOpenRouterUsage } from '../../../lib/ai-openrouter'
+
+export { extractOpenRouterUsage, mergeOpenRouterUsage }
 
 // S3 run-history persistence (`persistRunHistory`) is deferred until Phase 3 —
 // we do not currently have the bucket write permissions required to store runs.
@@ -141,83 +144,11 @@ async function loadGuidelinesStep(input) {
   })
 }
 
-/**
- * Extract OpenRouter usage metadata from a chat/completions response.
- * Returns null when the response has no usable usage fields.
- */
-export function extractOpenRouterUsage(data, model) {
-  const usage = data?.usage
-  if (!usage || typeof usage !== 'object') return null
-
-  const promptTokens = typeof usage.prompt_tokens === 'number' ? usage.prompt_tokens : undefined
-  const completionTokens =
-    typeof usage.completion_tokens === 'number' ? usage.completion_tokens : undefined
-  const totalTokens = typeof usage.total_tokens === 'number' ? usage.total_tokens : undefined
-  const costAmount = typeof usage.cost === 'number' ? usage.cost : undefined
-
-  if (
-    promptTokens === undefined &&
-    completionTokens === undefined &&
-    totalTokens === undefined &&
-    costAmount === undefined
-  ) {
-    return null
-  }
-
-  return {
-    openRouterGenerationId: typeof data?.id === 'string' ? data.id : undefined,
-    model: typeof data?.model === 'string' ? data.model : model,
-    promptTokens,
-    completionTokens,
-    totalTokens,
-    cost:
-      costAmount !== undefined
-        ? {
-            amount: costAmount,
-            currency: 'USD',
-          }
-        : undefined,
-  }
-}
-
-/**
- * Merge usage from multiple OpenRouter attempts (e.g. retries).
- * Sums tokens/cost; keeps the latest successful generation id/model.
- */
-export function mergeOpenRouterUsage(a, b) {
-  if (!a) return b || null
-  if (!b) return a
-
-  const sumOptional = (x, y) => {
-    if (typeof x !== 'number' && typeof y !== 'number') return undefined
-    return (typeof x === 'number' ? x : 0) + (typeof y === 'number' ? y : 0)
-  }
-
-  const amountA = a.cost?.amount
-  const amountB = b.cost?.amount
-  const mergedAmount = sumOptional(amountA, amountB)
-
-  return {
-    openRouterGenerationId: b.openRouterGenerationId || a.openRouterGenerationId,
-    model: b.model || a.model,
-    promptTokens: sumOptional(a.promptTokens, b.promptTokens),
-    completionTokens: sumOptional(a.completionTokens, b.completionTokens),
-    totalTokens: sumOptional(a.totalTokens, b.totalTokens),
-    cost:
-      mergedAmount !== undefined
-        ? {
-            amount: mergedAmount,
-            currency: b.cost?.currency || a.cost?.currency || 'USD',
-          }
-        : undefined,
-  }
-}
-
 async function callOpenRouterStep(input, guidelines) {
   'use step'
 
   const apiKey = process.env.OPENROUTER_API_KEY
-  const model = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini'
+  const model = process.env.OPENROUTER_MODEL || 'google/gemini-3.1-flash-lite-image'
 
   if (!apiKey) {
     return {
@@ -309,12 +240,14 @@ Input (JSON): ${JSON.stringify(userText)}`,
         ...(siteUrl ? { 'HTTP-Referer': siteUrl } : null),
         ...(openRouterTitle ? { 'X-OpenRouter-Title': openRouterTitle } : null),
       },
-      body: JSON.stringify({
-        model,
-        messages,
-        temperature: 0.2,
-        response_format: { type: 'json_object' },
-      }),
+      body: JSON.stringify(
+        buildOpenRouterChatBody({
+          model,
+          messages,
+          temperature: 0.2,
+          forceJson: true,
+        })
+      ),
     })
 
     if (!res.ok) {

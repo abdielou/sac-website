@@ -1,9 +1,8 @@
 import {
   AiValidationResultSchema,
   buildFallbackResult,
-  extractOpenRouterUsage,
-  mergeOpenRouterUsage,
 } from '../../workflows/ai-social-media-designer/validation/validateAiWorkflow'
+import { extractOpenRouterUsage, mergeOpenRouterUsage } from '../../lib/ai-openrouter'
 
 describe('validateAiWorkflow schema', () => {
   const baseInput = {
