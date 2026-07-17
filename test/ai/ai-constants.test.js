@@ -7,6 +7,7 @@ import {
   PLATFORM_MEDIA_POSTURE,
   contentTypeAcceptsImages,
   contentTypeRequiresImages,
+  shouldGenerateImagePrompt,
 } from '../../lib/ai-constants'
 
 describe('ai-constants', () => {
@@ -69,5 +70,10 @@ describe('ai-constants', () => {
       expect(contentTypeAcceptsImages(platform, 'reel_caption')).toBe(false)
       expect(contentTypeRequiresImages(platform, 'reel_caption')).toBe(false)
     }
+  })
+
+  test('shouldGenerateImagePrompt skips reel captions and defaults on for others', () => {
+    expect(shouldGenerateImagePrompt('reel_caption')).toBe(false)
+    expect(shouldGenerateImagePrompt('regular_post')).toBe(true)
   })
 })
