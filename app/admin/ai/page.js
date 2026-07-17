@@ -2,8 +2,8 @@ import { Suspense } from 'react'
 import AiDesignerShell from '@/components/admin/ai/AiDesignerShell'
 
 export const metadata = {
-  title: 'AI Designer - SAC',
-  description: 'AI Social Media Designer — validación y generación de publicaciones',
+  title: 'AI - SAC',
+  description: 'AI Social Media Designer',
 }
 
 export default function AdminAIPage() {

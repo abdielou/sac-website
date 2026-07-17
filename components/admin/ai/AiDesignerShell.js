@@ -4,7 +4,7 @@ import PermissionGate from '@/components/admin/PermissionGate'
 import HumanReviewNotice from '@/components/admin/ai/HumanReviewNotice'
 import AiDesignerTabs, { useAiTab } from '@/components/admin/ai/AiDesignerTabs'
 import AiValidationClient from '@/components/admin/ai/AiValidationClient'
-import GeneratePlaceholder from '@/components/admin/ai/GeneratePlaceholder'
+import AiGenerationClient from '@/components/admin/ai/AiGenerationClient'
 import GuidelinesClient from '@/components/admin/ai/GuidelinesClient'
 
 export default function AiDesignerShell() {
@@ -24,7 +24,7 @@ export default function AiDesignerShell() {
         <HumanReviewNotice />
         <AiDesignerTabs activeTab={activeTab} />
 
-        {activeTab === 'generar' && <GeneratePlaceholder />}
+        {activeTab === 'generar' && <AiGenerationClient />}
         {activeTab === 'guidelines' && <GuidelinesClient />}
         {activeTab === 'validar' && <AiValidationClient />}
       </div>
