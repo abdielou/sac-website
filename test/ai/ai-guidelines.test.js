@@ -1,8 +1,27 @@
-import { getActiveGuidelines, getDefaultGuidelines, resolveGuidelinesForRequest } from '../../lib/ai-guidelines'
+import {
+  getActiveGuidelines,
+  getDefaultGuidelines,
+  resolveGuidelinesForRequest,
+} from '../../lib/ai-guidelines'
 
 describe('ai-guidelines', () => {
-  test('getActiveGuidelines returns version and platform rules', () => {
-    const guidelines = getActiveGuidelines()
+  const originalBucket = process.env.S3_ARTICLES_BUCKET_NAME
+
+  beforeAll(() => {
+    // Force defaults path for unit tests of resolvers.
+    delete process.env.S3_ARTICLES_BUCKET_NAME
+  })
+
+  afterAll(() => {
+    if (originalBucket === undefined) {
+      delete process.env.S3_ARTICLES_BUCKET_NAME
+    } else {
+      process.env.S3_ARTICLES_BUCKET_NAME = originalBucket
+    }
+  })
+
+  test('getActiveGuidelines returns version and platform rules', async () => {
+    const guidelines = await getActiveGuidelines()
     expect(guidelines.version).toBe('mvp-default-v1')
     expect(guidelines.global).toContain('Español')
     expect(guidelines.platforms.x).toBeTruthy()
@@ -15,12 +34,12 @@ describe('ai-guidelines', () => {
     expect(guidelines.imageValidation).toBeTruthy()
   })
 
-  test('getDefaultGuidelines matches getActiveGuidelines stub', () => {
-    expect(getDefaultGuidelines()).toEqual(getActiveGuidelines())
+  test('getDefaultGuidelines matches getActiveGuidelines without bucket', async () => {
+    expect(getDefaultGuidelines()).toEqual(await getActiveGuidelines())
   })
 
-  test('resolveGuidelinesForRequest merges platform and content type', () => {
-    const resolved = resolveGuidelinesForRequest({
+  test('resolveGuidelinesForRequest merges platform and content type', async () => {
+    const resolved = await resolveGuidelinesForRequest({
       platform: 'instagram',
       contentType: 'event_promotion',
     })
@@ -32,8 +51,8 @@ describe('ai-guidelines', () => {
     expect(resolved.imageValidation).toBeTruthy()
   })
 
-  test('resolveGuidelinesForRequest handles unknown platform', () => {
-    const resolved = resolveGuidelinesForRequest({
+  test('resolveGuidelinesForRequest handles unknown platform', async () => {
+    const resolved = await resolveGuidelinesForRequest({
       platform: 'unknown',
       contentType: 'regular_post',
     })

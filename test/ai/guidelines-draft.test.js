@@ -5,10 +5,14 @@ import {
   cloneGuidelines,
   createAuditEvent,
   createGuidelineDocument,
+  listContentTypeEntries,
   listPlatformEntries,
   normalizeGuidelineDocument,
   prependAuditEvent,
+  previewGuidelinesAgainstDocument,
   removePlatform,
+  resolveContentTypeOptions,
+  resolvePlatformOptions,
   slugifyPlatformId,
 } from '../../lib/ai-guidelines-draft'
 import { getDefaultGuidelines } from '../../lib/ai-guidelines'
@@ -124,5 +128,49 @@ describe('ai-guidelines-draft', () => {
     doc = removePlatform(doc, 'facebook')
     doc = removePlatform(doc, 'instagram')
     expect(() => removePlatform(doc, 'x')).toThrow(/al menos una/)
+  })
+
+  test('listContentTypeEntries reads content type rules', () => {
+    const entries = listContentTypeEntries(seed)
+    expect(entries.some((e) => e.id === 'event_promotion')).toBe(true)
+    expect(entries.find((e) => e.id === 'event_promotion')?.rules).toMatch(/evento/i)
+  })
+
+  test('resolvePlatformOptions falls back to MVP defaults', () => {
+    const options = resolvePlatformOptions(null)
+    expect(options.map((o) => o.id)).toEqual(['x', 'instagram', 'facebook'])
+  })
+
+  test('resolvePlatformOptions generationOnly intersects with supported platforms', () => {
+    const doc = createGuidelineDocument({ seed })
+    doc.platforms.threads = 'Reglas Threads'
+    doc.platformLabels.threads = 'Threads'
+    const options = resolvePlatformOptions(doc, { generationOnly: true })
+    expect(options.map((o) => o.id)).toEqual(['x', 'instagram', 'facebook'])
+    expect(options.every((o) => o.id !== 'threads')).toBe(true)
+  })
+
+  test('resolveContentTypeOptions uses active doc when present', () => {
+    const options = resolveContentTypeOptions(seed)
+    expect(options.some((o) => o.id === 'regular_post')).toBe(true)
+  })
+
+  test('previewGuidelinesAgainstDocument returns validation and generation views', () => {
+    const validation = previewGuidelinesAgainstDocument(seed, {
+      platform: 'instagram',
+      contentType: 'event_promotion',
+      mode: 'validation',
+    })
+    expect(validation.mode).toBe('validation')
+    expect(validation.platform).toMatch(/Instagram/i)
+
+    const generation = previewGuidelinesAgainstDocument(seed, {
+      platform: 'x',
+      contentType: 'regular_post',
+      mode: 'generation',
+    })
+    expect(generation.mode).toBe('generation')
+    expect(generation.platform).toMatch(/280/)
+    expect(generation.imagePrompt).toBeTruthy()
   })
 })

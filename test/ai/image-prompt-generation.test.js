@@ -24,15 +24,29 @@ describe('shouldGenerateImagePrompt', () => {
 
   test('still returns true when image style or constraints are provided', () => {
     expect(shouldGenerateImagePrompt('regular_post', { imageStyle: 'ilustración' })).toBe(true)
-    expect(
-      shouldGenerateImagePrompt('member_update', { imageConstraints: 'sin rostros' })
-    ).toBe(true)
+    expect(shouldGenerateImagePrompt('member_update', { imageConstraints: 'sin rostros' })).toBe(
+      true
+    )
   })
 })
 
 describe('resolveGenerationGuidelinesForRequest image prompts', () => {
-  test('includes imagePrompt generation rules', () => {
-    const resolved = resolveGenerationGuidelinesForRequest({
+  const originalBucket = process.env.S3_ARTICLES_BUCKET_NAME
+
+  beforeAll(() => {
+    delete process.env.S3_ARTICLES_BUCKET_NAME
+  })
+
+  afterAll(() => {
+    if (originalBucket === undefined) {
+      delete process.env.S3_ARTICLES_BUCKET_NAME
+    } else {
+      process.env.S3_ARTICLES_BUCKET_NAME = originalBucket
+    }
+  })
+
+  test('includes imagePrompt generation rules', async () => {
+    const resolved = await resolveGenerationGuidelinesForRequest({
       platform: 'instagram',
       contentType: 'image_post',
     })
@@ -91,9 +105,9 @@ describe('applyImagePromptGuardrailsToDraft', () => {
       baseInput
     )
 
-    expect(
-      draft.missingInformation.some((item) => /aprobación oficial de SAC/i.test(item))
-    ).toBe(true)
+    expect(draft.missingInformation.some((item) => /aprobación oficial de SAC/i.test(item))).toBe(
+      true
+    )
   })
 
   test('flags unprovided dates in image prompts', () => {

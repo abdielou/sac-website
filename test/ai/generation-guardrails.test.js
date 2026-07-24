@@ -2,27 +2,38 @@ import {
   applyGenerationGuardrails,
   AiGenerationResultSchema,
 } from '../../workflows/ai-social-media-designer/generation/generateAiWorkflow'
-import {
-  getActiveGuidelines,
-  resolveGenerationGuidelinesForRequest,
-} from '../../lib/ai-guidelines'
+import { getActiveGuidelines, resolveGenerationGuidelinesForRequest } from '../../lib/ai-guidelines'
 
 describe('resolveGenerationGuidelinesForRequest', () => {
-  test('returns version and generation rules for known platform/content type', () => {
-    const resolved = resolveGenerationGuidelinesForRequest({
+  const originalBucket = process.env.S3_ARTICLES_BUCKET_NAME
+
+  beforeAll(() => {
+    delete process.env.S3_ARTICLES_BUCKET_NAME
+  })
+
+  afterAll(() => {
+    if (originalBucket === undefined) {
+      delete process.env.S3_ARTICLES_BUCKET_NAME
+    } else {
+      process.env.S3_ARTICLES_BUCKET_NAME = originalBucket
+    }
+  })
+
+  test('returns version and generation rules for known platform/content type', async () => {
+    const resolved = await resolveGenerationGuidelinesForRequest({
       platform: 'x',
       contentType: 'event_promotion',
     })
 
-    expect(resolved.version).toBe(getActiveGuidelines().version)
+    expect(resolved.version).toBe((await getActiveGuidelines()).version)
     expect(resolved.global).toContain('Español')
     expect(resolved.platform).toContain('280')
     expect(resolved.contentType).toContain('evento')
     expect(resolved.prohibited).toBeTruthy()
   })
 
-  test('uses generation-specific rules, not validation rules', () => {
-    const resolved = resolveGenerationGuidelinesForRequest({
+  test('uses generation-specific rules, not validation rules', async () => {
+    const resolved = await resolveGenerationGuidelinesForRequest({
       platform: 'instagram',
       contentType: 'educational_astronomy',
     })
@@ -32,8 +43,8 @@ describe('resolveGenerationGuidelinesForRequest', () => {
     expect(resolved.contentType).toContain('cautela factual')
   })
 
-  test('falls back gracefully for unknown platform and content type', () => {
-    const resolved = resolveGenerationGuidelinesForRequest({
+  test('falls back gracefully for unknown platform and content type', async () => {
+    const resolved = await resolveGenerationGuidelinesForRequest({
       platform: 'tiktok',
       contentType: 'unknown_type',
     })
@@ -134,9 +145,9 @@ describe('applyGenerationGuardrails', () => {
     )
 
     const igDraft = result.drafts.find((d) => d.platform === 'instagram')
-    expect(
-      igDraft.missingInformation.some((item) => /aprobación oficial de SAC/i.test(item))
-    ).toBe(true)
+    expect(igDraft.missingInformation.some((item) => /aprobación oficial de SAC/i.test(item))).toBe(
+      true
+    )
 
     const xDraft = result.drafts.find((d) => d.platform === 'x')
     expect(xDraft.missingInformation).toEqual([])
