@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import GenerationForm, { DEFAULT_GENERATION_FORM } from '@/components/admin/ai/GenerationForm'
 import GenerationResult from '@/components/admin/ai/GenerationResult'
 import { useAiGenerationRun } from '@/lib/hooks/useAiGenerationRun'
+import { useActiveGuidelines } from '@/lib/hooks/useActiveGuidelines'
+import { resolveContentTypeOptions, resolvePlatformOptions } from '@/lib/ai-guidelines-draft'
 import { ErrorState } from '@/components/admin/ErrorState'
 
 export default function AiGenerationClient() {
@@ -12,7 +14,34 @@ export default function AiGenerationClient() {
   const accessibleActions = session?.user?.accessibleActions || []
   const canGenerate = accessibleActions.includes('write_ai')
 
+  const { active, hydrated: guidelinesHydrated } = useActiveGuidelines()
+  const platforms = useMemo(
+    () => resolvePlatformOptions(active, { generationOnly: true }),
+    [active]
+  )
+  const contentTypes = useMemo(() => resolveContentTypeOptions(active), [active])
+
   const [formState, setFormState] = useState(DEFAULT_GENERATION_FORM)
+
+  useEffect(() => {
+    if (!guidelinesHydrated || !platforms.length) return
+    const ids = platforms.map((p) => p.id)
+    const nextPlatforms = formState.platforms.filter((id) => ids.includes(id))
+    if (nextPlatforms.length === formState.platforms.length) return
+    setFormState((prev) => ({
+      ...prev,
+      platforms: nextPlatforms.length ? nextPlatforms : [ids[0]],
+    }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when guideline platforms change
+  }, [guidelinesHydrated, platforms])
+
+  useEffect(() => {
+    if (!guidelinesHydrated || !contentTypes.length) return
+    const ids = contentTypes.map((ct) => ct.id)
+    if (ids.includes(formState.contentType)) return
+    setFormState((prev) => ({ ...prev, contentType: ids[0] }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when guideline content types change
+  }, [guidelinesHydrated, contentTypes])
 
   const {
     phase,
@@ -44,10 +73,12 @@ export default function AiGenerationClient() {
 
       <GenerationForm
         canGenerate={canGenerate}
-        disabled={isBusy}
+        disabled={isBusy || !guidelinesHydrated}
         formState={formState}
         onFormChange={setFormState}
         onSubmit={handleSubmit}
+        platforms={platforms}
+        contentTypes={contentTypes}
       />
 
       {isBusy && (

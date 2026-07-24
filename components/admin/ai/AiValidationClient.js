@@ -7,7 +7,7 @@ import ValidationResult from '@/components/admin/ai/ValidationResult'
 import { useAiValidationRun } from '@/lib/hooks/useAiValidationRun'
 import { useActiveGuidelines } from '@/lib/hooks/useActiveGuidelines'
 import { useValidationDraft } from '@/lib/hooks/useValidationDraft'
-import { listPlatformEntries } from '@/lib/ai-guidelines-draft'
+import { resolveContentTypeOptions, resolvePlatformOptions } from '@/lib/ai-guidelines-draft'
 import { ErrorState } from '@/components/admin/ErrorState'
 
 export default function AiValidationClient() {
@@ -16,9 +16,16 @@ export default function AiValidationClient() {
   const canValidate = accessibleActions.includes('write_ai')
 
   const { active, hydrated: guidelinesHydrated } = useActiveGuidelines()
-  const platforms = useMemo(() => listPlatformEntries(active), [active])
+  const platforms = useMemo(() => resolvePlatformOptions(active), [active])
+  const contentTypes = useMemo(() => resolveContentTypeOptions(active), [active])
 
-  const { formState, setFormState, images, setImages, hydrated: draftHydrated } = useValidationDraft()
+  const {
+    formState,
+    setFormState,
+    images,
+    setImages,
+    hydrated: draftHydrated,
+  } = useValidationDraft()
   const formReady = guidelinesHydrated && draftHydrated
 
   const {
@@ -40,7 +47,9 @@ export default function AiValidationClient() {
 
   return (
     <div className="max-w-3xl">
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Validar publicación</h2>
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+        Validar publicación
+      </h2>
       <p className="text-gray-600 dark:text-gray-400 mb-6">
         Revisa un borrador de redes sociales contra las guías de SAC antes de publicar manualmente.
       </p>
@@ -54,6 +63,7 @@ export default function AiValidationClient() {
         onImagesChange={setImages}
         onSubmit={handleSubmit}
         platforms={platforms}
+        contentTypes={contentTypes}
       />
 
       {isBusy && (

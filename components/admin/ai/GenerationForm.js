@@ -1,7 +1,5 @@
 'use client'
 
-import { PLATFORMS, PLATFORM_LABELS, CONTENT_TYPES, CONTENT_TYPE_LABELS } from '@/lib/ai-constants'
-
 const inputClass =
   'w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-60 disabled:cursor-not-allowed'
 const labelClass = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'
@@ -32,6 +30,8 @@ export const DEFAULT_GENERATION_FORM = {
  * @param {Object} props.formState
  * @param {Function} props.onFormChange
  * @param {Function} props.onSubmit
+ * @param {{ id: string, label: string }[]} [props.platforms]
+ * @param {{ id: string, label: string }[]} [props.contentTypes]
  */
 export default function GenerationForm({
   canGenerate,
@@ -39,6 +39,8 @@ export default function GenerationForm({
   formState,
   onFormChange,
   onSubmit,
+  platforms = [],
+  contentTypes = [],
 }) {
   const showEventFields = formState.contentType === 'event_promotion'
 
@@ -113,19 +115,19 @@ export default function GenerationForm({
             Plataformas <span className="text-red-500">*</span>
           </legend>
           <div className="flex flex-wrap gap-3 pt-1">
-            {PLATFORMS.map((platform) => (
+            {platforms.map((platform) => (
               <label
-                key={platform}
+                key={platform.id}
                 className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
               >
                 <input
                   type="checkbox"
-                  checked={formState.platforms.includes(platform)}
-                  onChange={() => togglePlatform(platform)}
+                  checked={formState.platforms.includes(platform.id)}
+                  onChange={() => togglePlatform(platform.id)}
                   disabled={formDisabled}
                   className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
                 />
-                {PLATFORM_LABELS[platform]}
+                {platform.label}
               </label>
             ))}
           </div>
@@ -147,9 +149,9 @@ export default function GenerationForm({
             disabled={formDisabled}
             className={inputClass}
           >
-            {CONTENT_TYPES.map((ct) => (
-              <option key={ct} value={ct}>
-                {CONTENT_TYPE_LABELS[ct]}
+            {contentTypes.map((ct) => (
+              <option key={ct.id} value={ct.id}>
+                {ct.label}
               </option>
             ))}
           </select>
