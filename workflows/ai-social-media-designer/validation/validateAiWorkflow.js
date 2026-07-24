@@ -1,12 +1,15 @@
-import { fetch } from 'workflow'
+import { fetch, getWorkflowMetadata } from 'workflow'
 import { z } from 'zod'
 import { resolveGuidelinesForRequest } from '../../../lib/ai-guidelines'
-import { buildOpenRouterChatBody, extractOpenRouterUsage, mergeOpenRouterUsage } from '../../../lib/ai-openrouter'
+import {
+  buildOpenRouterChatBody,
+  extractOpenRouterUsage,
+  mergeOpenRouterUsage,
+} from '../../../lib/ai-openrouter'
+import { buildValidationHistoryRecord } from '../../../lib/ai-run-history'
+import { persistRunHistory } from '../../../lib/run-history-store'
 
 export { extractOpenRouterUsage, mergeOpenRouterUsage }
-
-// S3 run-history persistence (`persistRunHistory`) is deferred until Phase 3 —
-// we do not currently have the bucket write permissions required to store runs.
 
 // ---------- Validation output schema (must match PRD) ----------
 
@@ -138,7 +141,7 @@ async function validatePayloadStep(input) {
 
 async function loadGuidelinesStep(input) {
   'use step'
-  return resolveGuidelinesForRequest({
+  return await resolveGuidelinesForRequest({
     platform: input.platform,
     contentType: input.contentType,
   })
@@ -303,20 +306,74 @@ Input (JSON): ${JSON.stringify(userText)}`,
   }
 }
 
+/**
+ * Build + persist history inside a step.
+ * Node crypto (userKey hash) and AWS SDK are not allowed in the workflow VM.
+ * Soft-fail: never rewrite client terminal status on history errors.
+ */
+async function persistValidationHistoryStep(payload) {
+  'use step'
+  try {
+    const record = buildValidationHistoryRecord(payload)
+    await persistRunHistory(record)
+  } catch (error) {
+    console.error('validateAiWorkflow: failed to persist run history', error)
+  }
+  return null
+}
+
 export async function validateAiWorkflow(input) {
   'use workflow'
 
+  const meta = getWorkflowMetadata()
+  const runId = meta?.workflowRunId
+  const startedAt =
+    meta?.workflowStartedAt instanceof Date
+      ? meta.workflowStartedAt.toISOString()
+      : new Date().toISOString()
+
   const validatedInputResult = await validatePayloadStep(input)
   if (!validatedInputResult.ok) {
+    if (runId) {
+      await persistValidationHistoryStep({
+        input,
+        runId,
+        status: 'failed',
+        error: { message: 'payload_invalid', retryable: false },
+        startedAt,
+        completedAt: new Date().toISOString(),
+        guidelineVersion: null,
+      })
+    }
     return { result: validatedInputResult.fallback, usage: null }
   }
 
   const validatedInput = validatedInputResult.value
   const guidelines = await loadGuidelinesStep(validatedInput)
   const modelResult = await callOpenRouterStep(validatedInput, guidelines)
+  const completedAt = new Date().toISOString()
+
+  if (runId) {
+    await persistValidationHistoryStep({
+      input: validatedInput,
+      runId,
+      status: modelResult.ok === false ? 'failed' : 'completed',
+      result: modelResult.result,
+      error:
+        modelResult.ok === false
+          ? { message: modelResult.reason || 'provider_failed', retryable: true }
+          : undefined,
+      startedAt,
+      completedAt,
+      guidelineVersion: guidelines?.version,
+      model: modelResult.model,
+      usage: modelResult.usage,
+    })
+  }
 
   return {
     result: modelResult.result,
     usage: modelResult.usage ?? null,
+    guidelineVersion: guidelines?.version ?? null,
   }
 }

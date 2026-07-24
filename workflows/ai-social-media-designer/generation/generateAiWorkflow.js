@@ -1,8 +1,12 @@
-import { fetch } from 'workflow'
+import { fetch, getWorkflowMetadata } from 'workflow'
 import { z } from 'zod'
 import { CONTENT_TYPES, PLATFORMS, shouldGenerateImagePrompt } from '../../../lib/ai-constants'
 import { resolveGenerationGuidelinesForRequest } from '../../../lib/ai-guidelines'
-import { buildOpenRouterChatBody, extractOpenRouterUsage, mergeOpenRouterUsage } from '../../../lib/ai-openrouter'
+import {
+  buildOpenRouterChatBody,
+  extractOpenRouterUsage,
+  mergeOpenRouterUsage,
+} from '../../../lib/ai-openrouter'
 import {
   applyImageAssetFallbackToDraft,
   buildGeneratedImageAsset,
@@ -10,9 +14,8 @@ import {
   recordImageGenerationSpend,
   resolveImageGenerationGate,
 } from '../../../lib/ai-image-generation'
-
-// S3 run-history persistence (`persistRunHistory`) is deferred until Phase 3 —
-// same as validation; we do not currently have the bucket write permissions required.
+import { buildGenerationHistoryRecord } from '../../../lib/ai-run-history'
+import { persistRunHistory } from '../../../lib/run-history-store'
 
 // ---------- Generation schemas (Phase 2A text; Phase 2D prompts; Phase 2E assets) ----------
 
@@ -89,9 +92,8 @@ function extractFirstJsonObject(text) {
 }
 
 export function buildFallbackGenerationResult(input, reason) {
-  const platforms = Array.isArray(input?.platforms) && input.platforms.length
-    ? input.platforms
-    : ['instagram']
+  const platforms =
+    Array.isArray(input?.platforms) && input.platforms.length ? input.platforms : ['instagram']
   const contentType = input?.contentType || 'regular_post'
 
   return AiGenerationResultSchema.parse({
@@ -229,8 +231,7 @@ const DEFAULT_IMAGE_SAFETY_SUFFIX =
 const IMAGE_PROMPT_RISK_PATTERNS = [
   {
     pattern: /\b(?:portrait|retrato)\s+of\b/i,
-    message:
-      'El prompt de imagen sugiere retrato identificable; revisar antes de generar.',
+    message: 'El prompt de imagen sugiere retrato identificable; revisar antes de generar.',
   },
   {
     pattern: /\b(?:minor|child|children|niñ[oa]s?)\b/i,
@@ -238,8 +239,7 @@ const IMAGE_PROMPT_RISK_PATTERNS = [
   },
   {
     pattern: /(?:SAC|Sociedad de Astronomía).{0,30}(?:logo|emblema|sello)/i,
-    message:
-      'El prompt de imagen podría incluir logo oficial de SAC; revisar antes de generar.',
+    message: 'El prompt de imagen podría incluir logo oficial de SAC; revisar antes de generar.',
   },
   {
     pattern: /foto\s+(?:real|documental)|photorealistic\s+documentary/i,
@@ -390,7 +390,7 @@ async function loadGuidelinesStep(input) {
   'use step'
   const byPlatform = {}
   for (const platform of input.platforms) {
-    byPlatform[platform] = resolveGenerationGuidelinesForRequest({
+    byPlatform[platform] = await resolveGenerationGuidelinesForRequest({
       platform,
       contentType: input.contentType,
     })
@@ -898,11 +898,45 @@ async function generateImageAssetsStep(input, promptResult, priorUsage) {
   }
 }
 
+/**
+ * Build + persist history inside a step.
+ * Node crypto (userKey hash) and AWS SDK are not allowed in the workflow VM.
+ * Soft-fail: never rewrite client terminal status on history errors.
+ */
+async function persistGenerationHistoryStep(payload) {
+  'use step'
+  try {
+    const record = buildGenerationHistoryRecord(payload)
+    await persistRunHistory(record)
+  } catch (error) {
+    console.error('generateAiWorkflow: failed to persist run history', error)
+  }
+  return null
+}
+
 export async function generateAiWorkflow(input) {
   'use workflow'
 
+  const meta = getWorkflowMetadata()
+  const runId = meta?.workflowRunId
+  const startedAt =
+    meta?.workflowStartedAt instanceof Date
+      ? meta.workflowStartedAt.toISOString()
+      : new Date().toISOString()
+
   const validatedInputResult = await validatePayloadStep(input)
   if (!validatedInputResult.ok) {
+    if (runId) {
+      await persistGenerationHistoryStep({
+        input,
+        runId,
+        status: 'failed',
+        error: { message: 'payload_invalid', retryable: false },
+        startedAt,
+        completedAt: new Date().toISOString(),
+        guidelineVersion: null,
+      })
+    }
     return { result: validatedInputResult.fallback, usage: null, guidelineVersion: null }
   }
 
@@ -920,10 +954,25 @@ export async function generateAiWorkflow(input) {
     imagePromptResult.result,
     usageAfterPrompts
   )
+  const usage = mergeOpenRouterUsage(usageAfterPrompts, imageAssetResult.usage)
+  const completedAt = new Date().toISOString()
+
+  if (runId) {
+    await persistGenerationHistoryStep({
+      input: validatedInput,
+      runId,
+      status: 'completed',
+      result: imageAssetResult.result,
+      startedAt,
+      completedAt,
+      guidelineVersion: guidelines.version,
+      usage,
+    })
+  }
 
   return {
     result: imageAssetResult.result,
-    usage: mergeOpenRouterUsage(usageAfterPrompts, imageAssetResult.usage),
+    usage,
     guidelineVersion: guidelines.version,
   }
 }
