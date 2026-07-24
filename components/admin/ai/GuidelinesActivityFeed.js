@@ -4,6 +4,8 @@ const ACTION_LABELS = {
   created_draft: 'Borrador creado',
   saved: 'Borrador guardado',
   activated: 'Versión activada',
+  rollback: 'Rollback',
+  discarded_draft: 'Borrador descartado',
 }
 
 function formatDate(iso) {
