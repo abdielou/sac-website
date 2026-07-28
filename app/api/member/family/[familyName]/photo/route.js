@@ -3,6 +3,7 @@ import { auth } from '../../../../../../auth'
 import { NextResponse } from 'next/server'
 import { uploadFamilyPhoto } from '../../../../../../lib/google-drive'
 import { getMemberByEmail, updateFamilyMemberPhoto } from '../../../../../../lib/google-sheets'
+import { checkMemberAccess } from '../../../../../../lib/api-permissions'
 
 /** Max photo upload size: 5MB */
 const MAX_PHOTO_SIZE = 5 * 1024 * 1024
@@ -26,6 +27,9 @@ export const POST = auth(async function POST(req, { params }) {
       { status: 401 }
     )
   }
+
+  const accessError = await checkMemberAccess(req)
+  if (accessError) return accessError
 
   try {
     const { familyName: familyNameParam } = await params

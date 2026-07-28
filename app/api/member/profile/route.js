@@ -6,6 +6,7 @@ import { uploadPhoto } from '../../../../lib/google-drive'
 import { notifyPhotoUpload } from '../../../../lib/apps-script'
 import { generateVerifyToken } from '../../../../lib/id-card/verifyToken'
 import { sanitizeMemberProfileFields } from '../../../../lib/member-profile-fields'
+import { checkMemberAccess } from '../../../../lib/api-permissions'
 
 /**
  * GET /api/member/profile
@@ -31,6 +32,9 @@ export const GET = auth(async function GET(req) {
         { status: 401 }
       )
     }
+
+    const accessError = await checkMemberAccess(req)
+    if (accessError) return accessError
 
     const member = await getMemberByEmail(email)
     if (!member) {
@@ -103,6 +107,9 @@ export const PUT = auth(async function PUT(req) {
         { status: 401 }
       )
     }
+
+    const accessError = await checkMemberAccess(req)
+    if (accessError) return accessError
 
     let fields = {}
     let photoFile = null

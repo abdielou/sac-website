@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { getMemberByEmail } from '../../../../../../../lib/google-sheets'
 import { getPhoto } from '../../../../../../../lib/google-drive'
 import { hasPermission } from '../../../../../../../lib/permissions'
+import { checkMemberAccess } from '../../../../../../../lib/api-permissions'
 
 /**
  * GET /api/member/photo/[email]/family/[familyName]
@@ -17,6 +18,9 @@ export const GET = auth(async function GET(req, { params }) {
       { status: 401 }
     )
   }
+
+  const accessError = await checkMemberAccess(req)
+  if (accessError) return accessError
 
   try {
     const { email, familyName: familyNameParam } = await params
