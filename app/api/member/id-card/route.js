@@ -1,6 +1,8 @@
 import { auth } from '../../../../auth'
 import { getMemberByEmail } from '../../../../lib/google-sheets'
 import { generateIdCardPdf } from '../../../../lib/id-card/generateIdCard'
+import { ACTIVE_MEMBER_STATUSES } from '../../../../lib/member-access'
+import { checkMemberAccess } from '../../../../lib/api-permissions'
 
 /**
  * GET /api/member/id-card
@@ -25,6 +27,9 @@ export const GET = auth(async function GET(req) {
     )
   }
 
+  const accessError = await checkMemberAccess(req)
+  if (accessError) return accessError
+
   try {
     const member = await getMemberByEmail(email)
 
@@ -35,7 +40,9 @@ export const GET = auth(async function GET(req) {
       )
     }
 
-    if (member.status !== 'active' && member.status !== 'expiring-soon') {
+    // Kept alongside the gate above: admins bypass the gate, but nobody gets an
+    // ID card that misrepresents an inactive membership.
+    if (!ACTIVE_MEMBER_STATUSES.includes(member.status)) {
       return Response.json(
         {
           error: 'Tu membresia no esta vigente para generar tarjeta de identificacion',
