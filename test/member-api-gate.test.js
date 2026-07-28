@@ -100,12 +100,16 @@ describe('member route gate coverage — structural', () => {
 
   GATED_ROUTES.forEach((relPath) => {
     // The test title embeds relPath so a regression names the offending file
-    // in Jest's failure output.
+    // in Jest's failure output. Count actual call sites (checkMemberAccess()
+    // with the paren) rather than a bare substring match — a bare
+    // content.includes('checkMemberAccess') would be satisfied by the import
+    // line alone even if the call itself were deleted.
     it(`${relPath} calls checkMemberAccess`, () => {
       const filePath = path.join(REPO_ROOT, relPath)
       const content = fs.readFileSync(filePath, 'utf8')
-      if (!content.includes('checkMemberAccess')) {
-        throw new Error(`Expected ${relPath} to call checkMemberAccess (member portal gate)`)
+      const callCount = (content.match(/checkMemberAccess\(/g) || []).length
+      if (callCount < 1) {
+        throw new Error(`Expected ${relPath} to call checkMemberAccess( ) (member portal gate)`)
       }
     })
   })
