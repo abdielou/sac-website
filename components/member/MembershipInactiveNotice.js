@@ -44,7 +44,9 @@ export function getNoticeCopy(reason, status) {
     }
   }
 
-  // Defensive fallback: the four known statuses are covered above.
+  // Defensive fallback: only 'expired' and 'applied' can reach an INACTIVE
+  // denial (see ACTIVE_MEMBER_STATUSES) and are handled above; this covers
+  // any future status value.
   return { heading: 'Tu membresia no esta activa', body: null, showRetry: false }
 }
 
@@ -83,7 +85,9 @@ export function MembershipInactiveNotice({ reason, status }) {
             {body && (
               <p className="text-sm text-yellow-800 dark:text-yellow-200 text-center">{body}</p>
             )}
-            <p className="mt-2 text-sm text-yellow-800 dark:text-yellow-200 text-center">
+            <p
+              className={`${body ? 'mt-2 ' : ''}text-sm text-yellow-800 dark:text-yellow-200 text-center`}
+            >
               Para resolver tu situacion de membresia, escribe a{' '}
               <a href={`mailto:${siteMetadata.email}`} className="font-medium underline">
                 {siteMetadata.email}

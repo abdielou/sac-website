@@ -77,3 +77,63 @@ describe('GET /api/member/profile — membership gate', () => {
     expect(body.status).toBe('active')
   })
 })
+
+describe('member route gate coverage — structural', () => {
+  const fs = require('fs')
+  const path = require('path')
+
+  const REPO_ROOT = path.join(__dirname, '..')
+  const MEMBER_API_DIR = path.join(REPO_ROOT, 'app', 'api', 'member')
+
+  // Every route file under app/api/member/ that is expected to gate access
+  // behind checkMemberAccess(). Keep this list in sync with the filesystem —
+  // the last test in this block fails if they diverge.
+  const GATED_ROUTES = [
+    'app/api/member/profile/route.js',
+    'app/api/member/id-card/route.js',
+    'app/api/member/photo/[email]/route.js',
+    'app/api/member/photo/[email]/family/[familyName]/route.js',
+    'app/api/member/family/[familyName]/photo/route.js',
+    'app/api/member/family/[familyName]/id-card/route.js',
+    'app/api/member/family/[familyName]/id-card-preview/route.js',
+  ]
+
+  GATED_ROUTES.forEach((relPath) => {
+    // The test title embeds relPath so a regression names the offending file
+    // in Jest's failure output.
+    it(`${relPath} calls checkMemberAccess`, () => {
+      const filePath = path.join(REPO_ROOT, relPath)
+      const content = fs.readFileSync(filePath, 'utf8')
+      if (!content.includes('checkMemberAccess')) {
+        throw new Error(`Expected ${relPath} to call checkMemberAccess (member portal gate)`)
+      }
+    })
+  })
+
+  it('app/api/member/profile/route.js gates both GET and PUT with checkMemberAccess', () => {
+    const relPath = 'app/api/member/profile/route.js'
+    const filePath = path.join(REPO_ROOT, relPath)
+    const content = fs.readFileSync(filePath, 'utf8')
+    const callCount = (content.match(/checkMemberAccess\(/g) || []).length
+    expect(callCount).toBeGreaterThanOrEqual(2)
+  })
+
+  it('GATED_ROUTES covers every route.js actually present under app/api/member/', () => {
+    const found = []
+    const walk = (dir) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const fullPath = path.join(dir, entry.name)
+        if (entry.isDirectory()) {
+          walk(fullPath)
+        } else if (entry.isFile() && entry.name === 'route.js') {
+          found.push(path.relative(REPO_ROOT, fullPath).split(path.sep).join('/'))
+        }
+      }
+    }
+    walk(MEMBER_API_DIR)
+
+    expect(found.sort()).toEqual(
+      [...GATED_ROUTES].sort()
+    )
+  })
+})
