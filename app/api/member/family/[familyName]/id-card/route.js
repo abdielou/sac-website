@@ -2,6 +2,8 @@ import { auth } from '../../../../../../auth'
 import { getMemberByEmail } from '../../../../../../lib/google-sheets'
 import { generateFamilyIdCardPdf } from '../../../../../../lib/id-card/generateFamilyIdCard'
 import { nameToPhotoSlug } from '../../../../../../lib/family-members'
+import { ACTIVE_MEMBER_STATUSES } from '../../../../../../lib/member-access'
+import { checkMemberAccess } from '../../../../../../lib/api-permissions'
 
 /**
  * GET /api/member/family/[familyName]/id-card
@@ -23,6 +25,9 @@ export const GET = auth(async function GET(req, { params }) {
     )
   }
 
+  const accessError = await checkMemberAccess(req)
+  if (accessError) return accessError
+
   const { familyName: familyNameParam } = await params
   const decodedName = decodeURIComponent(familyNameParam)
 
@@ -36,7 +41,9 @@ export const GET = auth(async function GET(req, { params }) {
       )
     }
 
-    if (member.status !== 'active' && member.status !== 'expiring-soon') {
+    // Kept alongside the gate above: admins bypass the gate, but nobody gets an
+    // ID card that misrepresents an inactive membership.
+    if (!ACTIVE_MEMBER_STATUSES.includes(member.status)) {
       return Response.json(
         {
           error: 'Tu membresia no esta vigente para generar tarjeta de identificacion',
