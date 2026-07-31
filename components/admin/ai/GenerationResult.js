@@ -1,14 +1,15 @@
 'use client'
 
+import { useState } from 'react'
 import { PLATFORM_LABELS, CONTENT_TYPE_LABELS } from '@/lib/ai-constants'
 
-async function copyToClipboard(text, onCopied) {
-  if (!text) return
+async function copyToClipboard(text) {
+  if (!text) return false
   try {
     await navigator.clipboard.writeText(text)
-    onCopied?.()
+    return true
   } catch {
-    // ignore
+    return false
   }
 }
 
@@ -23,30 +24,48 @@ function downloadDataUrl(dataUrl, fileName) {
   link.remove()
 }
 
+function extractSharedImage(result, drafts) {
+  if (result?.generatedImage?.dataUrl) return result.generatedImage
+  for (const draft of drafts) {
+    const images = Array.isArray(draft.generatedImages) ? draft.generatedImages : []
+    if (images.length > 0 && images[0].dataUrl) return images[0]
+  }
+  return null
+}
+
 /**
  * @param {Object} props
  * @param {Object} props.result - AiGenerationResult ({ drafts, recommendedNextStep, humanReviewRequired })
  * @param {Object} [props.usage] - OpenRouter usage metadata for this run
  * @param {string} [props.guidelineVersion] - Active guideline version applied to this run
- * @param {Function} [props.onCopyFeedback]
  */
-export default function GenerationResult({ result, usage, guidelineVersion, onCopyFeedback }) {
+export default function GenerationResult({ result, usage, guidelineVersion }) {
+  const [localFeedback, setLocalFeedback] = useState(null)
   if (!result) return null
 
   const drafts = Array.isArray(result.drafts) ? result.drafts : []
   const costAmount = usage?.cost?.amount
   const hasCost = typeof costAmount === 'number'
   const hasTokens = typeof usage?.totalTokens === 'number'
+  const sharedImage = extractSharedImage(result, drafts)
+  const generatedDraftCount = drafts.filter((draft) => draft?.draftText?.trim()).length
 
-  const handleCopy = (text) => {
-    copyToClipboard(text, onCopyFeedback)
+  const handleCopy = async (text) => {
+    const copied = await copyToClipboard(text)
+    setLocalFeedback(copied ? 'Copiado' : 'No se pudo copiar')
+    window.setTimeout(() => setLocalFeedback(null), 2000)
   }
 
   return (
     <div className="mt-8 space-y-6" data-testid="generation-result">
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-        Borradores generados ({drafts.length})
+        Borradores generados ({generatedDraftCount})
       </h2>
+      {localFeedback && (
+        <p className="text-sm text-gray-600 dark:text-gray-300" role="status" aria-live="polite">
+          {localFeedback}
+        </p>
+      )}
 
       {(hasCost || hasTokens || guidelineVersion) && (
         <p className="text-sm text-gray-500 dark:text-gray-400" data-testid="generation-run-cost">
@@ -66,11 +85,45 @@ export default function GenerationResult({ result, usage, guidelineVersion, onCo
         </p>
       )}
 
+      {sharedImage && (
+        <div
+          className="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-3 space-y-3"
+          data-testid="generation-shared-image"
+        >
+          <p className="text-sm font-medium text-emerald-900 dark:text-emerald-200">
+            Imagen compartida (todas las redes)
+          </p>
+          {/* Data URLs are ephemeral workflow output and cannot use the Next image optimizer. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={sharedImage.dataUrl}
+            alt="Arte compartido para redes sociales"
+            className="max-h-80 rounded-lg border border-emerald-200 dark:border-emerald-700 object-contain bg-white dark:bg-gray-900"
+          />
+          {sharedImage.rationale && (
+            <p className="text-sm text-emerald-800 dark:text-emerald-300/90">
+              <span className="font-medium">Justificación:</span> {sharedImage.rationale}
+            </p>
+          )}
+          {sharedImage.downloadFileName && (
+            <button
+              type="button"
+              onClick={() => downloadDataUrl(sharedImage.dataUrl, sharedImage.downloadFileName)}
+              className="text-sm text-emerald-700 dark:text-emerald-300 hover:underline"
+            >
+              Descargar imagen
+            </button>
+          )}
+          <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80">
+            Borrador para revisión humana; no publicar sin validar.
+          </p>
+        </div>
+      )}
+
       {drafts.map((draft, idx) => {
         const platformLabel = PLATFORM_LABELS[draft.platform] || draft.platform
         const missing = Array.isArray(draft.missingInformation) ? draft.missingInformation : []
         const assumptions = Array.isArray(draft.assumptions) ? draft.assumptions : []
-        const generatedImages = Array.isArray(draft.generatedImages) ? draft.generatedImages : []
 
         return (
           <div
@@ -141,73 +194,35 @@ export default function GenerationResult({ result, usage, guidelineVersion, onCo
               </div>
             )}
 
-            {generatedImages.length > 0 && (
-              <div
-                className="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-3 space-y-3"
-                data-testid={`generation-image-assets-${draft.platform}`}
-              >
-                <p className="text-sm font-medium text-emerald-900 dark:text-emerald-200">
-                  Imágenes generadas (borrador)
-                </p>
-                {generatedImages.map((asset) => (
-                  <div key={asset.assetId} className="space-y-2">
-                    {asset.dataUrl && (
-                      <img
-                        src={asset.dataUrl}
-                        alt={`Borrador generado para ${platformLabel}`}
-                        className="max-h-64 rounded-lg border border-emerald-200 dark:border-emerald-700 object-contain bg-white dark:bg-gray-900"
-                      />
-                    )}
-                    {asset.rationale && (
-                      <p className="text-sm text-emerald-800 dark:text-emerald-300/90">
-                        <span className="font-medium">Justificación:</span> {asset.rationale}
-                      </p>
-                    )}
-                    {asset.dataUrl && asset.downloadFileName && (
-                      <button
-                        type="button"
-                        onClick={() => downloadDataUrl(asset.dataUrl, asset.downloadFileName)}
-                        className="text-sm text-emerald-700 dark:text-emerald-300 hover:underline"
-                      >
-                        Descargar imagen
-                      </button>
-                    )}
-                    <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80">
-                      Borrador para revisión humana; no publicar sin validar.
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-
             {draft.imagePrompt && (
               <div
-                className="rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20 px-3 py-3 space-y-2"
+                className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-3 space-y-2"
                 data-testid={`generation-image-prompt-${draft.platform}`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm font-medium text-purple-900 dark:text-purple-200">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                     Prompt de imagen (borrador)
                   </p>
                   <button
                     type="button"
                     onClick={() => handleCopy(draft.imagePrompt)}
-                    className="text-sm text-purple-700 dark:text-purple-300 hover:underline"
+                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
                   >
                     Copiar prompt
                   </button>
                 </div>
-                <p className="text-sm text-purple-950 dark:text-purple-100 whitespace-pre-wrap font-mono">
+                <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap font-mono">
                   {draft.imagePrompt}
                 </p>
                 {draft.imageRationale && (
-                  <p className="text-sm text-purple-800 dark:text-purple-300/90">
-                    <span className="font-medium">Justificación visual:</span> {draft.imageRationale}
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    <span className="font-medium">Justificación visual:</span>{' '}
+                    {draft.imageRationale}
                   </p>
                 )}
-                <p className="text-xs text-purple-700/80 dark:text-purple-400/80">
-                  {generatedImages.length > 0
-                    ? 'Prompt usado para generar la imagen de borrador; revisar restricciones de seguridad.'
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  {sharedImage
+                    ? 'Prompt usado para generar la imagen compartida; revisar restricciones de seguridad.'
                     : 'Borrador para generación de imagen; revisar restricciones de seguridad antes de usar.'}
                 </p>
               </div>

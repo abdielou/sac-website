@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import GenerationForm, { DEFAULT_GENERATION_FORM } from '@/components/admin/ai/GenerationForm'
 import GenerationResult from '@/components/admin/ai/GenerationResult'
 import { useAiGenerationRun } from '@/lib/hooks/useAiGenerationRun'
 import { useActiveGuidelines } from '@/lib/hooks/useActiveGuidelines'
 import { resolveContentTypeOptions, resolvePlatformOptions } from '@/lib/ai-guidelines-draft'
+import { OBSERVATION_NIGHT_CONTENT_TYPE } from '@/lib/ai-constants'
 import { ErrorState } from '@/components/admin/ErrorState'
 
 export default function AiGenerationClient() {
@@ -22,44 +23,66 @@ export default function AiGenerationClient() {
   const contentTypes = useMemo(() => resolveContentTypeOptions(active), [active])
 
   const [formState, setFormState] = useState(DEFAULT_GENERATION_FORM)
+  const resultRef = useRef(null)
 
   useEffect(() => {
     if (!guidelinesHydrated || !platforms.length) return
     const ids = platforms.map((p) => p.id)
-    const nextPlatforms = formState.platforms.filter((id) => ids.includes(id))
-    if (nextPlatforms.length === formState.platforms.length) return
-    setFormState((prev) => ({
-      ...prev,
-      platforms: nextPlatforms.length ? nextPlatforms : [ids[0]],
-    }))
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when guideline platforms change
+    setFormState((prev) => {
+      const retained = prev.platforms.filter((id) => ids.includes(id))
+      // Prefer keeping all available platforms when defaults were "select all".
+      const nextPlatforms =
+        retained.length > 0
+          ? retained
+          : ids.includes('x') || ids.includes('instagram') || ids.includes('facebook')
+            ? ids.filter((id) => ['x', 'instagram', 'facebook'].includes(id))
+            : [ids[0]]
+      if (
+        nextPlatforms.length === prev.platforms.length &&
+        nextPlatforms.every((id, i) => id === prev.platforms[i])
+      ) {
+        return prev
+      }
+      return { ...prev, platforms: nextPlatforms }
+    })
   }, [guidelinesHydrated, platforms])
 
   useEffect(() => {
     if (!guidelinesHydrated || !contentTypes.length) return
     const ids = contentTypes.map((ct) => ct.id)
-    if (ids.includes(formState.contentType)) return
-    setFormState((prev) => ({ ...prev, contentType: ids[0] }))
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when guideline content types change
+    setFormState((prev) => {
+      if (ids.includes(prev.contentType)) return prev
+      const preferred = ids.includes(OBSERVATION_NIGHT_CONTENT_TYPE)
+        ? OBSERVATION_NIGHT_CONTENT_TYPE
+        : ids[0]
+      return { ...prev, contentType: preferred }
+    })
   }, [guidelinesHydrated, contentTypes])
 
   const {
     phase,
-    runId,
     result,
     usage,
     guidelineVersion,
     error,
     isBusy,
-    copyFeedback,
     submitGeneration,
+    retryRun,
     resetRun,
-    showCopyFeedback,
   } = useAiGenerationRun({ canGenerate })
 
   const handleSubmit = () => {
     submitGeneration(formState)
   }
+
+  useEffect(() => {
+    if (phase !== 'completed' || !result) return
+    const frame = window.requestAnimationFrame(() => {
+      resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      resultRef.current?.focus({ preventScroll: true })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [phase, result])
 
   return (
     <div className="max-w-3xl">
@@ -67,24 +90,26 @@ export default function AiGenerationClient() {
         Generar borradores
       </h2>
       <p className="text-gray-600 dark:text-gray-400 mb-6">
-        Crea borradores de texto en español para redes sociales según las guías de SAC. Los
-        borradores son propuestas: valídalos y revísalos antes de publicar manualmente.
+        Crea borradores para las plataformas seleccionadas. El formulario se adapta al tipo de
+        contenido; revisa todo antes de publicar manualmente.
       </p>
 
-      <GenerationForm
-        canGenerate={canGenerate}
-        disabled={isBusy || !guidelinesHydrated}
-        formState={formState}
-        onFormChange={setFormState}
-        onSubmit={handleSubmit}
-        platforms={platforms}
-        contentTypes={contentTypes}
-      />
+      {!guidelinesHydrated && !isBusy && (
+        <p
+          className="mb-4 text-sm text-gray-600 dark:text-gray-400"
+          role="status"
+          aria-live="polite"
+        >
+          Cargando opciones del generador...
+        </p>
+      )}
 
       {isBusy && (
         <div
-          className="mt-6 flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400"
+          className="mb-4 flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400"
           data-testid="generation-polling"
+          role="status"
+          aria-live="polite"
         >
           <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24" aria-hidden="true">
             <circle
@@ -102,33 +127,37 @@ export default function AiGenerationClient() {
             />
           </svg>
           <span>
-            {phase === 'submitting'
-              ? 'Iniciando generación...'
-              : `Generando borradores${runId ? ` (${runId.slice(0, 12)}…)` : ''}...`}
+            {phase === 'submitting' ? 'Iniciando generación...' : 'Generando borradores...'}
           </span>
         </div>
       )}
 
+      <GenerationForm
+        canGenerate={canGenerate}
+        loading={!guidelinesHydrated}
+        busy={isBusy}
+        formState={formState}
+        onFormChange={setFormState}
+        onSubmit={handleSubmit}
+        platforms={platforms}
+        contentTypes={contentTypes}
+      />
+
       {error && (phase === 'failed' || phase === 'timeout') && (
         <div className="mt-6">
-          <ErrorState message={error} onRetry={resetRun} />
+          <ErrorState
+            message={error}
+            onRetry={phase === 'timeout' ? retryRun : resetRun}
+            actionLabel={phase === 'timeout' ? 'Consultar de nuevo' : 'Volver al formulario'}
+          />
         </div>
-      )}
-
-      {copyFeedback && (
-        <p className="mt-2 text-sm text-green-600 dark:text-green-400" role="status">
-          {copyFeedback}
-        </p>
       )}
 
       {result && phase === 'completed' && (
         <>
-          <GenerationResult
-            result={result}
-            usage={usage}
-            guidelineVersion={guidelineVersion}
-            onCopyFeedback={showCopyFeedback}
-          />
+          <div ref={resultRef} tabIndex={-1} className="scroll-mt-6 outline-none">
+            <GenerationResult result={result} usage={usage} guidelineVersion={guidelineVersion} />
+          </div>
           <div className="mt-6">
             <button
               type="button"

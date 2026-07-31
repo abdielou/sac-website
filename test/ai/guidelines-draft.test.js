@@ -132,8 +132,12 @@ describe('ai-guidelines-draft', () => {
 
   test('listContentTypeEntries reads content type rules', () => {
     const entries = listContentTypeEntries(seed)
+    expect(entries.some((e) => e.id === 'observation_night')).toBe(true)
+    expect(entries.find((e) => e.id === 'observation_night')?.rules).toMatch(
+      /Noche de Observación/i
+    )
     expect(entries.some((e) => e.id === 'event_promotion')).toBe(true)
-    expect(entries.find((e) => e.id === 'event_promotion')?.rules).toMatch(/evento/i)
+    expect(entries.find((e) => e.id === 'event_promotion')?.rules).toMatch(/evento|fecha/i)
   })
 
   test('resolvePlatformOptions falls back to MVP defaults', () => {
@@ -150,9 +154,26 @@ describe('ai-guidelines-draft', () => {
     expect(options.every((o) => o.id !== 'threads')).toBe(true)
   })
 
-  test('resolveContentTypeOptions uses active doc when present', () => {
+  test('resolveContentTypeOptions preserves the active guideline order', () => {
     const options = resolveContentTypeOptions(seed)
+    expect(options[0]).toEqual({ id: 'regular_post', label: 'Publicación regular' })
+    expect(options).toContainEqual({
+      id: 'observation_night',
+      label: 'Noche de Observación',
+    })
+    expect(options).toContainEqual({ id: 'event_promotion', label: 'Promoción de evento' })
     expect(options.some((o) => o.id === 'regular_post')).toBe(true)
+  })
+
+  test('resolveContentTypeOptions restores observation_night for an older guideline document', () => {
+    const olderDocument = createGuidelineDocument({ seed })
+    delete olderDocument.contentTypes.observation_night
+    delete olderDocument.generation.contentTypes.observation_night
+
+    expect(resolveContentTypeOptions(olderDocument)).toContainEqual({
+      id: 'observation_night',
+      label: 'Noche de Observación',
+    })
   })
 
   test('previewGuidelinesAgainstDocument returns validation and generation views', () => {
