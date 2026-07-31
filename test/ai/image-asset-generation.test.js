@@ -1,13 +1,9 @@
 import {
   applyImageAssetFallbackToDraft,
   buildGeneratedImageAsset,
-  checkImageGenerationSpendCeiling,
   extractOpenRouterImageUsage,
   getImageGenerationConfig,
   parseOpenRouterImageResponse,
-  recordImageGenerationSpend,
-  resetImageGenerationSpendForTests,
-  resolveImageGenerationGate,
 } from '../../lib/ai-image-generation'
 import {
   AiGeneratedImageSchema,
@@ -25,73 +21,16 @@ describe('getImageGenerationConfig', () => {
     process.env = originalEnv
   })
 
-  test('always uses download-only retention (not env-toggled)', () => {
-    process.env.AI_IMAGE_GENERATION_RETENTION = 's3'
-    const config = getImageGenerationConfig()
-    expect(config.retention).toBe('download-only')
-  })
-
-  test('reads model and optional spend limits from env', () => {
-    process.env.OPENROUTER_MODEL = 'google/gemini-3.1-flash-lite-image'
-    process.env.AI_IMAGE_GENERATION_MAX_COST_PER_RUN_USD = '1.25'
-    process.env.AI_IMAGE_GENERATION_SPEND_CEILING_USD = '10'
-
-    const config = getImageGenerationConfig()
-    expect(config.model).toBe('google/gemini-3.1-flash-lite-image')
-    expect(config.maxCostPerRunUsd).toBe(1.25)
-    expect(config.spendCeilingUsd).toBe(10)
-  })
-
   test('uses OPENROUTER_MODEL (no separate image model)', () => {
     process.env.OPENROUTER_MODEL = 'google/gemini-3.1-flash-lite-image'
-    delete process.env.OPENROUTER_IMAGE_MODEL
     expect(getImageGenerationConfig().model).toBe('google/gemini-3.1-flash-lite-image')
   })
 
-  test('ignores legacy enable/rights env flags', () => {
-    process.env.AI_IMAGE_GENERATION_ENABLED = 'false'
-    process.env.AI_IMAGE_GENERATION_RIGHTS_ACKNOWLEDGED = 'false'
-    process.env.OPENROUTER_API_KEY = 'test-key'
-    expect(resolveImageGenerationGate().allowed).toBe(true)
-  })
-})
-
-describe('resolveImageGenerationGate', () => {
-  const originalEnv = process.env
-
-  beforeEach(() => {
-    process.env = { ...originalEnv }
-    resetImageGenerationSpendForTests()
-  })
-
-  afterAll(() => {
-    process.env = originalEnv
-  })
-
-  test('allows when API key is present (always generate)', () => {
-    process.env.OPENROUTER_API_KEY = 'test-key'
-    delete process.env.AI_IMAGE_GENERATION_ENABLED
-    delete process.env.AI_IMAGE_GENERATION_RIGHTS_ACKNOWLEDGED
-
-    const gate = resolveImageGenerationGate()
-    expect(gate.allowed).toBe(true)
-  })
-
-  test('blocks only when API key is missing', () => {
-    delete process.env.OPENROUTER_API_KEY
-    const gate = resolveImageGenerationGate()
-    expect(gate.allowed).toBe(false)
-    expect(gate.reason).toBe('missing_api_key')
-  })
-
-  test('blocks when monthly spend ceiling exceeded', () => {
-    process.env.OPENROUTER_API_KEY = 'test-key'
-    process.env.AI_IMAGE_GENERATION_SPEND_CEILING_USD = '0.01'
-    recordImageGenerationSpend(0.02)
-
-    const gate = resolveImageGenerationGate()
-    expect(gate.allowed).toBe(false)
-    expect(gate.reason).toBe('monthly_spend_ceiling')
+  test('uses the multimodal default when OPENROUTER_MODEL is absent', () => {
+    delete process.env.OPENROUTER_MODEL
+    expect(getImageGenerationConfig()).toEqual({
+      model: 'google/gemini-3.1-flash-lite-image',
+    })
   })
 })
 
@@ -137,7 +76,7 @@ describe('extractOpenRouterImageUsage', () => {
 })
 
 describe('buildGeneratedImageAsset and fallback', () => {
-  test('buildGeneratedImageAsset produces downloadable draft metadata', () => {
+  test('buildGeneratedImageAsset produces downloadable draft metadata (platform-specific)', () => {
     const asset = buildGeneratedImageAsset({
       platform: 'instagram',
       dataUrl: 'data:image/png;base64,abc',
@@ -148,6 +87,18 @@ describe('buildGeneratedImageAsset and fallback', () => {
     expect(AiGeneratedImageSchema.safeParse(asset).success).toBe(true)
     expect(asset.status).toBe('draft')
     expect(asset.downloadFileName).toBe('sac-borrador-instagram.png')
+  })
+
+  test('buildGeneratedImageAsset uses neutral naming when platform omitted', () => {
+    const asset = buildGeneratedImageAsset({
+      dataUrl: 'data:image/png;base64,abc',
+      mimeType: 'image/png',
+      rationale: 'Shared visual.',
+    })
+
+    expect(asset.assetId).toBe('generated-social-0')
+    expect(asset.downloadFileName).toBe('sac-borrador-social.png')
+    expect(AiGeneratedImageSchema.safeParse(asset).success).toBe(true)
   })
 
   test('applyImageAssetFallbackToDraft keeps imagePrompt and adds missingInformation', () => {
@@ -162,44 +113,37 @@ describe('buildGeneratedImageAsset and fallback', () => {
     )
 
     expect(draft.imagePrompt).toBe('Cielo nocturno sobre el Caribe')
-    expect(draft.missingInformation.some((m) => m.includes('No se pudo generar imagen'))).toBe(
-      true
-    )
+    expect(draft.missingInformation.some((m) => m.includes('No se pudo generar imagen'))).toBe(true)
   })
 
-  test('AiGenerationResultSchema accepts drafts with generatedImages', () => {
+  test('AiGenerationResultSchema keeps one shared generated image at result level', () => {
+    const sharedAsset = {
+      assetId: 'generated-social-0',
+      status: 'draft',
+      mimeType: 'image/png',
+      dataUrl: 'data:image/png;base64,abc',
+      downloadFileName: 'sac-borrador-social.png',
+    }
     const result = AiGenerationResultSchema.parse({
       drafts: [
         {
           platform: 'instagram',
           contentType: 'image_post',
-          draftText: 'Texto',
+          draftText: 'Texto IG',
           imagePrompt: 'Prompt',
-          generatedImages: [
-            {
-              assetId: 'generated-instagram-0',
-              status: 'draft',
-              mimeType: 'image/png',
-              dataUrl: 'data:image/png;base64,abc',
-              downloadFileName: 'sac-borrador-instagram.png',
-            },
-          ],
+        },
+        {
+          platform: 'x',
+          contentType: 'image_post',
+          draftText: 'Texto X',
+          imagePrompt: 'Prompt',
         },
       ],
+      generatedImage: sharedAsset,
       recommendedNextStep: 'Validar',
       humanReviewRequired: true,
     })
-    expect(result.drafts[0].generatedImages).toHaveLength(1)
-  })
-})
-
-describe('checkImageGenerationSpendCeiling', () => {
-  beforeEach(() => {
-    resetImageGenerationSpendForTests()
-  })
-
-  test('allows spend when no ceiling configured', () => {
-    delete process.env.AI_IMAGE_GENERATION_SPEND_CEILING_USD
-    expect(checkImageGenerationSpendCeiling(1).allowed).toBe(true)
+    expect(result.generatedImage.assetId).toBe('generated-social-0')
+    expect(result.drafts[0].generatedImages).toBeUndefined()
   })
 })

@@ -3,6 +3,7 @@ import {
   GenerateInputSchema,
   buildFallbackGenerationResult,
 } from '../../workflows/ai-social-media-designer/generation/generateAiWorkflow'
+import { GENERATION_INPUT_LIMITS } from '../../lib/ai-constants'
 import { extractOpenRouterUsage, mergeOpenRouterUsage } from '../../lib/ai-openrouter'
 
 describe('generateAiWorkflow schema', () => {
@@ -13,6 +14,13 @@ describe('generateAiWorkflow schema', () => {
     topic: 'Lluvia de meteoros',
     platforms: ['instagram', 'facebook'],
     contentType: 'event_promotion',
+    cta: 'Confirma tu asistencia',
+    eventDetails: {
+      name: 'Noche de Observación',
+      date: '2026-07-11',
+      time: '19:15',
+      location: 'Pitahaya, Cabo Rojo',
+    },
   }
 
   test('buildFallbackGenerationResult always sets humanReviewRequired true', () => {
@@ -39,7 +47,9 @@ describe('generateAiWorkflow schema', () => {
     expect(AiGenerationResultSchema.safeParse(invalid).success).toBe(false)
   })
 
-  test('AiGenerationResultSchema accepts valid multi-platform result', () => {
+  test('AiGenerationResultSchema accepts valid multi-platform result with shared prompt', () => {
+    const sharedPrompt =
+      'Family-friendly astronomy outreach; no identifiable faces, no official logo.'
     const valid = {
       drafts: [
         {
@@ -49,8 +59,7 @@ describe('generateAiWorkflow schema', () => {
           rationale: 'Tono cercano sin inventar logística.',
           assumptions: ['El evento es presencial'],
           missingInformation: ['Hora y lugar exactos'],
-          imagePrompt:
-            'Family-friendly astronomy outreach; no identifiable faces, no official logo.',
+          imagePrompt: sharedPrompt,
           imageRationale: 'Apoya la promoción sin inventar detalles.',
         },
         {
@@ -58,12 +67,14 @@ describe('generateAiWorkflow schema', () => {
           contentType: 'event_promotion',
           draftText: 'Observación con SAC este sábado. Detalles pronto.',
           missingInformation: ['Hora', 'Lugar'],
+          imagePrompt: sharedPrompt,
         },
       ],
       recommendedNextStep: 'Validar los borradores antes de aprobar.',
       humanReviewRequired: true,
     }
     expect(AiGenerationResultSchema.safeParse(valid).success).toBe(true)
+    expect(valid.drafts[0].imagePrompt).toBe(valid.drafts[1].imagePrompt)
   })
 
   test('GenerateInputSchema rejects empty platforms', () => {
@@ -93,6 +104,153 @@ describe('generateAiWorkflow schema', () => {
       imageConstraints: 'sin rostros identificables',
     })
     expect(parsed.success).toBe(true)
+  })
+
+  test('GenerateInputSchema deduplicates platforms', () => {
+    const parsed = GenerateInputSchema.safeParse({
+      ...baseInput,
+      platforms: ['instagram', 'instagram', 'facebook'],
+    })
+    expect(parsed.success).toBe(true)
+    expect(parsed.data.platforms).toEqual(['instagram', 'facebook'])
+  })
+
+  test('GenerateInputSchema rejects an invalid calendar date', () => {
+    const parsed = GenerateInputSchema.safeParse({
+      ...baseInput,
+      eventDetails: { ...baseInput.eventDetails, date: '2026-02-30' },
+    })
+    expect(parsed.success).toBe(false)
+  })
+
+  test('GenerateInputSchema rejects an invalid 24-hour time', () => {
+    const parsed = GenerateInputSchema.safeParse({
+      ...baseInput,
+      eventDetails: { ...baseInput.eventDetails, time: '25:99' },
+    })
+    expect(parsed.success).toBe(false)
+  })
+
+  test('GenerateInputSchema requires event CTA and rejects unknown event fields', () => {
+    expect(
+      GenerateInputSchema.safeParse({
+        ...baseInput,
+        cta: undefined,
+      }).success
+    ).toBe(false)
+    expect(
+      GenerateInputSchema.safeParse({
+        ...baseInput,
+        eventDetails: { ...baseInput.eventDetails, privateNotes: 'no permitido' },
+      }).success
+    ).toBe(false)
+  })
+
+  test('GenerateInputSchema enforces input limits and template compatibility', () => {
+    expect(
+      GenerateInputSchema.safeParse({
+        ...baseInput,
+        topic: 'a'.repeat(GENERATION_INPUT_LIMITS.topic + 1),
+      }).success
+    ).toBe(false)
+    expect(
+      GenerateInputSchema.safeParse({
+        ...baseInput,
+        contentType: 'caption',
+        backgroundMode: 'stock',
+        backgroundId: 'telescope-nebula',
+      }).success
+    ).toBe(false)
+    expect(
+      GenerateInputSchema.safeParse({
+        ...baseInput,
+        backgroundMode: 'stock',
+        backgroundId: 'does-not-exist',
+      }).success
+    ).toBe(false)
+    expect(
+      GenerateInputSchema.safeParse({
+        ...baseInput,
+        unexpected: true,
+      }).success
+    ).toBe(false)
+  })
+
+  test('AiGenerationResultSchema keeps template request and blobs paired at top level', () => {
+    const baseResult = {
+      drafts: [
+        {
+          platform: 'instagram',
+          contentType: 'event_promotion',
+          draftText: 'Acompáñanos a observar.',
+        },
+      ],
+      recommendedNextStep: 'Validar',
+      humanReviewRequired: true,
+    }
+    expect(
+      AiGenerationResultSchema.safeParse({
+        ...baseResult,
+        templateRequest: {
+          layout: 'event',
+          textFields: { headline: 'Noche de Observación' },
+        },
+      }).success
+    ).toBe(false)
+    expect(
+      AiGenerationResultSchema.safeParse({
+        ...baseResult,
+        templateRequest: {
+          layout: 'event',
+          textFields: { headline: 'Noche de Observación' },
+        },
+        templateAssets: {
+          backgroundSource: {
+            mode: 'stock',
+            backgroundId: 'telescope-nebula',
+          },
+        },
+      }).success
+    ).toBe(true)
+  })
+
+  test('GenerateInputSchema rejects event_promotion without logistics', () => {
+    const parsed = GenerateInputSchema.safeParse({
+      userId: 'user-1',
+      userEmail: 'test@example.com',
+      intent: 'Promover',
+      topic: 'Evento',
+      platforms: ['instagram'],
+      contentType: 'event_promotion',
+      eventDetails: { name: 'Solo nombre' },
+    })
+    expect(parsed.success).toBe(false)
+  })
+
+  test('GenerateInputSchema preserves observation_night as a distinct event type', () => {
+    const base = {
+      userId: 'user-1',
+      userEmail: 'test@example.com',
+      intent: 'Invitar al público',
+      topic: 'Noche de Observación',
+      platforms: ['instagram'],
+      contentType: 'observation_night',
+      cta: 'Confirma tu asistencia',
+      eventDetails: {
+        name: 'Noche de Observación',
+        date: '2026-08-15',
+        time: '19:30',
+        location: 'Cabo Rojo',
+      },
+    }
+
+    expect(GenerateInputSchema.safeParse(base).success).toBe(true)
+    expect(
+      GenerateInputSchema.safeParse({
+        ...base,
+        eventDetails: { ...base.eventDetails, name: 'Promoción de evento' },
+      }).success
+    ).toBe(false)
   })
 })
 

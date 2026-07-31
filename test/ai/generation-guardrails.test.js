@@ -88,7 +88,7 @@ describe('applyGenerationGuardrails', () => {
     expect(result.drafts.map((d) => d.platform)).toEqual(['instagram', 'x'])
     // Missing platform gets an explicit placeholder draft.
     const xDraft = result.drafts.find((d) => d.platform === 'x')
-    expect(xDraft.draftText).toBe('')
+    expect(xDraft.draftText).toBe('Generación no disponible. Completa este borrador manualmente.')
     expect(xDraft.missingInformation).toContain('Borrador ausente; completar manualmente.')
     expect(AiGenerationResultSchema.safeParse(result).success).toBe(true)
   })
@@ -182,6 +182,33 @@ describe('applyGenerationGuardrails', () => {
     // Provided details are not flagged.
     expect(fbDraft.missingInformation.some((item) => /nombre/i.test(item))).toBe(false)
     expect(fbDraft.missingInformation.some((item) => /fecha/i.test(item))).toBe(false)
+  })
+
+  test('observation_night retains its type while applying event guardrails', () => {
+    const input = {
+      ...baseInput,
+      platforms: ['facebook'],
+      contentType: 'observation_night',
+      eventDetails: {
+        name: 'Noche de Observación',
+        date: '2026-08-01',
+        time: '20:00',
+        location: 'Cabo Rojo',
+      },
+      cta: 'Acompáñanos',
+    }
+
+    const result = applyGenerationGuardrails(
+      {
+        drafts: [draft('facebook', { contentType: 'event_promotion' })],
+        recommendedNextStep: 'Validar.',
+        humanReviewRequired: true,
+      },
+      input
+    )
+
+    expect(result.drafts[0].contentType).toBe('observation_night')
+    expect(result.drafts[0].missingInformation).toEqual([])
   })
 
   test('event_promotion does not duplicate missing details already listed by the model', () => {

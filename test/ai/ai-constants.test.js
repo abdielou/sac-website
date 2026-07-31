@@ -1,12 +1,15 @@
 import {
   PLATFORMS,
   CONTENT_TYPES,
+  OBSERVATION_NIGHT_CONTENT_TYPE,
+  OBSERVATION_NIGHT_LABEL,
   PLATFORM_LABELS,
   CONTENT_TYPE_LABELS,
   IMAGE_CONTENT_TYPES,
   PLATFORM_MEDIA_POSTURE,
   contentTypeAcceptsImages,
   contentTypeRequiresImages,
+  isEventContentType,
   shouldGenerateImagePrompt,
 } from '../../lib/ai-constants'
 
@@ -18,7 +21,12 @@ describe('ai-constants', () => {
     }
   })
 
-  test('CONTENT_TYPES has labels for every type', () => {
+  test('CONTENT_TYPES has a generic label for every supported type', () => {
+    expect(OBSERVATION_NIGHT_CONTENT_TYPE).toBe('observation_night')
+    expect(CONTENT_TYPE_LABELS[OBSERVATION_NIGHT_CONTENT_TYPE]).toBe(OBSERVATION_NIGHT_LABEL)
+    expect(isEventContentType(OBSERVATION_NIGHT_CONTENT_TYPE)).toBe(true)
+    expect(isEventContentType('event_promotion')).toBe(true)
+    expect(CONTENT_TYPE_LABELS.event_promotion).toBe('Promoción de evento')
     expect(CONTENT_TYPES.length).toBeGreaterThan(0)
     for (const ct of CONTENT_TYPES) {
       expect(CONTENT_TYPE_LABELS[ct]).toBeTruthy()

@@ -1,7 +1,18 @@
 import { fetch, getWorkflowMetadata } from 'workflow'
 import { z } from 'zod'
-import { CONTENT_TYPES, PLATFORMS, shouldGenerateImagePrompt } from '../../../lib/ai-constants'
-import { resolveGenerationGuidelinesForRequest } from '../../../lib/ai-guidelines'
+import {
+  CONTENT_TYPES,
+  GENERATION_INPUT_LIMITS,
+  OBSERVATION_NIGHT_CONTENT_TYPE,
+  OBSERVATION_NIGHT_LABEL,
+  PLATFORMS,
+  isEventContentType,
+  shouldGenerateImagePrompt,
+} from '../../../lib/ai-constants'
+import {
+  getActiveGuidelines,
+  resolveGenerationGuidelinesFromDocument,
+} from '../../../lib/ai-guidelines'
 import {
   buildOpenRouterChatBody,
   extractOpenRouterUsage,
@@ -10,70 +21,296 @@ import {
 import {
   applyImageAssetFallbackToDraft,
   buildGeneratedImageAsset,
+  getImageGenerationConfig,
   parseOpenRouterImageResponse,
-  recordImageGenerationSpend,
-  resolveImageGenerationGate,
 } from '../../../lib/ai-image-generation'
 import { buildGenerationHistoryRecord } from '../../../lib/ai-run-history'
 import { persistRunHistory } from '../../../lib/run-history-store'
+import { getBackgroundById } from '../../../lib/social-template/backgroundCatalog'
+import { attachTemplateRequestsToResult } from '../../../lib/social-template/buildTemplateTextFields'
+import {
+  SPONSOR_MAX_BYTES,
+  validateSponsorLogo,
+} from '../../../lib/social-template/eventFormHelpers'
+import { resolveTemplateLayoutId } from '../../../lib/social-template/templateLayouts'
+
+const OPENROUTER_TEXT_TIMEOUT_MS = 30_000
+const OPENROUTER_IMAGE_TIMEOUT_MS = 60_000
+const OPENROUTER_TEXT_MAX_TOKENS = 2_000
+const OPENROUTER_IMAGE_MAX_TOKENS = 2_048
 
 // ---------- Generation schemas (Phase 2A text; Phase 2D prompts; Phase 2E assets) ----------
 
-export const AiGeneratedImageSchema = z.object({
-  assetId: z.string(),
-  status: z.enum(['draft', 'failed']),
-  rationale: z.string().optional(),
-  mimeType: z.string().optional(),
-  dataUrl: z.string().optional(),
-  downloadFileName: z.string().optional(),
-  error: z.string().optional(),
-})
+const MAX_SPONSOR_DATA_URL_LENGTH = Math.ceil((SPONSOR_MAX_BYTES * 4) / 3) + 128
+const MAX_PLATFORM_INPUTS = PLATFORMS.length * 4
 
-export const AiDraftVariantSchema = z.object({
-  platform: z.enum(PLATFORMS),
-  contentType: z.string(),
-  draftText: z.string(),
-  rationale: z.string().optional(),
-  assumptions: z.array(z.string()).optional(),
-  missingInformation: z.array(z.string()).optional(),
-  imagePrompt: z.string().optional(),
-  imageRationale: z.string().optional(),
-  generatedImages: z.array(AiGeneratedImageSchema).optional(),
-})
+const boundedRequiredString = (max) => z.string().trim().min(1).max(max)
+const boundedOptionalString = (max) => boundedRequiredString(max).optional()
+const boundedStringList = z
+  .array(boundedRequiredString(GENERATION_INPUT_LIMITS.listItem))
+  .max(GENERATION_INPUT_LIMITS.listItems)
 
-const AiImagePromptEntrySchema = z.object({
-  platform: z.enum(PLATFORMS),
-  imagePrompt: z.string(),
-  imageRationale: z.string().optional(),
-})
+export const AiGeneratedImageSchema = z
+  .object({
+    assetId: boundedRequiredString(200),
+    status: z.enum(['draft', 'failed']),
+    rationale: boundedOptionalString(4000),
+    mimeType: boundedOptionalString(100),
+    dataUrl: boundedOptionalString(20_000_000),
+    downloadFileName: boundedOptionalString(255),
+    error: boundedOptionalString(1000),
+  })
+  .strict()
 
-export const AiImagePromptsResultSchema = z.object({
-  imagePrompts: z.array(AiImagePromptEntrySchema),
-})
+const AiSponsorLogoSchema = z
+  .object({
+    dataUrl: boundedRequiredString(MAX_SPONSOR_DATA_URL_LENGTH),
+    mimeType: z.enum(['image/png', 'image/jpeg', 'image/jpg', 'image/webp']).optional(),
+    fileName: boundedOptionalString(GENERATION_INPUT_LIMITS.sponsorFileName),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    const validation = validateSponsorLogo(value)
+    if (!validation.ok) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: validation.error,
+        path: ['dataUrl'],
+      })
+    }
+  })
 
-export const AiGenerationResultSchema = z.object({
-  drafts: z.array(AiDraftVariantSchema).min(1),
-  recommendedNextStep: z.string(),
-  humanReviewRequired: z.literal(true),
-})
+const AiTemplateRequestSchema = z
+  .object({
+    layout: z.enum(['event', 'simple']),
+    textFields: z
+      .object({
+        headline: boundedRequiredString(500),
+        subtitle: boundedOptionalString(1000),
+        body: boundedOptionalString(1000),
+        dateLabel: boundedOptionalString(100),
+        timeLabel: boundedOptionalString(100),
+        locationLabel: boundedOptionalString(500),
+        weatherDisclaimer: boundedOptionalString(500),
+      })
+      .strict(),
+  })
+  .strict()
 
-export const GenerateInputSchema = z.object({
-  userId: z.string(),
-  userEmail: z.string().email(),
-  intent: z.string().min(1),
-  topic: z.string().min(1),
-  platforms: z.array(z.enum(PLATFORMS)).min(1).max(3),
-  contentType: z.enum(CONTENT_TYPES),
-  tone: z.string().optional(),
-  audience: z.string().optional(),
-  cta: z.string().optional(),
-  knownFacts: z.array(z.string()).optional(),
-  eventDetails: z.record(z.any()).optional(),
-  hashtags: z.array(z.string()).optional(),
-  links: z.array(z.string()).optional(),
-  imageStyle: z.string().optional(),
-  imageConstraints: z.string().optional(),
-})
+const AiTemplateBackgroundSourceSchema = z
+  .object({
+    mode: z.enum(['stock', 'ai_generated']),
+    backgroundId: boundedOptionalString(100),
+    dataUrl: boundedOptionalString(20_000_000),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.mode === 'stock' && !value.backgroundId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'backgroundId es obligatorio para fondos stock',
+        path: ['backgroundId'],
+      })
+    }
+    if (value.mode === 'ai_generated' && !value.dataUrl) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'dataUrl es obligatorio para fondos generados',
+        path: ['dataUrl'],
+      })
+    }
+  })
+
+const AiTemplateAssetsSchema = z
+  .object({
+    backgroundSource: AiTemplateBackgroundSourceSchema,
+    sponsorLogo: AiSponsorLogoSchema.optional(),
+  })
+  .strict()
+
+export const AiDraftVariantSchema = z
+  .object({
+    platform: z.enum(PLATFORMS),
+    contentType: z.enum(CONTENT_TYPES),
+    draftText: boundedRequiredString(20_000),
+    rationale: boundedOptionalString(4000),
+    assumptions: z.array(boundedRequiredString(2000)).max(50).optional(),
+    missingInformation: z.array(boundedRequiredString(2000)).max(50).optional(),
+    imagePrompt: boundedOptionalString(20_000),
+    imageRationale: boundedOptionalString(4000),
+  })
+  .strict()
+
+const AiImagePromptEntrySchema = z
+  .object({
+    platform: z.enum(PLATFORMS),
+    imagePrompt: boundedRequiredString(20_000),
+    imageRationale: boundedOptionalString(4000),
+  })
+  .strict()
+
+export const AiImagePromptsResultSchema = z
+  .object({
+    imagePrompts: z.array(AiImagePromptEntrySchema).min(1).max(PLATFORMS.length),
+  })
+  .strict()
+
+export const AiGenerationResultSchema = z
+  .object({
+    drafts: z.array(AiDraftVariantSchema).min(1).max(PLATFORMS.length),
+    recommendedNextStep: boundedRequiredString(4000),
+    humanReviewRequired: z.literal(true),
+    generatedImage: AiGeneratedImageSchema.optional(),
+    templateRequest: AiTemplateRequestSchema.optional(),
+    templateAssets: AiTemplateAssetsSchema.optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (Boolean(value.templateRequest) !== Boolean(value.templateAssets)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'templateRequest y templateAssets deben estar presentes juntos',
+        path: ['templateRequest'],
+      })
+    }
+  })
+
+function isValidIsoCalendarDate(value) {
+  const [year, month, day] = value.split('-').map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day))
+  return (
+    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+  )
+}
+
+const EventDateSchema = boundedRequiredString(GENERATION_INPUT_LIMITS.eventDate)
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'La fecha debe usar el formato YYYY-MM-DD')
+  .refine(isValidIsoCalendarDate, 'La fecha no es válida')
+
+const EventTimeSchema = boundedRequiredString(GENERATION_INPUT_LIMITS.eventTime)
+  .regex(/^\d{2}:\d{2}$/, 'La hora debe usar el formato HH:MM')
+  .refine((value) => {
+    const [hours, minutes] = value.split(':').map(Number)
+    return hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59
+  }, 'La hora no es válida')
+
+const EventDetailsSchema = z
+  .object({
+    name: boundedRequiredString(GENERATION_INPUT_LIMITS.eventName),
+    date: EventDateSchema,
+    time: EventTimeSchema,
+    location: boundedRequiredString(GENERATION_INPUT_LIMITS.eventLocation),
+  })
+  .strict()
+
+const NormalizedPlatformsSchema = z
+  .array(z.enum(PLATFORMS))
+  .min(1)
+  .max(MAX_PLATFORM_INPUTS)
+  .transform((platforms) => [...new Set(platforms)])
+  .refine((platforms) => platforms.length <= PLATFORMS.length, {
+    message: `Máximo ${PLATFORMS.length} plataformas`,
+  })
+
+export const GenerateInputSchema = z
+  .object({
+    userId: boundedRequiredString(256),
+    userEmail: z.string().trim().email().max(254),
+    intent: boundedRequiredString(GENERATION_INPUT_LIMITS.intent),
+    topic: boundedRequiredString(GENERATION_INPUT_LIMITS.topic),
+    platforms: NormalizedPlatformsSchema,
+    contentType: z.enum(CONTENT_TYPES),
+    tone: boundedOptionalString(GENERATION_INPUT_LIMITS.tone),
+    audience: boundedOptionalString(GENERATION_INPUT_LIMITS.audience),
+    cta: boundedOptionalString(GENERATION_INPUT_LIMITS.cta),
+    knownFacts: boundedStringList.optional(),
+    eventDetails: EventDetailsSchema.optional(),
+    hashtags: boundedStringList.optional(),
+    links: boundedStringList.optional(),
+    imageStyle: boundedOptionalString(GENERATION_INPUT_LIMITS.imageStyle),
+    imageConstraints: boundedOptionalString(GENERATION_INPUT_LIMITS.imageConstraints),
+    backgroundMode: z.enum(['stock', 'ai_generated']).optional(),
+    backgroundId: boundedOptionalString(100),
+    sponsorLogo: AiSponsorLogoSchema.optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (isEventContentType(value.contentType)) {
+      if (!value.eventDetails) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `eventDetails es obligatorio para ${value.contentType}`,
+          path: ['eventDetails'],
+        })
+      }
+      if (!value.cta) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `cta es obligatorio para ${value.contentType}`,
+          path: ['cta'],
+        })
+      }
+    }
+
+    if (
+      value.contentType === OBSERVATION_NIGHT_CONTENT_TYPE &&
+      value.eventDetails &&
+      value.eventDetails.name !== OBSERVATION_NIGHT_LABEL
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `El nombre debe coincidir con la etiqueta canónica vigente (${OBSERVATION_NIGHT_LABEL}) para ${OBSERVATION_NIGHT_CONTENT_TYPE}`,
+        path: ['eventDetails', 'name'],
+      })
+    }
+
+    if (value.backgroundMode && !resolveTemplateLayoutId(value.contentType)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'El tipo de contenido no admite plantilla visual',
+        path: ['backgroundMode'],
+      })
+    }
+
+    if (value.backgroundMode === 'stock') {
+      if (!value.backgroundId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'backgroundId es obligatorio cuando backgroundMode es stock',
+          path: ['backgroundId'],
+        })
+      } else if (!getBackgroundById(value.backgroundId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Fondo stock desconocido',
+          path: ['backgroundId'],
+        })
+      }
+    } else if (value.backgroundId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'backgroundId solo se admite con backgroundMode stock',
+        path: ['backgroundId'],
+      })
+    }
+
+    if (value.sponsorLogo) {
+      if (!isEventContentType(value.contentType)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'sponsorLogo solo se admite para publicaciones de eventos',
+          path: ['sponsorLogo'],
+        })
+      }
+      if (!value.backgroundMode) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'sponsorLogo requiere una plantilla visual',
+          path: ['sponsorLogo'],
+        })
+      }
+    }
+  })
 
 function extractFirstJsonObject(text) {
   const cleaned = text
@@ -100,7 +337,7 @@ export function buildFallbackGenerationResult(input, reason) {
     drafts: platforms.map((platform) => ({
       platform,
       contentType,
-      draftText: '',
+      draftText: 'Generación no disponible. Completa este borrador manualmente.',
       rationale: `No fue posible generar automáticamente: ${reason}.`,
       assumptions: [],
       missingInformation: [
@@ -142,7 +379,7 @@ function hasApprovalClaim(text) {
  * - exactly one draft per requested platform (requested contentType enforced)
  * - assumptions/missingInformation always arrays
  * - approval-claim phrases flagged for human review (never silently rewritten)
- * - event_promotion: unprovided event details surfaced in missingInformation
+ * - event-oriented content: unprovided event details surfaced in missingInformation
  * - X drafts over the character limit flagged
  * - humanReviewRequired always true
  *
@@ -153,14 +390,13 @@ export function applyGenerationGuardrails(result, input) {
     (Array.isArray(result?.drafts) ? result.drafts : []).map((d) => [d.platform, d])
   )
 
-  const missingEventDetails =
-    input.contentType === 'event_promotion'
-      ? EVENT_DETAIL_CHECKS.filter((check) => {
-          const value = input.eventDetails?.[check.field]
-          return !(typeof value === 'string' && value.trim())
-        })
-      : []
-  const missingCta = input.contentType === 'event_promotion' && !input.cta
+  const missingEventDetails = isEventContentType(input.contentType)
+    ? EVENT_DETAIL_CHECKS.filter((check) => {
+        const value = input.eventDetails?.[check.field]
+        return !(typeof value === 'string' && value.trim())
+      })
+    : []
+  const missingCta = isEventContentType(input.contentType) && !input.cta
 
   const drafts = input.platforms.map((platform) => {
     const existing = byPlatform.get(platform)
@@ -169,7 +405,7 @@ export function applyGenerationGuardrails(result, input) {
       return {
         platform,
         contentType: input.contentType,
-        draftText: '',
+        draftText: 'Generación no disponible. Completa este borrador manualmente.',
         rationale: 'No se generó borrador para esta plataforma.',
         assumptions: [],
         missingInformation: ['Borrador ausente; completar manualmente.'],
@@ -210,7 +446,6 @@ export function applyGenerationGuardrails(result, input) {
       missingInformation,
       imagePrompt: existing.imagePrompt,
       imageRationale: existing.imageRationale,
-      generatedImages: existing.generatedImages,
     }
   })
 
@@ -369,17 +604,6 @@ async function validatePayloadStep(input) {
     return {
       ok: false,
       reason: 'Input inválido (schema)',
-      fallback: buildFallbackGenerationResult(
-        {
-          userId: input.userId || 'unknown',
-          userEmail: input.userEmail || 'unknown@example.com',
-          intent: input.intent || '',
-          topic: input.topic || '',
-          platforms: input.platforms,
-          contentType: input.contentType,
-        },
-        'Input inválido'
-      ),
     }
   }
 
@@ -388,21 +612,17 @@ async function validatePayloadStep(input) {
 
 async function loadGuidelinesStep(input) {
   'use step'
+  const active = await getActiveGuidelines()
   const byPlatform = {}
   for (const platform of input.platforms) {
-    byPlatform[platform] = await resolveGenerationGuidelinesForRequest({
+    byPlatform[platform] = resolveGenerationGuidelinesFromDocument(active, {
       platform,
       contentType: input.contentType,
     })
   }
 
-  const version =
-    byPlatform[input.platforms[0]]?.version ||
-    Object.values(byPlatform)[0]?.version ||
-    'mvp-default-v1'
-
   return {
-    version,
+    version: active?.version || 'mvp-default-v1',
     platforms: byPlatform,
   }
 }
@@ -505,20 +725,22 @@ Input (JSON): ${JSON.stringify(userText)}`,
   const attempt = async () => {
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
+      signal: AbortSignal.timeout(OPENROUTER_TEXT_TIMEOUT_MS),
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         ...(siteUrl ? { 'HTTP-Referer': siteUrl } : null),
         ...(openRouterTitle ? { 'X-OpenRouter-Title': openRouterTitle } : null),
       },
-      body: JSON.stringify(
-        buildOpenRouterChatBody({
+      body: JSON.stringify({
+        ...buildOpenRouterChatBody({
           model,
           messages,
           temperature: 0.4,
           forceJson: true,
-        })
-      ),
+        }),
+        max_tokens: OPENROUTER_TEXT_MAX_TOKENS,
+      }),
     })
 
     if (!res.ok) {
@@ -613,24 +835,40 @@ async function generateImagePromptsStep(input, textResult, guidelines) {
   const openRouterTitle = process.env.OPENROUTER_TITLE
   const firstPlatformGuidelines = guidelines.platforms[input.platforms[0]] || {}
 
-  const platformSections = input.platforms
-    .map((platform) => {
-      const rules = guidelines.platforms[platform]?.platform || 'Reglas generales de plataforma.'
-      return `- ${platform}: ${rules}`
-    })
-    .join('\n')
+  const backdropOnlyRules =
+    input.backgroundMode === 'ai_generated'
+      ? `
+Reglas adicionales (fondo para plantilla):
+- Describe un fondo visual limpio apto para sobreimpresionar texto después.
+- SIN texto, SIN logos, SIN captions, SIN tipografía, SIN marcas de agua en la imagen.
+- Espacio negativo central amplio para tipografía; atmósfera astronómica / Caribe coherente con SAC.
+`
+      : ''
+
+  const isEvent = isEventContentType(input.contentType)
+
+  const posterTextBlock = isEvent
+    ? `
+Además de imagePrompt, genera texto para el afiche del evento:
+- "posterSubtitle": frase corta (max 80 chars) que acompañe el titular en el afiche. Ejemplo: "Acompáñanos bajo las estrellas en Pitahaya, Cabo Rojo."
+- "posterBody": 1-2 oraciones breves (max 140 chars) descriptivas para el afiche. Ejemplo: "Una noche para mirar al cielo, aprender y disfrutar la astronomía en comunidad."
+NO inventes fechas, horarios, lugares, costos ni enlaces que no estén en los datos provistos.
+`
+    : ''
 
   const systemPrompt = `Eres un generador de prompts de imagen para borradores de redes sociales de SAC (Sociedad de Astronomía del Caribe).
+SAC publica la MISMA imagen en todas las redes sociales. Genera UN SOLO prompt visual compartido.
 Devuelve EXACTAMENTE un objeto JSON (sin texto adicional, sin markdown) con esta forma:
 
 {
-  "imagePrompts": [
-    {
-      "platform": "x" | "instagram" | "facebook",
-      "imagePrompt": string (inglés o español, descripción visual para generador de imágenes),
-      "imageRationale": string (español, por qué el prompt apoya el borrador)
-    }
-  ]
+  "sharedImagePrompt": string (inglés o español, descripción visual para generador de imágenes),
+  "sharedImageRationale": string (español, por qué el prompt apoya los borradores)${
+    isEvent
+      ? `,
+  "posterSubtitle": string (español, subtítulo corto para el afiche),
+  "posterBody": string (español, párrafo descriptivo breve para el afiche)`
+      : ''
+  }
 }
 
 GUÍAS DE SAC (versión ${guidelines.version}) — cúmplelas al redactar prompts:
@@ -640,9 +878,6 @@ ${firstPlatformGuidelines.imagePrompt || ''}
 
 [Globales]
 ${firstPlatformGuidelines.global || ''}
-
-[Por plataforma]
-${platformSections}
 
 [Tipo de contenido]
 ${firstPlatformGuidelines.contentType || ''}
@@ -654,14 +889,14 @@ ${firstPlatformGuidelines.prohibited || ''}
 ${firstPlatformGuidelines.imageValidation || ''}
 
 Reglas:
-- Incluye exactamente un imagePrompt por cada plataforma en la solicitud.
-- Alinea cada prompt con el borrador de texto de esa plataforma y el tema; NO inventes hechos no provistos.
+- Genera UN SOLO imagePrompt compartido para todas las plataformas.
+- Alinea el prompt con el tema y los borradores de texto; NO inventes hechos no provistos.
 - NO personas identificables, menores, datos privados, logos oficiales ni estilos con copyright.
 - NO fechas, horarios, lugares, costos ni enlaces específicos que no estén en los datos provistos.
-- Incluye restricciones de seguridad explícitas en cada imagePrompt.
+- Incluye restricciones de seguridad explícitas en el imagePrompt.
 - Respeta imageStyle e imageConstraints del usuario cuando estén provistos.
 - NO generes assets de imagen; solo el prompt de texto.
-`
+${posterTextBlock}${backdropOnlyRules}`
 
   const userPayload = {
     intent: input.intent,
@@ -683,7 +918,7 @@ Reglas:
     { role: 'system', content: systemPrompt },
     {
       role: 'user',
-      content: `Generar imagePrompt e imageRationale por plataforma.
+      content: `Generar un imagePrompt compartido${isEvent ? ' y texto del afiche' : ''}.
 Input (JSON): ${JSON.stringify(userPayload)}`,
     },
   ]
@@ -691,20 +926,22 @@ Input (JSON): ${JSON.stringify(userPayload)}`,
   const attempt = async () => {
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
+      signal: AbortSignal.timeout(OPENROUTER_TEXT_TIMEOUT_MS),
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         ...(siteUrl ? { 'HTTP-Referer': siteUrl } : null),
         ...(openRouterTitle ? { 'X-OpenRouter-Title': openRouterTitle } : null),
       },
-      body: JSON.stringify(
-        buildOpenRouterChatBody({
+      body: JSON.stringify({
+        ...buildOpenRouterChatBody({
           model,
           messages,
           temperature: 0.3,
           forceJson: true,
-        })
-      ),
+        }),
+        max_tokens: OPENROUTER_TEXT_MAX_TOKENS,
+      }),
     })
 
     if (!res.ok) {
@@ -728,17 +965,47 @@ Input (JSON): ${JSON.stringify(userPayload)}`,
       throw err
     }
 
-    const validated = AiImagePromptsResultSchema.parse(json)
-    const result = mergeImagePromptsIntoResult(textResult, validated.imagePrompts, input)
+    const sharedPrompt = json.sharedImagePrompt || json.imagePrompt
+    const sharedRationale = json.sharedImageRationale || json.imageRationale || ''
+    if (!sharedPrompt || typeof sharedPrompt !== 'string') {
+      const err = new Error('Respuesta sin sharedImagePrompt')
+      err.usage = usage
+      throw err
+    }
 
-    return { result, usage }
+    const imagePrompts = input.platforms.map((platform) => ({
+      platform,
+      imagePrompt: sharedPrompt,
+      imageRationale: sharedRationale,
+    }))
+
+    const result = mergeImagePromptsIntoResult(textResult, imagePrompts, input)
+
+    const posterText =
+      isEvent && (json.posterSubtitle || json.posterBody)
+        ? {
+            subtitle:
+              typeof json.posterSubtitle === 'string'
+                ? json.posterSubtitle.slice(0, 120)
+                : undefined,
+            body: typeof json.posterBody === 'string' ? json.posterBody.slice(0, 200) : undefined,
+          }
+        : undefined
+
+    return { result, usage, posterText }
   }
 
   let accumulatedUsage = null
 
   try {
     const first = await attempt()
-    return { ok: true, skipped: false, result: first.result, usage: first.usage }
+    return {
+      ok: true,
+      skipped: false,
+      result: first.result,
+      usage: first.usage,
+      posterText: first.posterText,
+    }
   } catch (err1) {
     accumulatedUsage = mergeOpenRouterUsage(accumulatedUsage, err1?.usage || null)
     try {
@@ -748,6 +1015,7 @@ Input (JSON): ${JSON.stringify(userPayload)}`,
         skipped: false,
         result: second.result,
         usage: mergeOpenRouterUsage(accumulatedUsage, second.usage),
+        posterText: second.posterText,
       }
     } catch (err2) {
       accumulatedUsage = mergeOpenRouterUsage(accumulatedUsage, err2?.usage || null)
@@ -772,129 +1040,185 @@ Input (JSON): ${JSON.stringify(userPayload)}`,
   }
 }
 
-const IMAGE_GATE_REASON_MESSAGES = {
-  missing_api_key: 'falta configuración del provider',
-  monthly_spend_ceiling: 'límite mensual de gasto alcanzado',
-  run_cost_limit: 'límite de costo por ejecución alcanzado',
-}
-
-async function generateImageAssetsStep(input, promptResult, priorUsage) {
+async function generateImageAssetsStep(input, promptResult) {
   'use step'
 
   if (!shouldGenerateImagePrompt(input.contentType, input)) {
     return { ok: true, skipped: true, result: promptResult, usage: null }
   }
 
-  const runCostUsd = priorUsage?.cost?.amount || 0
-  const initialGate = resolveImageGenerationGate({ accumulatedRunCostUsd: runCostUsd })
-  if (!initialGate.allowed) {
+  const draftWithPrompt = promptResult.drafts.find((d) => d.imagePrompt?.trim())
+  if (!draftWithPrompt) {
+    return { ok: true, skipped: true, result: promptResult, usage: null }
+  }
+
+  const apiKey = process.env.OPENROUTER_API_KEY
+  const model = getImageGenerationConfig().model
+  const siteUrl = process.env.OPENROUTER_SITE_URL
+  const openRouterTitle = process.env.OPENROUTER_TITLE
+
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      signal: AbortSignal.timeout(OPENROUTER_IMAGE_TIMEOUT_MS),
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        ...(siteUrl ? { 'HTTP-Referer': siteUrl } : null),
+        ...(openRouterTitle ? { 'X-OpenRouter-Title': openRouterTitle } : null),
+      },
+      body: JSON.stringify({
+        ...buildOpenRouterChatBody({
+          model,
+          messages: [
+            {
+              role: 'user',
+              content: `Genera una sola imagen de borrador para redes sociales de SAC a partir de este prompt. No inventes hechos no incluidos.\n\n${draftWithPrompt.imagePrompt}`,
+            },
+          ],
+          modalities: ['image', 'text'],
+        }),
+        max_tokens: OPENROUTER_IMAGE_MAX_TOKENS,
+      }),
+    })
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`OpenRouter HTTP ${res.status}: ${text}`)
+    }
+
+    const data = await res.json()
+    const parsedImage = parseOpenRouterImageResponse(data)
+    const usage = extractOpenRouterUsage(data, model)
+
+    if (!parsedImage?.dataUrl) {
+      throw new Error('Respuesta del provider sin imagen')
+    }
+
+    const asset = buildGeneratedImageAsset({
+      dataUrl: parsedImage.dataUrl,
+      mimeType: parsedImage.mimeType,
+      rationale:
+        draftWithPrompt.imageRationale ||
+        'Borrador visual compartido generado a partir del prompt.',
+    })
+
     return {
       ok: true,
-      skipped: true,
-      skippedReason: initialGate.reason,
-      result: promptResult,
+      skipped: false,
+      result: AiGenerationResultSchema.parse({
+        ...promptResult,
+        generatedImage: asset,
+        humanReviewRequired: true,
+      }),
+      usage,
+    }
+  } catch (err) {
+    const updatedDrafts = promptResult.drafts.map((draft) =>
+      applyImageAssetFallbackToDraft(draft, err?.message || 'fallo del provider')
+    )
+
+    return {
+      ok: true,
+      skipped: false,
+      result: AiGenerationResultSchema.parse({
+        ...promptResult,
+        drafts: updatedDrafts,
+        humanReviewRequired: true,
+      }),
       usage: null,
+    }
+  }
+}
+
+/**
+ * Generate one shared clean backdrop for template mode (ai_generated).
+ * Uses the first draft's imagePrompt; result is attached later via attachTemplateRequestsToResult.
+ */
+async function generateSharedBackdropStep(input, promptResult) {
+  'use step'
+
+  const draftWithPrompt = (promptResult.drafts || []).find((d) => d.imagePrompt?.trim())
+  if (!draftWithPrompt) {
+    return {
+      ok: false,
+      skipped: true,
+      skippedReason: 'missing_image_prompt',
+      backdropDataUrl: null,
+      usage: null,
+      result: promptResult,
     }
   }
 
   const apiKey = process.env.OPENROUTER_API_KEY
-  const model = initialGate.config.model
+  const model = getImageGenerationConfig().model
   const siteUrl = process.env.OPENROUTER_SITE_URL
   const openRouterTitle = process.env.OPENROUTER_TITLE
 
-  let accumulatedUsage = null
-  let accumulatedImageCost = 0
-  const updatedDrafts = []
+  const backdropPrompt = `${draftWithPrompt.imagePrompt}
 
-  for (const draft of promptResult.drafts) {
-    if (!draft.imagePrompt?.trim()) {
-      updatedDrafts.push(draft)
-      continue
-    }
+Clean background only for a social media template overlay. No text, no logos, no captions, no typography baked into the image. Wide open negative space for headline text.`
 
-    const gate = resolveImageGenerationGate({
-      accumulatedRunCostUsd: runCostUsd + accumulatedImageCost,
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      signal: AbortSignal.timeout(OPENROUTER_IMAGE_TIMEOUT_MS),
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        ...(siteUrl ? { 'HTTP-Referer': siteUrl } : null),
+        ...(openRouterTitle ? { 'X-OpenRouter-Title': openRouterTitle } : null),
+      },
+      body: JSON.stringify({
+        ...buildOpenRouterChatBody({
+          model,
+          messages: [
+            {
+              role: 'user',
+              content: `Genera una sola imagen de fondo limpio para plantilla de redes sociales de SAC.\n\n${backdropPrompt}`,
+            },
+          ],
+          modalities: ['image', 'text'],
+        }),
+        max_tokens: OPENROUTER_IMAGE_MAX_TOKENS,
+      }),
     })
-    if (!gate.allowed) {
-      updatedDrafts.push(
-        applyImageAssetFallbackToDraft(
-          draft,
-          IMAGE_GATE_REASON_MESSAGES[gate.reason] || gate.reason
-        )
-      )
-      continue
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`OpenRouter HTTP ${res.status}: ${text}`)
     }
 
-    try {
-      // Same OPENROUTER_MODEL as text steps; multimodal models return images via chat completions.
-      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          ...(siteUrl ? { 'HTTP-Referer': siteUrl } : null),
-          ...(openRouterTitle ? { 'X-OpenRouter-Title': openRouterTitle } : null),
-        },
-        body: JSON.stringify(
-          buildOpenRouterChatBody({
-            model,
-            messages: [
-              {
-                role: 'user',
-                content: `Genera una sola imagen de borrador para redes sociales de SAC a partir de este prompt. No inventes hechos no incluidos.\n\n${draft.imagePrompt}`,
-              },
-            ],
-            modalities: ['image', 'text'],
-          })
-        ),
-      })
+    const data = await res.json()
+    const parsedImage = parseOpenRouterImageResponse(data)
+    const usage = extractOpenRouterUsage(data, model)
 
-      if (!res.ok) {
-        const text = await res.text().catch(() => '')
-        throw new Error(`OpenRouter HTTP ${res.status}: ${text}`)
-      }
-
-      const data = await res.json()
-      const parsedImage = parseOpenRouterImageResponse(data)
-      const usage = extractOpenRouterUsage(data, model)
-      accumulatedUsage = mergeOpenRouterUsage(accumulatedUsage, usage)
-
-      if (usage?.cost?.amount) {
-        accumulatedImageCost += usage.cost.amount
-        recordImageGenerationSpend(usage.cost.amount)
-      }
-
-      if (!parsedImage?.dataUrl) {
-        throw new Error('Respuesta del provider sin imagen')
-      }
-
-      const asset = buildGeneratedImageAsset({
-        platform: draft.platform,
-        dataUrl: parsedImage.dataUrl,
-        mimeType: parsedImage.mimeType,
-        rationale: draft.imageRationale || 'Borrador visual generado a partir del prompt.',
-      })
-
-      updatedDrafts.push({
-        ...draft,
-        generatedImages: [asset],
-      })
-    } catch (err) {
-      updatedDrafts.push(
-        applyImageAssetFallbackToDraft(draft, err?.message || 'fallo del provider')
-      )
+    if (!parsedImage?.dataUrl) {
+      throw new Error('Respuesta del provider sin imagen')
     }
-  }
 
-  return {
-    ok: true,
-    skipped: false,
-    result: AiGenerationResultSchema.parse({
-      ...promptResult,
-      drafts: updatedDrafts,
-      humanReviewRequired: true,
-    }),
-    usage: accumulatedUsage,
+    return {
+      ok: true,
+      skipped: false,
+      backdropDataUrl: parsedImage.dataUrl,
+      usage,
+      result: promptResult,
+    }
+  } catch (err) {
+    const drafts = promptResult.drafts.map((draft) =>
+      applyImageAssetFallbackToDraft(draft, err?.message || 'fallo del provider (fondo)')
+    )
+    return {
+      ok: false,
+      skipped: false,
+      backdropDataUrl: null,
+      usage: null,
+      result: AiGenerationResultSchema.parse({
+        ...promptResult,
+        drafts,
+        humanReviewRequired: true,
+      }),
+    }
   }
 }
 
@@ -937,24 +1261,100 @@ export async function generateAiWorkflow(input) {
         guidelineVersion: null,
       })
     }
-    return { result: validatedInputResult.fallback, usage: null, guidelineVersion: null }
+    throw new Error('La solicitud de generación no es válida.')
   }
 
   const validatedInput = validatedInputResult.value
   const guidelines = await loadGuidelinesStep(validatedInput)
   const textResult = await generateTextStep(validatedInput, guidelines)
-  const imagePromptResult = await generateImagePromptsStep(
-    validatedInput,
-    textResult.result,
-    guidelines
-  )
-  const usageAfterPrompts = mergeOpenRouterUsage(textResult.usage, imagePromptResult.usage)
-  const imageAssetResult = await generateImageAssetsStep(
-    validatedInput,
-    imagePromptResult.result,
-    usageAfterPrompts
-  )
-  const usage = mergeOpenRouterUsage(usageAfterPrompts, imageAssetResult.usage)
+  if (!textResult.ok) {
+    console.error('generateAiWorkflow: text provider failed', textResult.reason)
+    if (runId) {
+      await persistGenerationHistoryStep({
+        input: validatedInput,
+        runId,
+        status: 'failed',
+        error: { message: 'provider_generation_failed', retryable: true },
+        startedAt,
+        completedAt: new Date().toISOString(),
+        guidelineVersion: guidelines.version,
+        usage: textResult.usage,
+      })
+    }
+    throw new Error('No se pudieron generar los borradores. Intenta nuevamente.')
+  }
+
+  const usesTemplate =
+    (validatedInput.backgroundMode === 'stock' ||
+      validatedInput.backgroundMode === 'ai_generated') &&
+    Boolean(resolveTemplateLayoutId(validatedInput.contentType))
+
+  let finalResult
+  let usage
+
+  if (usesTemplate && validatedInput.backgroundMode === 'stock') {
+    if (!getBackgroundById(validatedInput.backgroundId)) {
+      const drafts = textResult.result.drafts.map((draft) => ({
+        ...draft,
+        missingInformation: [
+          ...(Array.isArray(draft.missingInformation) ? draft.missingInformation : []),
+          'Fondo de plantilla inválido o no seleccionado.',
+        ],
+      }))
+      finalResult = AiGenerationResultSchema.parse({
+        ...textResult.result,
+        drafts,
+        humanReviewRequired: true,
+      })
+      usage = textResult.usage
+    } else {
+      const imagePromptResult = await generateImagePromptsStep(
+        validatedInput,
+        textResult.result,
+        guidelines
+      )
+      usage = mergeOpenRouterUsage(textResult.usage, imagePromptResult.usage)
+      finalResult = AiGenerationResultSchema.parse(
+        attachTemplateRequestsToResult(imagePromptResult.result, validatedInput, {
+          posterText: imagePromptResult.posterText,
+        })
+      )
+    }
+  } else if (usesTemplate && validatedInput.backgroundMode === 'ai_generated') {
+    const imagePromptResult = await generateImagePromptsStep(
+      validatedInput,
+      textResult.result,
+      guidelines
+    )
+    const usageAfterPrompts = mergeOpenRouterUsage(textResult.usage, imagePromptResult.usage)
+    const backdropResult = await generateSharedBackdropStep(
+      validatedInput,
+      imagePromptResult.result
+    )
+    usage = mergeOpenRouterUsage(usageAfterPrompts, backdropResult.usage)
+
+    if (backdropResult.backdropDataUrl) {
+      finalResult = AiGenerationResultSchema.parse(
+        attachTemplateRequestsToResult(backdropResult.result, validatedInput, {
+          backdropDataUrl: backdropResult.backdropDataUrl,
+          posterText: imagePromptResult.posterText,
+        })
+      )
+    } else {
+      finalResult = backdropResult.result
+    }
+  } else {
+    const imagePromptResult = await generateImagePromptsStep(
+      validatedInput,
+      textResult.result,
+      guidelines
+    )
+    const usageAfterPrompts = mergeOpenRouterUsage(textResult.usage, imagePromptResult.usage)
+    const imageAssetResult = await generateImageAssetsStep(validatedInput, imagePromptResult.result)
+    usage = mergeOpenRouterUsage(usageAfterPrompts, imageAssetResult.usage)
+    finalResult = imageAssetResult.result
+  }
+
   const completedAt = new Date().toISOString()
 
   if (runId) {
@@ -962,7 +1362,7 @@ export async function generateAiWorkflow(input) {
       input: validatedInput,
       runId,
       status: 'completed',
-      result: imageAssetResult.result,
+      result: finalResult,
       startedAt,
       completedAt,
       guidelineVersion: guidelines.version,
@@ -971,7 +1371,7 @@ export async function generateAiWorkflow(input) {
   }
 
   return {
-    result: imageAssetResult.result,
+    result: finalResult,
     usage,
     guidelineVersion: guidelines.version,
   }
