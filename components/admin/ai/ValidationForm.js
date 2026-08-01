@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  OBSERVATION_NIGHT_CONTENT_TYPE,
   contentTypeAcceptsImages,
   contentTypeRequiresImages,
+  getCanonicalEventName,
   isEventContentType,
   MAX_VALIDATION_IMAGES,
 } from '@/lib/ai-constants'
@@ -48,7 +48,7 @@ export default function ValidationForm({
   const showImages = contentTypeAcceptsImages(formState.platform, formState.contentType)
   const requiresImages = contentTypeRequiresImages(formState.platform, formState.contentType)
   const showEventFields = isEventContentType(formState.contentType)
-  const isObservationNight = formState.contentType === OBSERVATION_NIGHT_CONTENT_TYPE
+  const canonicalEventName = getCanonicalEventName(formState.contentType)
   const formDisabled = disabled || !canValidate
   const canAddMore = images.length < MAX_VALIDATION_IMAGES
 
@@ -451,7 +451,7 @@ export default function ValidationForm({
 
           {showEventFields && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-gray-200 dark:border-gray-700">
-              {!isObservationNight && (
+              {!canonicalEventName && (
                 <div className="sm:col-span-2">
                   <label htmlFor="ai-event-name" className={labelClass}>
                     Nombre del evento

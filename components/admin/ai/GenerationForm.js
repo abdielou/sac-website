@@ -3,8 +3,8 @@
 import { useCallback, useRef, useState } from 'react'
 import {
   GENERATION_INPUT_LIMITS,
-  OBSERVATION_NIGHT_CONTENT_TYPE,
-  OBSERVATION_NIGHT_LABEL,
+  contentTypeRequiresEventCta,
+  getCanonicalEventName,
   isEventContentType,
   shouldGenerateImagePrompt,
 } from '@/lib/ai-constants'
@@ -63,7 +63,8 @@ export default function GenerationForm({
   contentTypes = [],
 }) {
   const isEvent = isEventContentType(formState.contentType)
-  const isObservationNight = formState.contentType === OBSERVATION_NIGHT_CONTENT_TYPE
+  const canonicalEventName = getCanonicalEventName(formState.contentType)
+  const requiresEventCta = contentTypeRequiresEventCta(formState.contentType)
   const supportsTemplate = Boolean(resolveTemplateLayoutId(formState.contentType))
   const supportsGeneratedImage = shouldGenerateImagePrompt(formState.contentType)
   const showImageSection = supportsTemplate || supportsGeneratedImage
@@ -160,13 +161,16 @@ export default function GenerationForm({
 
   const fieldErrors = {
     eventName:
-      isEvent && !isObservationNight && !formState.eventName?.trim()
+      isEvent && !canonicalEventName && !formState.eventName?.trim()
         ? 'Indica el nombre del evento'
         : null,
     eventDate: isEvent && !formState.eventDate?.trim() ? 'Indica la fecha' : null,
     eventTime: isEvent && !formState.eventTime?.trim() ? 'Indica la hora' : null,
     eventLocation: isEvent && !formState.eventLocation?.trim() ? 'Indica el lugar' : null,
-    eventCta: isEvent && !formState.eventCta?.trim() ? 'Indica el llamado a la acción' : null,
+    eventCta:
+      isEvent && requiresEventCta && !formState.eventCta?.trim()
+        ? 'Indica el llamado a la acción'
+        : null,
     intent: !isEvent && !formState.intent?.trim() ? 'Indica la intención' : null,
     topic: !isEvent && !formState.topic?.trim() ? 'Indica el tema' : null,
     knownFacts: validateListInput(formState.knownFacts, '\n', 'Datos confirmados'),
@@ -303,13 +307,15 @@ export default function GenerationForm({
       {isEvent ? (
         <section className={sectionClass} aria-labelledby="gen-event-heading">
           <h3 id="gen-event-heading" className={sectionTitleClass}>
-            {isObservationNight ? `2. Datos de ${OBSERVATION_NIGHT_LABEL}` : '2. Datos del evento'}
+            {canonicalEventName ? `2. Datos de ${canonicalEventName}` : '2. Datos del evento'}
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
-            Estos datos se usan en el arte y en el texto. Todos son obligatorios.
+            {!requiresEventCta
+              ? 'La fecha, la hora y el lugar son obligatorios. El llamado a la acción es opcional.'
+              : 'Estos datos se usan en el arte y en el texto. Todos son obligatorios.'}
           </p>
 
-          {!isObservationNight && (
+          {!canonicalEventName && (
             <div>
               <label htmlFor="gen-event-name" className={labelClass}>
                 Nombre del evento <span className="text-red-500">*</span>
@@ -436,7 +442,12 @@ export default function GenerationForm({
 
           <div>
             <label htmlFor="gen-event-cta" className={labelClass}>
-              Llamado a la acción <span className="text-red-500">*</span>
+              Llamado a la acción
+              {!requiresEventCta ? (
+                <span className="font-normal text-gray-500 dark:text-gray-400"> (opcional)</span>
+              ) : (
+                <span className="text-red-500"> *</span>
+              )}
             </label>
             <input
               id="gen-event-cta"
@@ -446,7 +457,7 @@ export default function GenerationForm({
               onChange={handleChange('eventCta')}
               onBlur={() => markTouched('eventCta')}
               disabled={formDisabled}
-              required
+              required={requiresEventCta}
               placeholder="ej. Confirma tu asistencia en el enlace"
               aria-invalid={Boolean(touched.eventCta && fieldErrors.eventCta)}
               aria-describedby={

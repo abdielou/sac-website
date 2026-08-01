@@ -154,10 +154,9 @@ describe('ai-guidelines-draft', () => {
     expect(options.every((o) => o.id !== 'threads')).toBe(true)
   })
 
-  test('resolveContentTypeOptions preserves the active guideline order', () => {
+  test('resolveContentTypeOptions uses the canonical generator order', () => {
     const options = resolveContentTypeOptions(seed)
-    expect(options[0]).toEqual({ id: 'regular_post', label: 'Publicación regular' })
-    expect(options).toContainEqual({
+    expect(options[0]).toEqual({
       id: 'observation_night',
       label: 'Noche de Observación',
     })

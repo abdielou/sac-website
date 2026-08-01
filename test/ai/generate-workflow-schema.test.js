@@ -245,6 +245,7 @@ describe('generateAiWorkflow schema', () => {
     }
 
     expect(GenerateInputSchema.safeParse(base).success).toBe(true)
+    expect(GenerateInputSchema.safeParse({ ...base, cta: undefined }).success).toBe(true)
     expect(
       GenerateInputSchema.safeParse({
         ...base,

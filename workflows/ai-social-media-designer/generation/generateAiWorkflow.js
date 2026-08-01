@@ -3,9 +3,9 @@ import { z } from 'zod'
 import {
   CONTENT_TYPES,
   GENERATION_INPUT_LIMITS,
-  OBSERVATION_NIGHT_CONTENT_TYPE,
-  OBSERVATION_NIGHT_LABEL,
   PLATFORMS,
+  contentTypeRequiresEventCta,
+  getCanonicalEventName,
   isEventContentType,
   shouldGenerateImagePrompt,
 } from '../../../lib/ai-constants'
@@ -243,7 +243,7 @@ export const GenerateInputSchema = z
           path: ['eventDetails'],
         })
       }
-      if (!value.cta) {
+      if (!value.cta && contentTypeRequiresEventCta(value.contentType)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: `cta es obligatorio para ${value.contentType}`,
@@ -252,14 +252,15 @@ export const GenerateInputSchema = z
       }
     }
 
+    const canonicalEventName = getCanonicalEventName(value.contentType)
     if (
-      value.contentType === OBSERVATION_NIGHT_CONTENT_TYPE &&
+      canonicalEventName &&
       value.eventDetails &&
-      value.eventDetails.name !== OBSERVATION_NIGHT_LABEL
+      value.eventDetails.name !== canonicalEventName
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: `El nombre debe coincidir con la etiqueta canónica vigente (${OBSERVATION_NIGHT_LABEL}) para ${OBSERVATION_NIGHT_CONTENT_TYPE}`,
+        message: `El nombre debe coincidir con la etiqueta canónica vigente (${canonicalEventName}) para ${value.contentType}`,
         path: ['eventDetails', 'name'],
       })
     }
@@ -396,7 +397,10 @@ export function applyGenerationGuardrails(result, input) {
         return !(typeof value === 'string' && value.trim())
       })
     : []
-  const missingCta = isEventContentType(input.contentType) && !input.cta
+  const missingCta =
+    isEventContentType(input.contentType) &&
+    contentTypeRequiresEventCta(input.contentType) &&
+    !input.cta
 
   const drafts = input.platforms.map((platform) => {
     const existing = byPlatform.get(platform)

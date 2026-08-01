@@ -7,7 +7,6 @@ import GenerationResult from '@/components/admin/ai/GenerationResult'
 import { useAiGenerationRun } from '@/lib/hooks/useAiGenerationRun'
 import { useActiveGuidelines } from '@/lib/hooks/useActiveGuidelines'
 import { resolveContentTypeOptions, resolvePlatformOptions } from '@/lib/ai-guidelines-draft'
-import { OBSERVATION_NIGHT_CONTENT_TYPE } from '@/lib/ai-constants'
 import { ErrorState } from '@/components/admin/ErrorState'
 
 export default function AiGenerationClient() {
@@ -52,10 +51,7 @@ export default function AiGenerationClient() {
     const ids = contentTypes.map((ct) => ct.id)
     setFormState((prev) => {
       if (ids.includes(prev.contentType)) return prev
-      const preferred = ids.includes(OBSERVATION_NIGHT_CONTENT_TYPE)
-        ? OBSERVATION_NIGHT_CONTENT_TYPE
-        : ids[0]
-      return { ...prev, contentType: preferred }
+      return { ...prev, contentType: ids[0] }
     })
   }, [guidelinesHydrated, contentTypes])
 

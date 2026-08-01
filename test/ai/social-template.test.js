@@ -105,6 +105,12 @@ describe('event form helpers', () => {
 
   test('missingEventLogistics reports incomplete fields', () => {
     expect(missingEventLogistics({}, '')).toEqual(['nombre', 'fecha', 'hora', 'lugar', 'CTA'])
+    expect(missingEventLogistics({}, '', { requireCta: false })).toEqual([
+      'nombre',
+      'fecha',
+      'hora',
+      'lugar',
+    ])
     expect(missingEventLogistics(completeEventDetails, 'Regístrate')).toEqual([])
   })
 

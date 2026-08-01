@@ -99,7 +99,7 @@ describe('guidelines-store S3 lifecycle', () => {
   test('getActiveGuidelines seeds defaults when store is empty', async () => {
     const active = await getActiveGuidelines()
     expect(active.version).toBe('mvp-default-v1')
-    expect(objects.has('guidelines/meta.json')).toBe(true)
+    expect(objects.has('guidelines/state.json')).toBe(true)
     expect(objects.has('guidelines/versions/mvp-default-v1.json')).toBe(true)
   })
 
@@ -142,13 +142,13 @@ describe('guidelines-store S3 lifecycle', () => {
     const created = await createGuidelineDraft({ createdBy: 'Elena' })
     const activated = await activateGuidelineVersion(created.draft.id, { activatedBy: 'Elena' })
     expect(activated.active.version).toBe('v2')
-    expect(objects.get('guidelines/meta.json').draft).toBeNull()
-    expect(objects.get('guidelines/meta.json').activeVersion).toBe('v2')
+    expect(objects.get('guidelines/state.json').draft).toBeNull()
+    expect(objects.get('guidelines/state.json').activeVersion).toBe('v2')
 
     const created2 = await createGuidelineDraft({ createdBy: 'Elena' })
     const discarded = await discardGuidelineDraft(created2.draft.id, { discardedBy: 'Elena' })
     expect(discarded.auditLog[0].action).toBe('discarded_draft')
-    expect(objects.get('guidelines/meta.json').draft).toBeNull()
+    expect(objects.get('guidelines/state.json').draft).toBeNull()
   })
 
   test('rollback re-points active without rewriting historical document', async () => {

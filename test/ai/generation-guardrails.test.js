@@ -195,7 +195,7 @@ describe('applyGenerationGuardrails', () => {
         time: '20:00',
         location: 'Cabo Rojo',
       },
-      cta: 'Acompáñanos',
+      cta: undefined,
     }
 
     const result = applyGenerationGuardrails(

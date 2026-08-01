@@ -104,6 +104,19 @@ describe('POST /api/admin/ai/generate contract', () => {
     expect(startedInput.eventDetails.name).toBe('Noche de Observación')
   })
 
+  test('starts observation_night without a CTA', async () => {
+    const response = await POST(
+      requestWithBody({
+        ...validEventBody,
+        contentType: 'observation_night',
+        cta: '',
+      })
+    )
+
+    expect(response.status).toBe(202)
+    expect(start.mock.calls[0][1][0].cta).toBeUndefined()
+  })
+
   test.each([
     ['invalid explicit background mode', { backgroundMode: 'custom' }],
     ['unknown stock background', { backgroundId: 'unknown-background' }],

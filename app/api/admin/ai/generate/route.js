@@ -2,7 +2,7 @@ import { auth } from '../../../../../auth'
 import { NextResponse } from 'next/server'
 import sharp from 'sharp'
 import { checkPermission } from '../../../../../lib/api-permissions'
-import { isEventContentType } from '../../../../../lib/ai-constants'
+import { contentTypeRequiresEventCta, isEventContentType } from '../../../../../lib/ai-constants'
 import { checkWorkflowStartRateLimit } from '../../../../../lib/ai-rate-limit'
 import {
   missingEventLogistics,
@@ -187,7 +187,9 @@ export const POST = auth(async function POST(req) {
   const sponsorLogo = normalizeSponsorLogo(body.sponsorLogo)
 
   if (isEventContentType(contentType)) {
-    const missing = missingEventLogistics(eventDetails, cta)
+    const missing = missingEventLogistics(eventDetails, cta, {
+      requireCta: contentTypeRequiresEventCta(contentType),
+    })
     if (missing.length) {
       return NextResponse.json(
         {
