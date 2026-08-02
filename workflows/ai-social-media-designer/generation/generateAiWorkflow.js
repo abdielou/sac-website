@@ -141,6 +141,22 @@ export const AiDraftVariantSchema = z
   })
   .strict()
 
+export const AiSharedCaptionResultSchema = z
+  .object({
+    caption: z
+      .object({
+        contentType: z.enum(CONTENT_TYPES),
+        draftText: boundedRequiredString(280),
+        rationale: boundedOptionalString(4000),
+        assumptions: z.array(boundedRequiredString(2000)).max(50).optional(),
+        missingInformation: z.array(boundedRequiredString(2000)).max(50).optional(),
+      })
+      .strict(),
+    recommendedNextStep: boundedRequiredString(4000),
+    humanReviewRequired: z.literal(true),
+  })
+  .strict()
+
 const AiImagePromptEntrySchema = z
   .object({
     platform: z.enum(PLATFORMS),
@@ -334,17 +350,18 @@ export function buildFallbackGenerationResult(input, reason) {
     Array.isArray(input?.platforms) && input.platforms.length ? input.platforms : ['instagram']
   const contentType = input?.contentType || 'regular_post'
 
+  const sharedDraft = {
+    contentType,
+    draftText: 'Generación no disponible. Completa este borrador manualmente.',
+    rationale: `No fue posible generar automáticamente: ${reason}.`,
+    assumptions: [],
+    missingInformation: [
+      'La generación automática falló; completa el borrador manualmente y valida antes de publicar.',
+    ],
+  }
+
   return AiGenerationResultSchema.parse({
-    drafts: platforms.map((platform) => ({
-      platform,
-      contentType,
-      draftText: 'Generación no disponible. Completa este borrador manualmente.',
-      rationale: `No fue posible generar automáticamente: ${reason}.`,
-      assumptions: [],
-      missingInformation: [
-        'La generación automática falló; completa el borrador manualmente y valida antes de publicar.',
-      ],
-    })),
+    drafts: platforms.map((platform) => ({ ...sharedDraft, platform })),
     recommendedNextStep:
       'Revisar la solicitud, completar datos faltantes y volver a intentar. Validar cualquier borrador antes de aprobar.',
     humanReviewRequired: true,
@@ -355,6 +372,10 @@ export function buildFallbackGenerationResult(input, reason) {
 
 const X_MAX_CHARS = 280
 
+const HASHTAG_PATTERN = /(^|\s)#[\p{L}\p{N}_-]+/gu
+const CAMPAIGN_PATTERN = /\b(?:campa(?:ñ|n)a|campaign)\b/i
+const REQUIRED_HASHTAG_PATTERN =
+  /(?:requier\w*|obligatori\w*|debe[n]?\s+incluir|incluir\s+obligatoriamente)[^\n.]{0,80}hashtags?|hashtags?[^\n.]{0,80}(?:requerid\w*|obligatori\w*)/i
 const APPROVAL_CLAIM_PATTERNS = [
   /aprobad[oa]s?\s+(?:oficialmente\s+)?por\s+(?:la\s+)?SAC/i,
   /avalad[oa]s?\s+(?:oficialmente\s+)?por\s+(?:la\s+)?SAC/i,
@@ -375,9 +396,57 @@ function hasApprovalClaim(text) {
   return APPROVAL_CLAIM_PATTERNS.some((pattern) => pattern.test(text))
 }
 
+function hasIdentifiableCampaign(input) {
+  const campaignContext = [
+    input?.intent,
+    input?.topic,
+    input?.cta,
+    ...(Array.isArray(input?.knownFacts) ? input.knownFacts : []),
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  return CAMPAIGN_PATTERN.test(campaignContext)
+}
+
+function activeGuidelinesRequireHashtags(guidelines) {
+  if (!guidelines) return false
+
+  const rules = Object.values(guidelines.platforms || {})
+    .flatMap((platform) =>
+      platform && typeof platform === 'object' ? Object.values(platform) : [platform]
+    )
+    .filter((rule) => typeof rule === 'string')
+    .join('\n')
+
+  return REQUIRED_HASHTAG_PATTERN.test(rules)
+}
+
+export function shouldIncludeHashtags(input, guidelines) {
+  const explicitlyRequested =
+    Array.isArray(input?.hashtags) && input.hashtags.some((hashtag) => String(hashtag).trim())
+
+  return (
+    explicitlyRequested ||
+    hasIdentifiableCampaign(input) ||
+    activeGuidelinesRequireHashtags(guidelines)
+  )
+}
+
+function removeUnrequestedHashtags(text) {
+  if (!text) return text
+
+  return text
+    .replace(HASHTAG_PATTERN, '$1')
+    .replace(/[ \t]+([,.;:!?])/g, '$1')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .trim()
+}
+
 /**
  * Deterministic post-processing of a model-produced generation result:
- * - exactly one draft per requested platform (requested contentType enforced)
+ * - one shared caption cloned across every requested platform for compatibility
  * - assumptions/missingInformation always arrays
  * - approval-claim phrases flagged for human review (never silently rewritten)
  * - event-oriented content: unprovided event details surfaced in missingInformation
@@ -386,10 +455,9 @@ function hasApprovalClaim(text) {
  *
  * Pure function — returns a schema-valid AiGenerationResult.
  */
-export function applyGenerationGuardrails(result, input) {
-  const byPlatform = new Map(
-    (Array.isArray(result?.drafts) ? result.drafts : []).map((d) => [d.platform, d])
-  )
+export function applyGenerationGuardrails(result, input, { allowHashtags = false } = {}) {
+  const legacyDrafts = Array.isArray(result?.drafts) ? result.drafts : []
+  const sharedCaption = result?.caption || legacyDrafts[0]
 
   const missingEventDetails = isEventContentType(input.contentType)
     ? EVENT_DETAIL_CHECKS.filter((check) => {
@@ -402,56 +470,50 @@ export function applyGenerationGuardrails(result, input) {
     contentTypeRequiresEventCta(input.contentType) &&
     !input.cta
 
-  const drafts = input.platforms.map((platform) => {
-    const existing = byPlatform.get(platform)
+  const existing = sharedCaption || {
+    contentType: input.contentType,
+    draftText: 'Generación no disponible. Completa este borrador manualmente.',
+    rationale: 'No se generó el caption compartido.',
+    assumptions: [],
+    missingInformation: ['Caption ausente; completar manualmente.'],
+  }
+  const assumptions = Array.isArray(existing.assumptions) ? [...existing.assumptions] : []
+  const missingInformation = Array.isArray(existing.missingInformation)
+    ? [...existing.missingInformation]
+    : []
 
-    if (!existing) {
-      return {
-        platform,
-        contentType: input.contentType,
-        draftText: 'Generación no disponible. Completa este borrador manualmente.',
-        rationale: 'No se generó borrador para esta plataforma.',
-        assumptions: [],
-        missingInformation: ['Borrador ausente; completar manualmente.'],
-      }
-    }
+  if (hasApprovalClaim(existing.draftText)) {
+    missingInformation.push(
+      'El borrador sugiere aprobación oficial de SAC; eliminar o reformular antes de publicar.'
+    )
+  }
 
-    const assumptions = Array.isArray(existing.assumptions) ? [...existing.assumptions] : []
-    const missingInformation = Array.isArray(existing.missingInformation)
-      ? [...existing.missingInformation]
-      : []
+  for (const check of missingEventDetails) {
+    const alreadyListed = missingInformation.some((item) => check.keyword.test(item))
+    if (!alreadyListed) {
+      missingInformation.push(`${check.label}: no provisto; no se inventó.`)
+    }
+  }
+  if (missingCta && !missingInformation.some((item) => /cta|registro|llamad/i.test(item))) {
+    missingInformation.push('CTA del evento: no provista; no se inventó.')
+  }
+  if ((existing.draftText?.length || 0) > X_MAX_CHARS) {
+    missingInformation.push(
+      `El caption compartido excede el límite de ${X_MAX_CHARS} caracteres de X (${existing.draftText.length}); acortar antes de publicar.`
+    )
+  }
 
-    if (hasApprovalClaim(existing.draftText)) {
-      missingInformation.push(
-        'El borrador sugiere aprobación oficial de SAC; eliminar o reformular antes de publicar.'
-      )
-    }
-
-    for (const check of missingEventDetails) {
-      const alreadyListed = missingInformation.some((item) => check.keyword.test(item))
-      if (!alreadyListed) {
-        missingInformation.push(`${check.label}: no provisto; no se inventó.`)
-      }
-    }
-    if (missingCta && !missingInformation.some((item) => /cta|registro|llamad/i.test(item))) {
-      missingInformation.push('CTA del evento: no provista; no se inventó.')
-    }
-
-    if (platform === 'x' && (existing.draftText?.length || 0) > X_MAX_CHARS) {
-      missingInformation.push(
-        `El borrador excede el límite de ${X_MAX_CHARS} caracteres de X (${existing.draftText.length}); acortar antes de publicar.`
-      )
-    }
-
-    return {
-      ...existing,
-      contentType: input.contentType,
-      assumptions,
-      missingInformation,
-      imagePrompt: existing.imagePrompt,
-      imageRationale: existing.imageRationale,
-    }
-  })
+  const normalizedCaption = {
+    ...existing,
+    contentType: input.contentType,
+    draftText: allowHashtags ? existing.draftText : removeUnrequestedHashtags(existing.draftText),
+    assumptions,
+    missingInformation,
+    imagePrompt: existing.imagePrompt,
+    imageRationale: existing.imageRationale,
+  }
+  delete normalizedCaption.platform
+  const drafts = input.platforms.map((platform) => ({ ...normalizedCaption, platform }))
 
   return AiGenerationResultSchema.parse({
     drafts,
@@ -652,6 +714,7 @@ async function generateTextStep(input, guidelines) {
 
   const firstPlatformGuidelines = guidelines.platforms[input.platforms[0]] || {}
 
+  const allowHashtags = shouldIncludeHashtags(input, guidelines)
   const platformSections = input.platforms
     .map((platform) => {
       const rules = guidelines.platforms[platform]?.platform || 'Reglas generales de plataforma.'
@@ -659,20 +722,17 @@ async function generateTextStep(input, guidelines) {
     })
     .join('\n')
 
-  const systemPrompt = `Eres un generador de borradores de redes sociales para SAC (Sociedad de Astronomía del Caribe).
+  const systemPrompt = `Eres un generador de captions para redes sociales de SAC (Sociedad de Astronomía del Caribe).
 Devuelve EXACTAMENTE un objeto JSON (sin texto adicional, sin markdown) con esta forma:
 
 {
-  "drafts": [
-    {
-      "platform": "x" | "instagram" | "facebook",
-      "contentType": string,
-      "draftText": string (español),
-      "rationale": string (opcional),
-      "assumptions": string[],
-      "missingInformation": string[]
-    }
-  ],
+  "caption": {
+    "contentType": string,
+    "draftText": string (español, máximo 280 caracteres incluyendo hashtags y enlaces),
+    "rationale": string (opcional),
+    "assumptions": string[],
+    "missingInformation": string[]
+  },
   "recommendedNextStep": string,
   "humanReviewRequired": true
 }
@@ -693,11 +753,18 @@ ${firstPlatformGuidelines.prohibited || ''}
 
 Reglas de salida:
 - Usa EXACTAMENTE esas claves. "humanReviewRequired" debe ser siempre true.
-- Incluye exactamente un draft por cada plataforma solicitada (mismas plataformas, mismo contentType).
+- Genera UN SOLO caption compartido para X, Instagram y Facebook.
+- El mismo texto se publicará sin cambios en las tres redes.
+- "draftText" no puede superar 280 caracteres en total, contando espacios, hashtags y enlaces.
+- Combina las reglas de las tres plataformas; ante conflicto aplica la regla más restrictiva.
+- Usa exactamente el contentType solicitado.
 - Idioma: español (por defecto), tono adecuado a SAC / Puerto Rico.
 - Preserva los hechos provistos (knownFacts, eventDetails, enlaces) tal cual, sin alterarlos.
 - NO inventes fechas, horarios, lugares, costos, enlaces ni hechos científicos no provistos.
 - Si falta información crítica, deja huecos claros en "missingInformation" y NO rellenes con datos inventados.
+- Hashtags: no incluir ni sugerir por defecto. En esta solicitud están ${
+    allowHashtags ? 'permitidos por una excepción aplicable' : 'prohibidos'
+  }. Solo se permiten si el usuario los solicitó, hay una campaña identificable o las guías activas los requieren explícitamente.
 - Registra en "assumptions" cualquier supuesto tomado; usa [] si no hay.
 - NO afirmes aprobación oficial de SAC ni que el contenido está listo para publicar sin revisión humana.
 - "recommendedNextStep" debe sugerir validar el borrador antes de aprobar/publicar.
@@ -721,7 +788,7 @@ Reglas de salida:
     { role: 'system', content: systemPrompt },
     {
       role: 'user',
-      content: `Generar borradores de texto y retornar AiGenerationResult.
+      content: `Generar un caption compartido y retornar el JSON solicitado.
 Input (JSON): ${JSON.stringify(userText)}`,
     },
   ]
@@ -773,10 +840,10 @@ Input (JSON): ${JSON.stringify(userText)}`,
       json.humanReviewRequired = true
     }
 
-    const validated = AiGenerationResultSchema.parse(json)
+    const validated = AiSharedCaptionResultSchema.parse(json)
 
     return {
-      result: applyGenerationGuardrails(validated, input),
+      result: applyGenerationGuardrails(validated, input, { allowHashtags }),
       usage,
     }
   }

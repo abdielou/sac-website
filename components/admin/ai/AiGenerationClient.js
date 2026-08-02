@@ -6,7 +6,7 @@ import GenerationForm, { DEFAULT_GENERATION_FORM } from '@/components/admin/ai/G
 import GenerationResult from '@/components/admin/ai/GenerationResult'
 import { useAiGenerationRun } from '@/lib/hooks/useAiGenerationRun'
 import { useActiveGuidelines } from '@/lib/hooks/useActiveGuidelines'
-import { resolveContentTypeOptions, resolvePlatformOptions } from '@/lib/ai-guidelines-draft'
+import { resolveContentTypeOptions } from '@/lib/ai-guidelines-draft'
 import { ErrorState } from '@/components/admin/ErrorState'
 
 export default function AiGenerationClient() {
@@ -15,36 +15,10 @@ export default function AiGenerationClient() {
   const canGenerate = accessibleActions.includes('write_ai')
 
   const { active, hydrated: guidelinesHydrated } = useActiveGuidelines()
-  const platforms = useMemo(
-    () => resolvePlatformOptions(active, { generationOnly: true }),
-    [active]
-  )
   const contentTypes = useMemo(() => resolveContentTypeOptions(active), [active])
 
   const [formState, setFormState] = useState(DEFAULT_GENERATION_FORM)
   const resultRef = useRef(null)
-
-  useEffect(() => {
-    if (!guidelinesHydrated || !platforms.length) return
-    const ids = platforms.map((p) => p.id)
-    setFormState((prev) => {
-      const retained = prev.platforms.filter((id) => ids.includes(id))
-      // Prefer keeping all available platforms when defaults were "select all".
-      const nextPlatforms =
-        retained.length > 0
-          ? retained
-          : ids.includes('x') || ids.includes('instagram') || ids.includes('facebook')
-            ? ids.filter((id) => ['x', 'instagram', 'facebook'].includes(id))
-            : [ids[0]]
-      if (
-        nextPlatforms.length === prev.platforms.length &&
-        nextPlatforms.every((id, i) => id === prev.platforms[i])
-      ) {
-        return prev
-      }
-      return { ...prev, platforms: nextPlatforms }
-    })
-  }, [guidelinesHydrated, platforms])
 
   useEffect(() => {
     if (!guidelinesHydrated || !contentTypes.length) return
@@ -135,7 +109,6 @@ export default function AiGenerationClient() {
         formState={formState}
         onFormChange={setFormState}
         onSubmit={handleSubmit}
-        platforms={platforms}
         contentTypes={contentTypes}
       />
 

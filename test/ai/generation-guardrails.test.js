@@ -1,6 +1,8 @@
 import {
   applyGenerationGuardrails,
   AiGenerationResultSchema,
+  AiSharedCaptionResultSchema,
+  shouldIncludeHashtags,
 } from '../../workflows/ai-social-media-designer/generation/generateAiWorkflow'
 import { getActiveGuidelines, resolveGenerationGuidelinesForRequest } from '../../lib/ai-guidelines'
 
@@ -43,6 +45,17 @@ describe('resolveGenerationGuidelinesForRequest', () => {
     expect(resolved.contentType).toContain('cautela factual')
   })
 
+  test('does not recommend hashtags in the default generation rules', async () => {
+    const resolved = await resolveGenerationGuidelinesForRequest({
+      platform: 'instagram',
+      contentType: 'regular_post',
+    })
+
+    expect(resolved.global).toContain('no incluir ni sugerir por defecto')
+    expect(resolved.platform).toContain('No añadir hashtags por defecto')
+    expect(resolved.platform).not.toMatch(/3-5 hashtags/i)
+  })
+
   test('falls back gracefully for unknown platform and content type', async () => {
     const resolved = await resolveGenerationGuidelinesForRequest({
       platform: 'tiktok',
@@ -52,6 +65,39 @@ describe('resolveGenerationGuidelinesForRequest', () => {
     expect(resolved.version).toBeTruthy()
     expect(resolved.platform).toContain('Reglas generales')
     expect(resolved.contentType).toContain('unknown_type')
+  })
+})
+
+describe('shouldIncludeHashtags', () => {
+  const input = {
+    intent: 'Compartir una publicación educativa',
+    topic: 'La Luna',
+  }
+
+  test('returns false for an ordinary publication', () => {
+    expect(shouldIncludeHashtags(input, null)).toBe(false)
+  })
+
+  test('allows user-requested hashtags', () => {
+    expect(shouldIncludeHashtags({ ...input, hashtags: ['#SAC'] }, null)).toBe(true)
+  })
+
+  test('allows an identifiable campaign', () => {
+    expect(shouldIncludeHashtags({ ...input, topic: 'Campaña Cielos Oscuros 2026' }, null)).toBe(
+      true
+    )
+  })
+
+  test('allows hashtags explicitly required by active guidelines', () => {
+    const guidelines = {
+      platforms: {
+        instagram: {
+          platform: 'Para esta iniciativa se requiere incluir el hashtag oficial.',
+        },
+      },
+    }
+
+    expect(shouldIncludeHashtags(input, guidelines)).toBe(true)
   })
 })
 
@@ -74,7 +120,7 @@ describe('applyGenerationGuardrails', () => {
     ...overrides,
   })
 
-  test('produces exactly one draft per requested platform and forces humanReviewRequired', () => {
+  test('clones one shared caption across every requested platform', () => {
     const result = applyGenerationGuardrails(
       {
         drafts: [draft('instagram')],
@@ -86,11 +132,37 @@ describe('applyGenerationGuardrails', () => {
 
     expect(result.humanReviewRequired).toBe(true)
     expect(result.drafts.map((d) => d.platform)).toEqual(['instagram', 'x'])
-    // Missing platform gets an explicit placeholder draft.
+    expect(new Set(result.drafts.map((d) => d.draftText)).size).toBe(1)
     const xDraft = result.drafts.find((d) => d.platform === 'x')
-    expect(xDraft.draftText).toBe('Generación no disponible. Completa este borrador manualmente.')
-    expect(xDraft.missingInformation).toContain('Borrador ausente; completar manualmente.')
+    expect(xDraft.draftText).toBe(result.drafts[0].draftText)
     expect(AiGenerationResultSchema.safeParse(result).success).toBe(true)
+  })
+
+  test('removes hashtags unless an exception allows them', () => {
+    const result = applyGenerationGuardrails(
+      {
+        drafts: [draft('instagram', { draftText: 'Mira el cielo con nosotros. #Astronomía #SAC' })],
+        recommendedNextStep: 'Validar antes de aprobar.',
+        humanReviewRequired: true,
+      },
+      baseInput
+    )
+
+    expect(result.drafts[0].draftText).toBe('Mira el cielo con nosotros.')
+  })
+
+  test('preserves hashtags when an exception allows them', () => {
+    const result = applyGenerationGuardrails(
+      {
+        drafts: [draft('instagram', { draftText: 'Mira el cielo. #CielosOscuros' })],
+        recommendedNextStep: 'Validar antes de aprobar.',
+        humanReviewRequired: true,
+      },
+      baseInput,
+      { allowHashtags: true }
+    )
+
+    expect(result.drafts[0].draftText).toContain('#CielosOscuros')
   })
 
   test('drops drafts for platforms that were not requested', () => {
@@ -150,7 +222,7 @@ describe('applyGenerationGuardrails', () => {
     )
 
     const xDraft = result.drafts.find((d) => d.platform === 'x')
-    expect(xDraft.missingInformation).toEqual([])
+    expect(xDraft.missingInformation).toEqual(igDraft.missingInformation)
   })
 
   test('event_promotion surfaces unprovided event details and CTA in missingInformation', () => {
@@ -241,7 +313,7 @@ describe('applyGenerationGuardrails', () => {
     expect(fbDraft.missingInformation.some((item) => /cta/i.test(item))).toBe(false)
   })
 
-  test('flags X drafts over 280 characters', () => {
+  test('flags a legacy shared caption over 280 characters on every compatibility draft', () => {
     const longText = 'a'.repeat(300)
     const result = applyGenerationGuardrails(
       {
@@ -255,9 +327,25 @@ describe('applyGenerationGuardrails', () => {
     const xDraft = result.drafts.find((d) => d.platform === 'x')
     expect(xDraft.missingInformation.some((item) => /280/.test(item))).toBe(true)
 
-    // Only X is subject to the character limit.
     const igDraft = result.drafts.find((d) => d.platform === 'instagram')
-    expect(igDraft.missingInformation).toEqual([])
+    expect(igDraft.missingInformation).toEqual(xDraft.missingInformation)
+  })
+
+  test('provider schema rejects shared captions over 280 characters', () => {
+    const result = {
+      caption: {
+        contentType: 'regular_post',
+        draftText: 'a'.repeat(281),
+        assumptions: [],
+        missingInformation: [],
+      },
+      recommendedNextStep: 'Validar.',
+      humanReviewRequired: true,
+    }
+
+    expect(AiSharedCaptionResultSchema.safeParse(result).success).toBe(false)
+    result.caption.draftText = 'a'.repeat(280)
+    expect(AiSharedCaptionResultSchema.safeParse(result).success).toBe(true)
   })
 
   test('fills recommendedNextStep when the model omits it', () => {

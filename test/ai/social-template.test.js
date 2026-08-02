@@ -132,8 +132,8 @@ describe('event form helpers', () => {
 })
 
 describe('buildGenerationPayload', () => {
-  test('defaults are event-first with all platforms and stock template', () => {
-    expect(DEFAULT_GENERATION_FORM.platforms).toEqual(['x', 'instagram', 'facebook'])
+  test('defaults are event-first with a stock template', () => {
+    expect(DEFAULT_GENERATION_FORM.platforms).toBeUndefined()
     expect(DEFAULT_GENERATION_FORM.contentType).toBe('observation_night')
     expect(DEFAULT_GENERATION_FORM.eventName).toBe('')
     expect(DEFAULT_GENERATION_FORM.backgroundMode).toBe('stock')
@@ -155,6 +155,7 @@ describe('buildGenerationPayload', () => {
       },
     })
     expect(payload.contentType).toBe('observation_night')
+    expect(payload.platforms).toEqual(['x', 'instagram', 'facebook'])
     expect(payload.intent).toContain('Pitahaya')
     expect(payload.topic).toContain('Noche de Observación')
     expect(payload.cta).toBe('Acompáñanos')

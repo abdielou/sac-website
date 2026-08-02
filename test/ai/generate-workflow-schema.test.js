@@ -28,6 +28,7 @@ describe('generateAiWorkflow schema', () => {
     expect(result.humanReviewRequired).toBe(true)
     expect(result.drafts).toHaveLength(2)
     expect(result.drafts.map((d) => d.platform)).toEqual(['instagram', 'facebook'])
+    expect(new Set(result.drafts.map((d) => d.draftText)).size).toBe(1)
     expect(result.recommendedNextStep).toBeTruthy()
     expect(AiGenerationResultSchema.safeParse(result).success).toBe(true)
   })

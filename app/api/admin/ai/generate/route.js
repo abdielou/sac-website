@@ -2,7 +2,11 @@ import { auth } from '../../../../../auth'
 import { NextResponse } from 'next/server'
 import sharp from 'sharp'
 import { checkPermission } from '../../../../../lib/api-permissions'
-import { contentTypeRequiresEventCta, isEventContentType } from '../../../../../lib/ai-constants'
+import {
+  PLATFORMS,
+  contentTypeRequiresEventCta,
+  isEventContentType,
+} from '../../../../../lib/ai-constants'
 import { checkWorkflowStartRateLimit } from '../../../../../lib/ai-rate-limit'
 import {
   missingEventLogistics,
@@ -43,17 +47,6 @@ function parseStringArray(value) {
     .map((s) => s.trim())
     .filter(Boolean)
   return list.length ? list : undefined
-}
-
-export function normalizePlatforms(value) {
-  const list = parseStringArray(value)
-  if (!Array.isArray(list)) return list
-
-  const normalized = list
-    .map((platform) => (typeof platform === 'string' ? platform.trim().toLowerCase() : platform))
-    .filter((platform) => platform !== '')
-
-  return [...new Set(normalized)]
 }
 
 function normalizeSponsorLogo(value) {
@@ -216,7 +209,7 @@ export const POST = auth(async function POST(req) {
     userEmail,
     intent: normalizeOptionalString(body.intent),
     topic: normalizeOptionalString(body.topic),
-    platforms: normalizePlatforms(body.platforms),
+    platforms: [...PLATFORMS],
     contentType,
     tone: normalizeOptionalString(body.tone),
     audience: normalizeOptionalString(body.audience),

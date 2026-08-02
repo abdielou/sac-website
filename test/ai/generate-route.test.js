@@ -75,7 +75,7 @@ describe('POST /api/admin/ai/generate contract', () => {
     expect(start).not.toHaveBeenCalled()
   })
 
-  test('normalizes and deduplicates platforms before start', async () => {
+  test('always starts generation for all supported platforms', async () => {
     const response = await POST(
       requestWithBody({
         ...validEventBody,
@@ -85,7 +85,7 @@ describe('POST /api/admin/ai/generate contract', () => {
 
     expect(response.status).toBe(202)
     const startedInput = start.mock.calls[0][1][0]
-    expect(startedInput.platforms).toEqual(['instagram', 'facebook'])
+    expect(startedInput.platforms).toEqual(['x', 'instagram', 'facebook'])
     expect(startedInput.userId).toBe('session-user')
     expect(startedInput.userEmail).toBe('user@example.com')
   })

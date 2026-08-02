@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import React, { useCallback, useRef, useState } from 'react'
 import {
   GENERATION_INPUT_LIMITS,
   contentTypeRequiresEventCta,
@@ -49,7 +49,6 @@ function validateListInput(value, separator, label) {
  * @param {Object} props.formState
  * @param {Function} props.onFormChange
  * @param {Function} props.onSubmit
- * @param {{ id: string, label: string }[]} [props.platforms]
  * @param {{ id: string, label: string }[]} [props.contentTypes]
  */
 export default function GenerationForm({
@@ -59,7 +58,6 @@ export default function GenerationForm({
   formState,
   onFormChange,
   onSubmit,
-  platforms = [],
   contentTypes = [],
 }) {
   const isEvent = isEventContentType(formState.contentType)
@@ -105,13 +103,6 @@ export default function GenerationForm({
 
   const markTouched = (field) => {
     setTouched((prev) => ({ ...prev, [field]: true }))
-  }
-
-  const togglePlatform = (platform) => {
-    const selected = formState.platforms.includes(platform)
-      ? formState.platforms.filter((p) => p !== platform)
-      : [...formState.platforms, platform]
-    onFormChange({ ...formState, platforms: selected })
   }
 
   const setBackgroundMode = (mode) => {
@@ -178,8 +169,6 @@ export default function GenerationForm({
     links: validateListInput(formState.links, ',', 'Enlaces'),
   }
 
-  const platformError =
-    formState.platforms.length === 0 ? 'Selecciona al menos una plataforma' : null
   const backgroundError =
     supportsTemplate && formState.backgroundMode === 'stock' && !formState.backgroundId
       ? 'Selecciona un fondo'
@@ -196,7 +185,6 @@ export default function GenerationForm({
     e.preventDefault()
     if (!canGenerate || loading || busy) return
     setTouched({
-      platforms: true,
       background: true,
       eventName: true,
       eventDate: true,
@@ -209,7 +197,7 @@ export default function GenerationForm({
       hashtags: true,
       links: true,
     })
-    if (platformError || backgroundError || hasFieldErrors || (isEvent && sponsorError)) return
+    if (backgroundError || hasFieldErrors || (isEvent && sponsorError)) return
     onSubmit()
   }
 
@@ -233,7 +221,7 @@ export default function GenerationForm({
           1. Publicación
         </h3>
         <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
-          Elige el tipo de contenido y las plataformas de destino.
+          El caption y la imagen se compartirán en X, Instagram y Facebook.
         </p>
 
         <div>
@@ -254,53 +242,6 @@ export default function GenerationForm({
             ))}
           </select>
         </div>
-
-        <fieldset
-          disabled={formDisabled}
-          className="min-w-0"
-          aria-invalid={Boolean(touched.platforms && platformError)}
-          aria-describedby={touched.platforms && platformError ? 'gen-platforms-error' : undefined}
-        >
-          <legend className={labelClass}>
-            Plataformas <span className="text-red-500">*</span>
-          </legend>
-          <div className="flex flex-wrap gap-2">
-            {platforms.map((platform) => {
-              const selected = formState.platforms.includes(platform.id)
-              return (
-                <label
-                  key={platform.id}
-                  className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm cursor-pointer select-none transition-[border-color,background-color,color,box-shadow] duration-150 ease-out ${
-                    formDisabled ? 'opacity-60 cursor-not-allowed' : ''
-                  } ${
-                    selected
-                      ? 'border-blue-500 bg-blue-50 text-gray-900 dark:border-blue-500 dark:bg-blue-900/20 dark:text-gray-100'
-                      : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
-                  }`}
-                >
-                  <input
-                    id={`gen-platform-${platform.id}`}
-                    type="checkbox"
-                    className="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800"
-                    checked={selected}
-                    disabled={formDisabled}
-                    onChange={() => togglePlatform(platform.id)}
-                  />
-                  <span>{platform.label}</span>
-                </label>
-              )
-            })}
-          </div>
-        </fieldset>
-        {touched.platforms && platformError && (
-          <p
-            id="gen-platforms-error"
-            className="text-sm text-red-600 dark:text-red-400"
-            role="alert"
-          >
-            {platformError}.
-          </p>
-        )}
       </section>
 
       {/* 2. Event info (or generic topic/intent for non-events) */}
@@ -850,7 +791,7 @@ export default function GenerationForm({
           </div>
           <div>
             <label htmlFor="gen-hashtags" className={labelClass}>
-              Hashtags (separados por coma)
+              Hashtags opcionales (separados por coma)
             </label>
             <input
               id="gen-hashtags"

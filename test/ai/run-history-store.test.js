@@ -166,6 +166,36 @@ describe('buildGenerationHistoryRecord', () => {
     expect(JSON.stringify(record)).not.toContain('Borrador secreto')
   })
 
+  test('counts replicated compatibility drafts as one logical caption', () => {
+    const sharedCaption = 'Un solo caption para todas las redes.'
+    const record = buildGenerationHistoryRecord({
+      input: {
+        userId: 'u1',
+        platforms: ['x', 'instagram', 'facebook'],
+        contentType: 'regular_post',
+        intent: 'Informar',
+        topic: 'Astronomía',
+      },
+      runId: 'wrun_shared',
+      status: 'completed',
+      result: {
+        drafts: ['x', 'instagram', 'facebook'].map((platform) => ({
+          platform,
+          contentType: 'regular_post',
+          draftText: sharedCaption,
+          missingInformation: [],
+        })),
+      },
+    })
+
+    expect(record.inputSummary.platforms).toEqual(['x', 'instagram', 'facebook'])
+    expect(record.outcomeSummary).toEqual({
+      draftCount: 1,
+      platforms: ['x', 'instagram', 'facebook'],
+      hasMissingInformation: false,
+    })
+  })
+
   test('single-platform sets platform field; failed includes safe error', () => {
     const record = buildGenerationHistoryRecord({
       input: {
