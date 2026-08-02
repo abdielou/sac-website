@@ -136,6 +136,7 @@ export async function applyTemplateRendersToWorkflowResult(workflowPayload) {
       generatedImage = buildGeneratedImageAsset({
         dataUrl: rendered.dataUrl,
         mimeType: rendered.mimeType,
+        downloadFileName: templateAssets.downloadFileName,
         rationale:
           templateAssets.backgroundSource.mode === 'stock'
             ? 'Imagen de plantilla con fondo seleccionado.'

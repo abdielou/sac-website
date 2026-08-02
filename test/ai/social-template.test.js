@@ -420,6 +420,7 @@ describe('attachTemplateRequestsToResult', () => {
     })
     expect(result.templateAssets).toMatchObject({
       backgroundSource: { mode: 'stock', backgroundId: 'telescope-nebula' },
+      downloadFileName: 'SAC-evento-2026-08-12-pr.jpg',
       sponsorLogo: { mimeType: 'image/png' },
     })
     expect(result.drafts[0]).not.toHaveProperty('templateRequest')

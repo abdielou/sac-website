@@ -82,11 +82,14 @@ describe('buildGeneratedImageAsset and fallback', () => {
       dataUrl: 'data:image/png;base64,abc',
       mimeType: 'image/png',
       rationale: 'Apoya el evento.',
+      contentType: 'regular_post',
+      topic: 'Eclipse lunar',
+      generatedAt: '2026-08-01T18:30:00Z',
     })
 
     expect(AiGeneratedImageSchema.safeParse(asset).success).toBe(true)
     expect(asset.status).toBe('draft')
-    expect(asset.downloadFileName).toBe('sac-borrador-instagram.png')
+    expect(asset.downloadFileName).toBe('SAC-publicacion-eclipse-lunar-2026-08-01.png')
   })
 
   test('buildGeneratedImageAsset uses neutral naming when platform omitted', () => {
@@ -94,10 +97,11 @@ describe('buildGeneratedImageAsset and fallback', () => {
       dataUrl: 'data:image/png;base64,abc',
       mimeType: 'image/png',
       rationale: 'Shared visual.',
+      generatedAt: '2026-08-01T18:30:00Z',
     })
 
     expect(asset.assetId).toBe('generated-social-0')
-    expect(asset.downloadFileName).toBe('sac-borrador-social.png')
+    expect(asset.downloadFileName).toBe('SAC-publicacion-2026-08-01.png')
     expect(AiGeneratedImageSchema.safeParse(asset).success).toBe(true)
   })
 

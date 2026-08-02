@@ -124,6 +124,7 @@ const AiTemplateBackgroundSourceSchema = z
 const AiTemplateAssetsSchema = z
   .object({
     backgroundSource: AiTemplateBackgroundSourceSchema,
+    downloadFileName: boundedOptionalString(255),
     sponsorLogo: AiSponsorLogoSchema.optional(),
   })
   .strict()
@@ -1170,6 +1171,9 @@ async function generateImageAssetsStep(input, promptResult) {
     const asset = buildGeneratedImageAsset({
       dataUrl: parsedImage.dataUrl,
       mimeType: parsedImage.mimeType,
+      contentType: input.contentType,
+      eventDetails: input.eventDetails,
+      topic: input.topic,
       rationale:
         draftWithPrompt.imageRationale ||
         'Borrador visual compartido generado a partir del prompt.',
