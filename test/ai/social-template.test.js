@@ -30,7 +30,10 @@ import {
   SOCIAL_CANVAS,
 } from '../../lib/social-template/platformCanvas'
 import { renderSocialTemplateImage } from '../../lib/social-template/renderSocialTemplateImage'
-import { resolveTemplateLayoutId } from '../../lib/social-template/templateLayouts'
+import {
+  getTemplateLayout,
+  resolveTemplateLayoutId,
+} from '../../lib/social-template/templateLayouts'
 import { fitAndWrapText, wrapText } from '../../lib/social-template/textWrap'
 import { GenerateInputSchema } from '../../workflows/ai-social-media-designer/generation/generateAiWorkflow'
 
@@ -73,6 +76,10 @@ describe('backgroundCatalog', () => {
 })
 
 describe('event form helpers', () => {
+  test('uses the approved weather disclaimer verbatim', () => {
+    expect(EVENT_WEATHER_DISCLAIMER).toBe('*Actividad sujeta a condiciones del tiempo')
+  })
+
   test('formats ISO dates and 24h times for Puerto Rico cards', () => {
     expect(formatEventDateLabel('2026-07-11')).toBe('SÁB 11 JUL')
     expect(formatEventTimeLabel('19:15')).toBe('7:15 PM')
@@ -339,6 +346,44 @@ describe('buildTemplateTextFields', () => {
 })
 
 describe('attachTemplateRequestsToResult', () => {
+  test('keeps the same fixed overlay and SAC logo across every stock background', () => {
+    const result = {
+      drafts: [{ platform: 'instagram', contentType: 'observation_night', draftText: 'Hola' }],
+      recommendedNextStep: 'Validar',
+      humanReviewRequired: true,
+    }
+    const input = {
+      contentType: 'observation_night',
+      topic: 'Noche de Observación',
+      backgroundMode: 'stock',
+      eventDetails: completeEventDetails,
+    }
+    const posterText = {
+      subtitle: 'Ven a mirar el cielo con nosotros.',
+      body: 'Descubre una experiencia que despierta la curiosidad bajo las estrellas.',
+    }
+
+    const generated = listBackgroundOptions().map(({ id }) =>
+      attachTemplateRequestsToResult(result, { ...input, backgroundId: id }, { posterText })
+    )
+    const [first, ...rest] = generated
+
+    for (const item of rest) {
+      expect(item.templateRequest).toEqual(first.templateRequest)
+    }
+    expect(generated.map((item) => item.templateAssets.backgroundSource.backgroundId)).toEqual(
+      listBackgroundOptions().map(({ id }) => id)
+    )
+    expect(first.templateRequest.textFields).toMatchObject({
+      headline: 'Noche de Observación',
+      dateLabel: 'SÁB 11 JUL',
+      timeLabel: '7:15 PM',
+      locationLabel: 'Pitahaya, Cabo Rojo',
+      weatherDisclaimer: '*Actividad sujeta a condiciones del tiempo',
+    })
+    expect(getTemplateLayout(first.templateRequest.layout).logo.asset).toBe('short')
+  })
+
   test('attaches one top-level template request and shared assets', () => {
     const result = attachTemplateRequestsToResult(
       {
@@ -355,7 +400,7 @@ describe('attachTemplateRequestsToResult', () => {
         intent: 'Invitar',
         backgroundMode: 'stock',
         backgroundId: 'telescope-nebula',
-        eventDetails: { name: 'Perseidas', date: 'ago 12', time: '8 PM', location: 'PR' },
+        eventDetails: { name: 'Perseidas', date: '2026-08-12', time: '8 PM', location: 'PR' },
         sponsorLogo: {
           dataUrl: 'data:image/png;base64,aaaa',
           mimeType: 'image/png',
@@ -369,7 +414,7 @@ describe('attachTemplateRequestsToResult', () => {
         headline: 'Perseidas',
         subtitle: 'Ven a vernos.',
         body: 'Noche especial.',
-        dateLabel: 'ago 12',
+        dateLabel: 'MIÉ 12 AGO',
         weatherDisclaimer: EVENT_WEATHER_DISCLAIMER,
       },
     })
@@ -410,6 +455,27 @@ describe('textWrap', () => {
     expect(fontSize).toBeGreaterThanOrEqual(18)
     expect(lines.length).toBeGreaterThan(0)
   })
+
+  test('does not add an ellipsis when all copy fills the final allowed line', () => {
+    expect(wrapText('Noche de Observación', 820, 132, { maxLines: 2, charRatio: 0.535 })).toEqual([
+      'Noche de',
+      'Observación',
+    ])
+  })
+
+  test('balances centered two-line poster copy', () => {
+    const { lines } = fitAndWrapText(
+      'Una noche para mirar al cielo, aprender y disfrutar la astronomía en comunidad.',
+      702,
+      38,
+      24,
+      { maxLines: 2, charRatio: 0.46, balanceLines: true }
+    )
+    expect(lines).toEqual([
+      'Una noche para mirar al cielo, aprender',
+      'y disfrutar la astronomía en comunidad.',
+    ])
+  })
 })
 
 describe('buildTemplateSvg', () => {
@@ -430,12 +496,14 @@ describe('buildTemplateSvg', () => {
       sponsorPlacement: { left: 820, top: 1210, width: 160, height: 60 },
     })
     expect(svg).toContain('<svg')
-    expect(svg).toContain('Noche de estrellas')
+    expect(svg).toContain('>Noche de<')
+    expect(svg).toContain('>estrellas<')
     expect(svg).toContain('Observación pública')
     expect(svg).toContain('Una noche para mirar al cielo.')
     expect(svg).toContain('>15<')
     expect(svg).toContain('AGO')
-    expect(svg).toContain('8 PM')
+    expect(svg).toContain('>8<')
+    expect(svg).toContain('>PM<')
     expect(svg).toContain('ARECIBO')
     expect(svg).toContain(EVENT_WEATHER_DISCLAIMER)
     expect(svg).toContain('Auspicia')
@@ -477,6 +545,76 @@ describe('buildTemplateSvg', () => {
       expect(Number(textTop)).toBeGreaterThanOrEqual(Number(cardTop))
       expect(Number(textBottom)).toBeLessThanOrEqual(Number(cardBottom))
     }
+  })
+
+  test('keeps the approved observation-night hierarchy and geometry', () => {
+    const svg = buildTemplateSvg({
+      layout: 'event',
+      canvas: getSocialCanvas(),
+      textFields: {
+        headline: 'Noche de Observación',
+        subtitle: 'Acompáñanos bajo las estrellas en Pitahaya, Cabo Rojo.',
+        body: 'Una noche para mirar al cielo, aprender y disfrutar la astronomía en comunidad.',
+        dateLabel: 'SÁB 11 JUL',
+        timeLabel: '7:15 PM',
+        locationLabel: 'Pitahaya, Cabo Rojo',
+        weatherDisclaimer: EVENT_WEATHER_DISCLAIMER,
+      },
+    })
+
+    const headlineMetrics = svg.match(
+      /<text x="540" y="([\d.]+)"[^>]*font-size="([\d.]+)" font-weight="800"[^>]*><tspan[^>]*>Noche de</
+    )
+    const subtitleMetrics = svg.match(
+      /<text x="540" y="([\d.]+)"[^>]*font-size="([\d.]+)" font-weight="700"[^>]*><tspan[^>]*>Acompáñanos/
+    )
+    const bodyMetrics = svg.match(
+      /<text x="540" y="([\d.]+)"[^>]*font-size="([\d.]+)" font-weight="400"[^>]*><tspan[^>]*>Una noche/
+    )
+    const dateCardMetrics = svg.match(
+      /data-kind="date"[^>]*data-card-top="([\d.]+)" data-card-bottom="([\d.]+)"[^>]*>[\s\S]*?<rect[^>]*width="([\d.]+)" height="([\d.]+)"/
+    )
+
+    expect(headlineMetrics.slice(1).map(Number)).toEqual([
+      expect.closeTo(476.64),
+      expect.closeTo(132.84),
+    ])
+    expect(subtitleMetrics.slice(1).map(Number)).toEqual([
+      expect.closeTo(683.6),
+      expect.closeTo(54),
+    ])
+    expect(bodyMetrics.slice(1).map(Number)).toEqual([expect.closeTo(839.3), expect.closeTo(37.8)])
+    expect(dateCardMetrics.slice(1).map(Number)).toEqual([
+      expect.closeTo(936),
+      expect.closeTo(1127.52),
+      expect.closeTo(181.08),
+      expect.closeTo(191.52),
+    ])
+    expect(Number(headlineMetrics[1])).toBeLessThan(Number(subtitleMetrics[1]))
+    expect(Number(subtitleMetrics[1])).toBeLessThan(Number(bodyMetrics[1]))
+    expect(Number(bodyMetrics[1])).toBeLessThan(Number(dateCardMetrics[1]))
+    expect(svg).toContain('>PITA<')
+    expect(svg).toContain('>HAYA<')
+  })
+
+  test('preserves location word boundaries when punctuation has no following space', () => {
+    const svg = buildTemplateSvg({
+      layout: 'event',
+      canvas: getSocialCanvas(),
+      textFields: {
+        headline: 'Noche de Observación',
+        subtitle: 'Acompáñanos bajo las estrellas.',
+        body: 'Una noche para mirar al cielo.',
+        dateLabel: 'SÁB 11 JUL',
+        timeLabel: '7:15 PM',
+        locationLabel: 'Pitahaya,Cabo Rojo',
+        weatherDisclaimer: EVENT_WEATHER_DISCLAIMER,
+      },
+    })
+
+    expect(svg).not.toContain('PITAHAYACABO')
+    expect(svg).toContain('>PITA<')
+    expect(svg).toContain('>HAYA<')
   })
 
   test('escapes XML special characters', () => {
