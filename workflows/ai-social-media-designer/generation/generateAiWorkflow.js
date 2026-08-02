@@ -371,11 +371,11 @@ export function buildFallbackGenerationResult(input, reason) {
 // ---------- Deterministic output guardrails (Phase 2C) ----------
 
 const X_MAX_CHARS = 280
-
 const HASHTAG_PATTERN = /(^|\s)#[\p{L}\p{N}_-]+/gu
 const CAMPAIGN_PATTERN = /\b(?:campa(?:ñ|n)a|campaign)\b/i
 const REQUIRED_HASHTAG_PATTERN =
   /(?:requier\w*|obligatori\w*|debe[n]?\s+incluir|incluir\s+obligatoriamente)[^\n.]{0,80}hashtags?|hashtags?[^\n.]{0,80}(?:requerid\w*|obligatori\w*)/i
+
 const APPROVAL_CLAIM_PATTERNS = [
   /aprobad[oa]s?\s+(?:oficialmente\s+)?por\s+(?:la\s+)?SAC/i,
   /avalad[oa]s?\s+(?:oficialmente\s+)?por\s+(?:la\s+)?SAC/i,
@@ -497,6 +497,7 @@ export function applyGenerationGuardrails(result, input, { allowHashtags = false
   if (missingCta && !missingInformation.some((item) => /cta|registro|llamad/i.test(item))) {
     missingInformation.push('CTA del evento: no provista; no se inventó.')
   }
+
   if ((existing.draftText?.length || 0) > X_MAX_CHARS) {
     missingInformation.push(
       `El caption compartido excede el límite de ${X_MAX_CHARS} caracteres de X (${existing.draftText.length}); acortar antes de publicar.`
@@ -713,8 +714,10 @@ async function generateTextStep(input, guidelines) {
   const openRouterTitle = process.env.OPENROUTER_TITLE
 
   const firstPlatformGuidelines = guidelines.platforms[input.platforms[0]] || {}
-
   const allowHashtags = shouldIncludeHashtags(input, guidelines)
+  const needsPosterText =
+    isEventContentType(input.contentType) && Boolean(resolveTemplateLayoutId(input.contentType))
+
   const platformSections = input.platforms
     .map((platform) => {
       const rules = guidelines.platforms[platform]?.platform || 'Reglas generales de plataforma.'
@@ -733,6 +736,8 @@ Devuelve EXACTAMENTE un objeto JSON (sin texto adicional, sin markdown) con esta
     "assumptions": string[],
     "missingInformation": string[]
   },
+  "posterSubtitle": string (solo para afiches de eventos; omitir en otros casos),
+  "posterBody": string (solo para afiches de eventos; omitir en otros casos),
   "recommendedNextStep": string,
   "humanReviewRequired": true
 }
@@ -759,15 +764,20 @@ Reglas de salida:
 - Combina las reglas de las tres plataformas; ante conflicto aplica la regla más restrictiva.
 - Usa exactamente el contentType solicitado.
 - Idioma: español (por defecto), tono adecuado a SAC / Puerto Rico.
-- Preserva los hechos provistos (knownFacts, eventDetails, enlaces) tal cual, sin alterarlos.
-- NO inventes fechas, horarios, lugares, costos, enlaces ni hechos científicos no provistos.
-- Si falta información crítica, deja huecos claros en "missingInformation" y NO rellenes con datos inventados.
 - Hashtags: no incluir ni sugerir por defecto. En esta solicitud están ${
     allowHashtags ? 'permitidos por una excepción aplicable' : 'prohibidos'
   }. Solo se permiten si el usuario los solicitó, hay una campaña identificable o las guías activas los requieren explícitamente.
+- Preserva los hechos provistos (knownFacts, eventDetails, enlaces) tal cual, sin alterarlos.
+- NO inventes fechas, horarios, lugares, costos, enlaces ni hechos científicos no provistos.
+- Si falta información crítica, deja huecos claros en "missingInformation" y NO rellenes con datos inventados.
 - Registra en "assumptions" cualquier supuesto tomado; usa [] si no hay.
 - NO afirmes aprobación oficial de SAC ni que el contenido está listo para publicar sin revisión humana.
 - "recommendedNextStep" debe sugerir validar el borrador antes de aprobar/publicar.
+- Para un afiche de evento con plantilla, "posterSubtitle" debe ser un llamado breve, cálido y activo (máximo 80 caracteres) debajo del título. Varía naturalmente la apertura entre invitaciones como venir, acompañarnos, descubrir, disfrutar o mirar juntos; no copies literalmente los ejemplos ni uses siempre el mismo verbo.
+- "posterBody" debe ser una sola oración creativa e inspiradora (máximo 140 caracteres) que aparecerá encima de las tarjetas informativas.
+- Mantén "posterSubtitle" y "posterBody" independientes del caption. No repitas en ellos el título del evento, la fecha, la hora ni el lugar: esos datos ya aparecen en la plantilla.
+- No incluyas hashtags, enlaces, costos ni hechos concretos nuevos en esos dos campos. No inventes información.
+- Omite "posterSubtitle" y "posterBody" si no corresponden al tipo de contenido.
 `
 
   const userText = {
@@ -835,6 +845,19 @@ Input (JSON): ${JSON.stringify(userText)}`,
       throw err
     }
 
+    const posterText = needsPosterText
+      ? {
+          subtitle:
+            typeof json.posterSubtitle === 'string'
+              ? json.posterSubtitle.trim().slice(0, 80)
+              : undefined,
+          body:
+            typeof json.posterBody === 'string' ? json.posterBody.trim().slice(0, 140) : undefined,
+        }
+      : undefined
+    delete json.posterSubtitle
+    delete json.posterBody
+
     // Normalize humanReviewRequired in case the model omitted it
     if (json.humanReviewRequired !== true) {
       json.humanReviewRequired = true
@@ -845,6 +868,7 @@ Input (JSON): ${JSON.stringify(userText)}`,
     return {
       result: applyGenerationGuardrails(validated, input, { allowHashtags }),
       usage,
+      posterText,
     }
   }
 
@@ -852,7 +876,13 @@ Input (JSON): ${JSON.stringify(userText)}`,
 
   try {
     const first = await attempt()
-    return { ok: true, model, result: first.result, usage: first.usage }
+    return {
+      ok: true,
+      model,
+      result: first.result,
+      usage: first.usage,
+      posterText: first.posterText,
+    }
   } catch (err1) {
     accumulatedUsage = mergeOpenRouterUsage(accumulatedUsage, err1?.usage || null)
     try {
@@ -862,6 +892,7 @@ Input (JSON): ${JSON.stringify(userText)}`,
         model,
         result: second.result,
         usage: mergeOpenRouterUsage(accumulatedUsage, second.usage),
+        posterText: second.posterText,
       }
     } catch (err2) {
       accumulatedUsage = mergeOpenRouterUsage(accumulatedUsage, err2?.usage || null)
@@ -916,30 +947,13 @@ Reglas adicionales (fondo para plantilla):
 `
       : ''
 
-  const isEvent = isEventContentType(input.contentType)
-
-  const posterTextBlock = isEvent
-    ? `
-Además de imagePrompt, genera texto para el afiche del evento:
-- "posterSubtitle": frase corta (max 80 chars) que acompañe el titular en el afiche. Ejemplo: "Acompáñanos bajo las estrellas en Pitahaya, Cabo Rojo."
-- "posterBody": 1-2 oraciones breves (max 140 chars) descriptivas para el afiche. Ejemplo: "Una noche para mirar al cielo, aprender y disfrutar la astronomía en comunidad."
-NO inventes fechas, horarios, lugares, costos ni enlaces que no estén en los datos provistos.
-`
-    : ''
-
   const systemPrompt = `Eres un generador de prompts de imagen para borradores de redes sociales de SAC (Sociedad de Astronomía del Caribe).
 SAC publica la MISMA imagen en todas las redes sociales. Genera UN SOLO prompt visual compartido.
 Devuelve EXACTAMENTE un objeto JSON (sin texto adicional, sin markdown) con esta forma:
 
 {
   "sharedImagePrompt": string (inglés o español, descripción visual para generador de imágenes),
-  "sharedImageRationale": string (español, por qué el prompt apoya los borradores)${
-    isEvent
-      ? `,
-  "posterSubtitle": string (español, subtítulo corto para el afiche),
-  "posterBody": string (español, párrafo descriptivo breve para el afiche)`
-      : ''
-  }
+  "sharedImageRationale": string (español, por qué el prompt apoya los borradores)
 }
 
 GUÍAS DE SAC (versión ${guidelines.version}) — cúmplelas al redactar prompts:
@@ -967,7 +981,7 @@ Reglas:
 - Incluye restricciones de seguridad explícitas en el imagePrompt.
 - Respeta imageStyle e imageConstraints del usuario cuando estén provistos.
 - NO generes assets de imagen; solo el prompt de texto.
-${posterTextBlock}${backdropOnlyRules}`
+${backdropOnlyRules}`
 
   const userPayload = {
     intent: input.intent,
@@ -989,7 +1003,7 @@ ${posterTextBlock}${backdropOnlyRules}`
     { role: 'system', content: systemPrompt },
     {
       role: 'user',
-      content: `Generar un imagePrompt compartido${isEvent ? ' y texto del afiche' : ''}.
+      content: `Generar un imagePrompt compartido.
 Input (JSON): ${JSON.stringify(userPayload)}`,
     },
   ]
@@ -1052,18 +1066,7 @@ Input (JSON): ${JSON.stringify(userPayload)}`,
 
     const result = mergeImagePromptsIntoResult(textResult, imagePrompts, input)
 
-    const posterText =
-      isEvent && (json.posterSubtitle || json.posterBody)
-        ? {
-            subtitle:
-              typeof json.posterSubtitle === 'string'
-                ? json.posterSubtitle.slice(0, 120)
-                : undefined,
-            body: typeof json.posterBody === 'string' ? json.posterBody.slice(0, 200) : undefined,
-          }
-        : undefined
-
-    return { result, usage, posterText }
+    return { result, usage }
   }
 
   let accumulatedUsage = null
@@ -1075,7 +1078,6 @@ Input (JSON): ${JSON.stringify(userPayload)}`,
       skipped: false,
       result: first.result,
       usage: first.usage,
-      posterText: first.posterText,
     }
   } catch (err1) {
     accumulatedUsage = mergeOpenRouterUsage(accumulatedUsage, err1?.usage || null)
@@ -1086,7 +1088,6 @@ Input (JSON): ${JSON.stringify(userPayload)}`,
         skipped: false,
         result: second.result,
         usage: mergeOpenRouterUsage(accumulatedUsage, second.usage),
-        posterText: second.posterText,
       }
     } catch (err2) {
       accumulatedUsage = mergeOpenRouterUsage(accumulatedUsage, err2?.usage || null)
@@ -1379,15 +1380,10 @@ export async function generateAiWorkflow(input) {
       })
       usage = textResult.usage
     } else {
-      const imagePromptResult = await generateImagePromptsStep(
-        validatedInput,
-        textResult.result,
-        guidelines
-      )
-      usage = mergeOpenRouterUsage(textResult.usage, imagePromptResult.usage)
+      usage = textResult.usage
       finalResult = AiGenerationResultSchema.parse(
-        attachTemplateRequestsToResult(imagePromptResult.result, validatedInput, {
-          posterText: imagePromptResult.posterText,
+        attachTemplateRequestsToResult(textResult.result, validatedInput, {
+          posterText: textResult.posterText,
         })
       )
     }
@@ -1408,7 +1404,7 @@ export async function generateAiWorkflow(input) {
       finalResult = AiGenerationResultSchema.parse(
         attachTemplateRequestsToResult(backdropResult.result, validatedInput, {
           backdropDataUrl: backdropResult.backdropDataUrl,
-          posterText: imagePromptResult.posterText,
+          posterText: textResult.posterText,
         })
       )
     } else {

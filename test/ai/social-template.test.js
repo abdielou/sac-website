@@ -8,6 +8,8 @@ import {
   listBackgroundOptions,
 } from '../../lib/social-template/backgroundCatalog'
 import {
+  EVENT_POSTER_BODY_FALLBACK,
+  EVENT_POSTER_SUBTITLE_FALLBACK,
   attachTemplateRequestsToResult,
   buildTemplateTextFields,
 } from '../../lib/social-template/buildTemplateTextFields'
@@ -233,7 +235,8 @@ describe('buildTemplateTextFields', () => {
     expect(fields).toMatchObject({
       layout: 'event',
       headline: 'Noche de Perseidas',
-      subtitle: 'Acompáñanos bajo las estrellas en Guánica.',
+      subtitle: EVENT_POSTER_SUBTITLE_FALLBACK,
+      body: EVENT_POSTER_BODY_FALLBACK,
       dateLabel: 'MIÉ 12 AGO',
       timeLabel: '8:00 PM',
       locationLabel: 'Guánica',
@@ -256,6 +259,44 @@ describe('buildTemplateTextFields', () => {
     })
     expect(fields.subtitle).toBe('Acompáñanos bajo las estrellas.')
     expect(fields.body).toBe('Una noche para mirar al cielo.')
+  })
+
+  test('replaces repeated logistics or invented date/time details with safe copy', () => {
+    const fields = buildTemplateTextFields({
+      input: {
+        contentType: 'observation_night',
+        eventDetails: {
+          name: 'Noche de Observación',
+          date: '2026-07-11',
+          time: '19:15',
+          location: 'Pitahaya, Cabo Rojo',
+        },
+      },
+      posterText: {
+        subtitle: 'Ven a la Noche de Observación el 15 de agosto.',
+        body: 'Nos vemos a las 8:30 PM en Pitahaya, Cabo Rojo.',
+      },
+    })
+
+    expect(fields.subtitle).toBe(EVENT_POSTER_SUBTITLE_FALLBACK)
+    expect(fields.body).toBe(EVENT_POSTER_BODY_FALLBACK)
+  })
+
+  test('enforces poster copy length limits', () => {
+    const fields = buildTemplateTextFields({
+      input: {
+        contentType: 'observation_night',
+        eventDetails: { name: 'Noche de Observación' },
+      },
+      posterText: {
+        subtitle:
+          'Ven a descubrir el universo con nosotros y comparte una experiencia inolvidable bajo un cielo lleno de estrellas.',
+        body: 'Mira hacia arriba y déjate sorprender por una experiencia de astronomía compartida que despierta la curiosidad y nos conecta con la inmensidad del universo visible.',
+      },
+    })
+
+    expect(fields.subtitle.length).toBeLessThanOrEqual(80)
+    expect(fields.body.length).toBeLessThanOrEqual(140)
   })
 
   test('falls back to topic when event name missing', () => {

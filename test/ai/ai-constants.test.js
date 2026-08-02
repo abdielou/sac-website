@@ -89,6 +89,7 @@ describe('ai-constants', () => {
 
   test('shouldGenerateImagePrompt skips reel captions and defaults on for others', () => {
     expect(shouldGenerateImagePrompt('reel_caption')).toBe(false)
+    expect(shouldGenerateImagePrompt('event_promotion', { backgroundMode: 'stock' })).toBe(false)
     expect(shouldGenerateImagePrompt('regular_post')).toBe(true)
   })
 })

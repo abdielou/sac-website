@@ -22,6 +22,10 @@ describe('shouldGenerateImagePrompt', () => {
     expect(shouldGenerateImagePrompt('reel_caption')).toBe(false)
   })
 
+  test('returns false when an existing template background supplies the visual', () => {
+    expect(shouldGenerateImagePrompt('event_promotion', { backgroundMode: 'stock' })).toBe(false)
+  })
+
   test('still returns true when image style or constraints are provided', () => {
     expect(shouldGenerateImagePrompt('regular_post', { imageStyle: 'ilustración' })).toBe(true)
     expect(shouldGenerateImagePrompt('member_update', { imageConstraints: 'sin rostros' })).toBe(
