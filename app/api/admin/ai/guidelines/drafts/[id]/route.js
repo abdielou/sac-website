@@ -33,14 +33,22 @@ export const PUT = auth(async function PUT(req, { params }) {
     if (!document || typeof document !== 'object') {
       return NextResponse.json({ error: 'document es obligatorio' }, { status: 400 })
     }
+    const expectedRevision = body?.expectedRevision
+    if (!Number.isInteger(expectedRevision) || expectedRevision < 1) {
+      return NextResponse.json({ error: 'expectedRevision es obligatorio' }, { status: 400 })
+    }
 
     const result = await saveGuidelineDraft(draftId, document, {
       updatedBy: actorFromAuth(req.auth),
+      expectedRevision,
     })
     return NextResponse.json(result)
   } catch (error) {
     if (error.code === 'DRAFT_NOT_FOUND') {
       return NextResponse.json({ error: error.message }, { status: 404 })
+    }
+    if (error.code === 'DRAFT_CONFLICT') {
+      return NextResponse.json({ error: error.message }, { status: 409 })
     }
     if (error.code === 'VALIDATION_FAILED') {
       return NextResponse.json(

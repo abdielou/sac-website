@@ -27,13 +27,31 @@ export const POST = auth(async function POST(req, { params }) {
   }
 
   try {
+    let body
+    try {
+      body = await req.json()
+    } catch {
+      body = null
+    }
+    const expectedRevision = body?.expectedRevision
+    if (!Number.isInteger(expectedRevision) || expectedRevision < 1) {
+      return NextResponse.json({ error: 'expectedRevision es obligatorio' }, { status: 400 })
+    }
+
     const result = await activateGuidelineVersion(draftId, {
       activatedBy: actorFromAuth(req.auth),
+      expectedRevision,
     })
     return NextResponse.json(result)
   } catch (error) {
     if (error.code === 'DRAFT_NOT_FOUND') {
       return NextResponse.json({ error: error.message }, { status: 404 })
+    }
+    if (error.code === 'DRAFT_CONFLICT') {
+      return NextResponse.json({ error: error.message }, { status: 409 })
+    }
+    if (error.code === 'ACTIVATION_CONFLICT') {
+      return NextResponse.json({ error: error.message }, { status: 409 })
     }
     if (error.code === 'VALIDATION_FAILED') {
       return NextResponse.json(
