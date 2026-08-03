@@ -21,7 +21,7 @@ describe('GenerationForm shared platforms', () => {
     container.remove()
   })
 
-  test('shows the shared destination and no platform selectors', () => {
+  test('shows the Guidelines-driven shared destination and no platform selectors', () => {
     act(() =>
       root.render(
         <GenerationForm
@@ -29,13 +29,34 @@ describe('GenerationForm shared platforms', () => {
           formState={DEFAULT_GENERATION_FORM}
           onFormChange={() => {}}
           onSubmit={() => {}}
-          contentTypes={[{ id: 'observation_night', label: 'Noche de Observación' }]}
+          contentTypes={[
+            {
+              id: 'observation_night',
+              label: 'Noche de Observación',
+              definition: {
+                platforms: ['instagram', 'facebook'],
+                visual: {
+                  mode: 'template',
+                  imagePolicyByPlatform: {
+                    x: 'prohibited',
+                    instagram: 'required',
+                    facebook: 'optional',
+                  },
+                },
+              },
+            },
+          ]}
+          platformOptions={[
+            { id: 'x', label: 'X' },
+            { id: 'instagram', label: 'Instagram' },
+            { id: 'facebook', label: 'Facebook' },
+          ]}
         />
       )
     )
 
     expect(container.textContent).toContain(
-      'El caption y la imagen se compartirán en X, Instagram y Facebook.'
+      'Se generarán un caption y una imagen compartidos para Instagram y Facebook, según Guidelines.'
     )
     expect(container.querySelector('[id^="gen-platform-"]')).toBeNull()
   })

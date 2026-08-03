@@ -1,5 +1,6 @@
 import { shouldGenerateImagePrompt } from '../../lib/ai-constants'
 import { resolveGenerationGuidelinesForRequest } from '../../lib/ai-guidelines'
+import { resolveImageTextPolicy, stripNoTextInstructions } from '../../lib/ai-image-text-policy'
 import {
   AiGenerationResultSchema,
   AiImagePromptsResultSchema,
@@ -55,7 +56,7 @@ describe('resolveGenerationGuidelinesForRequest image prompts', () => {
       contentType: 'image_post',
     })
 
-    expect(resolved.imagePrompt).toMatch(/prompts de imagen/i)
+    expect(resolved.imagePrompt).toMatch(/la imagen debe representar el tema/i)
     expect(resolved.imageValidation).toBeTruthy()
   })
 })
@@ -95,6 +96,38 @@ describe('applyImagePromptGuardrailsToDraft', () => {
     )
 
     expect(draft.imagePrompt).toMatch(/no identifiable faces/i)
+    expect(draft.imagePrompt).toMatch(/no unrequested text overlay/i)
+  })
+
+  test('allows required greeting typography and removes a conflicting no-text clause', () => {
+    const requiredTextInput = {
+      ...baseInput,
+      topic: 'Día del Padre',
+      contentType: 'holiday_greeting',
+      contentTypeDefinition: {
+        id: 'holiday_greeting',
+        generation: {
+          rules:
+            'Debe generar una felicitación de acuerdo al día festivo. La imagen generada debe incluir la felicitación.',
+        },
+      },
+    }
+    const draft = applyImagePromptGuardrailsToDraft(
+      {
+        platform: 'instagram',
+        contentType: 'holiday_greeting',
+        draftText: 'Feliz Día del Padre.',
+        imagePrompt:
+          'Father and child observing the stars; no identifiable faces; no text overlay.',
+      },
+      requiredTextInput
+    )
+
+    expect(draft.imagePrompt).not.toMatch(/no text overlay/i)
+    expect(draft.imagePrompt).toContain('Required on-image text: "Feliz Día del Padre"')
+    expect(draft.imagePrompt).toMatch(/clearly legible/i)
+    expect(draft.imagePrompt).toContain('aligned with the publication topic, occasion, and caption')
+    expect(draft.imagePrompt).not.toMatch(/astronomy anchor/i)
   })
 
   test('flags approval claims in image prompts', () => {
@@ -129,19 +162,60 @@ describe('applyImagePromptGuardrailsToDraft', () => {
     expect(draft.missingInformation.some((item) => /20 de diciembre/i.test(item))).toBe(true)
   })
 
-  test('flags risky patterns such as minors', () => {
+  test('flags identifiable portrait prompts', () => {
     const draft = applyImagePromptGuardrailsToDraft(
       {
         platform: 'instagram',
         contentType: 'image_post',
         draftText: 'Texto',
-        imagePrompt: 'Children looking through telescopes at night.',
+        imagePrompt: 'Portrait of a child looking through a telescope at night.',
         missingInformation: [],
       },
       baseInput
     )
 
-    expect(draft.missingInformation.some((item) => /menores/i.test(item))).toBe(true)
+    expect(draft.missingInformation.some((item) => /retrato identificable/i.test(item))).toBe(true)
+  })
+
+  test('allows a non-identifiable family scene when it is relevant to the theme', () => {
+    const draft = applyImagePromptGuardrailsToDraft(
+      {
+        platform: 'instagram',
+        contentType: 'regular_post',
+        draftText: 'Feliz Día del Padre.',
+        imagePrompt:
+          'Silhouettes of a father and child seen from behind, observing stars through a telescope.',
+        missingInformation: [],
+      },
+      baseInput
+    )
+
+    expect(draft.missingInformation).toEqual([])
+    expect(draft.imagePrompt).toMatch(/non-identifiably, fully clothed/i)
+  })
+})
+
+describe('image text policy', () => {
+  test('derives a supplied holiday greeting from natural-language type rules', () => {
+    const policy = resolveImageTextPolicy({
+      topic: 'Día del Padre',
+      contentTypeDefinition: {
+        generation: {
+          rules:
+            'Debe generar una felicitación de acuerdo al día festivo. La imagen generada debe incluir la felicitación.',
+        },
+      },
+    })
+
+    expect(policy).toMatchObject({ required: true, suggestedText: 'Feliz Día del Padre' })
+  })
+
+  test('removes persisted English and Spanish no-text instructions', () => {
+    expect(
+      stripNoTextInstructions(
+        'Astronomy greeting; no text overlay; sin tipografía; no identifiable faces.'
+      )
+    ).toBe('Astronomy greeting; no identifiable faces')
   })
 })
 

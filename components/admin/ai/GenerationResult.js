@@ -1,8 +1,23 @@
 'use client'
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { PLATFORM_LABELS, CONTENT_TYPE_LABELS } from '@/lib/ai-constants'
+import { DEFAULT_SEED_PLATFORM_LABELS, CONTENT_TYPE_LABELS } from '@/lib/ai-constants'
 import GeneratedImageLightbox from './GeneratedImageLightbox'
+
+const POLICY_CATEGORY_LABELS = {
+  invalid_request: 'No se pudo confirmar la solicitud',
+  medical_advice: 'Asesoría médica',
+  legal_advice: 'Asesoría legal',
+  sexual_content: 'Contenido sexual',
+  double_entendre: 'Doble sentido',
+  deceptive_content: 'Contenido engañoso',
+  out_of_scope: 'Fuera del alcance del SAC',
+  unrelated_image: 'Imagen no relacionada',
+  guideline_noncompliance: 'No cumple una guía',
+  fabricated_facts: 'Hechos no provistos',
+  direct_publishing: 'Publicación directa',
+  bypass_human_review: 'Omisión de revisión humana',
+}
 
 async function copyToClipboard(text) {
   if (!text) return false
@@ -95,6 +110,7 @@ function extractSharedImage(result, drafts) {
  * @param {Object} [props.usage] - OpenRouter usage metadata for this run
  * @param {string} [props.guidelineVersion] - Active guideline version applied to this run
  * @param {string} [props.policyVersion] - Immutable base policy applied to this run
+ * @param {Record<string, string>} [props.platformLabels] - Labels from active Guidelines
  */
 export default function GenerationResult({
   result,
@@ -102,9 +118,11 @@ export default function GenerationResult({
   guidelineVersion,
   policyVersion,
   contentTypeIdentity,
+  platformLabels = {},
 }) {
   const [actionFeedback, setActionFeedback] = useState(null)
   const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false)
+  const [policyReviewConfirmed, setPolicyReviewConfirmed] = useState(false)
   const [editedCaptions, setEditedCaptions] = useState(() =>
     Array.isArray(result?.drafts) ? result.drafts.map((draft) => draft?.draftText || '') : []
   )
@@ -116,6 +134,7 @@ export default function GenerationResult({
     setEditedCaptions(
       Array.isArray(result?.drafts) ? result.drafts.map((draft) => draft?.draftText || '') : []
     )
+    setPolicyReviewConfirmed(false)
   }, [result])
 
   useEffect(
@@ -141,12 +160,28 @@ export default function GenerationResult({
     ? result.captionCharacterLimit
     : null
   const sharedPlatformLabel = drafts
-    .map(({ platform }) => PLATFORM_LABELS[platform] || platform)
+    .map(
+      ({ platform }) =>
+        platformLabels[platform] || DEFAULT_SEED_PLATFORM_LABELS[platform] || platform
+    )
     .filter(Boolean)
     .join(' · ')
   const sharedImageAudience = imagePlatforms.length
-    ? imagePlatforms.map((platform) => PLATFORM_LABELS[platform] || platform).join(', ')
-    : 'todas las redes'
+    ? imagePlatforms
+        .map(
+          (platform) =>
+            platformLabels[platform] || DEFAULT_SEED_PLATFORM_LABELS[platform] || platform
+        )
+        .join(', ')
+    : 'las redes permitidas por Guidelines'
+  const policyReview =
+    result.policyReview ||
+    (result.policyBlock ? { ...result.policyBlock, disposition: 'block' } : null)
+  const policyNeedsConfirmation = policyReview?.disposition === 'review'
+  const hasGuidelineNoncompliance = policyReview?.categories?.includes('guideline_noncompliance')
+  const actionsLocked = Boolean(
+    policyReview && (policyReview.disposition === 'block' || !policyReviewConfirmed)
+  )
 
   const showActionFeedback = (id, message, succeeded) => {
     if (feedbackTimerRef.current) window.clearTimeout(feedbackTimerRef.current)
@@ -155,11 +190,13 @@ export default function GenerationResult({
   }
 
   const handleCopy = async (text, id, successMessage = 'Copiado') => {
+    if (actionsLocked) return
     const copied = await copyToClipboard(text)
     showActionFeedback(id, copied ? successMessage : 'No se pudo copiar', copied)
   }
 
   const handleDownload = () => {
+    if (actionsLocked) return
     const downloaded = downloadDataUrl(sharedImage?.dataUrl, sharedImage?.downloadFileName)
     showActionFeedback(
       'download-image',
@@ -170,8 +207,78 @@ export default function GenerationResult({
 
   return (
     <div className="mt-8 space-y-6" data-testid="generation-result">
+      {policyReview && (
+        <div
+          className={`rounded-lg border px-4 py-4 ${
+            policyReview.disposition === 'block'
+              ? 'border-red-300 bg-red-50 text-red-950 dark:border-red-800 dark:bg-red-950/30 dark:text-red-100'
+              : 'border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-100'
+          }`}
+          data-testid="generation-policy-review"
+          role="alert"
+        >
+          <p className="font-semibold">
+            {policyReview.disposition === 'block'
+              ? 'Borrador bloqueado — revisa esto'
+              : hasGuidelineNoncompliance
+                ? 'Borrador para corregir'
+                : 'Política: revisar'}
+          </p>
+          <p className="mt-1 text-sm opacity-90">
+            {policyReview.disposition === 'review'
+              ? hasGuidelineNoncompliance
+                ? 'El borrador no cumple por completo una regla de Guías. Se conserva para que puedas corregirlo o volver a generar.'
+                : policyReview.stage === 'caption'
+                  ? 'El reviewer detectó una duda factual. La imagen no se generó; confirma o corrige el caption.'
+                  : 'El reviewer detectó una duda factual. Confirma los datos antes de usar el caption o la imagen.'
+              : policyReview.stage === 'caption'
+                ? 'El caption viola una política de bloqueo duro. La imagen no se generó.'
+                : 'El resultado viola una política de bloqueo duro. La imagen fue descartada.'}
+          </p>
+          <details className="mt-3">
+            <summary className="cursor-pointer text-sm font-semibold underline underline-offset-2">
+              Mostrar el motivo
+            </summary>
+            <div className="mt-3 space-y-2 text-sm">
+              <p>
+                <span className="font-semibold">Motivo:</span> {policyReview.reason}
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold">Categorías:</span>
+                {policyReview.categories.map((category) => (
+                  <span
+                    key={category}
+                    className="rounded-full border border-current/30 bg-white/60 px-2 py-0.5 text-xs dark:bg-gray-950/30"
+                  >
+                    {POLICY_CATEGORY_LABELS[category] || category} ({category})
+                  </span>
+                ))}
+              </div>
+            </div>
+          </details>
+          {policyNeedsConfirmation && (
+            <label className="mt-4 flex items-start gap-3 rounded-md border border-amber-300 bg-white/60 px-3 py-3 text-sm dark:border-amber-700 dark:bg-gray-950/20">
+              <input
+                type="checkbox"
+                checked={policyReviewConfirmed}
+                onChange={(event) => setPolicyReviewConfirmed(event.target.checked)}
+                className="mt-0.5 rounded border-amber-400 text-amber-700 focus:ring-amber-600"
+              />
+              <span>
+                {hasGuidelineNoncompliance
+                  ? 'Revisé el incumplimiento indicado y quiero habilitar copiar y descargar este borrador.'
+                  : 'Confirmo que comparé el borrador con la información oficial. Habilitar copiar y descargar.'}
+              </span>
+            </label>
+          )}
+        </div>
+      )}
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-        {hasSharedCaption ? 'Caption compartido' : `Borradores generados (${generatedDraftCount})`}
+        {policyReview
+          ? 'Contenido para corregir'
+          : hasSharedCaption
+            ? 'Caption compartido'
+            : `Borradores generados (${generatedDraftCount})`}
       </h2>
       <p className="sr-only" role="status" aria-live="polite">
         {actionFeedback?.message || ''}
@@ -250,7 +357,8 @@ export default function GenerationResult({
             <button
               type="button"
               onClick={handleDownload}
-              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 sm:w-auto dark:bg-emerald-600 dark:hover:bg-emerald-500 dark:focus-visible:ring-emerald-400 dark:focus-visible:ring-offset-gray-900"
+              disabled={actionsLocked}
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto dark:bg-emerald-600 dark:hover:bg-emerald-500 dark:focus-visible:ring-emerald-400 dark:focus-visible:ring-offset-gray-900"
             >
               {actionFeedback?.id === 'download-image' && actionFeedback.succeeded ? (
                 <CheckIcon />
@@ -275,7 +383,10 @@ export default function GenerationResult({
       />
 
       {displayDrafts.map((draft, idx) => {
-        const platformLabel = PLATFORM_LABELS[draft.platform] || draft.platform
+        const platformLabel =
+          platformLabels[draft.platform] ||
+          DEFAULT_SEED_PLATFORM_LABELS[draft.platform] ||
+          draft.platform
         const contentTypeLabel =
           contentTypeIdentity?.id === draft.contentType && contentTypeIdentity?.label
             ? contentTypeIdentity.label
@@ -326,7 +437,11 @@ export default function GenerationResult({
                     className="block w-full resize-y rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-blue-400 dark:focus:ring-blue-400"
                   />
                   <div className="flex items-center justify-between gap-3 text-xs text-gray-500 dark:text-gray-400">
-                    <span>Se copiará esta versión.</span>
+                    <span>
+                      {actionsLocked
+                        ? 'Confirma la revisión de política para copiar.'
+                        : 'Se copiará esta versión.'}
+                    </span>
                     <span aria-live="polite">
                       {captionCharacterLimit
                         ? `${editedCaption.length}/${captionCharacterLimit}`
@@ -344,7 +459,8 @@ export default function GenerationResult({
                         hasSharedCaption ? 'Caption copiado' : 'Borrador copiado'
                       )
                     }
-                    className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-800 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 sm:w-auto dark:bg-blue-600 dark:hover:bg-blue-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-gray-900"
+                    disabled={actionsLocked}
+                    className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-800 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto dark:bg-blue-600 dark:hover:bg-blue-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-gray-900"
                   >
                     {actionFeedback?.id === `copy-caption-${idx}` && actionFeedback.succeeded ? (
                       <CheckIcon />
@@ -428,7 +544,8 @@ export default function GenerationResult({
                     onClick={() =>
                       handleCopy(draft.imagePrompt, `copy-prompt-${draft.platform}-${idx}`)
                     }
-                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                    disabled={actionsLocked}
+                    className="text-sm text-blue-600 hover:underline disabled:cursor-not-allowed disabled:opacity-45 dark:text-blue-400"
                   >
                     {actionFeedback?.id === `copy-prompt-${draft.platform}-${idx}`
                       ? actionFeedback.message

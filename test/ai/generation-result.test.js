@@ -94,6 +94,74 @@ describe('GenerationResult image preview', () => {
     expect(downloadButton.querySelector('svg')).not.toBeNull()
     anchorClick.mockRestore()
   })
+
+  test('shows a gray-policy image but gates download behind human confirmation', () => {
+    act(() =>
+      root.render(
+        <GenerationResult
+          result={{
+            ...RESULT,
+            drafts: [
+              {
+                platform: 'instagram',
+                contentType: 'observation_night',
+                draftText: 'Noche de Observación el 15 de agosto.',
+              },
+            ],
+            policyReview: {
+              stage: 'result',
+              disposition: 'review',
+              categories: ['fabricated_facts'],
+              reason: 'No pude confirmar si el afiche debía mostrar el año.',
+              failClosed: false,
+            },
+          }}
+        />
+      )
+    )
+
+    expect(container.textContent).toContain('Política: revisar')
+    expect(container.querySelector('[data-testid="generation-shared-image"]')).not.toBeNull()
+    const download = Array.from(container.querySelectorAll('button')).find((button) =>
+      button.textContent.includes('Descargar imagen')
+    )
+    expect(download.disabled).toBe(true)
+
+    act(() => container.querySelector('input[type="checkbox"]').click())
+    expect(download.disabled).toBe(false)
+  })
+
+  test('keeps a guideline-mismatch image as a correctable draft', () => {
+    act(() =>
+      root.render(
+        <GenerationResult
+          result={{
+            ...RESULT,
+            drafts: [
+              {
+                platform: 'instagram',
+                contentType: 'holiday_greeting',
+                draftText: 'Feliz Día del Padre.',
+              },
+            ],
+            policyReview: {
+              stage: 'result',
+              disposition: 'review',
+              categories: ['guideline_noncompliance'],
+              reason: 'La imagen corresponde al tema, pero omite la felicitación requerida.',
+              failClosed: false,
+            },
+          }}
+        />
+      )
+    )
+
+    expect(container.textContent).toContain('Borrador para corregir')
+    expect(container.textContent).toContain('Se conserva para que puedas corregirlo')
+    expect(container.textContent).toContain('No cumple una guía (guideline_noncompliance)')
+    expect(container.querySelector('[data-testid="generation-shared-image"]')).not.toBeNull()
+    expect(container.textContent).not.toContain('La imagen fue descartada')
+  })
 })
 
 describe('GenerationResult captions', () => {
@@ -133,6 +201,45 @@ describe('GenerationResult captions', () => {
     expect(container.textContent).toContain(`${shared.length} caracteres`)
   })
 
+  test('shows the reason and categories while preserving a blocked caption for correction', () => {
+    const result = {
+      drafts: [
+        {
+          platform: 'instagram',
+          contentType: 'observation_night',
+          draftText: 'Acompáñanos mañana a las 8:00 p. m.',
+        },
+      ],
+      recommendedNextStep: 'Corrige el caption y vuelve a generar.',
+      humanReviewRequired: true,
+      policyReview: {
+        stage: 'caption',
+        disposition: 'review',
+        categories: ['fabricated_facts', 'deceptive_content'],
+        reason: 'La hora no aparece en los datos provistos.',
+        failClosed: false,
+      },
+    }
+
+    act(() => root.render(<GenerationResult result={result} />))
+
+    expect(container.textContent).toContain('Política: revisar')
+    expect(container.textContent).toContain('La imagen no se generó')
+    expect(container.textContent).toContain('Mostrar el motivo')
+    expect(container.textContent).toContain('La hora no aparece en los datos provistos.')
+    expect(container.textContent).toContain('Hechos no provistos (fabricated_facts)')
+    expect(container.textContent).toContain('Contenido engañoso (deceptive_content)')
+    expect(container.querySelector('textarea').value).toContain('Acompáñanos mañana')
+    expect(container.querySelector('[data-testid="generation-shared-image"]')).toBeNull()
+    const copyButton = Array.from(container.querySelectorAll('button')).find((button) =>
+      button.textContent.includes('Copiar borrador')
+    )
+    expect(copyButton.disabled).toBe(true)
+
+    act(() => container.querySelector('input[type="checkbox"]').click())
+    expect(copyButton.disabled).toBe(false)
+  })
+
   test('uses the effective Guidelines limit in the shared caption editor', () => {
     const shared = 'Caption compartido.'
     const result = {
@@ -150,6 +257,29 @@ describe('GenerationResult captions', () => {
     expect(container.textContent).toContain(`${shared.length}/500`)
     expect(container.textContent).toContain('Instagram · Facebook')
     expect(container.textContent).not.toContain('X · Instagram · Facebook')
+  })
+
+  test('uses platform names configured in Guidelines', () => {
+    const result = {
+      imagePlatforms: ['threads'],
+      generatedImage: RESULT.generatedImage,
+      drafts: [
+        {
+          platform: 'threads',
+          contentType: 'regular_post',
+          draftText: 'Caption para la red configurada.',
+        },
+      ],
+    }
+
+    act(() =>
+      root.render(
+        <GenerationResult result={result} platformLabels={{ threads: 'Threads de SAC' }} />
+      )
+    )
+
+    expect(container.textContent).toContain('Threads de SAC')
+    expect(container.textContent).toContain('Imagen compartida para Threads de SAC')
   })
 
   test('edits and copies the shared caption, then restores the original', async () => {

@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { FIELD_LIBRARY } from '@/lib/ai-guidelines-schema'
 
 const inputClass =

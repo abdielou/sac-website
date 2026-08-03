@@ -19,9 +19,11 @@ export default function AiGenerationClient() {
     () => resolveContentTypeOptions(active, { includeDefinitions: true }),
     [active]
   )
-  const platforms = useMemo(
-    () => resolvePlatformOptions(active).map(({ id }) => id),
-    [active]
+  const platformOptions = useMemo(() => resolvePlatformOptions(active), [active])
+  const platforms = useMemo(() => platformOptions.map(({ id }) => id), [platformOptions])
+  const platformLabels = useMemo(
+    () => Object.fromEntries(platformOptions.map(({ id, label }) => [id, label])),
+    [platformOptions]
   )
 
   const [formState, setFormState] = useState(DEFAULT_GENERATION_FORM)
@@ -47,7 +49,6 @@ export default function AiGenerationClient() {
     error,
     isBusy,
     submitGeneration,
-    retryRun,
     resetRun,
   } = useAiGenerationRun({ canGenerate })
 
@@ -70,7 +71,7 @@ export default function AiGenerationClient() {
         Generar borradores
       </h2>
       <p className="text-gray-600 dark:text-gray-400 mb-6">
-      Generado conforme a las guías activas. Requiere revisión humana antes de publicar.
+        Generado conforme a las guías activas. Requiere revisión humana antes de publicar.
       </p>
 
       {!guidelinesHydrated && !isBusy && (
@@ -120,15 +121,12 @@ export default function AiGenerationClient() {
         onSubmit={handleSubmit}
         contentTypes={contentTypes}
         platforms={platforms}
+        platformOptions={platformOptions}
       />
 
       {error && (phase === 'failed' || phase === 'timeout') && (
         <div className="mt-6">
-          <ErrorState
-            message={error}
-            onRetry={phase === 'timeout' ? retryRun : resetRun}
-            actionLabel={phase === 'timeout' ? 'Consultar de nuevo' : 'Volver al formulario'}
-          />
+          <ErrorState message={error} onRetry={resetRun} actionLabel="Volver al formulario" />
         </div>
       )}
 
@@ -141,6 +139,7 @@ export default function AiGenerationClient() {
               guidelineVersion={guidelineVersion}
               policyVersion={policyVersion}
               contentTypeIdentity={contentTypeIdentity}
+              platformLabels={platformLabels}
             />
           </div>
           <div className="mt-6">

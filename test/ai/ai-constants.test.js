@@ -1,11 +1,9 @@
 import {
-  PLATFORMS,
   DEFAULT_SEED_PLATFORMS,
   DEFAULT_SEED_PLATFORM_LABELS,
   CONTENT_TYPES,
   OBSERVATION_NIGHT_CONTENT_TYPE,
   OBSERVATION_NIGHT_LABEL,
-  PLATFORM_LABELS,
   CONTENT_TYPE_LABELS,
   DEFAULT_GENERATION_CONTENT_TYPE,
   IMAGE_CONTENT_TYPES,
@@ -20,10 +18,8 @@ import {
 
 describe('ai-constants', () => {
   test('DEFAULT_SEED_PLATFORMS includes x, instagram, facebook', () => {
-    expect(PLATFORMS).toEqual(['x', 'instagram', 'facebook'])
-    expect(DEFAULT_SEED_PLATFORMS).toEqual(PLATFORMS)
-    for (const p of PLATFORMS) {
-      expect(PLATFORM_LABELS[p]).toBeTruthy()
+    expect(DEFAULT_SEED_PLATFORMS).toEqual(['x', 'instagram', 'facebook'])
+    for (const p of DEFAULT_SEED_PLATFORMS) {
       expect(DEFAULT_SEED_PLATFORM_LABELS[p]).toBeTruthy()
     }
   })
@@ -53,13 +49,13 @@ describe('ai-constants', () => {
   })
 
   test('every platform has a media posture', () => {
-    for (const p of PLATFORMS) {
+    for (const p of DEFAULT_SEED_PLATFORMS) {
       expect(['text_first', 'image_first', 'mixed']).toContain(PLATFORM_MEDIA_POSTURE[p])
     }
   })
 
   test('intrinsic image types accept images on any platform and do not require them', () => {
-    for (const platform of PLATFORMS) {
+    for (const platform of DEFAULT_SEED_PLATFORMS) {
       for (const contentType of IMAGE_CONTENT_TYPES) {
         expect(contentTypeAcceptsImages(platform, contentType)).toBe(true)
         expect(contentTypeRequiresImages(platform, contentType)).toBe(false)
@@ -88,7 +84,7 @@ describe('ai-constants', () => {
   })
 
   test('non-visual content types do not accept images', () => {
-    for (const platform of PLATFORMS) {
+    for (const platform of DEFAULT_SEED_PLATFORMS) {
       expect(contentTypeAcceptsImages(platform, 'caption')).toBe(false)
       expect(contentTypeRequiresImages(platform, 'caption')).toBe(false)
       expect(contentTypeAcceptsImages(platform, 'reel_caption')).toBe(false)
