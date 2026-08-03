@@ -2,6 +2,7 @@ import {
   applyGenerationGuardrails,
   AiGenerationResultSchema,
   AiSharedCaptionResultSchema,
+  resolveSharedCaptionCharacterLimit,
   shouldIncludeHashtags,
 } from '../../workflows/ai-social-media-designer/generation/generateAiWorkflow'
 import { getActiveGuidelines, resolveGenerationGuidelinesForRequest } from '../../lib/ai-guidelines'
@@ -29,7 +30,8 @@ describe('resolveGenerationGuidelinesForRequest', () => {
 
     expect(resolved.version).toBe((await getActiveGuidelines()).version)
     expect(resolved.global).toContain('Español')
-    expect(resolved.platform).toContain('280')
+    expect(resolved.captionMaxCharacters).toBe(280)
+    expect(resolved.platform).not.toContain('280')
     expect(resolved.contentType).toContain('evento')
     expect(resolved.prohibited).toBeTruthy()
   })
@@ -63,7 +65,7 @@ describe('resolveGenerationGuidelinesForRequest', () => {
     })
 
     expect(resolved.version).toBeTruthy()
-    expect(resolved.platform).toContain('Reglas generales')
+    expect(resolved.platform).toContain('Expectativas generales')
     expect(resolved.contentType).toContain('unknown_type')
   })
 })
@@ -313,7 +315,7 @@ describe('applyGenerationGuardrails', () => {
     expect(fbDraft.missingInformation.some((item) => /cta/i.test(item))).toBe(false)
   })
 
-  test('flags a legacy shared caption over 280 characters on every compatibility draft', () => {
+  test('flags a shared caption over the configured effective limit', () => {
     const longText = 'a'.repeat(300)
     const result = applyGenerationGuardrails(
       {
@@ -321,7 +323,8 @@ describe('applyGenerationGuardrails', () => {
         recommendedNextStep: 'Validar.',
         humanReviewRequired: true,
       },
-      baseInput
+      baseInput,
+      { captionMaxCharacters: 280 }
     )
 
     const xDraft = result.drafts.find((d) => d.platform === 'x')
@@ -331,7 +334,7 @@ describe('applyGenerationGuardrails', () => {
     expect(igDraft.missingInformation).toEqual(xDraft.missingInformation)
   })
 
-  test('provider schema rejects shared captions over 280 characters', () => {
+  test('provider schema leaves the editorial character limit to Guidelines', () => {
     const result = {
       caption: {
         contentType: 'regular_post',
@@ -343,9 +346,22 @@ describe('applyGenerationGuardrails', () => {
       humanReviewRequired: true,
     }
 
-    expect(AiSharedCaptionResultSchema.safeParse(result).success).toBe(false)
-    result.caption.draftText = 'a'.repeat(280)
     expect(AiSharedCaptionResultSchema.safeParse(result).success).toBe(true)
+    result.caption.draftText = 'a'.repeat(20_001)
+    expect(AiSharedCaptionResultSchema.safeParse(result).success).toBe(false)
+  })
+
+  test('uses the smallest configured limit for a shared caption and none when unspecified', () => {
+    const guidelines = {
+      platforms: {
+        x: { captionMaxCharacters: 280 },
+        instagram: { captionMaxCharacters: null },
+        facebook: { captionMaxCharacters: 500 },
+      },
+    }
+
+    expect(resolveSharedCaptionCharacterLimit(guidelines, ['x', 'instagram', 'facebook'])).toBe(280)
+    expect(resolveSharedCaptionCharacterLimit(guidelines, ['instagram'])).toBeNull()
   })
 
   test('fills recommendedNextStep when the model omits it', () => {

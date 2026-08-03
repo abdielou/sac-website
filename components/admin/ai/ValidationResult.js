@@ -43,9 +43,19 @@ function formatIssuesForCopy(issues) {
  * @param {Object} props
  * @param {Object} props.result - AiValidationResult
  * @param {Object} [props.usage] - OpenRouter usage metadata for this run
+ * @param {string} [props.guidelineVersion]
+ * @param {string} [props.policyVersion]
+ * @param {{ id: string, label: string }} [props.contentTypeIdentity]
  * @param {Function} [props.onCopyFeedback]
  */
-export default function ValidationResult({ result, usage, onCopyFeedback }) {
+export default function ValidationResult({
+  result,
+  usage,
+  guidelineVersion,
+  policyVersion,
+  contentTypeIdentity,
+  onCopyFeedback,
+}) {
   const sortedIssues = useMemo(() => {
     const issues = result?.issues || []
     return [...issues].sort(
@@ -76,12 +86,31 @@ export default function ValidationResult({ result, usage, onCopyFeedback }) {
         </span>
       </div>
 
-      {(hasCost || hasTokens) && (
+      {(hasCost ||
+        hasTokens ||
+        guidelineVersion ||
+        policyVersion ||
+        contentTypeIdentity?.label) && (
         <p className="text-sm text-gray-500 dark:text-gray-400" data-testid="validation-run-cost">
-          {hasCost
-            ? `Costo estimado: $${costAmount.toFixed(4)}`
-            : 'Costo estimado: no disponible'}
-          {hasTokens ? ` · ${usage.totalTokens} tokens` : ''}
+          {(hasCost || hasTokens) && (
+            <>
+              {hasCost
+                ? `Costo estimado: $${costAmount.toFixed(4)}`
+                : 'Costo estimado: no disponible'}
+              {hasTokens ? ` · ${usage.totalTokens} tokens` : ''}
+            </>
+          )}
+          {guidelineVersion
+            ? `${hasCost || hasTokens ? ' · ' : ''}Guías aplicadas: ${guidelineVersion}`
+            : ''}
+          {policyVersion
+            ? `${hasCost || hasTokens || guidelineVersion ? ' · ' : ''}Política: ${policyVersion}`
+            : ''}
+          {contentTypeIdentity?.label
+            ? `${
+                hasCost || hasTokens || guidelineVersion || policyVersion ? ' · ' : ''
+              }Tipo: ${contentTypeIdentity.label}`
+            : ''}
         </p>
       )}
 

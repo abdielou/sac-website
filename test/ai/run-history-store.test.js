@@ -2,6 +2,7 @@ import { buildUserKey, buildHistoryKey } from '../../lib/run-history-store'
 import {
   buildValidationHistoryRecord,
   buildGenerationHistoryRecord,
+  normalizeRunHistoryRecord,
 } from '../../lib/ai-run-history'
 
 describe('run-history-store', () => {
@@ -44,19 +45,34 @@ describe('buildValidationHistoryRecord', () => {
       },
       startedAt: '2026-07-10T12:00:00.000Z',
       completedAt: '2026-07-10T12:00:05.000Z',
-      guidelineVersion: 'mvp-default-v1',
+      guidelineVersion: 'v2',
+      policyVersion: 'sac-social-policy-v1',
+      contentTypeIdentity: {
+        id: 'caption',
+        label: 'Caption',
+        guidelineVersion: 'v2',
+        prompt: 'No persistir este prompt',
+      },
       model: 'openai/gpt-4o-mini',
     })
 
-    expect(record.schemaVersion).toBe(1)
+    expect(record.schemaVersion).toBe(2)
     expect(record.mode).toBe('validate')
     expect(record.runId).toBe('wrun_abc')
     expect(record.userKey).toBe(buildUserKey('session-user-1'))
+    expect(record.guidelineVersion).toBe('v2')
+    expect(record.policyVersion).toBe('sac-social-policy-v1')
+    expect(record.contentTypeIdentity).toEqual({
+      id: 'caption',
+      label: 'Caption',
+      guidelineVersion: 'v2',
+    })
     expect(record.validationOutcome).toBe('warning')
     expect(record.inputSummary.draftTextLength).toBeGreaterThan(0)
     expect(record.inputSummary.imageCount).toBe(1)
     expect(JSON.stringify(record)).not.toContain('data:image')
     expect(JSON.stringify(record)).not.toContain('Texto secreto')
+    expect(JSON.stringify(record)).not.toContain('No persistir este prompt')
     expect(record.durationMs).toBe(5000)
   })
 
@@ -72,6 +88,21 @@ describe('buildValidationHistoryRecord', () => {
     expect(record.error.message).toBe('Provider timeout')
     expect(record.error.retryable).toBe(true)
     expect(record.validationOutcome).toBeUndefined()
+    expect(record.policyVersion).toBe('legacy-unversioned')
+    expect(record.contentTypeIdentity).toBe('legacy-unversioned')
+  })
+
+  test('marks explicitly legacy validation runs without inventing current versions', () => {
+    const record = buildValidationHistoryRecord({
+      input: { userId: 'u1', platform: 'x', contentType: 'regular_post', draftText: 'x' },
+      runId: 'wrun_legacy_validation',
+      status: 'completed',
+      legacy: true,
+    })
+
+    expect(record.guidelineVersion).toBeUndefined()
+    expect(record.policyVersion).toBe('legacy-unversioned')
+    expect(record.contentTypeIdentity).toBe('legacy-unversioned')
   })
 
   test('includes OpenRouter usage fields when provided', () => {
@@ -140,14 +171,27 @@ describe('buildGenerationHistoryRecord', () => {
       },
       startedAt: '2026-07-10T12:00:00.000Z',
       completedAt: '2026-07-10T12:00:08.000Z',
-      guidelineVersion: 'mvp-default-v1',
+      guidelineVersion: 'v2',
+      policyVersion: 'sac-social-policy-v1',
+      contentTypeIdentity: {
+        id: 'event_promotion',
+        label: 'Promoción de evento',
+        guidelineVersion: 'v2',
+      },
       model: 'openai/gpt-4o-mini',
     })
 
-    expect(record.schemaVersion).toBe(1)
+    expect(record.schemaVersion).toBe(2)
     expect(record.mode).toBe('generate')
     expect(record.runId).toBe('wrun_gen_abc')
     expect(record.userKey).toBe(buildUserKey('session-user-1'))
+    expect(record.guidelineVersion).toBe('v2')
+    expect(record.policyVersion).toBe('sac-social-policy-v1')
+    expect(record.contentTypeIdentity).toEqual({
+      id: 'event_promotion',
+      label: 'Promoción de evento',
+      guidelineVersion: 'v2',
+    })
     expect(record.platform).toBeUndefined()
     expect(record.contentType).toBe('event_promotion')
     expect(record.inputSummary.platforms).toEqual(['instagram', 'facebook'])
@@ -216,5 +260,42 @@ describe('buildGenerationHistoryRecord', () => {
     expect(record.error.message).toBe('Provider timeout')
     expect(record.error.retryable).toBe(true)
     expect(record.outcomeSummary).toBeUndefined()
+    expect(record.policyVersion).toBe('legacy-unversioned')
+    expect(record.contentTypeIdentity).toBe('legacy-unversioned')
+  })
+
+  test('marks explicitly legacy generation runs without inventing current versions', () => {
+    const record = buildGenerationHistoryRecord({
+      input: {
+        userId: 'u1',
+        platforms: ['facebook'],
+        contentType: 'member_update',
+        intent: 'hola',
+        topic: 'mundo',
+      },
+      runId: 'wrun_legacy_generation',
+      status: 'completed',
+      legacy: true,
+    })
+
+    expect(record.guidelineVersion).toBeUndefined()
+    expect(record.policyVersion).toBe('legacy-unversioned')
+    expect(record.contentTypeIdentity).toBe('legacy-unversioned')
+  })
+
+  test('projects immutable v1 history with explicit unversioned markers at read time', () => {
+    const legacyRecord = {
+      schemaVersion: 1,
+      runId: 'wrun_old',
+      mode: 'generate',
+      contentType: 'caption',
+    }
+
+    expect(normalizeRunHistoryRecord(legacyRecord)).toEqual({
+      ...legacyRecord,
+      policyVersion: 'legacy-unversioned',
+      contentTypeIdentity: 'legacy-unversioned',
+    })
+    expect(legacyRecord).not.toHaveProperty('policyVersion')
   })
 })

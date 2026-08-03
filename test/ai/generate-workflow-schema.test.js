@@ -2,12 +2,34 @@ import {
   AiGenerationResultSchema,
   GenerateInputSchema,
   buildFallbackGenerationResult,
+  mergeImagePromptsIntoResult,
 } from '../../workflows/ai-social-media-designer/generation/generateAiWorkflow'
 import { GENERATION_INPUT_LIMITS } from '../../lib/ai-constants'
+import { AI_BASE_POLICY_VERSION } from '../../lib/ai-base-policy'
+import { legacyInputToContentData } from '../../lib/ai-content-data'
+import { getDefaultGuidelines } from '../../lib/ai-guidelines'
+import { resolveContentTypeDefinition } from '../../lib/ai-guidelines-schema'
 import { extractOpenRouterUsage, mergeOpenRouterUsage } from '../../lib/ai-openrouter'
 
+const guidelineDocument = getDefaultGuidelines()
+
+function runtimeMetadata(input) {
+  const definition = resolveContentTypeDefinition(guidelineDocument, input.contentType)
+  return {
+    contentData: legacyInputToContentData(input, definition),
+    contentTypeDefinition: definition,
+    contentTypeIdentity: {
+      id: definition.id,
+      label: definition.label,
+      guidelineVersion: guidelineDocument.version,
+    },
+    guidelineVersion: guidelineDocument.version,
+    policyVersion: AI_BASE_POLICY_VERSION,
+  }
+}
+
 describe('generateAiWorkflow schema', () => {
-  const baseInput = {
+  const basePayload = {
     userId: 'user-1',
     userEmail: 'test@example.com',
     intent: 'Promover observación',
@@ -21,7 +43,10 @@ describe('generateAiWorkflow schema', () => {
       time: '19:15',
       location: 'Pitahaya, Cabo Rojo',
     },
+    backgroundMode: 'stock',
+    backgroundId: 'telescope-nebula',
   }
+  const baseInput = { ...basePayload, ...runtimeMetadata(basePayload) }
 
   test('buildFallbackGenerationResult always sets humanReviewRequired true', () => {
     const result = buildFallbackGenerationResult(baseInput, 'test reason')
@@ -78,6 +103,143 @@ describe('generateAiWorkflow schema', () => {
     expect(valid.drafts[0].imagePrompt).toBe(valid.drafts[1].imagePrompt)
   })
 
+  test('keeps image prompts only on platforms whose active definition allows images', () => {
+    const definition = resolveContentTypeDefinition(guidelineDocument, 'regular_post')
+    const textResult = {
+      drafts: [
+        {
+          platform: 'x',
+          contentType: 'regular_post',
+          draftText: 'Texto para X.',
+          imagePrompt: 'Prompt que el modelo de texto no debía adjuntar.',
+        },
+        {
+          platform: 'instagram',
+          contentType: 'regular_post',
+          draftText: 'Texto para Instagram.',
+        },
+      ],
+      recommendedNextStep: 'Validar',
+      humanReviewRequired: true,
+    }
+    const result = mergeImagePromptsIntoResult(
+      textResult,
+      [
+        { platform: 'x', imagePrompt: 'Prompt compartido' },
+        { platform: 'instagram', imagePrompt: 'Prompt compartido' },
+      ],
+      {
+        contentType: 'regular_post',
+        platforms: ['x', 'instagram'],
+        contentTypeDefinition: definition,
+      }
+    )
+
+    expect(result.drafts.find(({ platform }) => platform === 'x').imagePrompt).toBeUndefined()
+    expect(result.drafts.find(({ platform }) => platform === 'instagram').imagePrompt).toContain(
+      'Prompt compartido'
+    )
+  })
+
+  test('accepts an active custom content type instead of a static enum', () => {
+    const definition = {
+      id: 'community_story',
+      label: 'Historia de la comunidad',
+      status: 'active',
+      fields: [
+        { key: 'intent', label: 'Intención', required: true },
+        { key: 'topic', label: 'Tema', required: true },
+      ],
+      visual: {
+        mode: 'none',
+        template: null,
+        backgroundSources: [],
+        sponsorAllowed: false,
+        imagePolicyByPlatform: {
+          x: 'prohibited',
+          instagram: 'prohibited',
+          facebook: 'prohibited',
+        },
+      },
+    }
+    const input = {
+      userId: 'user-1',
+      userEmail: 'test@example.com',
+      platforms: ['facebook'],
+      contentType: definition.id,
+      contentData: { intent: 'Compartir', topic: 'Primera observación' },
+      contentTypeDefinition: definition,
+      contentTypeIdentity: {
+        id: definition.id,
+        label: definition.label,
+        guidelineVersion: 'guidelines-v12',
+      },
+      guidelineVersion: 'guidelines-v12',
+      policyVersion: AI_BASE_POLICY_VERSION,
+      intent: 'Compartir',
+      topic: 'Primera observación',
+    }
+
+    expect(GenerateInputSchema.safeParse(input).success).toBe(true)
+    expect(
+      AiGenerationResultSchema.safeParse({
+        drafts: [
+          {
+            platform: 'facebook',
+            contentType: definition.id,
+            draftText: 'Una historia de nuestra comunidad.',
+          },
+        ],
+        recommendedNextStep: 'Validar antes de publicar.',
+        humanReviewRequired: true,
+      }).success
+    ).toBe(true)
+  })
+
+  test('does not require eventDetails when a custom type only exposes optional event fields', () => {
+    const definition = {
+      id: 'community_update',
+      label: 'Actualización comunitaria',
+      status: 'active',
+      fields: [
+        { key: 'intent', label: 'Intención', required: true },
+        { key: 'topic', label: 'Tema', required: true },
+        { key: 'event_name', label: 'Nombre del evento', required: false },
+      ],
+      titleSource: 'topic',
+      visual: {
+        mode: 'none',
+        template: null,
+        backgroundSources: [],
+        sponsorAllowed: false,
+        imagePolicyByPlatform: {
+          x: 'prohibited',
+          instagram: 'prohibited',
+          facebook: 'prohibited',
+        },
+      },
+    }
+    const input = {
+      userId: 'user-1',
+      userEmail: 'test@example.com',
+      platforms: ['facebook'],
+      contentType: definition.id,
+      contentData: { intent: 'Informar', topic: 'Reunión del club' },
+      contentTypeDefinition: definition,
+      contentTypeIdentity: {
+        id: definition.id,
+        label: definition.label,
+        guidelineVersion: 'guidelines-v12',
+      },
+      guidelineVersion: 'guidelines-v12',
+      policyVersion: AI_BASE_POLICY_VERSION,
+      intent: 'Informar',
+      topic: 'Reunión del club',
+    }
+
+    expect(GenerateInputSchema.safeParse(input).success).toBe(true)
+  })
+
   test('GenerateInputSchema rejects empty platforms', () => {
     const parsed = GenerateInputSchema.safeParse({
       ...baseInput,
@@ -86,10 +248,19 @@ describe('generateAiWorkflow schema', () => {
     expect(parsed.success).toBe(false)
   })
 
-  test('GenerateInputSchema rejects invalid platform', () => {
+  test('GenerateInputSchema accepts named platforms beyond the seed set', () => {
     const parsed = GenerateInputSchema.safeParse({
       ...baseInput,
-      platforms: ['tiktok'],
+      platforms: ['tiktok', 'threads'],
+    })
+    expect(parsed.success).toBe(true)
+    expect(parsed.data.platforms).toEqual(['tiktok', 'threads'])
+  })
+
+  test('GenerateInputSchema rejects invalid platform ids', () => {
+    const parsed = GenerateInputSchema.safeParse({
+      ...baseInput,
+      platforms: ['Bad Platform'],
     })
     expect(parsed.success).toBe(false)
   })
@@ -158,6 +329,7 @@ describe('generateAiWorkflow schema', () => {
       GenerateInputSchema.safeParse({
         ...baseInput,
         contentType: 'caption',
+        ...runtimeMetadata({ ...baseInput, contentType: 'caption' }),
         backgroundMode: 'stock',
         backgroundId: 'telescope-nebula',
       }).success
@@ -216,7 +388,7 @@ describe('generateAiWorkflow schema', () => {
   })
 
   test('GenerateInputSchema rejects event_promotion without logistics', () => {
-    const parsed = GenerateInputSchema.safeParse({
+    const input = {
       userId: 'user-1',
       userEmail: 'test@example.com',
       intent: 'Promover',
@@ -224,12 +396,13 @@ describe('generateAiWorkflow schema', () => {
       platforms: ['instagram'],
       contentType: 'event_promotion',
       eventDetails: { name: 'Solo nombre' },
-    })
+    }
+    const parsed = GenerateInputSchema.safeParse({ ...input, ...runtimeMetadata(input) })
     expect(parsed.success).toBe(false)
   })
 
   test('GenerateInputSchema preserves observation_night as a distinct event type', () => {
-    const base = {
+    const observationInput = {
       userId: 'user-1',
       userEmail: 'test@example.com',
       intent: 'Invitar al público',
@@ -243,7 +416,10 @@ describe('generateAiWorkflow schema', () => {
         time: '19:30',
         location: 'Cabo Rojo',
       },
+      backgroundMode: 'stock',
+      backgroundId: 'telescope-nebula',
     }
+    const base = { ...observationInput, ...runtimeMetadata(observationInput) }
 
     expect(GenerateInputSchema.safeParse(base).success).toBe(true)
     expect(GenerateInputSchema.safeParse({ ...base, cta: undefined }).success).toBe(true)

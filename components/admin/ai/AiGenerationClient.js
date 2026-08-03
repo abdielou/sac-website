@@ -6,7 +6,7 @@ import GenerationForm, { DEFAULT_GENERATION_FORM } from '@/components/admin/ai/G
 import GenerationResult from '@/components/admin/ai/GenerationResult'
 import { useAiGenerationRun } from '@/lib/hooks/useAiGenerationRun'
 import { useActiveGuidelines } from '@/lib/hooks/useActiveGuidelines'
-import { resolveContentTypeOptions } from '@/lib/ai-guidelines-draft'
+import { resolveContentTypeOptions, resolvePlatformOptions } from '@/lib/ai-guidelines-draft'
 import { ErrorState } from '@/components/admin/ErrorState'
 
 export default function AiGenerationClient() {
@@ -15,9 +15,17 @@ export default function AiGenerationClient() {
   const canGenerate = accessibleActions.includes('write_ai')
 
   const { active, hydrated: guidelinesHydrated } = useActiveGuidelines()
-  const contentTypes = useMemo(() => resolveContentTypeOptions(active), [active])
+  const contentTypes = useMemo(
+    () => resolveContentTypeOptions(active, { includeDefinitions: true }),
+    [active]
+  )
+  const platforms = useMemo(
+    () => resolvePlatformOptions(active).map(({ id }) => id),
+    [active]
+  )
 
   const [formState, setFormState] = useState(DEFAULT_GENERATION_FORM)
+  const selectedContentType = contentTypes.find(({ id }) => id === formState.contentType)
   const resultRef = useRef(null)
 
   useEffect(() => {
@@ -34,6 +42,8 @@ export default function AiGenerationClient() {
     result,
     usage,
     guidelineVersion,
+    policyVersion,
+    contentTypeIdentity,
     error,
     isBusy,
     submitGeneration,
@@ -42,7 +52,7 @@ export default function AiGenerationClient() {
   } = useAiGenerationRun({ canGenerate })
 
   const handleSubmit = () => {
-    submitGeneration(formState)
+    submitGeneration(formState, selectedContentType?.definition, platforms)
   }
 
   useEffect(() => {
@@ -60,8 +70,7 @@ export default function AiGenerationClient() {
         Generar borradores
       </h2>
       <p className="text-gray-600 dark:text-gray-400 mb-6">
-        Crea borradores para las plataformas seleccionadas. El formulario se adapta al tipo de
-        contenido; revisa todo antes de publicar manualmente.
+      Generado conforme a las guías activas. Requiere revisión humana antes de publicar.
       </p>
 
       {!guidelinesHydrated && !isBusy && (
@@ -110,6 +119,7 @@ export default function AiGenerationClient() {
         onFormChange={setFormState}
         onSubmit={handleSubmit}
         contentTypes={contentTypes}
+        platforms={platforms}
       />
 
       {error && (phase === 'failed' || phase === 'timeout') && (
@@ -125,7 +135,13 @@ export default function AiGenerationClient() {
       {result && phase === 'completed' && (
         <>
           <div ref={resultRef} tabIndex={-1} className="scroll-mt-6 outline-none">
-            <GenerationResult result={result} usage={usage} guidelineVersion={guidelineVersion} />
+            <GenerationResult
+              result={result}
+              usage={usage}
+              guidelineVersion={guidelineVersion}
+              policyVersion={policyVersion}
+              contentTypeIdentity={contentTypeIdentity}
+            />
           </div>
           <div className="mt-6">
             <button

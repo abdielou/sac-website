@@ -3,6 +3,7 @@
 import React, { useCallback, useRef, useState } from 'react'
 import {
   GENERATION_INPUT_LIMITS,
+  DEFAULT_SEED_PLATFORMS,
   contentTypeRequiresEventCta,
   getCanonicalEventName,
   isEventContentType,
@@ -12,6 +13,9 @@ import { listBackgroundOptions } from '@/lib/social-template/backgroundCatalog'
 import { DEFAULT_GENERATION_FORM } from '@/lib/social-template/buildGenerationPayload'
 import { SPONSOR_MAX_BYTES, isAllowedSponsorMimeType } from '@/lib/social-template/eventFormHelpers'
 import { resolveTemplateLayoutId } from '@/lib/social-template/templateLayouts'
+import ContentTypeFields, {
+  formStateKeyForContentField,
+} from '@/components/admin/ai/ContentTypeFields'
 
 export { DEFAULT_GENERATION_FORM }
 
@@ -59,13 +63,47 @@ export default function GenerationForm({
   onFormChange,
   onSubmit,
   contentTypes = [],
+  platforms = DEFAULT_SEED_PLATFORMS,
 }) {
-  const isEvent = isEventContentType(formState.contentType)
-  const canonicalEventName = getCanonicalEventName(formState.contentType)
-  const requiresEventCta = contentTypeRequiresEventCta(formState.contentType)
-  const supportsTemplate = Boolean(resolveTemplateLayoutId(formState.contentType))
-  const supportsGeneratedImage = shouldGenerateImagePrompt(formState.contentType)
-  const showImageSection = supportsTemplate || supportsGeneratedImage
+  const resolvedPlatforms =
+    Array.isArray(platforms) && platforms.length ? platforms : DEFAULT_SEED_PLATFORMS
+  const contentTypeDefinition = contentTypes.find(
+    ({ id }) => id === formState.contentType
+  )?.definition
+  const isEvent = isEventContentType(formState.contentType, contentTypeDefinition)
+  const canonicalEventName = getCanonicalEventName(formState.contentType, contentTypeDefinition)
+  const requiresEventCta = contentTypeRequiresEventCta(formState.contentType, contentTypeDefinition)
+  const supportsImageForSelection = shouldGenerateImagePrompt(
+    formState.contentType,
+    { platforms: resolvedPlatforms },
+    contentTypeDefinition
+  )
+  const supportsTemplate =
+    supportsImageForSelection &&
+    Boolean(resolveTemplateLayoutId(formState.contentType, contentTypeDefinition))
+  const supportsGeneratedImage = shouldGenerateImagePrompt(
+    formState.contentType,
+    { platforms: resolvedPlatforms },
+    contentTypeDefinition
+  )
+  const configuredBackgroundSources = contentTypeDefinition?.visual?.backgroundSources || []
+  const allowsStockBackground = contentTypeDefinition
+    ? configuredBackgroundSources.includes('stock')
+    : supportsTemplate
+  const allowsAiBackground = contentTypeDefinition
+    ? configuredBackgroundSources.includes('ai_generated')
+    : supportsGeneratedImage
+  const allowsFullAiImage = contentTypeDefinition
+    ? contentTypeDefinition.visual?.mode === 'ai_image'
+    : supportsGeneratedImage && !supportsTemplate
+  const showImageSection = supportsTemplate || allowsFullAiImage
+  const sponsorField = contentTypeDefinition?.fields?.find(({ key }) => key === 'sponsor')
+  const supportsSponsor = contentTypeDefinition
+    ? supportsImageForSelection &&
+      contentTypeDefinition.visual?.sponsorAllowed === true &&
+      Boolean(sponsorField)
+    : isEvent
+  const sponsorRequired = sponsorField?.required === true
   const fileInputRef = useRef(null)
   const [sponsorError, setSponsorError] = useState(null)
   const [isDragOver, setIsDragOver] = useState(false)
@@ -80,19 +118,33 @@ export default function GenerationForm({
   const handleContentTypeChange = (e) => {
     const contentType = e.target.value
     const next = { ...formState, contentType }
-    const nextSupportsTemplate = Boolean(resolveTemplateLayoutId(contentType))
-    const nextSupportsGeneratedImage = shouldGenerateImagePrompt(contentType)
+    const nextDefinition = contentTypes.find(({ id }) => id === contentType)?.definition
+    const nextSupportsGeneratedImage = shouldGenerateImagePrompt(
+      contentType,
+      { platforms: resolvedPlatforms },
+      nextDefinition
+    )
+    const nextSupportsTemplate =
+      nextSupportsGeneratedImage && Boolean(resolveTemplateLayoutId(contentType, nextDefinition))
+    const nextBackgroundSources = nextDefinition?.visual?.backgroundSources || []
+    const nextAllowsStock = nextDefinition
+      ? nextBackgroundSources.includes('stock')
+      : nextSupportsTemplate
+    const nextAllowsAiBackground = nextDefinition
+      ? nextBackgroundSources.includes('ai_generated')
+      : nextSupportsGeneratedImage
 
     if (!nextSupportsTemplate) {
       next.backgroundMode = ''
       next.backgroundId = ''
     } else if (
-      (!nextSupportsGeneratedImage || isEventContentType(contentType)) &&
-      next.backgroundMode !== 'stock' &&
-      next.backgroundMode !== 'ai_generated'
+      (next.backgroundMode === 'stock' && !nextAllowsStock) ||
+      (next.backgroundMode === 'ai_generated' && !nextAllowsAiBackground) ||
+      !['stock', 'ai_generated'].includes(next.backgroundMode)
     ) {
-      next.backgroundMode = 'stock'
-      next.backgroundId = next.backgroundId || BACKGROUND_OPTIONS[0]?.id || ''
+      next.backgroundMode = nextAllowsStock ? 'stock' : nextAllowsAiBackground ? 'ai_generated' : ''
+      next.backgroundId =
+        next.backgroundMode === 'stock' ? next.backgroundId || BACKGROUND_OPTIONS[0]?.id || '' : ''
     }
     if (!nextSupportsGeneratedImage && !nextSupportsTemplate) {
       next.imageStyle = ''
@@ -168,12 +220,43 @@ export default function GenerationForm({
     hashtags: validateListInput(formState.hashtags, ',', 'Hashtags'),
     links: validateListInput(formState.links, ',', 'Enlaces'),
   }
+  const dynamicFieldErrors = Object.fromEntries(
+    (contentTypeDefinition?.fields || []).map((field) => {
+      if (field.key === 'sponsor') {
+        return [
+          field.key,
+          supportsSponsor && field.required && !formState.sponsorLogo?.dataUrl
+            ? `${field.label || 'El auspiciador'} es obligatorio`
+            : null,
+        ]
+      }
+      const stateKey = formStateKeyForContentField(field.key, contentTypeDefinition)
+      const value = stateKey ? formState[stateKey] : ''
+      if (field.required && !String(value || '').trim()) {
+        return [field.key, `${field.label || 'Este campo'} es obligatorio`]
+      }
+      if (field.key === 'known_facts') {
+        return [field.key, validateListInput(value, '\n', field.label || 'Datos confirmados')]
+      }
+      if (field.key === 'hashtags' || field.key === 'links') {
+        return [field.key, validateListInput(value, ',', field.label || field.key)]
+      }
+      return [field.key, null]
+    })
+  )
 
   const backgroundError =
-    supportsTemplate && formState.backgroundMode === 'stock' && !formState.backgroundId
-      ? 'Selecciona un fondo'
-      : null
-  const hasFieldErrors = Object.values(fieldErrors).some(Boolean)
+    supportsTemplate &&
+    ((formState.backgroundMode === 'stock' && !allowsStockBackground) ||
+      (formState.backgroundMode === 'ai_generated' && !allowsAiBackground) ||
+      !['stock', 'ai_generated'].includes(formState.backgroundMode))
+      ? 'Selecciona un origen de imagen permitido'
+      : supportsTemplate && formState.backgroundMode === 'stock' && !formState.backgroundId
+        ? 'Selecciona un fondo'
+        : null
+  const hasFieldErrors = contentTypeDefinition
+    ? Object.values(dynamicFieldErrors).some(Boolean)
+    : Object.values(fieldErrors).some(Boolean)
   const submitDisabled = formDisabled
   const submitLabel = busy
     ? 'Generando borradores...'
@@ -196,8 +279,9 @@ export default function GenerationForm({
       knownFacts: true,
       hashtags: true,
       links: true,
+      dynamic: true,
     })
-    if (backgroundError || hasFieldErrors || (isEvent && sponsorError)) return
+    if (backgroundError || hasFieldErrors || (supportsSponsor && sponsorError)) return
     onSubmit()
   }
 
@@ -244,8 +328,27 @@ export default function GenerationForm({
         </div>
       </section>
 
-      {/* 2. Event info (or generic topic/intent for non-events) */}
-      {isEvent ? (
+      {/* 2. The active content-type definition controls the data contract. */}
+      {contentTypeDefinition ? (
+        <section className={sectionClass} aria-labelledby="gen-content-heading">
+          <h3 id="gen-content-heading" className={sectionTitleClass}>
+            2. Datos de {contentTypeDefinition.label}
+          </h3>
+          {contentTypeDefinition.description && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
+              {contentTypeDefinition.description}
+            </p>
+          )}
+          <ContentTypeFields
+            definition={contentTypeDefinition}
+            formState={formState}
+            onFormChange={onFormChange}
+            disabled={formDisabled}
+            idPrefix="gen-content"
+            errors={touched.dynamic ? dynamicFieldErrors : {}}
+          />
+        </section>
+      ) : isEvent ? (
         <section className={sectionClass} aria-labelledby="gen-event-heading">
           <h3 id="gen-event-heading" className={sectionTitleClass}>
             {canonicalEventName ? `2. Datos de ${canonicalEventName}` : '2. Datos del evento'}
@@ -509,17 +612,19 @@ export default function GenerationForm({
             >
               <legend className="sr-only">Origen de la imagen</legend>
               <div className="space-y-2">
-                <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
-                  <input
-                    type="radio"
-                    name="backgroundMode"
-                    checked={formState.backgroundMode === 'stock'}
-                    onChange={() => setBackgroundMode('stock')}
-                    className="mt-0.5 border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span>Usar fondo de plantilla</span>
-                </label>
-                {supportsGeneratedImage && (
+                {allowsStockBackground && (
+                  <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                    <input
+                      type="radio"
+                      name="backgroundMode"
+                      checked={formState.backgroundMode === 'stock'}
+                      onChange={() => setBackgroundMode('stock')}
+                      className="mt-0.5 border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>Usar fondo de plantilla</span>
+                  </label>
+                )}
+                {allowsAiBackground && (
                   <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
                     <input
                       type="radio"
@@ -529,18 +634,6 @@ export default function GenerationForm({
                       className="mt-0.5 border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
                     />
                     <span>Generar fondo con IA</span>
-                  </label>
-                )}
-                {!isEvent && supportsGeneratedImage && (
-                  <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
-                    <input
-                      type="radio"
-                      name="backgroundMode"
-                      checked={!formState.backgroundMode}
-                      onChange={() => setBackgroundMode('')}
-                      className="mt-0.5 border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span>Sin plantilla (imagen completa con IA)</span>
                   </label>
                 )}
               </div>
@@ -594,11 +687,16 @@ export default function GenerationForm({
         </section>
       )}
 
-      {/* 4. Optional sponsor (events only) */}
-      {isEvent && (
+      {/* 4. Optional sponsor when explicitly enabled by the definition. */}
+      {supportsSponsor && (
         <section className={sectionClass} aria-labelledby="gen-sponsor-heading">
           <h3 id="gen-sponsor-heading" className={sectionTitleClass}>
-            4. Auspiciador <span className="font-normal text-gray-500">(opcional)</span>
+            4. Auspiciador{' '}
+            {sponsorRequired ? (
+              <span className="text-red-500">*</span>
+            ) : (
+              <span className="font-normal text-gray-500">(opcional)</span>
+            )}
           </h3>
           <p id="gen-sponsor-help" className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
             Sube el logo del auspiciador. Aparecerá como “Auspicia” en la esquina inferior derecha.
@@ -707,177 +805,186 @@ export default function GenerationForm({
               {sponsorError}.
             </p>
           )}
+          {touched.dynamic && dynamicFieldErrors.sponsor && (
+            <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+              {dynamicFieldErrors.sponsor}.
+            </p>
+          )}
         </section>
       )}
 
-      {/* Advanced */}
-      <details className="rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-        <summary className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-          Opciones avanzadas
-        </summary>
-        <div className="mt-4 space-y-4">
-          <div>
-            <label htmlFor="gen-tone" className={labelClass}>
-              Tono
-            </label>
-            <input
-              id="gen-tone"
-              type="text"
-              value={formState.tone}
-              maxLength={GENERATION_INPUT_LIMITS.tone}
-              onChange={handleChange('tone')}
-              disabled={formDisabled}
-              placeholder="ej. cercano y educativo"
-              className={inputClass}
-            />
-          </div>
-          {!isEvent && (
+      {/* Legacy fallback while an older guideline document is being migrated. */}
+      {!contentTypeDefinition && (
+        <details className="rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+          <summary className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+            Opciones avanzadas
+          </summary>
+          <div className="mt-4 space-y-4">
             <div>
-              <label htmlFor="gen-cta" className={labelClass}>
-                Llamado a la acción (CTA)
+              <label htmlFor="gen-tone" className={labelClass}>
+                Tono
               </label>
               <input
-                id="gen-cta"
+                id="gen-tone"
                 type="text"
-                value={formState.cta}
-                maxLength={GENERATION_INPUT_LIMITS.cta}
-                onChange={handleChange('cta')}
+                value={formState.tone}
+                maxLength={GENERATION_INPUT_LIMITS.tone}
+                onChange={handleChange('tone')}
+                disabled={formDisabled}
+                placeholder="ej. cercano y educativo"
+                className={inputClass}
+              />
+            </div>
+            {!isEvent && (
+              <div>
+                <label htmlFor="gen-cta" className={labelClass}>
+                  Llamado a la acción (CTA)
+                </label>
+                <input
+                  id="gen-cta"
+                  type="text"
+                  value={formState.cta}
+                  maxLength={GENERATION_INPUT_LIMITS.cta}
+                  onChange={handleChange('cta')}
+                  disabled={formDisabled}
+                  className={inputClass}
+                />
+              </div>
+            )}
+            <div>
+              <label htmlFor="gen-audience" className={labelClass}>
+                Audiencia
+              </label>
+              <input
+                id="gen-audience"
+                type="text"
+                value={formState.audience}
+                maxLength={GENERATION_INPUT_LIMITS.audience}
+                onChange={handleChange('audience')}
                 disabled={formDisabled}
                 className={inputClass}
               />
             </div>
-          )}
-          <div>
-            <label htmlFor="gen-audience" className={labelClass}>
-              Audiencia
-            </label>
-            <input
-              id="gen-audience"
-              type="text"
-              value={formState.audience}
-              maxLength={GENERATION_INPUT_LIMITS.audience}
-              onChange={handleChange('audience')}
-              disabled={formDisabled}
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label htmlFor="gen-known-facts" className={labelClass}>
-              Datos confirmados (uno por línea)
-            </label>
-            <textarea
-              id="gen-known-facts"
-              value={formState.knownFacts}
-              maxLength={maxListInputLength}
-              onChange={handleChange('knownFacts')}
-              onBlur={() => markTouched('knownFacts')}
-              disabled={formDisabled}
-              rows={3}
-              aria-invalid={Boolean(touched.knownFacts && fieldErrors.knownFacts)}
-              aria-describedby={
-                touched.knownFacts && fieldErrors.knownFacts ? 'gen-known-facts-error' : undefined
-              }
-              className={inputClass}
-            />
-            {touched.knownFacts && fieldErrors.knownFacts && (
-              <p
-                id="gen-known-facts-error"
-                className="mt-1 text-sm text-red-600 dark:text-red-400"
-                role="alert"
-              >
-                {fieldErrors.knownFacts}.
-              </p>
-            )}
-          </div>
-          <div>
-            <label htmlFor="gen-hashtags" className={labelClass}>
-              Hashtags opcionales (separados por coma)
-            </label>
-            <input
-              id="gen-hashtags"
-              type="text"
-              value={formState.hashtags}
-              maxLength={maxListInputLength}
-              onChange={handleChange('hashtags')}
-              onBlur={() => markTouched('hashtags')}
-              disabled={formDisabled}
-              placeholder="#astronomia, #SAC"
-              aria-invalid={Boolean(touched.hashtags && fieldErrors.hashtags)}
-              aria-describedby={
-                touched.hashtags && fieldErrors.hashtags ? 'gen-hashtags-error' : undefined
-              }
-              className={inputClass}
-            />
-            {touched.hashtags && fieldErrors.hashtags && (
-              <p
-                id="gen-hashtags-error"
-                className="mt-1 text-sm text-red-600 dark:text-red-400"
-                role="alert"
-              >
-                {fieldErrors.hashtags}.
-              </p>
-            )}
-          </div>
-          <div>
-            <label htmlFor="gen-links" className={labelClass}>
-              Enlaces (separados por coma)
-            </label>
-            <input
-              id="gen-links"
-              type="text"
-              value={formState.links}
-              maxLength={maxListInputLength}
-              onChange={handleChange('links')}
-              onBlur={() => markTouched('links')}
-              disabled={formDisabled}
-              aria-invalid={Boolean(touched.links && fieldErrors.links)}
-              aria-describedby={touched.links && fieldErrors.links ? 'gen-links-error' : undefined}
-              className={inputClass}
-            />
-            {touched.links && fieldErrors.links && (
-              <p
-                id="gen-links-error"
-                className="mt-1 text-sm text-red-600 dark:text-red-400"
-                role="alert"
-              >
-                {fieldErrors.links}.
-              </p>
-            )}
-          </div>
-          {supportsGeneratedImage && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="gen-image-style" className={labelClass}>
-                  Estilo de imagen
-                </label>
-                <input
-                  id="gen-image-style"
-                  type="text"
-                  value={formState.imageStyle}
-                  maxLength={GENERATION_INPUT_LIMITS.imageStyle}
-                  onChange={handleChange('imageStyle')}
-                  disabled={formDisabled}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label htmlFor="gen-image-constraints" className={labelClass}>
-                  Restricciones de imagen
-                </label>
-                <input
-                  id="gen-image-constraints"
-                  type="text"
-                  value={formState.imageConstraints}
-                  maxLength={GENERATION_INPUT_LIMITS.imageConstraints}
-                  onChange={handleChange('imageConstraints')}
-                  disabled={formDisabled}
-                  className={inputClass}
-                />
-              </div>
+            <div>
+              <label htmlFor="gen-known-facts" className={labelClass}>
+                Datos confirmados (uno por línea)
+              </label>
+              <textarea
+                id="gen-known-facts"
+                value={formState.knownFacts}
+                maxLength={maxListInputLength}
+                onChange={handleChange('knownFacts')}
+                onBlur={() => markTouched('knownFacts')}
+                disabled={formDisabled}
+                rows={3}
+                aria-invalid={Boolean(touched.knownFacts && fieldErrors.knownFacts)}
+                aria-describedby={
+                  touched.knownFacts && fieldErrors.knownFacts ? 'gen-known-facts-error' : undefined
+                }
+                className={inputClass}
+              />
+              {touched.knownFacts && fieldErrors.knownFacts && (
+                <p
+                  id="gen-known-facts-error"
+                  className="mt-1 text-sm text-red-600 dark:text-red-400"
+                  role="alert"
+                >
+                  {fieldErrors.knownFacts}.
+                </p>
+              )}
             </div>
-          )}
-        </div>
-      </details>
+            <div>
+              <label htmlFor="gen-hashtags" className={labelClass}>
+                Hashtags (separados por coma)
+              </label>
+              <input
+                id="gen-hashtags"
+                type="text"
+                value={formState.hashtags}
+                maxLength={maxListInputLength}
+                onChange={handleChange('hashtags')}
+                onBlur={() => markTouched('hashtags')}
+                disabled={formDisabled}
+                placeholder="#astronomia, #SAC"
+                aria-invalid={Boolean(touched.hashtags && fieldErrors.hashtags)}
+                aria-describedby={
+                  touched.hashtags && fieldErrors.hashtags ? 'gen-hashtags-error' : undefined
+                }
+                className={inputClass}
+              />
+              {touched.hashtags && fieldErrors.hashtags && (
+                <p
+                  id="gen-hashtags-error"
+                  className="mt-1 text-sm text-red-600 dark:text-red-400"
+                  role="alert"
+                >
+                  {fieldErrors.hashtags}.
+                </p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="gen-links" className={labelClass}>
+                Enlaces (separados por coma)
+              </label>
+              <input
+                id="gen-links"
+                type="text"
+                value={formState.links}
+                maxLength={maxListInputLength}
+                onChange={handleChange('links')}
+                onBlur={() => markTouched('links')}
+                disabled={formDisabled}
+                aria-invalid={Boolean(touched.links && fieldErrors.links)}
+                aria-describedby={
+                  touched.links && fieldErrors.links ? 'gen-links-error' : undefined
+                }
+                className={inputClass}
+              />
+              {touched.links && fieldErrors.links && (
+                <p
+                  id="gen-links-error"
+                  className="mt-1 text-sm text-red-600 dark:text-red-400"
+                  role="alert"
+                >
+                  {fieldErrors.links}.
+                </p>
+              )}
+            </div>
+            {supportsGeneratedImage && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="gen-image-style" className={labelClass}>
+                    Estilo de imagen
+                  </label>
+                  <input
+                    id="gen-image-style"
+                    type="text"
+                    value={formState.imageStyle}
+                    maxLength={GENERATION_INPUT_LIMITS.imageStyle}
+                    onChange={handleChange('imageStyle')}
+                    disabled={formDisabled}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="gen-image-constraints" className={labelClass}>
+                    Restricciones de imagen
+                  </label>
+                  <input
+                    id="gen-image-constraints"
+                    type="text"
+                    value={formState.imageConstraints}
+                    maxLength={GENERATION_INPUT_LIMITS.imageConstraints}
+                    onChange={handleChange('imageConstraints')}
+                    disabled={formDisabled}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </details>
+      )}
 
       {canGenerate && (
         <div className="flex items-center gap-4">

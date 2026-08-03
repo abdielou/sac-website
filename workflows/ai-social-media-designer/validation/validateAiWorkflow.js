@@ -1,12 +1,26 @@
 import { fetch, getWorkflowMetadata } from 'workflow'
 import { z } from 'zod'
-import { resolveGuidelinesForRequest } from '../../../lib/ai-guidelines'
+import {
+  AI_BASE_POLICY_VERSION,
+  buildAgentSystemPrompt,
+  formatUntrustedGuidelines,
+  formatUntrustedRequest,
+} from '../../../lib/ai-agent'
+import { classifyAiPolicyRequest, reviewAiPolicyResult } from '../../../lib/ai-policy-review'
+import { contentDataToLegacyInput, validateContentData } from '../../../lib/ai-content-data'
+import { resolveGuidelinesFromDocument } from '../../../lib/ai-guidelines'
+import { getGuidelineVersion } from '../../../lib/guidelines-store'
 import {
   buildOpenRouterChatBody,
   extractOpenRouterUsage,
   mergeOpenRouterUsage,
 } from '../../../lib/ai-openrouter'
 import { buildValidationHistoryRecord } from '../../../lib/ai-run-history'
+import {
+  MAX_VALIDATION_IMAGE_DATA_URL_LENGTH,
+  VALIDATION_IMAGE_MIME_TYPES,
+  validateSerializedValidationImage,
+} from '../../../lib/ai-validation-images'
 import { persistRunHistory } from '../../../lib/run-history-store'
 
 export { extractOpenRouterUsage, mergeOpenRouterUsage }
@@ -45,28 +59,109 @@ export const AiValidationResultSchema = z.object({
   humanReviewRequired: z.literal(true),
 })
 
-const ImageInputSchema = z.object({
-  dataUrl: z.string(),
-  mimeType: z.string(),
-  fileName: z.string().optional(),
-  size: z.number().optional(),
-})
+const ImageInputSchema = z
+  .object({
+    dataUrl: z.string().trim().min(1).max(MAX_VALIDATION_IMAGE_DATA_URL_LENGTH),
+    mimeType: z.enum(VALIDATION_IMAGE_MIME_TYPES),
+    fileName: z.string().trim().min(1).max(255).optional(),
+    size: z.number().int().positive().optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    const validation = validateSerializedValidationImage(value)
+    if (!validation.ok) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: validation.error, path: ['dataUrl'] })
+    }
+  })
+  .transform((value) => validateSerializedValidationImage(value).image)
 
-const ValidateInputSchema = z.object({
-  userId: z.string(),
-  userEmail: z.string().email(),
-  platform: z.string(),
-  contentType: z.string(),
-  draftText: z.string(),
-  goal: z.string().optional(),
-  audience: z.string().optional(),
-  cta: z.string().optional(),
-  hashtags: z.array(z.string()).optional(),
-  links: z.array(z.string()).optional(),
-  eventDetails: z.record(z.any()).optional(),
-  altText: z.string().optional(),
-  images: z.array(ImageInputSchema).optional(),
-})
+const ContentTypeIdSchema = z
+  .string()
+  .trim()
+  .min(2)
+  .max(64)
+  .regex(/^[a-z][a-z0-9_]{1,63}$/)
+
+const ContentTypeDefinitionSchema = z
+  .object({
+    id: ContentTypeIdSchema,
+    label: z.string().trim().min(1),
+    status: z.literal('active'),
+    fields: z.array(z.record(z.any())).min(1).max(30),
+    visual: z.record(z.any()),
+  })
+  .passthrough()
+
+const ContentTypeIdentitySchema = z
+  .object({
+    id: ContentTypeIdSchema,
+    label: z.string().trim().min(1),
+    guidelineVersion: z.string().trim().min(1).max(100),
+  })
+  .strict()
+
+export const ValidateInputSchema = z
+  .object({
+    userId: z.string().trim().min(1).max(256),
+    userEmail: z.string().trim().email().max(254),
+    platform: z.string().trim().min(1).max(64),
+    contentType: ContentTypeIdSchema,
+    contentData: z.record(z.any()),
+    contentTypeDefinition: ContentTypeDefinitionSchema,
+    contentTypeIdentity: ContentTypeIdentitySchema,
+    guidelineVersion: z.string().trim().min(1).max(100),
+    policyVersion: z.string().trim().min(1).max(100),
+    draftText: z.string().trim().min(1).max(20_000),
+    goal: z.string().trim().min(1).max(600).optional(),
+    topic: z.string().trim().min(1).max(600).optional(),
+    audience: z.string().trim().min(1).max(200).optional(),
+    cta: z.string().trim().min(1).max(300).optional(),
+    tone: z.string().trim().min(1).max(120).optional(),
+    knownFacts: z.array(z.string().trim().min(1).max(500)).max(20).optional(),
+    hashtags: z.array(z.string().trim().min(1).max(500)).max(20).optional(),
+    links: z.array(z.string().trim().min(1).max(500)).max(20).optional(),
+    eventDetails: z.record(z.any()).optional(),
+    imageStyle: z.string().trim().min(1).max(500).optional(),
+    imageConstraints: z.string().trim().min(1).max(1000).optional(),
+    altText: z.string().trim().min(1).max(2000).optional(),
+    images: z.array(ImageInputSchema).max(4).optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.contentTypeDefinition.id !== value.contentType) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'La definición no corresponde al tipo de contenido solicitado',
+        path: ['contentTypeDefinition', 'id'],
+      })
+    }
+    if (
+      value.contentTypeIdentity.id !== value.contentType ||
+      value.contentTypeIdentity.label !== value.contentTypeDefinition.label ||
+      value.contentTypeIdentity.guidelineVersion !== value.guidelineVersion
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'La identidad del tipo de contenido no coincide con la versión fijada',
+        path: ['contentTypeIdentity'],
+      })
+    }
+    if (value.policyVersion !== AI_BASE_POLICY_VERSION) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'La versión de la política base no coincide con la versión vigente',
+        path: ['policyVersion'],
+      })
+    }
+
+    const contentDataValidation = validateContentData(
+      value.contentData,
+      value.contentTypeDefinition
+    )
+    for (const message of contentDataValidation.errors) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message, path: ['contentData'] })
+    }
+  })
 
 function extractFirstJsonObject(text) {
   const cleaned = text
@@ -141,10 +236,184 @@ async function validatePayloadStep(input) {
 
 async function loadGuidelinesStep(input) {
   'use step'
-  return await resolveGuidelinesForRequest({
+  try {
+    const document = await getGuidelineVersion(input.guidelineVersion)
+    if (!document || document.version !== input.guidelineVersion) {
+      return { ok: false, reason: 'guideline_version_unavailable' }
+    }
+    if (!Object.prototype.hasOwnProperty.call(document.platforms || {}, input.platform)) {
+      return { ok: false, reason: 'platform_unavailable' }
+    }
+
+    const resolved = resolveGuidelinesFromDocument(document, {
+      platform: input.platform,
+      contentType: input.contentType,
+    })
+    const definition = resolved.contentTypeDefinition
+    if (!definition || definition.status !== 'active') {
+      return { ok: false, reason: 'content_type_unavailable' }
+    }
+    if (
+      input.policyVersion !== AI_BASE_POLICY_VERSION ||
+      input.contentTypeIdentity?.id !== definition.id ||
+      input.contentTypeIdentity?.label !== definition.label ||
+      input.contentTypeIdentity?.guidelineVersion !== document.version
+    ) {
+      return { ok: false, reason: 'pinned_identity_mismatch' }
+    }
+
+    const exactInputResult = ValidateInputSchema.safeParse({
+      ...input,
+      contentTypeDefinition: definition,
+      contentTypeIdentity: resolved.contentTypeIdentity,
+    })
+    if (!exactInputResult.success) {
+      return { ok: false, reason: 'pinned_definition_mismatch' }
+    }
+    const normalizedLegacyInput = contentDataToLegacyInput(
+      exactInputResult.data.contentData,
+      definition
+    )
+
+    return {
+      ...resolved,
+      ok: true,
+      input: {
+        ...exactInputResult.data,
+        ...normalizedLegacyInput,
+        goal:
+          normalizedLegacyInput.intent || normalizedLegacyInput.topic || exactInputResult.data.goal,
+        contentTypeDefinition: definition,
+        contentTypeIdentity: resolved.contentTypeIdentity,
+      },
+    }
+  } catch (error) {
+    console.error('validateAiWorkflow: failed to load pinned guidelines', error)
+    return { ok: false, reason: 'guideline_version_unavailable' }
+  }
+}
+
+function buildPolicyRequest(input) {
+  return {
     platform: input.platform,
     contentType: input.contentType,
+    contentData: input.contentData,
+    draftText: input.draftText,
+    goal: input.goal,
+    topic: input.topic,
+    audience: input.audience,
+    cta: input.cta,
+    tone: input.tone,
+    knownFacts: input.knownFacts,
+    hashtags: input.hashtags,
+    links: input.links,
+    eventDetails: input.eventDetails,
+    imageStyle: input.imageStyle,
+    imageConstraints: input.imageConstraints,
+    altText: input.altText,
+  }
+}
+
+function buildPolicyGuidelines(guidelines) {
+  return {
+    version: guidelines.version,
+    global: guidelines.global,
+    platform: guidelines.platform,
+    captionMaxCharacters: guidelines.captionMaxCharacters ?? null,
+    contentType: guidelines.contentType,
+    prohibited: guidelines.prohibited,
+    imageValidation: guidelines.imageValidation,
+    contentTypeDefinition: guidelines.contentTypeDefinition,
+  }
+}
+
+export function applyConfiguredCaptionLimit(result, input, guidelines) {
+  const limit = guidelines?.captionMaxCharacters
+  if (!Number.isInteger(limit) || limit < 1 || input.draftText.length <= limit) return result
+
+  const issues = Array.isArray(result.issues) ? [...result.issues] : []
+  const alreadyReported = issues.some(
+    (issue) => issue.category === 'platform_fit' && /caracter/i.test(issue.message || '')
+  )
+  if (!alreadyReported) {
+    issues.push({
+      severity: 'major',
+      category: 'platform_fit',
+      message: `El caption tiene ${input.draftText.length} caracteres y el máximo configurado para ${input.platform} es ${limit}.`,
+      suggestedFix: `Acortar el caption a ${limit} caracteres o menos.`,
+      affectedPlatform: input.platform,
+    })
+  }
+
+  return AiValidationResultSchema.parse({
+    ...result,
+    overallOutcome: result.overallOutcome === 'fail' ? 'fail' : 'warning',
+    approvalRecommendation:
+      result.approvalRecommendation === 'do_not_publish' ? 'do_not_publish' : 'needs_edits',
+    issues,
+    humanReviewRequired: true,
   })
+}
+
+function collectValidationImageUrls(input) {
+  const urls = (input.images || []).map(({ dataUrl }) => dataUrl)
+  const sponsorDataUrl = input.contentData?.sponsor?.dataUrl
+  if (typeof sponsorDataUrl === 'string' && sponsorDataUrl.trim()) urls.push(sponsorDataUrl.trim())
+  return urls
+}
+
+export function buildPolicyValidationResult(input, decision) {
+  const unavailable = decision.failClosed === true
+  const categories = Array.isArray(decision.categories) ? decision.categories.join(', ') : ''
+  return AiValidationResultSchema.parse({
+    overallOutcome: 'fail',
+    approvalRecommendation: 'do_not_publish',
+    summary: unavailable
+      ? 'No fue posible confirmar el cumplimiento de la política base. No publiques este contenido.'
+      : 'El contenido no cumple la política base de SAC y no debe publicarse.',
+    issues: [
+      {
+        severity: unavailable ? 'major' : 'critical',
+        category: unavailable ? 'uncertainty_factual_risk' : 'safety',
+        message: decision.reason || 'La revisión de política no pudo aprobar el contenido.',
+        suggestedFix: unavailable
+          ? 'Solicita una revisión humana antes de continuar.'
+          : 'Ajusta el contenido al alcance social y a las restricciones de SAC.',
+        affectedPlatform: input.platform,
+      },
+    ],
+    platformNotes: categories ? `Categorías de política: ${categories}.` : undefined,
+    imageNotes:
+      input.images?.length > 0
+        ? 'Las imágenes tampoco deben usarse hasta completar una revisión segura.'
+        : undefined,
+    humanReviewRequired: true,
+  })
+}
+
+async function classifyPolicyRequestStep(input, guidelines) {
+  'use step'
+  return classifyAiPolicyRequest(
+    {
+      request: buildPolicyRequest(input),
+      guidelines: buildPolicyGuidelines(guidelines),
+      images: collectValidationImageUrls(input),
+    },
+    { fetchImpl: fetch }
+  )
+}
+
+async function reviewPolicyResultStep(input, guidelines, result) {
+  'use step'
+  return reviewAiPolicyResult(
+    {
+      request: buildPolicyRequest(input),
+      result,
+      guidelines: buildPolicyGuidelines(guidelines),
+      images: collectValidationImageUrls(input),
+    },
+    { fetchImpl: fetch }
+  )
 }
 
 async function callOpenRouterStep(input, guidelines) {
@@ -166,7 +435,10 @@ async function callOpenRouterStep(input, guidelines) {
   const siteUrl = process.env.OPENROUTER_SITE_URL
   const openRouterTitle = process.env.OPENROUTER_TITLE
 
-  const systemPrompt = `Eres un validador de publicaciones para SAC.
+  const systemPrompt = buildAgentSystemPrompt({
+    modeInstructions: `INSTRUCCIONES OPERATIVAS DEL VALIDADOR
+
+En modo validación, evalúa publicaciones para SAC.
 Devuelve EXACTAMENTE un objeto JSON (sin texto adicional, sin markdown) con esta forma:
 
 {
@@ -193,37 +465,44 @@ Reglas:
 - "issues" siempre es un arreglo (usa [] si no hay problemas).
 - No inventes datos no provistos (fechas, lugares, costos, enlaces, hechos científicos verificables).
 - Astronomía: NO verificas hechos; si hay riesgo de afirmaciones no verificables, marca uncertainty_factual_risk.
-`
+`,
+  })
 
   const userText = {
     platform: input.platform,
     contentType: input.contentType,
     draftText: input.draftText,
     goal: input.goal,
+    topic: input.topic,
     audience: input.audience,
     cta: input.cta,
+    tone: input.tone,
+    knownFacts: input.knownFacts,
     hashtags: input.hashtags,
     links: input.links,
     eventDetails: input.eventDetails,
+    imageStyle: input.imageStyle,
+    imageConstraints: input.imageConstraints,
     altText: input.altText,
-    guidelines: guidelines,
-    imageCount: input.images?.length || 0,
+    imageCount: collectValidationImageUrls(input).length,
   }
 
   const messageContent = [
     {
       type: 'text',
-      text: `Validar el borrador y retornar AiValidationResult.
-Input (JSON): ${JSON.stringify(userText)}`,
+      text: `${formatUntrustedGuidelines(buildPolicyGuidelines(guidelines))}
+Validar el borrador y retornar AiValidationResult.
+${formatUntrustedRequest(userText)}`,
     },
   ]
 
-  if (input.images && input.images.length > 0) {
-    for (const img of input.images) {
+  const validationImageUrls = collectValidationImageUrls(input)
+  if (validationImageUrls.length > 0) {
+    for (const dataUrl of validationImageUrls) {
       messageContent.push({
         type: 'image_url',
         image_url: {
-          url: img.dataUrl,
+          url: dataUrl,
         },
       })
     }
@@ -338,11 +617,13 @@ export async function validateAiWorkflow(input) {
       await persistValidationHistoryStep({
         input,
         runId,
-        status: 'failed',
-        error: { message: 'payload_invalid', retryable: false },
+        status: 'completed',
+        result: validatedInputResult.fallback,
         startedAt,
         completedAt: new Date().toISOString(),
         guidelineVersion: null,
+        policyVersion: AI_BASE_POLICY_VERSION,
+        contentTypeIdentity: input?.contentTypeIdentity,
       })
     }
     return { result: validatedInputResult.fallback, usage: null }
@@ -350,30 +631,102 @@ export async function validateAiWorkflow(input) {
 
   const validatedInput = validatedInputResult.value
   const guidelines = await loadGuidelinesStep(validatedInput)
-  const modelResult = await callOpenRouterStep(validatedInput, guidelines)
+  if (!guidelines.ok) {
+    const fallback = buildFallbackResult(
+      validatedInput,
+      'la versión de Guidelines fijada no está disponible'
+    )
+    const completedAt = new Date().toISOString()
+    if (runId) {
+      await persistValidationHistoryStep({
+        input: validatedInput,
+        runId,
+        status: 'completed',
+        result: fallback,
+        startedAt,
+        completedAt,
+        guidelineVersion: validatedInput.guidelineVersion,
+        policyVersion: AI_BASE_POLICY_VERSION,
+        contentTypeIdentity: validatedInput.contentTypeIdentity,
+      })
+    }
+    return {
+      result: fallback,
+      usage: null,
+      guidelineVersion: validatedInput.guidelineVersion,
+      policyVersion: AI_BASE_POLICY_VERSION,
+      contentTypeIdentity: validatedInput.contentTypeIdentity,
+    }
+  }
+
+  const runtimeInput = guidelines.input
+  const requestPolicy = await classifyPolicyRequestStep(runtimeInput, guidelines)
+  if (requestPolicy.decision !== 'allow') {
+    const policyResult = buildPolicyValidationResult(runtimeInput, requestPolicy)
+    const completedAt = new Date().toISOString()
+    if (runId) {
+      await persistValidationHistoryStep({
+        input: runtimeInput,
+        runId,
+        status: 'completed',
+        result: policyResult,
+        startedAt,
+        completedAt,
+        guidelineVersion: guidelines.version,
+        policyVersion: AI_BASE_POLICY_VERSION,
+        contentTypeIdentity: guidelines.contentTypeIdentity,
+        model: requestPolicy.model,
+        usage: requestPolicy.usage,
+      })
+    }
+    return {
+      result: policyResult,
+      usage: requestPolicy.usage ?? null,
+      guidelineVersion: guidelines.version,
+      policyVersion: AI_BASE_POLICY_VERSION,
+      contentTypeIdentity: guidelines.contentTypeIdentity,
+    }
+  }
+
+  const modelResult = await callOpenRouterStep(runtimeInput, guidelines)
+  let finalResult = modelResult.result
+  let usage = mergeOpenRouterUsage(requestPolicy.usage, modelResult.usage)
+  let finalModel = modelResult.model || requestPolicy.model
+
+  if (modelResult.ok !== false) {
+    const resultPolicy = await reviewPolicyResultStep(runtimeInput, guidelines, modelResult.result)
+    usage = mergeOpenRouterUsage(usage, resultPolicy.usage)
+    finalModel = resultPolicy.model || finalModel
+    if (resultPolicy.decision !== 'allow') {
+      finalResult = buildPolicyValidationResult(runtimeInput, resultPolicy)
+    }
+  }
+
+  finalResult = applyConfiguredCaptionLimit(finalResult, runtimeInput, guidelines)
+
   const completedAt = new Date().toISOString()
 
   if (runId) {
     await persistValidationHistoryStep({
-      input: validatedInput,
+      input: runtimeInput,
       runId,
-      status: modelResult.ok === false ? 'failed' : 'completed',
-      result: modelResult.result,
-      error:
-        modelResult.ok === false
-          ? { message: modelResult.reason || 'provider_failed', retryable: true }
-          : undefined,
+      status: 'completed',
+      result: finalResult,
       startedAt,
       completedAt,
       guidelineVersion: guidelines?.version,
-      model: modelResult.model,
-      usage: modelResult.usage,
+      policyVersion: AI_BASE_POLICY_VERSION,
+      contentTypeIdentity: guidelines.contentTypeIdentity,
+      model: finalModel,
+      usage,
     })
   }
 
   return {
-    result: modelResult.result,
-    usage: modelResult.usage ?? null,
+    result: finalResult,
+    usage: usage ?? null,
     guidelineVersion: guidelines?.version ?? null,
+    policyVersion: AI_BASE_POLICY_VERSION,
+    contentTypeIdentity: guidelines.contentTypeIdentity,
   }
 }

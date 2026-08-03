@@ -31,6 +31,11 @@ describe('ai-validation-images', () => {
     expect(validateImageFiles(files)).toBe('Solo se permiten archivos de imagen.')
   })
 
+  test('rejects unsupported image formats', () => {
+    const files = [makeFile({ name: 'animation.gif', type: 'image/gif' })]
+    expect(validateImageFiles(files)).toBe('Solo se permiten imágenes PNG, JPEG o WebP.')
+  })
+
   test('merge appends valid files onto the current selection', () => {
     const current = [makeFile({ name: 'a.png' })]
     const incoming = [makeFile({ name: 'b.png' }), makeFile({ name: 'c.png' })]

@@ -1,18 +1,27 @@
 import { fetch, getWorkflowMetadata } from 'workflow'
 import { z } from 'zod'
 import {
-  CONTENT_TYPES,
+  AI_AGENT_IDENTITY_PROMPT,
+  AI_BASE_POLICY_VERSION,
+  buildAgentSystemPrompt,
+  formatUntrustedGuidelines,
+  formatUntrustedRequest,
+} from '../../../lib/ai-agent'
+import { classifyAiPolicyRequest, reviewAiPolicyResult } from '../../../lib/ai-policy-review'
+import {
   GENERATION_INPUT_LIMITS,
-  PLATFORMS,
+  MAX_GUIDELINE_PLATFORMS,
+  PLATFORM_ID_PATTERN,
+  contentTypeAcceptsImages,
+  contentTypeRequiresImages,
   contentTypeRequiresEventCta,
   getCanonicalEventName,
   isEventContentType,
   shouldGenerateImagePrompt,
 } from '../../../lib/ai-constants'
-import {
-  getActiveGuidelines,
-  resolveGenerationGuidelinesFromDocument,
-} from '../../../lib/ai-guidelines'
+import { contentDataToLegacyInput, validateContentData } from '../../../lib/ai-content-data'
+import { resolveGenerationGuidelinesFromDocument } from '../../../lib/ai-guidelines'
+import { getGuidelineVersion } from '../../../lib/guidelines-store'
 import {
   buildOpenRouterChatBody,
   extractOpenRouterUsage,
@@ -33,6 +42,11 @@ import {
   validateSponsorLogo,
 } from '../../../lib/social-template/eventFormHelpers'
 import { resolveTemplateLayoutId } from '../../../lib/social-template/templateLayouts'
+import { renderSocialTemplateImage } from '../../../lib/social-template/renderSocialTemplateImage'
+import {
+  markGeneratedImageAssetPrepared,
+  normalizeGeneratedImageAsset,
+} from '../../../lib/social-template/prepareGeneratedImageAsset'
 
 const OPENROUTER_TEXT_TIMEOUT_MS = 30_000
 const OPENROUTER_IMAGE_TIMEOUT_MS = 60_000
@@ -42,10 +56,18 @@ const OPENROUTER_IMAGE_MAX_TOKENS = 2_048
 // ---------- Generation schemas (Phase 2A text; Phase 2D prompts; Phase 2E assets) ----------
 
 const MAX_SPONSOR_DATA_URL_LENGTH = Math.ceil((SPONSOR_MAX_BYTES * 4) / 3) + 128
-const MAX_PLATFORM_INPUTS = PLATFORMS.length * 4
+const MAX_PLATFORM_INPUTS = MAX_GUIDELINE_PLATFORMS
 
 const boundedRequiredString = (max) => z.string().trim().min(1).max(max)
 const boundedOptionalString = (max) => boundedRequiredString(max).optional()
+const ContentTypeIdSchema = boundedRequiredString(64).regex(
+  /^[a-z][a-z0-9_]{1,63}$/,
+  'Identificador de tipo de contenido inválido'
+)
+const PlatformIdSchema = boundedRequiredString(64).regex(
+  PLATFORM_ID_PATTERN,
+  'Identificador de plataforma inválido'
+)
 const boundedStringList = z
   .array(boundedRequiredString(GENERATION_INPUT_LIMITS.listItem))
   .max(GENERATION_INPUT_LIMITS.listItems)
@@ -59,6 +81,7 @@ export const AiGeneratedImageSchema = z
     dataUrl: boundedOptionalString(20_000_000),
     downloadFileName: boundedOptionalString(255),
     error: boundedOptionalString(1000),
+    preparedForDisplay: z.literal(true).optional(),
   })
   .strict()
 
@@ -131,8 +154,8 @@ const AiTemplateAssetsSchema = z
 
 export const AiDraftVariantSchema = z
   .object({
-    platform: z.enum(PLATFORMS),
-    contentType: z.enum(CONTENT_TYPES),
+    platform: PlatformIdSchema,
+    contentType: ContentTypeIdSchema,
     draftText: boundedRequiredString(20_000),
     rationale: boundedOptionalString(4000),
     assumptions: z.array(boundedRequiredString(2000)).max(50).optional(),
@@ -146,8 +169,8 @@ export const AiSharedCaptionResultSchema = z
   .object({
     caption: z
       .object({
-        contentType: z.enum(CONTENT_TYPES),
-        draftText: boundedRequiredString(280),
+        contentType: ContentTypeIdSchema,
+        draftText: boundedRequiredString(20_000),
         rationale: boundedOptionalString(4000),
         assumptions: z.array(boundedRequiredString(2000)).max(50).optional(),
         missingInformation: z.array(boundedRequiredString(2000)).max(50).optional(),
@@ -160,7 +183,7 @@ export const AiSharedCaptionResultSchema = z
 
 const AiImagePromptEntrySchema = z
   .object({
-    platform: z.enum(PLATFORMS),
+    platform: PlatformIdSchema,
     imagePrompt: boundedRequiredString(20_000),
     imageRationale: boundedOptionalString(4000),
   })
@@ -168,16 +191,18 @@ const AiImagePromptEntrySchema = z
 
 export const AiImagePromptsResultSchema = z
   .object({
-    imagePrompts: z.array(AiImagePromptEntrySchema).min(1).max(PLATFORMS.length),
+    imagePrompts: z.array(AiImagePromptEntrySchema).min(1).max(MAX_GUIDELINE_PLATFORMS),
   })
   .strict()
 
 export const AiGenerationResultSchema = z
   .object({
-    drafts: z.array(AiDraftVariantSchema).min(1).max(PLATFORMS.length),
+    drafts: z.array(AiDraftVariantSchema).min(1).max(MAX_GUIDELINE_PLATFORMS),
     recommendedNextStep: boundedRequiredString(4000),
     humanReviewRequired: z.literal(true),
+    captionCharacterLimit: z.number().int().min(1).max(20_000).optional(),
     generatedImage: AiGeneratedImageSchema.optional(),
+    imagePlatforms: z.array(PlatformIdSchema).min(1).max(MAX_GUIDELINE_PLATFORMS).optional(),
     templateRequest: AiTemplateRequestSchema.optional(),
     templateAssets: AiTemplateAssetsSchema.optional(),
   })
@@ -213,30 +238,53 @@ const EventTimeSchema = boundedRequiredString(GENERATION_INPUT_LIMITS.eventTime)
 
 const EventDetailsSchema = z
   .object({
-    name: boundedRequiredString(GENERATION_INPUT_LIMITS.eventName),
-    date: EventDateSchema,
-    time: EventTimeSchema,
-    location: boundedRequiredString(GENERATION_INPUT_LIMITS.eventLocation),
+    name: boundedOptionalString(GENERATION_INPUT_LIMITS.eventName),
+    date: EventDateSchema.optional(),
+    time: EventTimeSchema.optional(),
+    location: boundedOptionalString(GENERATION_INPUT_LIMITS.eventLocation),
   })
   .strict()
 
 const NormalizedPlatformsSchema = z
-  .array(z.enum(PLATFORMS))
+  .array(PlatformIdSchema)
   .min(1)
   .max(MAX_PLATFORM_INPUTS)
   .transform((platforms) => [...new Set(platforms)])
-  .refine((platforms) => platforms.length <= PLATFORMS.length, {
-    message: `Máximo ${PLATFORMS.length} plataformas`,
+  .refine((platforms) => platforms.length <= MAX_GUIDELINE_PLATFORMS, {
+    message: `Máximo ${MAX_GUIDELINE_PLATFORMS} plataformas`,
   })
+
+const ContentTypeDefinitionSchema = z
+  .object({
+    id: ContentTypeIdSchema,
+    label: z.string().trim().min(1),
+    status: z.literal('active'),
+    fields: z.array(z.record(z.any())).min(1).max(30),
+    visual: z.record(z.any()),
+  })
+  .passthrough()
+
+const ContentTypeIdentitySchema = z
+  .object({
+    id: ContentTypeIdSchema,
+    label: z.string().trim().min(1),
+    guidelineVersion: boundedRequiredString(100),
+  })
+  .strict()
 
 export const GenerateInputSchema = z
   .object({
     userId: boundedRequiredString(256),
     userEmail: z.string().trim().email().max(254),
-    intent: boundedRequiredString(GENERATION_INPUT_LIMITS.intent),
-    topic: boundedRequiredString(GENERATION_INPUT_LIMITS.topic),
+    intent: boundedOptionalString(GENERATION_INPUT_LIMITS.intent),
+    topic: boundedOptionalString(GENERATION_INPUT_LIMITS.topic),
     platforms: NormalizedPlatformsSchema,
-    contentType: z.enum(CONTENT_TYPES),
+    contentType: ContentTypeIdSchema,
+    contentData: z.record(z.any()),
+    contentTypeDefinition: ContentTypeDefinitionSchema,
+    contentTypeIdentity: ContentTypeIdentitySchema,
+    guidelineVersion: boundedRequiredString(100),
+    policyVersion: boundedRequiredString(100),
     tone: boundedOptionalString(GENERATION_INPUT_LIMITS.tone),
     audience: boundedOptionalString(GENERATION_INPUT_LIMITS.audience),
     cta: boundedOptionalString(GENERATION_INPUT_LIMITS.cta),
@@ -252,7 +300,44 @@ export const GenerateInputSchema = z
   })
   .strict()
   .superRefine((value, ctx) => {
-    if (isEventContentType(value.contentType)) {
+    const definition = value.contentTypeDefinition
+
+    if (definition.id !== value.contentType) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'La definición no corresponde al tipo de contenido solicitado',
+        path: ['contentTypeDefinition', 'id'],
+      })
+    }
+    if (
+      value.contentTypeIdentity.id !== value.contentType ||
+      value.contentTypeIdentity.label !== definition.label ||
+      value.contentTypeIdentity.guidelineVersion !== value.guidelineVersion
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'La identidad del tipo de contenido no coincide con la versión fijada',
+        path: ['contentTypeIdentity'],
+      })
+    }
+    if (value.policyVersion !== AI_BASE_POLICY_VERSION) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'La versión de la política base no coincide con la versión vigente',
+        path: ['policyVersion'],
+      })
+    }
+
+    const contentDataValidation = validateContentData(value.contentData, definition)
+    for (const message of contentDataValidation.errors) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message,
+        path: ['contentData'],
+      })
+    }
+
+    if (isEventContentType(value.contentType, definition)) {
       if (!value.eventDetails) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -260,7 +345,7 @@ export const GenerateInputSchema = z
           path: ['eventDetails'],
         })
       }
-      if (!value.cta && contentTypeRequiresEventCta(value.contentType)) {
+      if (!value.cta && contentTypeRequiresEventCta(value.contentType, definition)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: `cta es obligatorio para ${value.contentType}`,
@@ -269,7 +354,7 @@ export const GenerateInputSchema = z
       }
     }
 
-    const canonicalEventName = getCanonicalEventName(value.contentType)
+    const canonicalEventName = getCanonicalEventName(value.contentType, definition)
     if (
       canonicalEventName &&
       value.eventDetails &&
@@ -282,10 +367,43 @@ export const GenerateInputSchema = z
       })
     }
 
-    if (value.backgroundMode && !resolveTemplateLayoutId(value.contentType)) {
+    const supportsImageForPlatforms = shouldGenerateImagePrompt(
+      value.contentType,
+      value,
+      definition
+    )
+    const templateLayout = resolveTemplateLayoutId(value.contentType, definition)
+    if (templateLayout && supportsImageForPlatforms && !value.backgroundMode) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'backgroundMode es obligatorio para tipos con plantilla visual',
+        path: ['backgroundMode'],
+      })
+    }
+
+    if (value.backgroundMode && !templateLayout) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'El tipo de contenido no admite plantilla visual',
+        path: ['backgroundMode'],
+      })
+    }
+
+    if (!supportsImageForPlatforms && value.backgroundMode) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Las plataformas seleccionadas prohíben imágenes para este tipo de contenido',
+        path: ['backgroundMode'],
+      })
+    }
+
+    if (
+      value.backgroundMode &&
+      !definition.visual?.backgroundSources?.includes(value.backgroundMode)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'La fuente de fondo no está permitida para este tipo de contenido',
         path: ['backgroundMode'],
       })
     }
@@ -313,10 +431,10 @@ export const GenerateInputSchema = z
     }
 
     if (value.sponsorLogo) {
-      if (!isEventContentType(value.contentType)) {
+      if (definition.visual?.sponsorAllowed !== true) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: 'sponsorLogo solo se admite para publicaciones de eventos',
+          message: 'sponsorLogo no está permitido para este tipo de contenido',
           path: ['sponsorLogo'],
         })
       }
@@ -371,7 +489,6 @@ export function buildFallbackGenerationResult(input, reason) {
 
 // ---------- Deterministic output guardrails (Phase 2C) ----------
 
-const X_MAX_CHARS = 280
 const HASHTAG_PATTERN = /(^|\s)#[\p{L}\p{N}_-]+/gu
 const CAMPAIGN_PATTERN = /\b(?:campa(?:ñ|n)a|campaign)\b/i
 const REQUIRED_HASHTAG_PATTERN =
@@ -456,19 +573,39 @@ function removeUnrequestedHashtags(text) {
  *
  * Pure function — returns a schema-valid AiGenerationResult.
  */
-export function applyGenerationGuardrails(result, input, { allowHashtags = false } = {}) {
+export function resolveSharedCaptionCharacterLimit(guidelines, platforms = []) {
+  const limits = platforms
+    .map((platform) => guidelines?.platforms?.[platform]?.captionMaxCharacters)
+    .filter((value) => Number.isInteger(value) && value > 0)
+  return limits.length ? Math.min(...limits) : null
+}
+
+export function applyGenerationGuardrails(
+  result,
+  input,
+  { allowHashtags = false, captionMaxCharacters = null } = {}
+) {
   const legacyDrafts = Array.isArray(result?.drafts) ? result.drafts : []
   const sharedCaption = result?.caption || legacyDrafts[0]
 
-  const missingEventDetails = isEventContentType(input.contentType)
+  const definition = input.contentTypeDefinition
+  const requiredEventFields = definition
+    ? new Set(
+        definition.fields
+          .filter(({ required }) => required)
+          .map(({ key }) => (key === 'event_name' ? 'name' : key))
+      )
+    : null
+  const missingEventDetails = isEventContentType(input.contentType, definition)
     ? EVENT_DETAIL_CHECKS.filter((check) => {
+        if (requiredEventFields && !requiredEventFields.has(check.field)) return false
         const value = input.eventDetails?.[check.field]
         return !(typeof value === 'string' && value.trim())
       })
     : []
   const missingCta =
-    isEventContentType(input.contentType) &&
-    contentTypeRequiresEventCta(input.contentType) &&
+    isEventContentType(input.contentType, definition) &&
+    contentTypeRequiresEventCta(input.contentType, definition) &&
     !input.cta
 
   const existing = sharedCaption || {
@@ -499,9 +636,13 @@ export function applyGenerationGuardrails(result, input, { allowHashtags = false
     missingInformation.push('CTA del evento: no provista; no se inventó.')
   }
 
-  if ((existing.draftText?.length || 0) > X_MAX_CHARS) {
+  if (
+    Number.isInteger(captionMaxCharacters) &&
+    captionMaxCharacters > 0 &&
+    (existing.draftText?.length || 0) > captionMaxCharacters
+  ) {
     missingInformation.push(
-      `El caption compartido excede el límite de ${X_MAX_CHARS} caracteres de X (${existing.draftText.length}); acortar antes de publicar.`
+      `El caption compartido excede el límite aplicable de ${captionMaxCharacters} caracteres (${existing.draftText.length}); acortar antes de publicar.`
     )
   }
 
@@ -519,6 +660,9 @@ export function applyGenerationGuardrails(result, input, { allowHashtags = false
 
   return AiGenerationResultSchema.parse({
     drafts,
+    ...(Number.isInteger(captionMaxCharacters) && captionMaxCharacters > 0
+      ? { captionCharacterLimit: captionMaxCharacters }
+      : null),
     recommendedNextStep:
       result?.recommendedNextStep ||
       'Validar los borradores generados antes de aprobar o publicar.',
@@ -640,6 +784,14 @@ export function applyImagePromptGuardrailsToDraft(draft, input) {
   }
 }
 
+function applyPlatformImagePolicyToDraft(draft, input) {
+  if (contentTypeAcceptsImages(draft.platform, input.contentType, input.contentTypeDefinition)) {
+    return draft
+  }
+  const { imagePrompt: _imagePrompt, imageRationale: _imageRationale, ...textOnlyDraft } = draft
+  return textOnlyDraft
+}
+
 /**
  * Merge image prompts into text drafts and apply image prompt guardrails.
  */
@@ -649,6 +801,8 @@ export function mergeImagePromptsIntoResult(textResult, imagePrompts, input) {
   )
 
   const drafts = textResult.drafts.map((draft) => {
+    const allowedDraft = applyPlatformImagePolicyToDraft(draft, input)
+    if (allowedDraft !== draft) return allowedDraft
     const promptEntry = byPlatform.get(draft.platform)
     const merged = {
       ...draft,
@@ -663,6 +817,12 @@ export function mergeImagePromptsIntoResult(textResult, imagePrompts, input) {
     drafts,
     humanReviewRequired: true,
   })
+}
+
+function resolveImagePlatforms(input) {
+  return input.platforms.filter((platform) =>
+    contentTypeAcceptsImages(platform, input.contentType, input.contentTypeDefinition)
+  )
 }
 
 async function validatePayloadStep(input) {
@@ -680,18 +840,260 @@ async function validatePayloadStep(input) {
 
 async function loadGuidelinesStep(input) {
   'use step'
-  const active = await getActiveGuidelines()
-  const byPlatform = {}
-  for (const platform of input.platforms) {
-    byPlatform[platform] = resolveGenerationGuidelinesFromDocument(active, {
-      platform,
-      contentType: input.contentType,
+  try {
+    const document = await getGuidelineVersion(input.guidelineVersion)
+    if (!document || document.version !== input.guidelineVersion) {
+      return { ok: false, reason: 'guideline_version_unavailable' }
+    }
+    if (
+      input.platforms.some(
+        (platform) => !Object.prototype.hasOwnProperty.call(document.platforms || {}, platform)
+      )
+    ) {
+      return { ok: false, reason: 'platform_unavailable' }
+    }
+
+    const byPlatform = {}
+    for (const platform of input.platforms) {
+      byPlatform[platform] = resolveGenerationGuidelinesFromDocument(document, {
+        platform,
+        contentType: input.contentType,
+      })
+    }
+
+    const resolved = byPlatform[input.platforms[0]]
+    const definition = resolved?.contentTypeDefinition
+    if (!definition || definition.status !== 'active') {
+      return { ok: false, reason: 'content_type_unavailable' }
+    }
+    if (
+      input.policyVersion !== AI_BASE_POLICY_VERSION ||
+      input.contentTypeIdentity?.id !== definition.id ||
+      input.contentTypeIdentity?.label !== definition.label ||
+      input.contentTypeIdentity?.guidelineVersion !== document.version
+    ) {
+      return { ok: false, reason: 'pinned_identity_mismatch' }
+    }
+
+    const exactInputResult = GenerateInputSchema.safeParse({
+      ...input,
+      contentTypeDefinition: definition,
+      contentTypeIdentity: resolved.contentTypeIdentity,
     })
+    if (!exactInputResult.success) {
+      return { ok: false, reason: 'pinned_definition_mismatch' }
+    }
+    const normalizedLegacyInput = contentDataToLegacyInput(
+      exactInputResult.data.contentData,
+      definition
+    )
+
+    return {
+      ok: true,
+      version: document.version,
+      policyVersion: AI_BASE_POLICY_VERSION,
+      contentTypeDefinition: definition,
+      contentTypeIdentity: resolved.contentTypeIdentity,
+      input: {
+        ...exactInputResult.data,
+        ...normalizedLegacyInput,
+        contentTypeDefinition: definition,
+        contentTypeIdentity: resolved.contentTypeIdentity,
+      },
+      platforms: byPlatform,
+    }
+  } catch (error) {
+    console.error('generateAiWorkflow: failed to load pinned guidelines', error)
+    return { ok: false, reason: 'guideline_version_unavailable' }
+  }
+}
+
+function buildPolicyRequest(input) {
+  return {
+    contentType: input.contentType,
+    contentData: input.contentData,
+    platforms: input.platforms,
+    intent: input.intent,
+    topic: input.topic,
+    tone: input.tone,
+    audience: input.audience,
+    cta: input.cta,
+    knownFacts: input.knownFacts,
+    eventDetails: input.eventDetails,
+    hashtags: input.hashtags,
+    links: input.links,
+    imageStyle: input.imageStyle,
+    imageConstraints: input.imageConstraints,
+    backgroundMode: input.backgroundMode,
+  }
+}
+
+function buildPolicyGuidelines(guidelines) {
+  const first = guidelines.platforms?.[Object.keys(guidelines.platforms)[0]] || {}
+  return {
+    version: guidelines.version,
+    global: first.global,
+    platforms: Object.fromEntries(
+      Object.entries(guidelines.platforms || {}).map(([platform, value]) => [
+        platform,
+        value.platform,
+      ])
+    ),
+    contentType: first.contentType,
+    prohibited: first.prohibited,
+    imagePrompt: first.imagePrompt,
+    imageValidation: first.imageValidation,
+    contentTypeDefinition: guidelines.contentTypeDefinition,
+  }
+}
+
+function buildTextPromptGuidelines(guidelines, platforms) {
+  const first = guidelines.platforms?.[platforms[0]] || {}
+  return {
+    version: guidelines.version,
+    global: first.global,
+    platforms: Object.fromEntries(
+      platforms.map((platform) => [
+        platform,
+        guidelines.platforms?.[platform]?.platform || 'Reglas generales de plataforma.',
+      ])
+    ),
+    platformConstraints: Object.fromEntries(
+      platforms.map((platform) => [
+        platform,
+        {
+          captionMaxCharacters: guidelines.platforms?.[platform]?.captionMaxCharacters ?? null,
+        },
+      ])
+    ),
+    contentType: first.contentType,
+    prohibited: first.prohibited,
+  }
+}
+
+function buildImagePromptGuidelines(guidelines, platforms) {
+  const first = guidelines.platforms?.[platforms[0]] || {}
+  return {
+    version: guidelines.version,
+    imagePrompt: first.imagePrompt,
+    global: first.global,
+    platforms: Object.fromEntries(
+      platforms.map((platform) => [
+        platform,
+        guidelines.platforms?.[platform]?.platform || 'Expectativas generales de plataforma.',
+      ])
+    ),
+    contentType: first.contentType,
+    prohibited: first.prohibited,
+    imageValidation: first.imageValidation,
+  }
+}
+
+async function classifyPolicyRequestStep(input, guidelines) {
+  'use step'
+  const images = input.sponsorLogo?.dataUrl ? [input.sponsorLogo.dataUrl] : []
+  return classifyAiPolicyRequest(
+    {
+      request: buildPolicyRequest(input),
+      guidelines: buildPolicyGuidelines(guidelines),
+      images,
+    },
+    { fetchImpl: fetch }
+  )
+}
+
+async function reviewPolicyResultStep(input, guidelines, result) {
+  'use step'
+  const images = []
+
+  if (result.generatedImage?.dataUrl) {
+    images.push(result.generatedImage.dataUrl)
   }
 
-  return {
-    version: active?.version || 'mvp-default-v1',
-    platforms: byPlatform,
+  return reviewAiPolicyResult(
+    {
+      request: buildPolicyRequest(input),
+      result,
+      guidelines: buildPolicyGuidelines(guidelines),
+      images,
+    },
+    { fetchImpl: fetch }
+  )
+}
+
+async function prepareFinalImageStep(input, result) {
+  'use step'
+
+  const imagePlatforms = resolveImagePlatforms(input)
+  result = AiGenerationResultSchema.parse({
+    ...result,
+    drafts: result.drafts.map((draft) => applyPlatformImagePolicyToDraft(draft, input)),
+  })
+  if (!result.generatedImage && !result.templateRequest) return { ok: true, result }
+
+  try {
+    let generatedImage
+    if (result.templateRequest) {
+      if (!result.templateAssets?.backgroundSource) {
+        throw new Error('faltan los assets compartidos de la plantilla')
+      }
+      const rendered = await renderSocialTemplateImage({
+        templateRequest: {
+          ...result.templateRequest,
+          backgroundSource: result.templateAssets.backgroundSource,
+          ...(result.templateAssets.sponsorLogo
+            ? { sponsorLogo: result.templateAssets.sponsorLogo }
+            : null),
+        },
+      })
+      generatedImage = markGeneratedImageAssetPrepared(
+        buildGeneratedImageAsset({
+          dataUrl: rendered.dataUrl,
+          mimeType: rendered.mimeType,
+          rationale:
+            result.templateAssets.backgroundSource.mode === 'stock'
+              ? 'Imagen de plantilla con fondo seleccionado.'
+              : 'Imagen de plantilla con fondo generado por IA.',
+        })
+      )
+    } else {
+      generatedImage = await normalizeGeneratedImageAsset(result.generatedImage)
+    }
+
+    return {
+      ok: true,
+      result: AiGenerationResultSchema.parse({
+        ...result,
+        generatedImage,
+        imagePlatforms,
+        humanReviewRequired: true,
+      }),
+    }
+  } catch (error) {
+    console.error('generateAiWorkflow: failed to prepare final image', error)
+    const {
+      generatedImage: _generatedImage,
+      templateRequest: _templateRequest,
+      templateAssets: _templateAssets,
+      imagePlatforms: _imagePlatforms,
+      ...textResult
+    } = result
+    const drafts = textResult.drafts.map((draft) =>
+      imagePlatforms.includes(draft.platform)
+        ? applyImageAssetFallbackToDraft(
+            draft,
+            error?.message || 'no se pudo preparar el arte final'
+          )
+        : draft
+    )
+    return {
+      ok: false,
+      result: AiGenerationResultSchema.parse({
+        ...textResult,
+        drafts,
+        humanReviewRequired: true,
+      }),
+    }
   }
 }
 
@@ -700,13 +1102,19 @@ async function generateTextStep(input, guidelines) {
 
   const apiKey = process.env.OPENROUTER_API_KEY
   const model = process.env.OPENROUTER_MODEL || 'google/gemini-3.1-flash-lite-image'
+  const allowHashtags = shouldIncludeHashtags(input, guidelines)
+  const captionMaxCharacters = resolveSharedCaptionCharacterLimit(guidelines, input.platforms)
 
   if (!apiKey) {
     return {
       ok: false,
       reason: 'Falta OPENROUTER_API_KEY',
       model,
-      result: buildFallbackGenerationResult(input, 'Falta configuración del provider'),
+      result: applyGenerationGuardrails(
+        buildFallbackGenerationResult(input, 'Falta configuración del provider'),
+        input,
+        { allowHashtags, captionMaxCharacters }
+      ),
       usage: null,
     }
   }
@@ -714,25 +1122,25 @@ async function generateTextStep(input, guidelines) {
   const siteUrl = process.env.OPENROUTER_SITE_URL
   const openRouterTitle = process.env.OPENROUTER_TITLE
 
-  const firstPlatformGuidelines = guidelines.platforms[input.platforms[0]] || {}
-  const allowHashtags = shouldIncludeHashtags(input, guidelines)
+  const captionLimitSchemaDescription = captionMaxCharacters
+    ? `español, máximo ${captionMaxCharacters} caracteres incluyendo hashtags y enlaces`
+    : 'español, sin un máximo editorial configurado'
+  const captionLimitInstruction = captionMaxCharacters
+    ? `- "draftText" no puede superar ${captionMaxCharacters} caracteres en total, contando espacios, hashtags y enlaces.`
+    : '- Guidelines no define un máximo de caracteres para este caption compartido.'
   const needsPosterText =
     isEventContentType(input.contentType) && Boolean(resolveTemplateLayoutId(input.contentType))
 
-  const platformSections = input.platforms
-    .map((platform) => {
-      const rules = guidelines.platforms[platform]?.platform || 'Reglas generales de plataforma.'
-      return `- ${platform}: ${rules}`
-    })
-    .join('\n')
+  const systemPrompt = buildAgentSystemPrompt({
+    modeInstructions: `INSTRUCCIONES OPERATIVAS DEL GENERADOR
 
-  const systemPrompt = `Eres un generador de captions para redes sociales de SAC (Sociedad de Astronomía del Caribe).
+En modo generación, crea captions para las redes sociales de SAC (Sociedad de Astronomía del Caribe).
 Devuelve EXACTAMENTE un objeto JSON (sin texto adicional, sin markdown) con esta forma:
 
 {
   "caption": {
     "contentType": string,
-    "draftText": string (español, máximo 280 caracteres incluyendo hashtags y enlaces),
+    "draftText": string (${captionLimitSchemaDescription}),
     "rationale": string (opcional),
     "assumptions": string[],
     "missingInformation": string[]
@@ -743,31 +1151,17 @@ Devuelve EXACTAMENTE un objeto JSON (sin texto adicional, sin markdown) con esta
   "humanReviewRequired": true
 }
 
-GUÍAS DE SAC (versión ${guidelines.version}) — cúmplelas al redactar:
-
-[Globales]
-${firstPlatformGuidelines.global || ''}
-
-[Por plataforma]
-${platformSections}
-
-[Tipo de contenido]
-${firstPlatformGuidelines.contentType || ''}
-
-[Contenido prohibido]
-${firstPlatformGuidelines.prohibited || ''}
-
 Reglas de salida:
 - Usa EXACTAMENTE esas claves. "humanReviewRequired" debe ser siempre true.
-- Genera UN SOLO caption compartido para X, Instagram y Facebook.
-- El mismo texto se publicará sin cambios en las tres redes.
-- "draftText" no puede superar 280 caracteres en total, contando espacios, hashtags y enlaces.
-- Combina las reglas de las tres plataformas; ante conflicto aplica la regla más restrictiva.
+- Genera UN SOLO caption compartido para las plataformas indicadas en la solicitud.
+- El mismo texto se publicará sin cambios en esas plataformas.
+${captionLimitInstruction}
+- Cumple conjuntamente las reglas de todas las plataformas destinatarias.
 - Usa exactamente el contentType solicitado.
 - Idioma: español (por defecto), tono adecuado a SAC / Puerto Rico.
 - Hashtags: no incluir ni sugerir por defecto. En esta solicitud están ${
-    allowHashtags ? 'permitidos por una excepción aplicable' : 'prohibidos'
-  }. Solo se permiten si el usuario los solicitó, hay una campaña identificable o las guías activas los requieren explícitamente.
+      allowHashtags ? 'permitidos por una excepción aplicable' : 'prohibidos'
+    }. Solo se permiten si el usuario los solicitó, hay una campaña identificable o las guías activas los requieren explícitamente.
 - Preserva los hechos provistos (knownFacts, eventDetails, enlaces) tal cual, sin alterarlos.
 - NO inventes fechas, horarios, lugares, costos, enlaces ni hechos científicos no provistos.
 - Si falta información crítica, deja huecos claros en "missingInformation" y NO rellenes con datos inventados.
@@ -779,7 +1173,8 @@ Reglas de salida:
 - Mantén "posterSubtitle" y "posterBody" independientes del caption. No repitas en ellos el título del evento, la fecha, la hora ni el lugar: esos datos ya aparecen en la plantilla.
 - No incluyas hashtags, enlaces, costos ni hechos concretos nuevos en esos dos campos. No inventes información.
 - Omite "posterSubtitle" y "posterBody" si no corresponden al tipo de contenido.
-`
+`,
+  })
 
   const userText = {
     intent: input.intent,
@@ -799,8 +1194,9 @@ Reglas de salida:
     { role: 'system', content: systemPrompt },
     {
       role: 'user',
-      content: `Generar un caption compartido y retornar el JSON solicitado.
-Input (JSON): ${JSON.stringify(userText)}`,
+      content: `${formatUntrustedGuidelines(buildTextPromptGuidelines(guidelines, input.platforms))}
+Generar un caption compartido y retornar el JSON solicitado.
+${formatUntrustedRequest(userText)}`,
     },
   ]
 
@@ -865,9 +1261,17 @@ Input (JSON): ${JSON.stringify(userText)}`,
     }
 
     const validated = AiSharedCaptionResultSchema.parse(json)
+    if (captionMaxCharacters && validated.caption.draftText.length > captionMaxCharacters) {
+      throw new Error(
+        `El caption generado excede el máximo configurado de ${captionMaxCharacters} caracteres`
+      )
+    }
 
     return {
-      result: applyGenerationGuardrails(validated, input, { allowHashtags }),
+      result: applyGenerationGuardrails(validated, input, {
+        allowHashtags,
+        captionMaxCharacters,
+      }),
       usage,
       posterText,
     }
@@ -901,7 +1305,11 @@ Input (JSON): ${JSON.stringify(userText)}`,
         ok: false,
         model,
         reason: err1?.message || 'Fallo provider/modelo',
-        result: buildFallbackGenerationResult(input, err1?.message || 'Fallo provider/modelo'),
+        result: applyGenerationGuardrails(
+          buildFallbackGenerationResult(input, err1?.message || 'Fallo provider/modelo'),
+          input,
+          { allowHashtags, captionMaxCharacters }
+        ),
         usage: accumulatedUsage,
       }
     }
@@ -911,7 +1319,7 @@ Input (JSON): ${JSON.stringify(userText)}`,
 async function generateImagePromptsStep(input, textResult, guidelines) {
   'use step'
 
-  if (!shouldGenerateImagePrompt(input.contentType, input)) {
+  if (!shouldGenerateImagePrompt(input.contentType, input, input.contentTypeDefinition)) {
     return { ok: true, skipped: true, result: textResult, usage: null }
   }
 
@@ -936,7 +1344,7 @@ async function generateImagePromptsStep(input, textResult, guidelines) {
 
   const siteUrl = process.env.OPENROUTER_SITE_URL
   const openRouterTitle = process.env.OPENROUTER_TITLE
-  const firstPlatformGuidelines = guidelines.platforms[input.platforms[0]] || {}
+  const imagePlatforms = resolveImagePlatforms(input)
 
   const backdropOnlyRules =
     input.backgroundMode === 'ai_generated'
@@ -948,7 +1356,10 @@ Reglas adicionales (fondo para plantilla):
 `
       : ''
 
-  const systemPrompt = `Eres un generador de prompts de imagen para borradores de redes sociales de SAC (Sociedad de Astronomía del Caribe).
+  const systemPrompt = buildAgentSystemPrompt({
+    modeInstructions: `INSTRUCCIONES OPERATIVAS DE IMAGEN
+
+En modo imagen, crea prompts visuales para borradores de redes sociales de SAC (Sociedad de Astronomía del Caribe).
 SAC publica la MISMA imagen en todas las redes sociales. Genera UN SOLO prompt visual compartido.
 Devuelve EXACTAMENTE un objeto JSON (sin texto adicional, sin markdown) con esta forma:
 
@@ -957,32 +1368,16 @@ Devuelve EXACTAMENTE un objeto JSON (sin texto adicional, sin markdown) con esta
   "sharedImageRationale": string (español, por qué el prompt apoya los borradores)
 }
 
-GUÍAS DE SAC (versión ${guidelines.version}) — cúmplelas al redactar prompts:
-
-[Prompts de imagen]
-${firstPlatformGuidelines.imagePrompt || ''}
-
-[Globales]
-${firstPlatformGuidelines.global || ''}
-
-[Tipo de contenido]
-${firstPlatformGuidelines.contentType || ''}
-
-[Contenido prohibido]
-${firstPlatformGuidelines.prohibited || ''}
-
-[Validación de imagen]
-${firstPlatformGuidelines.imageValidation || ''}
-
 Reglas:
-- Genera UN SOLO imagePrompt compartido para todas las plataformas.
+- Genera UN SOLO imagePrompt compartido para las plataformas que admiten imagen.
 - Alinea el prompt con el tema y los borradores de texto; NO inventes hechos no provistos.
 - NO personas identificables, menores, datos privados, logos oficiales ni estilos con copyright.
 - NO fechas, horarios, lugares, costos ni enlaces específicos que no estén en los datos provistos.
 - Incluye restricciones de seguridad explícitas en el imagePrompt.
 - Respeta imageStyle e imageConstraints del usuario cuando estén provistos.
 - NO generes assets de imagen; solo el prompt de texto.
-${backdropOnlyRules}`
+${backdropOnlyRules}`,
+  })
 
   const userPayload = {
     intent: input.intent,
@@ -1004,8 +1399,9 @@ ${backdropOnlyRules}`
     { role: 'system', content: systemPrompt },
     {
       role: 'user',
-      content: `Generar un imagePrompt compartido.
-Input (JSON): ${JSON.stringify(userPayload)}`,
+      content: `${formatUntrustedGuidelines(buildImagePromptGuidelines(guidelines, imagePlatforms))}
+Generar un imagePrompt compartido.
+${formatUntrustedRequest(userPayload)}`,
     },
   ]
 
@@ -1059,7 +1455,7 @@ Input (JSON): ${JSON.stringify(userPayload)}`,
       throw err
     }
 
-    const imagePrompts = input.platforms.map((platform) => ({
+    const imagePrompts = imagePlatforms.map((platform) => ({
       platform,
       imagePrompt: sharedPrompt,
       imageRationale: sharedRationale,
@@ -1116,7 +1512,7 @@ Input (JSON): ${JSON.stringify(userPayload)}`,
 async function generateImageAssetsStep(input, promptResult) {
   'use step'
 
-  if (!shouldGenerateImagePrompt(input.contentType, input)) {
+  if (!shouldGenerateImagePrompt(input.contentType, input, input.contentTypeDefinition)) {
     return { ok: true, skipped: true, result: promptResult, usage: null }
   }
 
@@ -1144,6 +1540,10 @@ async function generateImageAssetsStep(input, promptResult) {
         ...buildOpenRouterChatBody({
           model,
           messages: [
+            {
+              role: 'system',
+              content: AI_AGENT_IDENTITY_PROMPT,
+            },
             {
               role: 'user',
               content: `Genera una sola imagen de borrador para redes sociales de SAC a partir de este prompt. No inventes hechos no incluidos.\n\n${draftWithPrompt.imagePrompt}`,
@@ -1250,6 +1650,10 @@ Clean background only for a social media template overlay. No text, no logos, no
           model,
           messages: [
             {
+              role: 'system',
+              content: AI_AGENT_IDENTITY_PROMPT,
+            },
+            {
               role: 'user',
               content: `Genera una sola imagen de fondo limpio para plantilla de redes sociales de SAC.\n\n${backdropPrompt}`,
             },
@@ -1335,13 +1739,59 @@ export async function generateAiWorkflow(input) {
         startedAt,
         completedAt: new Date().toISOString(),
         guidelineVersion: null,
+        policyVersion: AI_BASE_POLICY_VERSION,
+        contentTypeIdentity: input?.contentTypeIdentity,
       })
     }
     throw new Error('La solicitud de generación no es válida.')
   }
 
-  const validatedInput = validatedInputResult.value
-  const guidelines = await loadGuidelinesStep(validatedInput)
+  const pinnedInput = validatedInputResult.value
+  const guidelines = await loadGuidelinesStep(pinnedInput)
+  if (!guidelines.ok) {
+    if (runId) {
+      await persistGenerationHistoryStep({
+        input: pinnedInput,
+        runId,
+        status: 'failed',
+        error: { message: guidelines.reason, retryable: false },
+        startedAt,
+        completedAt: new Date().toISOString(),
+        guidelineVersion: pinnedInput.guidelineVersion,
+        policyVersion: AI_BASE_POLICY_VERSION,
+        contentTypeIdentity: pinnedInput.contentTypeIdentity,
+      })
+    }
+    throw new Error('La versión de Guidelines fijada para esta ejecución no está disponible.')
+  }
+
+  const validatedInput = guidelines.input
+  const requestPolicy = await classifyPolicyRequestStep(validatedInput, guidelines)
+  if (requestPolicy.decision !== 'allow') {
+    const completedAt = new Date().toISOString()
+    if (runId) {
+      await persistGenerationHistoryStep({
+        input: validatedInput,
+        runId,
+        status: 'failed',
+        error: {
+          message: requestPolicy.failClosed
+            ? 'policy_classification_unavailable'
+            : `policy_request_blocked:${requestPolicy.categories.join(',')}`,
+          retryable: requestPolicy.failClosed,
+        },
+        startedAt,
+        completedAt,
+        guidelineVersion: guidelines.version,
+        policyVersion: AI_BASE_POLICY_VERSION,
+        contentTypeIdentity: guidelines.contentTypeIdentity,
+        model: requestPolicy.model,
+        usage: requestPolicy.usage,
+      })
+    }
+    throw new Error('La solicitud no cumple la política de contenido de SAC.')
+  }
+
   const textResult = await generateTextStep(validatedInput, guidelines)
   if (!textResult.ok) {
     console.error('generateAiWorkflow: text provider failed', textResult.reason)
@@ -1354,16 +1804,25 @@ export async function generateAiWorkflow(input) {
         startedAt,
         completedAt: new Date().toISOString(),
         guidelineVersion: guidelines.version,
-        usage: textResult.usage,
+        policyVersion: AI_BASE_POLICY_VERSION,
+        contentTypeIdentity: guidelines.contentTypeIdentity,
+        usage: mergeOpenRouterUsage(requestPolicy.usage, textResult.usage),
       })
     }
     throw new Error('No se pudieron generar los borradores. Intenta nuevamente.')
   }
 
   const usesTemplate =
+    shouldGenerateImagePrompt(
+      validatedInput.contentType,
+      validatedInput,
+      validatedInput.contentTypeDefinition
+    ) &&
     (validatedInput.backgroundMode === 'stock' ||
       validatedInput.backgroundMode === 'ai_generated') &&
-    Boolean(resolveTemplateLayoutId(validatedInput.contentType))
+    Boolean(
+      resolveTemplateLayoutId(validatedInput.contentType, validatedInput.contentTypeDefinition)
+    )
 
   let finalResult
   let usage
@@ -1426,6 +1885,65 @@ export async function generateAiWorkflow(input) {
     finalResult = imageAssetResult.result
   }
 
+  const preparedImageResult = await prepareFinalImageStep(validatedInput, finalResult)
+  finalResult = preparedImageResult.result
+
+  usage = mergeOpenRouterUsage(requestPolicy.usage, usage)
+  const requiredImagePlatforms = validatedInput.platforms.filter((platform) =>
+    contentTypeRequiresImages(
+      platform,
+      validatedInput.contentType,
+      validatedInput.contentTypeDefinition
+    )
+  )
+  const sponsorMustAppear = Boolean(validatedInput.sponsorLogo?.dataUrl)
+  if (
+    (requiredImagePlatforms.length > 0 || sponsorMustAppear) &&
+    !finalResult.generatedImage?.preparedForDisplay
+  ) {
+    if (runId) {
+      await persistGenerationHistoryStep({
+        input: validatedInput,
+        runId,
+        status: 'failed',
+        error: { message: 'required_image_unavailable', retryable: true },
+        startedAt,
+        completedAt: new Date().toISOString(),
+        guidelineVersion: guidelines.version,
+        policyVersion: AI_BASE_POLICY_VERSION,
+        contentTypeIdentity: guidelines.contentTypeIdentity,
+        usage,
+      })
+    }
+    throw new Error('No se pudo preparar la imagen requerida por Guidelines.')
+  }
+  const resultPolicy = await reviewPolicyResultStep(validatedInput, guidelines, finalResult)
+  usage = mergeOpenRouterUsage(usage, resultPolicy.usage)
+  if (resultPolicy.decision !== 'allow') {
+    const completedAt = new Date().toISOString()
+    if (runId) {
+      await persistGenerationHistoryStep({
+        input: validatedInput,
+        runId,
+        status: 'failed',
+        error: {
+          message: resultPolicy.failClosed
+            ? 'policy_review_unavailable'
+            : `policy_result_blocked:${resultPolicy.categories.join(',')}`,
+          retryable: resultPolicy.failClosed,
+        },
+        startedAt,
+        completedAt,
+        guidelineVersion: guidelines.version,
+        policyVersion: AI_BASE_POLICY_VERSION,
+        contentTypeIdentity: guidelines.contentTypeIdentity,
+        model: resultPolicy.model,
+        usage,
+      })
+    }
+    throw new Error('El resultado no superó la revisión de política de SAC.')
+  }
+
   const completedAt = new Date().toISOString()
 
   if (runId) {
@@ -1437,6 +1955,8 @@ export async function generateAiWorkflow(input) {
       startedAt,
       completedAt,
       guidelineVersion: guidelines.version,
+      policyVersion: AI_BASE_POLICY_VERSION,
+      contentTypeIdentity: guidelines.contentTypeIdentity,
       usage,
     })
   }
@@ -1445,5 +1965,7 @@ export async function generateAiWorkflow(input) {
     result: finalResult,
     usage,
     guidelineVersion: guidelines.version,
+    policyVersion: AI_BASE_POLICY_VERSION,
+    contentTypeIdentity: guidelines.contentTypeIdentity,
   }
 }

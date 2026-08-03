@@ -17,7 +17,10 @@ export default function AiValidationClient() {
 
   const { active, hydrated: guidelinesHydrated } = useActiveGuidelines()
   const platforms = useMemo(() => resolvePlatformOptions(active), [active])
-  const contentTypes = useMemo(() => resolveContentTypeOptions(active), [active])
+  const contentTypes = useMemo(
+    () => resolveContentTypeOptions(active, { includeDefinitions: true }),
+    [active]
+  )
 
   const {
     formState,
@@ -27,12 +30,16 @@ export default function AiValidationClient() {
     hydrated: draftHydrated,
   } = useValidationDraft()
   const formReady = guidelinesHydrated && draftHydrated
+  const selectedContentType = contentTypes.find(({ id }) => id === formState.contentType)
 
   const {
     phase,
     runId,
     result,
     usage,
+    guidelineVersion,
+    policyVersion,
+    contentTypeIdentity,
     error,
     isBusy,
     copyFeedback,
@@ -42,7 +49,7 @@ export default function AiValidationClient() {
   } = useAiValidationRun({ canValidate })
 
   const handleSubmit = () => {
-    submitValidation(formState, images)
+    submitValidation(formState, images, selectedContentType?.definition)
   }
 
   return (
@@ -51,7 +58,7 @@ export default function AiValidationClient() {
         Validar publicación
       </h2>
       <p className="text-gray-600 dark:text-gray-400 mb-6">
-        Revisa un borrador de redes sociales contra las guías de SAC antes de publicar manualmente.
+        Revisa tu publicación contra las guías de SAC antes de publicar.
       </p>
 
       <ValidationForm
@@ -108,7 +115,14 @@ export default function AiValidationClient() {
 
       {result && phase === 'completed' && (
         <>
-          <ValidationResult result={result} usage={usage} onCopyFeedback={showCopyFeedback} />
+          <ValidationResult
+            result={result}
+            usage={usage}
+            guidelineVersion={guidelineVersion}
+            policyVersion={policyVersion}
+            contentTypeIdentity={contentTypeIdentity}
+            onCopyFeedback={showCopyFeedback}
+          />
           <div className="mt-6">
             <button
               type="button"

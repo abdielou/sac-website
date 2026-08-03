@@ -1,13 +1,31 @@
 import { auth } from '../../../../../auth'
 import { NextResponse } from 'next/server'
 import { checkPermission } from '../../../../../lib/api-permissions'
-import { contentTypeRequiresImages } from '../../../../../lib/ai-constants'
+import { AI_BASE_POLICY_VERSION } from '../../../../../lib/ai-base-policy'
+import {
+  MAX_IMAGE_SIZE_BYTES,
+  MAX_VALIDATION_IMAGES,
+  contentTypeAcceptsImages,
+  contentTypeRequiresImages,
+} from '../../../../../lib/ai-constants'
+import {
+  contentDataToLegacyInput,
+  legacyInputToContentData,
+  validateContentData,
+} from '../../../../../lib/ai-content-data'
+import { getActiveGuidelinesStrict } from '../../../../../lib/ai-guidelines'
+import { resolveContentTypeDefinition } from '../../../../../lib/ai-guidelines-schema'
 import { checkWorkflowStartRateLimit } from '../../../../../lib/ai-rate-limit'
+import {
+  VALIDATION_IMAGE_MIME_TYPES,
+  normalizeSerializedValidationImages,
+} from '../../../../../lib/ai-validation-images'
 import { start } from 'workflow/api'
-import { validateAiWorkflow } from '../../../../../workflows/ai-social-media-designer/validation/validateAiWorkflow'
+import {
+  ValidateInputSchema,
+  validateAiWorkflow,
+} from '../../../../../workflows/ai-social-media-designer/validation/validateAiWorkflow'
 
-const MAX_IMAGES = 4
-const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024 // 5MB
 const VALIDATE_WORKFLOW_ID =
   'workflow//./workflows/ai-social-media-designer/validation/validateAiWorkflow//validateAiWorkflow'
 
@@ -39,6 +57,16 @@ function parseStringArray(value) {
     .map((s) => s.trim())
     .filter(Boolean)
   return list.length ? list : undefined
+}
+
+function formatSchemaIssues(error) {
+  return error.issues
+    .slice(0, 5)
+    .map((issue) => {
+      const path = issue.path.length ? `${issue.path.join('.')}: ` : ''
+      return `${path}${issue.message}`
+    })
+    .join('; ')
 }
 
 async function fileToDataUrl(file) {
@@ -87,6 +115,8 @@ export const POST = auth(async function POST(req) {
     let links
     let eventDetails
     let altText
+    let contentData
+    let legacySource
     let images = []
 
     if (contentTypeHeader.includes('multipart/form-data')) {
@@ -113,11 +143,30 @@ export const POST = auth(async function POST(req) {
         }
       }
 
+      const contentDataStr = formData.get('contentData')
+      if (contentDataStr) {
+        try {
+          contentData = JSON.parse(String(contentDataStr))
+        } catch {
+          return NextResponse.json({ error: 'contentData inválido' }, { status: 400 })
+        }
+      }
+
+      legacySource = {
+        intent: goal,
+        topic: goal,
+        audience,
+        cta,
+        hashtags,
+        links,
+        eventDetails,
+      }
+
       const imageFiles = formData.getAll('images').filter((f) => f && f.size > 0)
 
-      if (imageFiles.length > MAX_IMAGES) {
+      if (imageFiles.length > MAX_VALIDATION_IMAGES) {
         return NextResponse.json(
-          { error: 'Demasiadas imágenes', details: `Máximo ${MAX_IMAGES}` },
+          { error: 'Demasiadas imágenes', details: `Máximo ${MAX_VALIDATION_IMAGES}` },
           { status: 400 }
         )
       }
@@ -133,9 +182,9 @@ export const POST = auth(async function POST(req) {
           )
         }
 
-        if (mime && !mime.startsWith('image/')) {
+        if (!VALIDATION_IMAGE_MIME_TYPES.includes(mime.toLowerCase())) {
           return NextResponse.json(
-            { error: 'Archivo inválido', details: 'Se requiere una imagen' },
+            { error: 'Archivo inválido', details: 'Se requiere una imagen PNG, JPEG o WebP' },
             { status: 400 }
           )
         }
@@ -162,11 +211,26 @@ export const POST = auth(async function POST(req) {
       links = parseStringArray(body.links)
       eventDetails = body.eventDetails
       altText = body.altText
+      contentData = body.contentData
+      legacySource = body
       images = body.images || []
     }
 
-    platform = typeof platform === 'string' ? platform : platform?.toString()
-    contentType = typeof contentType === 'string' ? contentType : contentType?.toString()
+    const normalizedImages = normalizeSerializedValidationImages(images)
+    if (!normalizedImages.ok) {
+      return NextResponse.json(
+        { error: 'Imágenes inválidas', details: normalizedImages.error },
+        { status: 400 }
+      )
+    }
+    images = normalizedImages.images
+
+    platform =
+      typeof platform === 'string'
+        ? platform.trim().toLowerCase()
+        : platform?.toString().trim().toLowerCase()
+    contentType =
+      typeof contentType === 'string' ? contentType.trim() : contentType?.toString().trim()
     draftText = typeof draftText === 'string' ? draftText : draftText?.toString()
 
     if (!platform || !contentType || !draftText || !draftText.trim()) {
@@ -179,7 +243,103 @@ export const POST = auth(async function POST(req) {
       )
     }
 
-    if (contentTypeRequiresImages(platform, contentType) && (!images || images.length === 0)) {
+    let activeGuidelines
+    try {
+      activeGuidelines = await getActiveGuidelinesStrict()
+    } catch (error) {
+      console.error('POST /api/admin/ai/validate: active Guidelines unavailable', error)
+      return NextResponse.json(
+        {
+          error: 'Guías no disponibles',
+          details: 'No se pudo fijar la versión activa de Guidelines. Intenta nuevamente.',
+        },
+        { status: 503 }
+      )
+    }
+    const contentTypeDefinition = resolveContentTypeDefinition(activeGuidelines, contentType, {
+      includeArchived: true,
+    })
+
+    if (!Object.prototype.hasOwnProperty.call(activeGuidelines.platforms || {}, platform)) {
+      return NextResponse.json(
+        {
+          error: 'Plataforma no disponible',
+          details: `La plataforma "${platform}" no existe en Guidelines activas.`,
+        },
+        { status: 400 }
+      )
+    }
+
+    if (!contentTypeDefinition) {
+      return NextResponse.json(
+        {
+          error: 'Tipo de contenido inválido',
+          details: `El tipo de contenido "${contentType}" no existe en Guidelines.`,
+        },
+        { status: 400 }
+      )
+    }
+
+    if (contentTypeDefinition.status !== 'active') {
+      return NextResponse.json(
+        {
+          error: 'Tipo de contenido archivado',
+          details: `El tipo de contenido "${contentTypeDefinition.label}" ya no admite ejecuciones nuevas.`,
+        },
+        { status: 400 }
+      )
+    }
+
+    const requestedContentData =
+      contentData === undefined
+        ? legacyInputToContentData(
+            {
+              ...legacySource,
+              intent: legacySource?.intent || goal || 'Validar borrador existente',
+              topic: legacySource?.topic || goal || draftText.trim().slice(0, 600),
+              audience,
+              cta,
+              hashtags,
+              links,
+              eventDetails,
+            },
+            contentTypeDefinition
+          )
+        : contentData
+    const contentDataValidation = validateContentData(requestedContentData, contentTypeDefinition)
+
+    if (!contentDataValidation.ok) {
+      return NextResponse.json(
+        {
+          error: 'Datos del contenido inválidos',
+          details: contentDataValidation.errors.slice(0, 5).join(' '),
+        },
+        { status: 400 }
+      )
+    }
+
+    const normalizedLegacyInput = contentDataToLegacyInput(
+      contentDataValidation.data,
+      contentTypeDefinition
+    )
+
+    if (
+      (images?.length > 0 || normalizedLegacyInput.sponsorLogo?.dataUrl) &&
+      !contentTypeAcceptsImages(platform, contentTypeDefinition.id, contentTypeDefinition)
+    ) {
+      return NextResponse.json(
+        {
+          error: 'Imagen no permitida',
+          details: 'Este tipo de contenido no admite imágenes en la plataforma seleccionada',
+        },
+        { status: 400 }
+      )
+    }
+
+    if (
+      contentTypeRequiresImages(platform, contentTypeDefinition.id, contentTypeDefinition) &&
+      (!images || images.length === 0)
+    ) {
       return NextResponse.json(
         {
           error: 'Imagen requerida',
@@ -193,16 +353,41 @@ export const POST = auth(async function POST(req) {
       userId: String(userId),
       userEmail,
       platform,
-      contentType,
+      contentType: contentTypeDefinition.id,
+      contentData: contentDataValidation.data,
+      contentTypeDefinition,
+      contentTypeIdentity: {
+        id: contentTypeDefinition.id,
+        label: contentTypeDefinition.label,
+        guidelineVersion: activeGuidelines.version,
+      },
+      guidelineVersion: activeGuidelines.version,
+      policyVersion: AI_BASE_POLICY_VERSION,
       draftText,
-      goal: goal ? String(goal) : undefined,
-      audience: audience ? String(audience) : undefined,
-      cta: cta ? String(cta) : undefined,
-      hashtags,
-      links,
-      eventDetails,
+      goal: normalizedLegacyInput.intent || normalizedLegacyInput.topic,
+      topic: normalizedLegacyInput.topic,
+      audience: normalizedLegacyInput.audience,
+      cta: normalizedLegacyInput.cta,
+      tone: normalizedLegacyInput.tone,
+      knownFacts: normalizedLegacyInput.knownFacts,
+      hashtags: normalizedLegacyInput.hashtags,
+      links: normalizedLegacyInput.links,
+      eventDetails: normalizedLegacyInput.eventDetails,
+      imageStyle: normalizedLegacyInput.imageStyle,
+      imageConstraints: normalizedLegacyInput.imageConstraints,
       altText: altText ? String(altText) : undefined,
       images,
+    }
+
+    const parsedInput = ValidateInputSchema.safeParse(workflowInput)
+    if (!parsedInput.success) {
+      return NextResponse.json(
+        {
+          error: 'Solicitud inválida',
+          details: formatSchemaIssues(parsedInput.error),
+        },
+        { status: 400 }
+      )
     }
 
     const workflowTarget =
@@ -210,7 +395,7 @@ export const POST = auth(async function POST(req) {
         ? validateAiWorkflow
         : { workflowId: VALIDATE_WORKFLOW_ID }
 
-    const run = await start(workflowTarget, [workflowInput])
+    const run = await start(workflowTarget, [parsedInput.data])
     const status = await run.status
 
     return NextResponse.json({ runId: run.runId, status }, { status: 202 })

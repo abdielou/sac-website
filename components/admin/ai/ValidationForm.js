@@ -10,6 +10,14 @@ import {
 } from '@/lib/ai-constants'
 import { DEFAULT_FORM } from '@/lib/ai-validation-draft'
 import { mergeValidationImages } from '@/lib/ai-validation-images'
+import {
+  SPONSOR_MAX_BYTES,
+  isAllowedSponsorMimeType,
+  validateSponsorLogo,
+} from '@/lib/social-template/eventFormHelpers'
+import ContentTypeFields, {
+  formStateKeyForContentField,
+} from '@/components/admin/ai/ContentTypeFields'
 
 const inputClass =
   'w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-60 disabled:cursor-not-allowed'
@@ -41,16 +49,55 @@ export default function ValidationForm({
   contentTypes = [],
 }) {
   const fileInputRef = useRef(null)
+  const sponsorFileInputRef = useRef(null)
   const [localImageError, setLocalImageError] = useState(null)
+  const [sponsorError, setSponsorError] = useState(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [previewUrls, setPreviewUrls] = useState([])
+  const [showFieldErrors, setShowFieldErrors] = useState(false)
 
-  const showImages = contentTypeAcceptsImages(formState.platform, formState.contentType)
-  const requiresImages = contentTypeRequiresImages(formState.platform, formState.contentType)
-  const showEventFields = isEventContentType(formState.contentType)
-  const canonicalEventName = getCanonicalEventName(formState.contentType)
+  const contentTypeDefinition = contentTypes.find(
+    ({ id }) => id === formState.contentType
+  )?.definition
+  const showImages = contentTypeAcceptsImages(
+    formState.platform,
+    formState.contentType,
+    contentTypeDefinition
+  )
+  const requiresImages = contentTypeRequiresImages(
+    formState.platform,
+    formState.contentType,
+    contentTypeDefinition
+  )
+  const showEventFields = isEventContentType(formState.contentType, contentTypeDefinition)
+  const canonicalEventName = getCanonicalEventName(formState.contentType, contentTypeDefinition)
   const formDisabled = disabled || !canValidate
   const canAddMore = images.length < MAX_VALIDATION_IMAGES
+  const sponsorField = contentTypeDefinition?.fields?.find(({ key }) => key === 'sponsor')
+  const supportsSponsor =
+    showImages && contentTypeDefinition?.visual?.sponsorAllowed === true && Boolean(sponsorField)
+  const dynamicFieldErrors = Object.fromEntries(
+    (contentTypeDefinition?.fields || [])
+      .filter(({ required }) => required)
+      .map((field) => {
+        if (field.key === 'sponsor') {
+          return [
+            field.key,
+            !supportsSponsor || formState.sponsorLogo?.dataUrl
+              ? null
+              : `${field.label || 'El auspiciador'} es obligatorio`,
+          ]
+        }
+        const stateKey = formStateKeyForContentField(field.key, contentTypeDefinition)
+        return [
+          field.key,
+          stateKey && String(formState[stateKey] || '').trim()
+            ? null
+            : `${field.label || 'Este campo'} es obligatorio`,
+        ]
+      })
+  )
+  const hasDynamicFieldErrors = Object.values(dynamicFieldErrors).some(Boolean)
 
   useEffect(() => {
     if (!platforms.length) return
@@ -158,9 +205,46 @@ export default function ValidationForm({
     setLocalImageError(null)
   }
 
+  const applySponsorFile = useCallback(
+    async (file) => {
+      if (!file) return
+      if (!isAllowedSponsorMimeType(file.type)) {
+        setSponsorError('El logo debe ser PNG, JPEG o WebP')
+        return
+      }
+      if (file.size > SPONSOR_MAX_BYTES) {
+        setSponsorError('El logo no puede superar 2 MB')
+        return
+      }
+
+      try {
+        const sponsorLogo = {
+          dataUrl: await readFileAsDataUrl(file),
+          mimeType: file.type,
+          fileName: file.name,
+        }
+        const validation = validateSponsorLogo(sponsorLogo)
+        if (!validation.ok) throw new Error(validation.error)
+        setSponsorError(null)
+        onFormChange({ ...formState, sponsorLogo })
+      } catch (error) {
+        setSponsorError(error?.message || 'No se pudo leer el logo')
+      }
+    },
+    [formState, onFormChange]
+  )
+
+  const clearSponsor = () => {
+    setSponsorError(null)
+    onFormChange({ ...formState, sponsorLogo: null })
+    if (sponsorFileInputRef.current) sponsorFileInputRef.current.value = ''
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!canValidate || disabled) return
+    setShowFieldErrors(true)
+    if (hasDynamicFieldErrors) return
     if (requiresImages && images.length === 0) {
       setLocalImageError(
         'Se requiere al menos una imagen para esta plataforma y tipo de contenido.'
@@ -377,65 +461,83 @@ export default function ValidationForm({
         />
       </div>
 
-      <details className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-        <summary className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-          Campos opcionales
-        </summary>
-        <div className="mt-4 space-y-4">
-          <div>
-            <label htmlFor="ai-goal" className={labelClass}>
-              Objetivo
-            </label>
-            <input
-              id="ai-goal"
-              type="text"
-              value={formState.goal}
-              onChange={handleChange('goal')}
-              disabled={formDisabled}
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label htmlFor="ai-audience" className={labelClass}>
-              Audiencia
-            </label>
-            <input
-              id="ai-audience"
-              type="text"
-              value={formState.audience}
-              onChange={handleChange('audience')}
-              disabled={formDisabled}
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label htmlFor="ai-cta" className={labelClass}>
-              Llamado a la acción (CTA)
-            </label>
-            <input
-              id="ai-cta"
-              type="text"
-              value={formState.cta}
-              onChange={handleChange('cta')}
-              disabled={formDisabled}
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label htmlFor="ai-hashtags" className={labelClass}>
-              Hashtags (separados por coma)
-            </label>
-            <input
-              id="ai-hashtags"
-              type="text"
-              value={formState.hashtags}
-              onChange={handleChange('hashtags')}
-              disabled={formDisabled}
-              placeholder="#astronomia, #SAC"
-              className={inputClass}
-            />
-          </div>
-          <div>
+      {contentTypeDefinition && (
+        <section
+          className="rounded-lg border border-gray-200 dark:border-gray-700 p-4"
+          aria-labelledby="validation-context-heading"
+        >
+          <h3
+            id="validation-context-heading"
+            className="text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Contexto de {contentTypeDefinition.label}
+          </h3>
+          {contentTypeDefinition.description && (
+            <p className="mt-1 mb-4 text-xs text-gray-500 dark:text-gray-400">
+              {contentTypeDefinition.description}
+            </p>
+          )}
+          <ContentTypeFields
+            definition={contentTypeDefinition}
+            formState={formState}
+            onFormChange={onFormChange}
+            disabled={formDisabled}
+            idPrefix="validation-content"
+            errors={showFieldErrors ? dynamicFieldErrors : {}}
+          />
+          {supportsSponsor && (
+            <div className="mt-4">
+              <label htmlFor="validation-content-sponsor" className={labelClass}>
+                {sponsorField.label || 'Auspiciador'}
+                {sponsorField.required && <span className="text-red-500"> *</span>}
+              </label>
+              <input
+                ref={sponsorFileInputRef}
+                id="validation-content-sponsor"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                disabled={formDisabled}
+                onChange={(event) => applySponsorFile(event.target.files?.[0])}
+                className={inputClass}
+              />
+              {sponsorField.help && (
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{sponsorField.help}</p>
+              )}
+              {formState.sponsorLogo?.dataUrl && (
+                <div className="mt-2 flex items-center gap-3">
+                  {/* Local data URL; the Next image optimizer is not applicable. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={formState.sponsorLogo.dataUrl}
+                    alt="Vista previa del auspiciador"
+                    className="h-14 max-w-40 rounded border border-gray-200 object-contain bg-white"
+                  />
+                  <button
+                    type="button"
+                    disabled={formDisabled}
+                    onClick={clearSponsor}
+                    className="text-sm text-red-600 dark:text-red-400 hover:underline disabled:opacity-50"
+                  >
+                    Quitar
+                  </button>
+                </div>
+              )}
+              {(sponsorError || (showFieldErrors && dynamicFieldErrors.sponsor)) && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">
+                  {sponsorError || dynamicFieldErrors.sponsor}
+                </p>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      {contentTypeDefinition && (
+        <details className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <summary className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+            Accesibilidad
+          </summary>
+          <div className="mt-4">
             <label htmlFor="ai-alt-text" className={labelClass}>
               Texto alternativo (alt text)
             </label>
@@ -448,69 +550,145 @@ export default function ValidationForm({
               className={inputClass}
             />
           </div>
+        </details>
+      )}
 
-          {showEventFields && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-gray-200 dark:border-gray-700">
-              {!canonicalEventName && (
-                <div className="sm:col-span-2">
-                  <label htmlFor="ai-event-name" className={labelClass}>
-                    Nombre del evento
+      {!contentTypeDefinition && (
+        <details className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <summary className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+            Campos opcionales
+          </summary>
+          <div className="mt-4 space-y-4">
+            <div>
+              <label htmlFor="ai-goal" className={labelClass}>
+                Objetivo
+              </label>
+              <input
+                id="ai-goal"
+                type="text"
+                value={formState.goal}
+                onChange={handleChange('goal')}
+                disabled={formDisabled}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="ai-audience" className={labelClass}>
+                Audiencia
+              </label>
+              <input
+                id="ai-audience"
+                type="text"
+                value={formState.audience}
+                onChange={handleChange('audience')}
+                disabled={formDisabled}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="ai-cta" className={labelClass}>
+                Llamado a la acción (CTA)
+              </label>
+              <input
+                id="ai-cta"
+                type="text"
+                value={formState.cta}
+                onChange={handleChange('cta')}
+                disabled={formDisabled}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="ai-hashtags" className={labelClass}>
+                Hashtags (separados por coma)
+              </label>
+              <input
+                id="ai-hashtags"
+                type="text"
+                value={formState.hashtags}
+                onChange={handleChange('hashtags')}
+                disabled={formDisabled}
+                placeholder="#astronomia, #SAC"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label htmlFor="ai-alt-text" className={labelClass}>
+                Texto alternativo (alt text)
+              </label>
+              <input
+                id="ai-alt-text"
+                type="text"
+                value={formState.altText}
+                onChange={handleChange('altText')}
+                disabled={formDisabled}
+                className={inputClass}
+              />
+            </div>
+
+            {showEventFields && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-gray-200 dark:border-gray-700">
+                {!canonicalEventName && (
+                  <div className="sm:col-span-2">
+                    <label htmlFor="ai-event-name" className={labelClass}>
+                      Nombre del evento
+                    </label>
+                    <input
+                      id="ai-event-name"
+                      type="text"
+                      value={formState.eventName}
+                      onChange={handleChange('eventName')}
+                      disabled={formDisabled}
+                      className={inputClass}
+                    />
+                  </div>
+                )}
+                <div>
+                  <label htmlFor="ai-event-date" className={labelClass}>
+                    Fecha
                   </label>
                   <input
-                    id="ai-event-name"
+                    id="ai-event-date"
                     type="text"
-                    value={formState.eventName}
-                    onChange={handleChange('eventName')}
+                    value={formState.eventDate}
+                    onChange={handleChange('eventDate')}
+                    disabled={formDisabled}
+                    placeholder="ej. 15 de agosto"
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="ai-event-time" className={labelClass}>
+                    Hora
+                  </label>
+                  <input
+                    id="ai-event-time"
+                    type="text"
+                    value={formState.eventTime}
+                    onChange={handleChange('eventTime')}
+                    disabled={formDisabled}
+                    placeholder="ej. 7:00 PM"
+                    className={inputClass}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label htmlFor="ai-event-location" className={labelClass}>
+                    Lugar
+                  </label>
+                  <input
+                    id="ai-event-location"
+                    type="text"
+                    value={formState.eventLocation}
+                    onChange={handleChange('eventLocation')}
                     disabled={formDisabled}
                     className={inputClass}
                   />
                 </div>
-              )}
-              <div>
-                <label htmlFor="ai-event-date" className={labelClass}>
-                  Fecha
-                </label>
-                <input
-                  id="ai-event-date"
-                  type="text"
-                  value={formState.eventDate}
-                  onChange={handleChange('eventDate')}
-                  disabled={formDisabled}
-                  placeholder="ej. 15 de agosto"
-                  className={inputClass}
-                />
               </div>
-              <div>
-                <label htmlFor="ai-event-time" className={labelClass}>
-                  Hora
-                </label>
-                <input
-                  id="ai-event-time"
-                  type="text"
-                  value={formState.eventTime}
-                  onChange={handleChange('eventTime')}
-                  disabled={formDisabled}
-                  placeholder="ej. 7:00 PM"
-                  className={inputClass}
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label htmlFor="ai-event-location" className={labelClass}>
-                  Lugar
-                </label>
-                <input
-                  id="ai-event-location"
-                  type="text"
-                  value={formState.eventLocation}
-                  onChange={handleChange('eventLocation')}
-                  disabled={formDisabled}
-                  className={inputClass}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      </details>
+            )}
+          </div>
+        </details>
+      )}
 
       {canValidate && (
         <div className="flex items-center gap-4">
@@ -550,3 +728,12 @@ export default function ValidationForm({
 }
 
 export { DEFAULT_FORM }
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result || ''))
+    reader.onerror = () => reject(reader.error || new Error('No se pudo leer el archivo'))
+    reader.readAsDataURL(file)
+  })
+}

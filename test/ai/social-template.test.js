@@ -1,4 +1,8 @@
 import sharp from 'sharp'
+import { AI_BASE_POLICY_VERSION } from '../../lib/ai-base-policy'
+import { legacyInputToContentData } from '../../lib/ai-content-data'
+import { getDefaultGuidelines } from '../../lib/ai-guidelines'
+import { resolveContentTypeDefinition } from '../../lib/ai-guidelines-schema'
 import {
   DEFAULT_GENERATION_FORM,
   buildGenerationPayload,
@@ -199,6 +203,71 @@ describe('buildGenerationPayload', () => {
     })
     expect(payload.backgroundMode).toBeUndefined()
     expect(payload.backgroundId).toBeUndefined()
+  })
+
+  test('keeps a selected event_name in contentData when the canonical title is the type label', () => {
+    const definition = {
+      id: 'club_event',
+      label: 'Evento del club',
+      status: 'active',
+      fields: [
+        { key: 'event_name', label: 'Nombre', required: true },
+        { key: 'date', label: 'Fecha', required: true },
+      ],
+      titleSource: 'type_label',
+      visual: {
+        mode: 'template',
+        template: 'event',
+        backgroundSources: ['stock'],
+        sponsorAllowed: false,
+        imagePolicyByPlatform: { x: 'optional', instagram: 'optional', facebook: 'optional' },
+      },
+    }
+    const payload = buildGenerationPayload(
+      {
+        ...DEFAULT_GENERATION_FORM,
+        contentType: definition.id,
+        eventName: 'Encuentro mensual',
+        eventDate: '2026-08-15',
+        platforms: ['instagram'],
+      },
+      definition
+    )
+
+    expect(payload.eventDetails.name).toBe('Evento del club')
+    expect(payload.contentData).toMatchObject({
+      event_name: 'Encuentro mensual',
+      date: '2026-08-15',
+    })
+  })
+
+  test('omits an optional sponsor when every platform prohibits images', () => {
+    const definition = JSON.parse(
+      JSON.stringify(resolveContentTypeDefinition(getDefaultGuidelines(), 'observation_night'))
+    )
+    definition.visual.imagePolicyByPlatform = {
+      x: 'prohibited',
+      instagram: 'prohibited',
+      facebook: 'prohibited',
+    }
+    const payload = buildGenerationPayload(
+      {
+        ...DEFAULT_GENERATION_FORM,
+        eventDate: '2026-08-15',
+        eventTime: '19:30',
+        eventLocation: 'Cabo Rojo',
+        sponsorLogo: {
+          dataUrl: 'data:image/png;base64,aaaa',
+          mimeType: 'image/png',
+          fileName: 'sponsor.png',
+        },
+      },
+      definition
+    )
+
+    expect(payload.backgroundMode).toBeUndefined()
+    expect(payload.sponsorLogo).toBeUndefined()
+    expect(payload.contentData.sponsor).toBeUndefined()
   })
 })
 
@@ -720,7 +789,23 @@ describe('renderSocialTemplateImage', () => {
 })
 
 describe('GenerateInputSchema background fields', () => {
-  const base = {
+  const guidelineDocument = getDefaultGuidelines()
+  const withRuntimeMetadata = (input) => {
+    const definition = resolveContentTypeDefinition(guidelineDocument, input.contentType)
+    return {
+      ...input,
+      contentData: legacyInputToContentData(input, definition),
+      contentTypeDefinition: definition,
+      contentTypeIdentity: {
+        id: definition.id,
+        label: definition.label,
+        guidelineVersion: guidelineDocument.version,
+      },
+      guidelineVersion: guidelineDocument.version,
+      policyVersion: AI_BASE_POLICY_VERSION,
+    }
+  }
+  const base = withRuntimeMetadata({
     userId: 'u1',
     userEmail: 'a@b.com',
     intent: 'Promover',
@@ -729,7 +814,7 @@ describe('GenerateInputSchema background fields', () => {
     contentType: 'event_promotion',
     cta: 'Regístrate',
     eventDetails: completeEventDetails,
-  }
+  })
 
   test('accepts stock backgroundMode + backgroundId', () => {
     const parsed = GenerateInputSchema.safeParse({
@@ -761,10 +846,12 @@ describe('GenerateInputSchema background fields', () => {
   })
 
   test('rejects event_promotion missing location', () => {
-    const parsed = GenerateInputSchema.safeParse({
-      ...base,
-      eventDetails: { name: 'X', date: '2026-07-11', time: '19:00' },
-    })
+    const parsed = GenerateInputSchema.safeParse(
+      withRuntimeMetadata({
+        ...base,
+        eventDetails: { name: 'X', date: '2026-07-11', time: '19:00' },
+      })
+    )
     expect(parsed.success).toBe(false)
   })
 })

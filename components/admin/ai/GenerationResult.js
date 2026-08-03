@@ -94,8 +94,15 @@ function extractSharedImage(result, drafts) {
  * @param {Object} props.result - AiGenerationResult ({ drafts, recommendedNextStep, humanReviewRequired })
  * @param {Object} [props.usage] - OpenRouter usage metadata for this run
  * @param {string} [props.guidelineVersion] - Active guideline version applied to this run
+ * @param {string} [props.policyVersion] - Immutable base policy applied to this run
  */
-export default function GenerationResult({ result, usage, guidelineVersion }) {
+export default function GenerationResult({
+  result,
+  usage,
+  guidelineVersion,
+  policyVersion,
+  contentTypeIdentity,
+}) {
   const [actionFeedback, setActionFeedback] = useState(null)
   const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false)
   const [editedCaptions, setEditedCaptions] = useState(() =>
@@ -129,6 +136,17 @@ export default function GenerationResult({ result, usage, guidelineVersion }) {
   const hasSharedCaption = captionTexts.length > 1 && new Set(captionTexts).size === 1
   const displayDrafts = hasSharedCaption ? drafts.slice(0, 1) : drafts
   const generatedDraftCount = displayDrafts.filter((draft) => draft?.draftText?.trim()).length
+  const imagePlatforms = Array.isArray(result.imagePlatforms) ? result.imagePlatforms : []
+  const captionCharacterLimit = Number.isInteger(result.captionCharacterLimit)
+    ? result.captionCharacterLimit
+    : null
+  const sharedPlatformLabel = drafts
+    .map(({ platform }) => PLATFORM_LABELS[platform] || platform)
+    .filter(Boolean)
+    .join(' · ')
+  const sharedImageAudience = imagePlatforms.length
+    ? imagePlatforms.map((platform) => PLATFORM_LABELS[platform] || platform).join(', ')
+    : 'todas las redes'
 
   const showActionFeedback = (id, message, succeeded) => {
     if (feedbackTimerRef.current) window.clearTimeout(feedbackTimerRef.current)
@@ -159,7 +177,7 @@ export default function GenerationResult({ result, usage, guidelineVersion }) {
         {actionFeedback?.message || ''}
       </p>
 
-      {(hasCost || hasTokens || guidelineVersion) && (
+      {(hasCost || hasTokens || guidelineVersion || policyVersion) && (
         <p className="text-sm text-gray-500 dark:text-gray-400" data-testid="generation-run-cost">
           {(hasCost || hasTokens) && (
             <>
@@ -174,6 +192,11 @@ export default function GenerationResult({ result, usage, guidelineVersion }) {
               {hasCost || hasTokens ? ' · ' : ''}Guías aplicadas: {guidelineVersion}
             </span>
           )}
+          {policyVersion && (
+            <span data-testid="generation-policy-version">
+              {hasCost || hasTokens || guidelineVersion ? ' · ' : ''}Política: {policyVersion}
+            </span>
+          )}
         </p>
       )}
 
@@ -183,7 +206,7 @@ export default function GenerationResult({ result, usage, guidelineVersion }) {
           data-testid="generation-shared-image"
         >
           <p className="text-sm font-medium text-emerald-900 dark:text-emerald-200">
-            Imagen compartida (todas las redes)
+            Imagen compartida para {sharedImageAudience}
           </p>
           <button
             ref={imagePreviewTriggerRef}
@@ -253,6 +276,10 @@ export default function GenerationResult({ result, usage, guidelineVersion }) {
 
       {displayDrafts.map((draft, idx) => {
         const platformLabel = PLATFORM_LABELS[draft.platform] || draft.platform
+        const contentTypeLabel =
+          contentTypeIdentity?.id === draft.contentType && contentTypeIdentity?.label
+            ? contentTypeIdentity.label
+            : CONTENT_TYPE_LABELS[draft.contentType] || draft.contentType
         const missing = Array.isArray(draft.missingInformation) ? draft.missingInformation : []
         const assumptions = Array.isArray(draft.assumptions) ? draft.assumptions : []
         const originalCaption = draft.draftText || ''
@@ -268,11 +295,9 @@ export default function GenerationResult({ result, usage, guidelineVersion }) {
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-2">
                 <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                  {hasSharedCaption ? 'X · Instagram · Facebook' : platformLabel}
+                  {hasSharedCaption ? sharedPlatformLabel : platformLabel}
                 </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {CONTENT_TYPE_LABELS[draft.contentType] || draft.contentType}
-                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{contentTypeLabel}</span>
               </div>
             </div>
 
@@ -288,7 +313,7 @@ export default function GenerationResult({ result, usage, guidelineVersion }) {
                   <textarea
                     id={`generated-caption-${idx}`}
                     value={editedCaption}
-                    maxLength={280}
+                    maxLength={captionCharacterLimit || undefined}
                     rows={5}
                     onChange={(event) => {
                       const nextCaption = event.target.value
@@ -302,7 +327,11 @@ export default function GenerationResult({ result, usage, guidelineVersion }) {
                   />
                   <div className="flex items-center justify-between gap-3 text-xs text-gray-500 dark:text-gray-400">
                     <span>Se copiará esta versión.</span>
-                    <span aria-live="polite">{editedCaption.length}/280</span>
+                    <span aria-live="polite">
+                      {captionCharacterLimit
+                        ? `${editedCaption.length}/${captionCharacterLimit}`
+                        : `${editedCaption.length} caracteres`}
+                    </span>
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">

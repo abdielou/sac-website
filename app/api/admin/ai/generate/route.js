@@ -2,16 +2,19 @@ import { auth } from '../../../../../auth'
 import { NextResponse } from 'next/server'
 import sharp from 'sharp'
 import { checkPermission } from '../../../../../lib/api-permissions'
+import { AI_BASE_POLICY_VERSION } from '../../../../../lib/ai-base-policy'
+import { shouldGenerateImagePrompt } from '../../../../../lib/ai-constants'
 import {
-  PLATFORMS,
-  contentTypeRequiresEventCta,
-  isEventContentType,
-} from '../../../../../lib/ai-constants'
+  contentDataToLegacyInput,
+  legacyInputToContentData,
+  validateContentData,
+} from '../../../../../lib/ai-content-data'
+import { getActiveGuidelinesStrict } from '../../../../../lib/ai-guidelines'
+import { resolveContentTypeDefinition } from '../../../../../lib/ai-guidelines-schema'
 import { checkWorkflowStartRateLimit } from '../../../../../lib/ai-rate-limit'
-import {
-  missingEventLogistics,
-  validateSponsorLogo,
-} from '../../../../../lib/social-template/eventFormHelpers'
+import { listBackgroundOptions } from '../../../../../lib/social-template/backgroundCatalog'
+import { validateSponsorLogo } from '../../../../../lib/social-template/eventFormHelpers'
+import { resolveTemplateLayoutId } from '../../../../../lib/social-template/templateLayouts'
 import { start } from 'workflow/api'
 import {
   GenerateInputSchema,
@@ -177,22 +180,119 @@ export const POST = auth(async function POST(req) {
   const contentType = normalizeOptionalString(body.contentType)
   const eventDetails = normalizeEventDetails(body.eventDetails)
   const cta = normalizeOptionalString(body.cta)
-  const sponsorLogo = normalizeSponsorLogo(body.sponsorLogo)
-
-  if (isEventContentType(contentType)) {
-    const missing = missingEventLogistics(eventDetails, cta, {
-      requireCta: contentTypeRequiresEventCta(contentType),
-    })
-    if (missing.length) {
-      return NextResponse.json(
-        {
-          error: 'Datos del evento incompletos',
-          details: `Faltan: ${missing.join(', ')}`,
-        },
-        { status: 400 }
-      )
-    }
+  const requestedSponsorLogo = normalizeSponsorLogo(body.sponsorLogo)
+  let activeGuidelines
+  try {
+    activeGuidelines = await getActiveGuidelinesStrict()
+  } catch (error) {
+    console.error('POST /api/admin/ai/generate: active Guidelines unavailable', error)
+    return NextResponse.json(
+      {
+        error: 'Guías no disponibles',
+        details: 'No se pudo fijar la versión activa de Guidelines. Intenta nuevamente.',
+      },
+      { status: 503 }
+    )
   }
+  const contentTypeDefinition = resolveContentTypeDefinition(activeGuidelines, contentType, {
+    includeArchived: true,
+  })
+
+  if (!contentTypeDefinition) {
+    return NextResponse.json(
+      {
+        error: 'Tipo de contenido inválido',
+        details: `El tipo de contenido "${contentType || ''}" no existe en Guidelines.`,
+      },
+      { status: 400 }
+    )
+  }
+
+  if (contentTypeDefinition.status !== 'active') {
+    return NextResponse.json(
+      {
+        error: 'Tipo de contenido archivado',
+        details: `El tipo de contenido "${contentTypeDefinition.label}" ya no admite ejecuciones nuevas.`,
+      },
+      { status: 400 }
+    )
+  }
+
+  const legacySource = {
+    ...body,
+    contentType: contentTypeDefinition.id,
+    cta,
+    eventDetails,
+    knownFacts: parseStringArray(body.knownFacts),
+    hashtags: parseStringArray(body.hashtags),
+    links: parseStringArray(body.links),
+    sponsorLogo: requestedSponsorLogo,
+  }
+  const requestedContentData = Object.prototype.hasOwnProperty.call(body, 'contentData')
+    ? body.contentData
+    : legacyInputToContentData(legacySource, contentTypeDefinition)
+  const contentDataValidation = validateContentData(requestedContentData, contentTypeDefinition)
+
+  if (!contentDataValidation.ok) {
+    return NextResponse.json(
+      {
+        error: 'Datos del contenido inválidos',
+        details: contentDataValidation.errors.slice(0, 5).join(' '),
+      },
+      { status: 400 }
+    )
+  }
+
+  const normalizedLegacyInput = contentDataToLegacyInput(
+    contentDataValidation.data,
+    contentTypeDefinition
+  )
+  const sponsorLogo = normalizedLegacyInput.sponsorLogo
+  const platforms = Object.keys(activeGuidelines.platforms || {})
+  if (!platforms.length) {
+    return NextResponse.json(
+      {
+        error: 'Plataforma no disponible',
+        details: 'Las Guidelines activas deben declarar al menos una plataforma.',
+      },
+      { status: 400 }
+    )
+  }
+  if (
+    platforms.some(
+      (platform) =>
+        !Object.prototype.hasOwnProperty.call(activeGuidelines.platforms || {}, platform)
+    )
+  ) {
+    return NextResponse.json(
+      {
+        error: 'Plataforma no disponible',
+        details: 'Todas las plataformas solicitadas deben existir en Guidelines activas.',
+      },
+      { status: 400 }
+    )
+  }
+  const templateLayout = resolveTemplateLayoutId(contentTypeDefinition.id, contentTypeDefinition)
+  const supportsImageForPlatforms = shouldGenerateImagePrompt(
+    contentTypeDefinition.id,
+    { platforms },
+    contentTypeDefinition
+  )
+  const requestedBackgroundMode = normalizeOptionalString(body.backgroundMode)
+  const allowedBackgroundSources = contentTypeDefinition.visual?.backgroundSources || []
+  const backgroundMode =
+    templateLayout && supportsImageForPlatforms
+      ? requestedBackgroundMode ||
+        (allowedBackgroundSources.includes('stock')
+          ? 'stock'
+          : allowedBackgroundSources.includes('ai_generated')
+            ? 'ai_generated'
+            : undefined)
+      : requestedBackgroundMode
+  const backgroundId =
+    backgroundMode === 'stock'
+      ? normalizeOptionalString(body.backgroundId) || listBackgroundOptions()[0]?.id
+      : normalizeOptionalString(body.backgroundId)
 
   if (sponsorLogo) {
     const sponsorCheck = validateSponsorLogo(sponsorLogo)
@@ -207,21 +307,30 @@ export const POST = auth(async function POST(req) {
   const workflowInput = {
     userId: String(userId),
     userEmail,
-    intent: normalizeOptionalString(body.intent),
-    topic: normalizeOptionalString(body.topic),
-    platforms: [...PLATFORMS],
-    contentType,
-    tone: normalizeOptionalString(body.tone),
-    audience: normalizeOptionalString(body.audience),
-    cta,
-    knownFacts: parseStringArray(body.knownFacts),
-    eventDetails,
-    hashtags: parseStringArray(body.hashtags),
-    links: parseStringArray(body.links),
-    imageStyle: normalizeOptionalString(body.imageStyle),
-    imageConstraints: normalizeOptionalString(body.imageConstraints),
-    backgroundMode: normalizeOptionalString(body.backgroundMode),
-    backgroundId: normalizeOptionalString(body.backgroundId),
+    intent: normalizedLegacyInput.intent,
+    topic: normalizedLegacyInput.topic,
+    platforms,
+    contentType: contentTypeDefinition.id,
+    contentData: contentDataValidation.data,
+    contentTypeDefinition,
+    contentTypeIdentity: {
+      id: contentTypeDefinition.id,
+      label: contentTypeDefinition.label,
+      guidelineVersion: activeGuidelines.version,
+    },
+    guidelineVersion: activeGuidelines.version,
+    policyVersion: AI_BASE_POLICY_VERSION,
+    tone: normalizedLegacyInput.tone,
+    audience: normalizedLegacyInput.audience,
+    cta: normalizedLegacyInput.cta,
+    knownFacts: normalizedLegacyInput.knownFacts,
+    eventDetails: normalizedLegacyInput.eventDetails,
+    hashtags: normalizedLegacyInput.hashtags,
+    links: normalizedLegacyInput.links,
+    imageStyle: normalizedLegacyInput.imageStyle,
+    imageConstraints: normalizedLegacyInput.imageConstraints,
+    backgroundMode,
+    backgroundId,
     sponsorLogo,
   }
 

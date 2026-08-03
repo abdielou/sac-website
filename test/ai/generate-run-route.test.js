@@ -88,15 +88,8 @@ describe('generation run result asset contract', () => {
     jest.clearAllMocks()
   })
 
-  test('hydrates shared template assets, renders once and omits internals', async () => {
+  test('does not render an unreviewed legacy template and omits its internals', async () => {
     const pngDataUrl = await tinyPngDataUrl()
-    const jpegDataUrl = await tinyJpegDataUrl()
-    renderSocialTemplateImage.mockResolvedValue({
-      dataUrl: jpegDataUrl,
-      mimeType: 'image/jpeg',
-      width: 1080,
-      height: 1440,
-    })
 
     const output = await applyTemplateRendersToWorkflowResult({
       result: {
@@ -117,21 +110,17 @@ describe('generation run result asset contract', () => {
       },
     })
 
-    expect(renderSocialTemplateImage).toHaveBeenCalledTimes(1)
-    expect(renderSocialTemplateImage).toHaveBeenCalledWith({
-      templateRequest: expect.objectContaining({
-        layout: 'event',
-        backgroundSource: { mode: 'stock', backgroundId: 'telescope-nebula' },
-        sponsorLogo: expect.objectContaining({ mimeType: 'image/png' }),
-      }),
-    })
+    expect(renderSocialTemplateImage).not.toHaveBeenCalled()
     expect(output.result.templateRequest).toBeUndefined()
     expect(output.result.templateAssets).toBeUndefined()
-    expect(output.result.generatedImage.dataUrl).toMatch(/^data:image\/jpeg;base64,/)
+    expect(output.result.generatedImage).toBeUndefined()
+    expect(output.result.drafts[0].missingInformation.join(' ')).toMatch(
+      /revisión de política verificable/i
+    )
     expect(output.result.drafts.every((draft) => draft.generatedImages === undefined)).toBe(true)
   })
 
-  test('normalizes a provider image once at result level', async () => {
+  test('does not normalize or return an unreviewed legacy provider image', async () => {
     const pngDataUrl = await tinyPngDataUrl()
     const output = await applyTemplateRendersToWorkflowResult({
       result: {
@@ -148,14 +137,10 @@ describe('generation run result asset contract', () => {
       },
     })
 
-    const buffer = Buffer.from(
-      output.result.generatedImage.dataUrl.replace(/^data:image\/jpeg;base64,/, ''),
-      'base64'
+    expect(output.result.generatedImage).toBeUndefined()
+    expect(output.result.drafts[0].missingInformation.join(' ')).toMatch(
+      /revisión de política verificable/i
     )
-    const metadata = await sharp(buffer).metadata()
-    expect(metadata).toMatchObject({ format: 'jpeg', width: 1080, height: 1440 })
-    expect(buffer.length).toBeLessThan(3_000_000)
-    expect(output.result.generatedImage.downloadFileName).toBe('sac-borrador-social.jpg')
   })
 
   test('soft-fails an invalid provider blob without returning it', async () => {
@@ -175,7 +160,39 @@ describe('generation run result asset contract', () => {
 
     expect(output.result.generatedImage).toBeUndefined()
     expect(output.result.drafts[0].missingInformation.join(' ')).toContain(
-      'No se pudo preparar la imagen generada'
+      'revisión de política verificable'
     )
+  })
+
+  test('returns an already prepared and reviewed template image byte-for-byte', async () => {
+    const jpegDataUrl = await tinyJpegDataUrl()
+    const output = await applyTemplateRendersToWorkflowResult({
+      result: {
+        drafts: [baseDraft()],
+        recommendedNextStep: 'Validar',
+        humanReviewRequired: true,
+        imagePlatforms: ['instagram'],
+        generatedImage: {
+          assetId: 'generated-social-0',
+          status: 'draft',
+          mimeType: 'image/jpeg',
+          dataUrl: jpegDataUrl,
+          downloadFileName: 'sac-borrador-social.jpg',
+          preparedForDisplay: true,
+        },
+        templateRequest: {
+          layout: 'event',
+          textFields: { headline: 'Noche de Observación' },
+        },
+        templateAssets: {
+          backgroundSource: { mode: 'stock', backgroundId: 'telescope-nebula' },
+        },
+      },
+    })
+
+    expect(renderSocialTemplateImage).not.toHaveBeenCalled()
+    expect(output.result.generatedImage.dataUrl).toBe(jpegDataUrl)
+    expect(output.result.generatedImage.preparedForDisplay).toBeUndefined()
+    expect(output.result.imagePlatforms).toEqual(['instagram'])
   })
 })

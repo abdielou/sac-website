@@ -129,6 +129,27 @@ describe('GenerationResult captions', () => {
     expect(container.textContent).toContain('Caption compartido')
     expect(container.querySelector('textarea').value).toBe(shared)
     expect(container.textContent).toContain('X · Instagram · Facebook')
+    expect(container.querySelector('textarea').hasAttribute('maxlength')).toBe(false)
+    expect(container.textContent).toContain(`${shared.length} caracteres`)
+  })
+
+  test('uses the effective Guidelines limit in the shared caption editor', () => {
+    const shared = 'Caption compartido.'
+    const result = {
+      captionCharacterLimit: 500,
+      drafts: ['instagram', 'facebook'].map((platform) => ({
+        platform,
+        contentType: 'regular_post',
+        draftText: shared,
+      })),
+    }
+
+    act(() => root.render(<GenerationResult result={result} />))
+
+    expect(container.querySelector('textarea').getAttribute('maxlength')).toBe('500')
+    expect(container.textContent).toContain(`${shared.length}/500`)
+    expect(container.textContent).toContain('Instagram · Facebook')
+    expect(container.textContent).not.toContain('X · Instagram · Facebook')
   })
 
   test('edits and copies the shared caption, then restores the original', async () => {
