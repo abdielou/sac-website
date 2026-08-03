@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   listContentTypeEntries,
   listPlatformEntries,
@@ -8,6 +8,7 @@ import {
   resolveContentTypeOptions,
   resolvePlatformOptions,
 } from '@/lib/ai-guidelines-draft'
+import { resolveContentTypeDefinition } from '@/lib/ai-guidelines-schema'
 
 const selectClass =
   'w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100'
@@ -30,6 +31,20 @@ export default function GuidelinesPreview({ doc }) {
     () => previewGuidelinesAgainstDocument(doc, { platform, contentType, mode }),
     [doc, platform, contentType, mode]
   )
+  const contentTypeDefinition = useMemo(
+    () => resolveContentTypeDefinition(doc, contentType),
+    [doc, contentType]
+  )
+
+  useEffect(() => {
+    if (platformOptions.some(({ id }) => id === platform)) return
+    setPlatform(platformOptions[0]?.id || '')
+  }, [platform, platformOptions])
+
+  useEffect(() => {
+    if (contentTypeOptions.some(({ id }) => id === contentType)) return
+    setContentType(contentTypeOptions[0]?.id || '')
+  }, [contentType, contentTypeOptions])
 
   const platformLabel = listPlatformEntries(doc).find((p) => p.id === platform)?.label || platform
   const contentTypeLabel =
@@ -47,19 +62,31 @@ export default function GuidelinesPreview({ doc }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor="guidelines-preview-mode"
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Modo
           </label>
-          <select className={selectClass} value={mode} onChange={(e) => setMode(e.target.value)}>
+          <select
+            id="guidelines-preview-mode"
+            className={selectClass}
+            value={mode}
+            onChange={(e) => setMode(e.target.value)}
+          >
             <option value="validation">Validación</option>
             <option value="generation">Generación</option>
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor="guidelines-preview-platform"
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Plataforma
           </label>
           <select
+            id="guidelines-preview-platform"
             className={selectClass}
             value={platform}
             onChange={(e) => setPlatform(e.target.value)}
@@ -72,10 +99,14 @@ export default function GuidelinesPreview({ doc }) {
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+          <label
+            htmlFor="guidelines-preview-content-type"
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
             Tipo de contenido
           </label>
           <select
+            id="guidelines-preview-content-type"
             className={selectClass}
             value={contentType}
             onChange={(e) => setContentType(e.target.value)}
@@ -89,10 +120,14 @@ export default function GuidelinesPreview({ doc }) {
         </div>
       </div>
 
-      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+      <label
+        htmlFor="guidelines-preview-sample"
+        className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+      >
         Texto de muestra
       </label>
       <textarea
+        id="guidelines-preview-sample"
         className={`${selectClass} min-h-[80px] mb-4`}
         value={sampleText}
         onChange={(e) => setSampleText(e.target.value)}
@@ -106,6 +141,29 @@ export default function GuidelinesPreview({ doc }) {
       </div>
 
       <dl className="space-y-3 text-sm">
+        {contentTypeDefinition && (
+          <div>
+            <dt className="text-xs font-medium text-gray-500 dark:text-gray-400">
+              Formulario y comportamiento visual
+            </dt>
+            <dd className="mt-1 text-gray-800 dark:text-gray-200">
+              <p>
+                {(contentTypeDefinition.fields || [])
+                  .map((field) => `${field.label}${field.required ? ' *' : ''}`)
+                  .join(' · ')}
+              </p>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Modo: {contentTypeDefinition.visual?.mode || 'none'}
+                {contentTypeDefinition.visual?.template
+                  ? ` · Plantilla: ${contentTypeDefinition.visual.template}`
+                  : ''}
+                {contentTypeDefinition.visual?.backgroundSources?.length
+                  ? ` · Fondos: ${contentTypeDefinition.visual.backgroundSources.join(', ')}`
+                  : ''}
+              </p>
+            </dd>
+          </div>
+        )}
         <div>
           <dt className="text-xs font-medium text-gray-500 dark:text-gray-400">Global</dt>
           <dd className="mt-0.5 text-gray-800 dark:text-gray-200 whitespace-pre-wrap">

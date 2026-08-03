@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import PermissionGate from '@/components/admin/PermissionGate'
 import HumanReviewNotice from '@/components/admin/ai/HumanReviewNotice'
 import AiDesignerTabs, { useAiTab } from '@/components/admin/ai/AiDesignerTabs'
@@ -9,19 +10,19 @@ import GuidelinesClient from '@/components/admin/ai/GuidelinesClient'
 
 export default function AiDesignerShell() {
   const activeTab = useAiTab()
+  const isGuidelines = activeTab === 'guidelines'
 
   return (
     <PermissionGate permission="read_ai">
-      <div className="max-w-6xl">
+      <div className={isGuidelines ? 'w-full max-w-[1600px]' : 'max-w-6xl'}>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-          AI Social Media Designer
+          Asistente de redes sociales
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mb-4">
-          Valida y genera borradores para redes sociales según las guías de SAC. La publicación
-          siempre es manual.
+          Genera y valida contenido para las redes sociales del SAC.
         </p>
 
-        <HumanReviewNotice />
+        {!isGuidelines && <HumanReviewNotice />}
         <AiDesignerTabs activeTab={activeTab} />
 
         {activeTab === 'generar' && <AiGenerationClient />}

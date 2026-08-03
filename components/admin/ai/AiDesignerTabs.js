@@ -1,12 +1,13 @@
 'use client'
 
+import React from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
 export const AI_TABS = [
   { id: 'validar', label: 'Validar' },
   { id: 'generar', label: 'Generar' },
-  { id: 'guidelines', label: 'Guidelines' },
+  { id: 'guidelines', label: 'Guías' },
 ]
 
 export const DEFAULT_AI_TAB = 'validar'
@@ -33,7 +34,7 @@ export default function AiDesignerTabs({ activeTab }) {
   return (
     <nav
       className="mb-6 flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto"
-      aria-label="AI Designer"
+      aria-label="Asistente de redes sociales"
     >
       {AI_TABS.map((tab) => {
         const active = activeTab === tab.id
@@ -43,7 +44,7 @@ export default function AiDesignerTabs({ activeTab }) {
             href={buildAiTabHref(tab.id)}
             className={`flex-shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
               active
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                ? 'border-sac-primary-violet text-sac-primary-violet dark:border-sac-secondary dark:text-sac-secondary'
                 : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
             }`}
             aria-current={active ? 'page' : undefined}
