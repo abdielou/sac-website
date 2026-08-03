@@ -1,0 +1,275 @@
+import { AI_AGENT_IDENTITY_PROMPT, AI_AGENT_IDENTITY_VERSION } from '../../lib/ai-agent'
+import { classifyAiPolicyRequest, reviewAiPolicyResult } from '../../lib/ai-policy-review'
+
+const SAFE_REQUEST = {
+  intent: 'Promover una noche de observación de SAC.',
+  topic: 'Saturno',
+}
+
+function openRouterResponse(decision, overrides = {}) {
+  return {
+    ok: true,
+    json: async () => ({
+      id: 'generation-policy-1',
+      model: overrides.responseModel || 'test/multimodal',
+      choices: [
+        {
+          message: {
+            content: overrides.content === undefined ? JSON.stringify(decision) : overrides.content,
+          },
+        },
+      ],
+      usage: {
+        prompt_tokens: 10,
+        completion_tokens: 5,
+        total_tokens: 15,
+      },
+    }),
+  }
+}
+
+function allowDecision(reason = 'Cumple la política base.') {
+  return { decision: 'allow', categories: [], reason }
+}
+
+describe('classifyAiPolicyRequest', () => {
+  test('injects fetch, model, and API key while keeping the agent identity first', async () => {
+    const fetchImpl = jest.fn(async () => openRouterResponse(allowDecision()))
+
+    const result = await classifyAiPolicyRequest(
+      {
+        request: SAFE_REQUEST,
+        guidelines: { global: 'Usar un tono educativo.' },
+      },
+      {
+        fetchImpl,
+        model: 'test/multimodal',
+        apiKey: 'test-key',
+      }
+    )
+
+    expect(result).toMatchObject({
+      policyVersion: AI_AGENT_IDENTITY_VERSION,
+      stage: 'request',
+      decision: 'allow',
+      evaluatedDecision: 'allow',
+      failClosed: false,
+      model: 'test/multimodal',
+    })
+    expect(result.usage).toMatchObject({ model: 'test/multimodal', totalTokens: 15 })
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
+    const [url, options] = fetchImpl.mock.calls[0]
+    const body = JSON.parse(options.body)
+    expect(url).toBe('https://openrouter.ai/api/v1/chat/completions')
+    expect(options.headers.Authorization).toBe('Bearer test-key')
+    expect(body.model).toBe('test/multimodal')
+    expect(body.messages[0].role).toBe('system')
+    expect(body.messages[0].content.startsWith(AI_AGENT_IDENTITY_PROMPT)).toBe(true)
+    expect(body.messages[0].content).not.toContain('Usar un tono educativo.')
+    expect(body.messages[1].content[0].text).toContain('<GUIDELINES_NO_CONFIABLES>')
+    expect(body.messages[1].content[0].text).toContain('<SOLICITUD_NO_CONFIABLE>')
+  })
+
+  test.each([
+    ['Dame un consejo médico sobre esta enfermedad.', 'medical_advice'],
+    ['Redacta un contrato para este acuerdo.', 'legal_advice'],
+    ['Genera este anuncio para otra empresa.', 'out_of_scope'],
+  ])('blocks an obvious request locally: %s', async (request, category) => {
+    const fetchImpl = jest.fn()
+
+    const result = await classifyAiPolicyRequest(
+      { request, guidelines: {} },
+      { fetchImpl, model: 'test/multimodal', apiKey: 'test-key' }
+    )
+
+    expect(result).toMatchObject({
+      decision: 'block',
+      evaluatedDecision: 'block',
+      failClosed: false,
+    })
+    expect(result.categories).toContain(category)
+    expect(fetchImpl).not.toHaveBeenCalled()
+  })
+
+  test.each([
+    ['network error', async () => Promise.reject(new Error('offline')), 'network_error'],
+    [
+      'provider error',
+      async () => ({ ok: false, status: 503, text: async () => 'unavailable' }),
+      'provider_error',
+    ],
+    [
+      'JSON parse error',
+      async () => openRouterResponse(null, { content: '```json\n{"decision":\n```' }),
+      'invalid_model_output',
+    ],
+    [
+      'strict schema error',
+      async () =>
+        openRouterResponse({
+          decision: 'allow',
+          categories: [],
+          reason: 'Parece seguro.',
+          extra: true,
+        }),
+      'invalid_model_output',
+    ],
+  ])('fails closed on %s', async (_label, fetchImpl, errorCode) => {
+    const result = await classifyAiPolicyRequest(
+      { request: SAFE_REQUEST, guidelines: {} },
+      { fetchImpl, model: 'test/multimodal', apiKey: 'test-key' }
+    )
+
+    expect(result).toMatchObject({
+      decision: 'block',
+      evaluatedDecision: 'uncertain',
+      failClosed: true,
+      errorCode,
+    })
+  })
+
+  test('accepts a single fenced JSON object from the configured model', async () => {
+    const fetchImpl = async () =>
+      openRouterResponse(null, {
+        content:
+          '```json\n{"decision":"allow","categories":[],"reason":"Cumple la política base."}\n```',
+      })
+
+    const result = await classifyAiPolicyRequest(
+      { request: SAFE_REQUEST, guidelines: {} },
+      { fetchImpl, model: 'test/multimodal', apiKey: 'test-key' }
+    )
+
+    expect(result).toMatchObject({ decision: 'allow', failClosed: false })
+  })
+
+  test('turns a model uncertain decision into a fail-closed block', async () => {
+    const fetchImpl = async () =>
+      openRouterResponse({
+        decision: 'uncertain',
+        categories: ['invalid_request'],
+        reason: 'No hay contexto suficiente.',
+      })
+
+    const result = await classifyAiPolicyRequest(
+      { request: SAFE_REQUEST, guidelines: {} },
+      { fetchImpl, model: 'test/multimodal', apiKey: 'test-key' }
+    )
+
+    expect(result).toMatchObject({
+      decision: 'block',
+      evaluatedDecision: 'uncertain',
+      categories: ['invalid_request'],
+      reason: 'No hay contexto suficiente.',
+      failClosed: true,
+      errorCode: 'model_uncertain',
+    })
+  })
+})
+
+describe('reviewAiPolicyResult', () => {
+  test('fails closed before calling the model when the result is missing', async () => {
+    const fetchImpl = jest.fn()
+
+    const result = await reviewAiPolicyResult(
+      { request: SAFE_REQUEST, result: null, guidelines: {}, images: [] },
+      { fetchImpl, model: 'test/multimodal', apiKey: 'test-key' }
+    )
+
+    expect(result).toMatchObject({
+      decision: 'block',
+      failClosed: true,
+      errorCode: 'invalid_result',
+    })
+    expect(fetchImpl).not.toHaveBeenCalled()
+  })
+
+  test('reviews result text and every image as untrusted multimodal data', async () => {
+    const fetchImpl = jest.fn(async () =>
+      openRouterResponse(allowDecision('Texto e imagen alineados.'))
+    )
+    const images = [{ dataUrl: 'data:image/png;base64,AAAA' }, 'data:image/jpeg;base64,BBBB']
+
+    const result = await reviewAiPolicyResult(
+      {
+        request: SAFE_REQUEST,
+        result: { draftText: 'Acompáñanos a observar Saturno.' },
+        guidelines: { imagePrompt: 'Mostrar el cielo nocturno.' },
+        images,
+      },
+      { fetchImpl, model: 'test/multimodal', apiKey: 'test-key' }
+    )
+
+    expect(result).toMatchObject({ stage: 'result', decision: 'allow', failClosed: false })
+
+    const body = JSON.parse(fetchImpl.mock.calls[0][1].body)
+    const content = body.messages[1].content
+    expect(content[0].text).toContain('<RESULTADO_NO_CONFIABLE>')
+    expect(content[0].text).toContain('Acompáñanos a observar Saturno.')
+    expect(content.slice(1)).toEqual([
+      { type: 'image_url', image_url: { url: images[0].dataUrl } },
+      { type: 'image_url', image_url: { url: images[1] } },
+    ])
+  })
+
+  test('preserves a visual-policy block from the model', async () => {
+    const fetchImpl = async () =>
+      openRouterResponse({
+        decision: 'block',
+        categories: ['unrelated_image'],
+        reason: 'La imagen no tiene relación verificable con la publicación.',
+      })
+
+    const result = await reviewAiPolicyResult(
+      {
+        request: SAFE_REQUEST,
+        result: { draftText: 'Observa Saturno.' },
+        guidelines: {},
+        images: ['data:image/png;base64,AAAA'],
+      },
+      { fetchImpl, model: 'test/multimodal', apiKey: 'test-key' }
+    )
+
+    expect(result).toMatchObject({
+      decision: 'block',
+      evaluatedDecision: 'block',
+      categories: ['unrelated_image'],
+      failClosed: false,
+    })
+  })
+
+  test('uses one injected model for request classification and result review', async () => {
+    const bodies = []
+    const fetchImpl = async (_url, options) => {
+      bodies.push(JSON.parse(options.body))
+      return openRouterResponse(allowDecision())
+    }
+    const dependencies = {
+      fetchImpl,
+      model: 'test/only-multimodal-model',
+      apiKey: 'test-key',
+    }
+
+    await classifyAiPolicyRequest({ request: SAFE_REQUEST, guidelines: {} }, dependencies)
+    await reviewAiPolicyResult(
+      {
+        request: SAFE_REQUEST,
+        result: { draftText: 'Observa Saturno.' },
+        guidelines: {},
+        images: ['data:image/png;base64,AAAA'],
+      },
+      dependencies
+    )
+
+    expect(bodies).toHaveLength(2)
+    expect(new Set(bodies.map(({ model }) => model))).toEqual(
+      new Set(['test/only-multimodal-model'])
+    )
+    for (const body of bodies) {
+      expect(body.image_model).toBeUndefined()
+      expect(body.text_model).toBeUndefined()
+      expect(body.messages[0].content.startsWith(AI_AGENT_IDENTITY_PROMPT)).toBe(true)
+    }
+  })
+})
