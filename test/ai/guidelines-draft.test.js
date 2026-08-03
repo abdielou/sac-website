@@ -102,12 +102,18 @@ describe('ai-guidelines-draft', () => {
     expect(entries).toHaveLength(3)
   })
 
-  test('addPlatform adds free-form platform with empty rules', () => {
+  test('addPlatform adds one canonical expectation and default policies', () => {
     const doc = createGuidelineDocument({ seed })
     const next = addPlatform(doc, 'Threads')
-    expect(next.platforms.threads).toBe('')
+    expect(next.platforms.threads).toMatch(/Threads/)
     expect(next.platformLabels.threads).toBe('Threads')
+    expect(next.generation.platforms).toBeUndefined()
     expect(Object.keys(next.platforms)).toHaveLength(4)
+    for (const entry of next.contentTypeCatalog) {
+      expect(entry.visual.imagePolicyByPlatform.threads).toBe(
+        entry.visual.mode === 'none' ? 'prohibited' : 'optional'
+      )
+    }
   })
 
   test('addPlatform rejects empty label', () => {
@@ -115,12 +121,16 @@ describe('ai-guidelines-draft', () => {
     expect(() => addPlatform(doc, '   ')).toThrow(/obligatorio/)
   })
 
-  test('removePlatform deletes platform and label', () => {
+  test('removePlatform deletes the expectation, label, and image policies', () => {
     const doc = createGuidelineDocument({ seed })
     const next = removePlatform(doc, 'facebook')
     expect(next.platforms.facebook).toBeUndefined()
     expect(next.platformLabels.facebook).toBeUndefined()
+    expect(next.generation.platforms).toBeUndefined()
     expect(Object.keys(next.platforms)).toHaveLength(2)
+    for (const entry of next.contentTypeCatalog) {
+      expect(entry.visual.imagePolicyByPlatform.facebook).toBeUndefined()
+    }
   })
 
   test('removePlatform refuses to delete the last platform', () => {
@@ -140,18 +150,25 @@ describe('ai-guidelines-draft', () => {
     expect(entries.find((e) => e.id === 'event_promotion')?.rules).toMatch(/evento|fecha/i)
   })
 
-  test('resolvePlatformOptions falls back to MVP defaults', () => {
+  test('resolvePlatformOptions falls back to seed defaults', () => {
     const options = resolvePlatformOptions(null)
     expect(options.map((o) => o.id)).toEqual(['x', 'instagram', 'facebook'])
   })
 
-  test('resolvePlatformOptions generationOnly intersects with supported platforms', () => {
+  test('resolvePlatformOptions includes custom platforms from the document', () => {
     const doc = createGuidelineDocument({ seed })
-    doc.platforms.threads = 'Reglas Threads'
-    doc.platformLabels.threads = 'Threads'
-    const options = resolvePlatformOptions(doc, { generationOnly: true })
-    expect(options.map((o) => o.id)).toEqual(['x', 'instagram', 'facebook'])
-    expect(options.every((o) => o.id !== 'threads')).toBe(true)
+    const next = addPlatform(doc, 'Threads')
+    next.platforms.threads = 'Reglas Threads'
+    const options = resolvePlatformOptions(next, { generationOnly: true })
+    expect(options.map((o) => o.id)).toEqual(['x', 'instagram', 'facebook', 'threads'])
+  })
+
+  test('resolvePlatformOptions does not invent platforms for an authoritative document without them', () => {
+    const doc = createGuidelineDocument({ seed })
+    doc.platforms = {}
+    doc.platformLabels = {}
+
+    expect(resolvePlatformOptions(doc, { generationOnly: true })).toEqual([])
   })
 
   test('resolveContentTypeOptions uses the canonical generator order', () => {
@@ -185,12 +202,14 @@ describe('ai-guidelines-draft', () => {
     expect(validation.platform).toMatch(/Instagram/i)
 
     const generation = previewGuidelinesAgainstDocument(seed, {
-      platform: 'x',
-      contentType: 'regular_post',
+      platform: 'instagram',
+      contentType: 'event_promotion',
       mode: 'generation',
     })
     expect(generation.mode).toBe('generation')
-    expect(generation.platform).toMatch(/280/)
+    expect(generation.platform).toBe(validation.platform)
+    expect(generation.captionMaxCharacters).toBeNull()
+    expect(generation.platform).not.toMatch(/280/)
     expect(generation.imagePrompt).toBeTruthy()
   })
 })

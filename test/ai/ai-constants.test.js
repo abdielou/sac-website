@@ -1,5 +1,7 @@
 import {
   PLATFORMS,
+  DEFAULT_SEED_PLATFORMS,
+  DEFAULT_SEED_PLATFORM_LABELS,
   CONTENT_TYPES,
   OBSERVATION_NIGHT_CONTENT_TYPE,
   OBSERVATION_NIGHT_LABEL,
@@ -17,10 +19,12 @@ import {
 } from '../../lib/ai-constants'
 
 describe('ai-constants', () => {
-  test('PLATFORMS includes x, instagram, facebook', () => {
+  test('DEFAULT_SEED_PLATFORMS includes x, instagram, facebook', () => {
     expect(PLATFORMS).toEqual(['x', 'instagram', 'facebook'])
+    expect(DEFAULT_SEED_PLATFORMS).toEqual(PLATFORMS)
     for (const p of PLATFORMS) {
       expect(PLATFORM_LABELS[p]).toBeTruthy()
+      expect(DEFAULT_SEED_PLATFORM_LABELS[p]).toBeTruthy()
     }
   })
 
@@ -78,6 +82,11 @@ describe('ai-constants', () => {
     expect(contentTypeRequiresImages('x', 'regular_post')).toBe(false)
   })
 
+  test('unknown platforms default to mixed media posture without a definition', () => {
+    expect(contentTypeAcceptsImages('threads', 'regular_post')).toBe(true)
+    expect(contentTypeRequiresImages('threads', 'regular_post')).toBe(false)
+  })
+
   test('non-visual content types do not accept images', () => {
     for (const platform of PLATFORMS) {
       expect(contentTypeAcceptsImages(platform, 'caption')).toBe(false)
@@ -91,5 +100,26 @@ describe('ai-constants', () => {
     expect(shouldGenerateImagePrompt('reel_caption')).toBe(false)
     expect(shouldGenerateImagePrompt('event_promotion', { backgroundMode: 'stock' })).toBe(false)
     expect(shouldGenerateImagePrompt('regular_post')).toBe(true)
+  })
+
+  test('optional event fields do not turn a custom type into an event contract', () => {
+    const definition = {
+      fields: [{ key: 'event_name', required: false }],
+      visual: { template: null },
+    }
+
+    expect(isEventContentType('community_update', definition)).toBe(false)
+    expect(
+      isEventContentType('community_update', {
+        ...definition,
+        fields: [{ key: 'event_name', required: true }],
+      })
+    ).toBe(true)
+    expect(
+      isEventContentType('community_update', {
+        ...definition,
+        visual: { template: 'event' },
+      })
+    ).toBe(true)
   })
 })

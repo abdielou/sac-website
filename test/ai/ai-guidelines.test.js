@@ -1,6 +1,7 @@
 import {
   getActiveGuidelines,
   getDefaultGuidelines,
+  resolveGenerationGuidelinesForRequest,
   resolveGuidelinesForRequest,
 } from '../../lib/ai-guidelines'
 
@@ -57,5 +58,16 @@ describe('ai-guidelines', () => {
       contentType: 'regular_post',
     })
     expect(resolved.platform).toContain('generales')
+  })
+
+  test('generation and validation use the exact same platform expectation', async () => {
+    const request = { platform: 'facebook', contentType: 'event_promotion' }
+    const [validation, generation] = await Promise.all([
+      resolveGuidelinesForRequest(request),
+      resolveGenerationGuidelinesForRequest(request),
+    ])
+
+    expect(generation.platform).toBe(validation.platform)
+    expect(generation.captionMaxCharacters).toBe(validation.captionMaxCharacters)
   })
 })
