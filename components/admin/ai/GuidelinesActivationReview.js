@@ -1,6 +1,10 @@
 'use client'
 
 import React from 'react'
+import {
+  GUIDELINE_VERSION_NAME_MAX_LENGTH,
+  validateGuidelineVersionName,
+} from '@/lib/guideline-version-name'
 
 const CATEGORY_ORDER = ['contentTypes', 'generalRules', 'platforms', 'images']
 
@@ -13,7 +17,6 @@ function sectionForIssue(issue) {
     path.startsWith('platformConstraints')
   )
     return 'platforms'
-  if (path.startsWith('generation.platforms')) return 'platforms'
   return 'general'
 }
 
@@ -69,12 +72,16 @@ export default function GuidelinesActivationReview({
   summary,
   canWrite = false,
   loading = false,
+  versionName = '',
+  onVersionNameChange,
   onBack,
   onActivate,
   onNavigate,
 }) {
   const issues = validation?.issues || []
-  const canActivate = canWrite && validation?.ok && summary?.hasChanges && !loading
+  const versionNameValidation = validateGuidelineVersionName(versionName)
+  const canActivate =
+    canWrite && validation?.ok && summary?.hasChanges && versionNameValidation.ok && !loading
 
   return (
     <div className="mx-auto max-w-5xl pb-12">
@@ -156,6 +163,46 @@ export default function GuidelinesActivationReview({
               Necesitas permiso de edición para activar cambios.
             </p>
           )}
+
+          <div className="mt-5 border-t border-gray-200 pt-5 dark:border-gray-700">
+            <div className="flex items-baseline justify-between gap-3">
+              <label
+                htmlFor="guidelines-version-name"
+                className="text-sm font-semibold text-gray-950 dark:text-white"
+              >
+                Nombre de la versión
+              </label>
+              <span className="text-xs tabular-nums text-gray-500 dark:text-gray-400">
+                {versionName.length}/{GUIDELINE_VERSION_NAME_MAX_LENGTH}
+              </span>
+            </div>
+            <input
+              id="guidelines-version-name"
+              type="text"
+              value={versionName}
+              maxLength={GUIDELINE_VERSION_NAME_MAX_LENGTH}
+              disabled={!canWrite || loading}
+              onChange={(event) => onVersionNameChange?.(event.target.value)}
+              aria-describedby="guidelines-version-name-help guidelines-version-name-error"
+              aria-invalid={!versionNameValidation.ok}
+              className="mt-2 block w-full rounded-lg border-gray-300 bg-white text-sm text-gray-950 shadow-sm focus:border-sac-primary-violet focus:ring-sac-primary-violet disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+            />
+            <p
+              id="guidelines-version-name-help"
+              className="mt-2 text-xs leading-5 text-gray-600 dark:text-gray-300"
+            >
+              Así aparecerá en el historial. El número de versión se añade automáticamente.
+            </p>
+            {!versionNameValidation.ok && canWrite && (
+              <p
+                id="guidelines-version-name-error"
+                role="alert"
+                className="mt-2 text-xs font-medium text-red-700 dark:text-red-300"
+              >
+                {versionNameValidation.error}
+              </p>
+            )}
+          </div>
           <button
             type="button"
             onClick={onActivate}

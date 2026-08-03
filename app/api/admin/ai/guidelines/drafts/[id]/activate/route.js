@@ -1,6 +1,7 @@
 import { auth } from '../../../../../../../../auth'
 import { NextResponse } from 'next/server'
 import { checkPermission } from '../../../../../../../../lib/api-permissions'
+import { validateGuidelineVersionName } from '../../../../../../../../lib/guideline-version-name'
 import { activateGuidelineVersion } from '../../../../../../../../lib/guidelines-store'
 
 function actorFromAuth(authSession) {
@@ -35,10 +36,15 @@ export const POST = auth(async function POST(req, { params }) {
     if (!Number.isInteger(expectedRevision) || expectedRevision < 1) {
       return NextResponse.json({ error: 'expectedRevision es obligatorio' }, { status: 400 })
     }
+    const nameValidation = validateGuidelineVersionName(body?.versionName)
+    if (!nameValidation.ok) {
+      return NextResponse.json({ error: nameValidation.error }, { status: 400 })
+    }
 
     const result = await activateGuidelineVersion(draftId, {
       activatedBy: actorFromAuth(req.auth),
       expectedRevision,
+      versionName: nameValidation.versionName,
     })
     return NextResponse.json(result)
   } catch (error) {

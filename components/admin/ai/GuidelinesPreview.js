@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   listContentTypeEntries,
   listPlatformEntries,
@@ -10,13 +10,27 @@ import {
 } from '@/lib/ai-guidelines-draft'
 import { resolveContentTypeDefinition } from '@/lib/ai-guidelines-schema'
 
-const selectClass =
-  'w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100'
+const controlClass =
+  'w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-sac-primary-violet focus:outline-none focus:ring-2 focus:ring-sac-primary-violet/20 dark:border-gray-600 dark:bg-gray-950 dark:text-gray-100'
+
+function PreviewControl({ id, label, children }) {
+  return (
+    <div>
+      <label
+        htmlFor={id}
+        className="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300"
+      >
+        {label}
+      </label>
+      {children}
+    </div>
+  )
+}
 
 /**
- * Lightweight client-side preview of which guideline sections apply to a sample post.
+ * Client-side explanation of which guideline layers apply to a sample post.
  */
-export default function GuidelinesPreview({ doc }) {
+export default function GuidelinesPreview({ doc, embedded = false }) {
   const platformOptions = useMemo(() => resolvePlatformOptions(doc), [doc])
   const contentTypeOptions = useMemo(() => resolveContentTypeOptions(doc), [doc])
 
@@ -49,167 +63,157 @@ export default function GuidelinesPreview({ doc }) {
   const platformLabel = listPlatformEntries(doc).find((p) => p.id === platform)?.label || platform
   const contentTypeLabel =
     listContentTypeEntries(doc).find((c) => c.id === contentType)?.label || contentType
+  const appliedRules = [
+    { label: 'Voz y tono general', value: preview.global },
+    { label: 'Red social', value: preview.platform },
+    { label: 'Tipo de contenido', value: preview.contentType },
+    { label: 'Qué debe evitar', value: preview.prohibited },
+    mode === 'generation'
+      ? { label: 'Generación de imágenes', value: preview.imagePrompt }
+      : { label: 'Validación de imágenes', value: preview.imageValidation },
+  ].filter(({ value }) => value)
 
   return (
-    <section className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 md:p-5">
-      <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-        Vista previa con publicación de muestra
-      </h3>
-      <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-        Revisa qué reglas aplicarían a una publicación de ejemplo antes de activar el borrador. No
-        ejecuta el agente de IA.
-      </p>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+    <section
+      aria-labelledby="guidelines-preview-title"
+      className={
+        embedded
+          ? ''
+          : 'rounded-2xl border border-gray-200 bg-white p-4 shadow-sm md:p-6 dark:border-gray-700 dark:bg-gray-900'
+      }
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <label
-            htmlFor="guidelines-preview-mode"
-            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          <p className="text-[0.68rem] font-bold uppercase tracking-[0.16em] text-sac-primary-violet dark:text-violet-300">
+            Simulación local
+          </p>
+          <h3
+            id="guidelines-preview-title"
+            className="mt-1 text-base font-semibold text-gray-950 dark:text-white"
           >
-            Modo
-          </label>
+            Aplicación de muestra
+          </h3>
+          <p className="mt-1 max-w-2xl text-xs leading-5 text-gray-600 dark:text-gray-300">
+            Muestra las capas de reglas que recibiría el asistente. No ejecuta IA ni guarda el
+            texto.
+          </p>
+        </div>
+        <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+          <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-gray-400" />
+          Solo vista previa
+        </span>
+      </div>
+
+      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <PreviewControl id="guidelines-preview-mode" label="Tarea">
           <select
             id="guidelines-preview-mode"
-            className={selectClass}
+            className={controlClass}
             value={mode}
-            onChange={(e) => setMode(e.target.value)}
+            onChange={(event) => setMode(event.target.value)}
           >
-            <option value="validation">Validación</option>
-            <option value="generation">Generación</option>
+            <option value="validation">Validar contenido</option>
+            <option value="generation">Generar contenido</option>
           </select>
-        </div>
-        <div>
-          <label
-            htmlFor="guidelines-preview-platform"
-            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
-          >
-            Plataforma
-          </label>
+        </PreviewControl>
+        <PreviewControl id="guidelines-preview-platform" label="Red social">
           <select
             id="guidelines-preview-platform"
-            className={selectClass}
+            className={controlClass}
             value={platform}
-            onChange={(e) => setPlatform(e.target.value)}
+            onChange={(event) => setPlatform(event.target.value)}
           >
-            {platformOptions.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label}
+            {platformOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
               </option>
             ))}
           </select>
-        </div>
-        <div>
-          <label
-            htmlFor="guidelines-preview-content-type"
-            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
-          >
-            Tipo de contenido
-          </label>
+        </PreviewControl>
+        <PreviewControl id="guidelines-preview-content-type" label="Tipo de contenido">
           <select
             id="guidelines-preview-content-type"
-            className={selectClass}
+            className={controlClass}
             value={contentType}
-            onChange={(e) => setContentType(e.target.value)}
+            onChange={(event) => setContentType(event.target.value)}
           >
-            {contentTypeOptions.map((ct) => (
-              <option key={ct.id} value={ct.id}>
-                {ct.label}
+            {contentTypeOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.label}
               </option>
             ))}
           </select>
-        </div>
+        </PreviewControl>
       </div>
 
-      <label
-        htmlFor="guidelines-preview-sample"
-        className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
-      >
-        Texto de muestra
-      </label>
-      <textarea
-        id="guidelines-preview-sample"
-        className={`${selectClass} min-h-[80px] mb-4`}
-        value={sampleText}
-        onChange={(e) => setSampleText(e.target.value)}
-      />
-
-      <div className="rounded-md border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/40 p-3 mb-4">
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-          Muestra · {platformLabel} · {contentTypeLabel} · {preview.version}
+      <div className="mt-4">
+        <PreviewControl id="guidelines-preview-sample" label="Publicación de ejemplo">
+          <textarea
+            id="guidelines-preview-sample"
+            className={`${controlClass} min-h-[88px] resize-y`}
+            value={sampleText}
+            onChange={(event) => setSampleText(event.target.value)}
+          />
+        </PreviewControl>
+        <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+          Sirve como contexto visual; el simulador no analiza su contenido.
         </p>
-        <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{sampleText}</p>
       </div>
 
-      <dl className="space-y-3 text-sm">
+      <div className="mt-5 overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700">
+        <div className="border-b border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800/60">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-gray-700 ring-1 ring-inset ring-gray-200 dark:bg-gray-900 dark:text-gray-200 dark:ring-gray-700">
+              {mode === 'generation' ? 'Generación' : 'Validación'}
+            </span>
+            <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-gray-700 ring-1 ring-inset ring-gray-200 dark:bg-gray-900 dark:text-gray-200 dark:ring-gray-700">
+              {platformLabel}
+            </span>
+            <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-gray-700 ring-1 ring-inset ring-gray-200 dark:bg-gray-900 dark:text-gray-200 dark:ring-gray-700">
+              {contentTypeLabel}
+            </span>
+            <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">
+              {preview.version}
+            </span>
+          </div>
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-gray-800 dark:text-gray-200">
+            {sampleText || 'Sin texto de ejemplo.'}
+          </p>
+        </div>
+
         {contentTypeDefinition && (
-          <div>
-            <dt className="text-xs font-medium text-gray-500 dark:text-gray-400">
+          <div className="border-b border-gray-200 px-4 py-4 dark:border-gray-700">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
               Formulario y comportamiento visual
-            </dt>
-            <dd className="mt-1 text-gray-800 dark:text-gray-200">
-              <p>
-                {(contentTypeDefinition.fields || [])
-                  .map((field) => `${field.label}${field.required ? ' *' : ''}`)
-                  .join(' · ')}
-              </p>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Modo: {contentTypeDefinition.visual?.mode || 'none'}
-                {contentTypeDefinition.visual?.template
-                  ? ` · Plantilla: ${contentTypeDefinition.visual.template}`
-                  : ''}
-                {contentTypeDefinition.visual?.backgroundSources?.length
-                  ? ` · Fondos: ${contentTypeDefinition.visual.backgroundSources.join(', ')}`
-                  : ''}
-              </p>
-            </dd>
+            </p>
+            <p className="mt-2 text-sm text-gray-800 dark:text-gray-200">
+              {(contentTypeDefinition.fields || [])
+                .map((field) => `${field.label}${field.required ? ' *' : ''}`)
+                .join(' · ') || 'Sin campos adicionales'}
+            </p>
+            <p className="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">
+              Modo: {contentTypeDefinition.visual?.mode || 'none'}
+              {contentTypeDefinition.visual?.template
+                ? ` · Plantilla: ${contentTypeDefinition.visual.template}`
+                : ''}
+              {contentTypeDefinition.visual?.backgroundSources?.length
+                ? ` · Fondos: ${contentTypeDefinition.visual.backgroundSources.join(', ')}`
+                : ''}
+            </p>
           </div>
         )}
-        <div>
-          <dt className="text-xs font-medium text-gray-500 dark:text-gray-400">Global</dt>
-          <dd className="mt-0.5 text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-            {preview.global}
-          </dd>
+
+        <div className="grid gap-px bg-gray-200 sm:grid-cols-2 dark:bg-gray-700">
+          {appliedRules.map((rule) => (
+            <div key={rule.label} className="min-w-0 bg-white p-4 dark:bg-gray-900">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">{rule.label}</p>
+              <p className="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-gray-800 dark:text-gray-200">
+                {rule.value}
+              </p>
+            </div>
+          ))}
         </div>
-        <div>
-          <dt className="text-xs font-medium text-gray-500 dark:text-gray-400">Plataforma</dt>
-          <dd className="mt-0.5 text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-            {preview.platform}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs font-medium text-gray-500 dark:text-gray-400">
-            Tipo de contenido
-          </dt>
-          <dd className="mt-0.5 text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-            {preview.contentType}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs font-medium text-gray-500 dark:text-gray-400">Prohibido</dt>
-          <dd className="mt-0.5 text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-            {preview.prohibited}
-          </dd>
-        </div>
-        {mode === 'generation' && preview.imagePrompt ? (
-          <div>
-            <dt className="text-xs font-medium text-gray-500 dark:text-gray-400">
-              Prompt de imagen
-            </dt>
-            <dd className="mt-0.5 text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-              {preview.imagePrompt}
-            </dd>
-          </div>
-        ) : (
-          <div>
-            <dt className="text-xs font-medium text-gray-500 dark:text-gray-400">
-              Validación de imágenes
-            </dt>
-            <dd className="mt-0.5 text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-              {preview.imageValidation}
-            </dd>
-          </div>
-        )}
-      </dl>
+      </div>
     </section>
   )
 }

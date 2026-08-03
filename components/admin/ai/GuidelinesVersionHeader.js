@@ -62,7 +62,9 @@ export default function GuidelinesVersionHeader({
             <span className="truncate text-sm font-semibold text-gray-900 dark:text-white">
               {viewingDraft
                 ? `Desde ${draft?.basedOn || active?.version || '—'}`
-                : displayed?.version}
+                : displayed?.versionName
+                  ? `${displayed.versionName} · ${displayed.version}`
+                  : displayed?.version}
             </span>
           </div>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">

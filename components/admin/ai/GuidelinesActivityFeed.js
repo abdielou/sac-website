@@ -10,6 +10,7 @@ const ACTION_LABELS = {
   discarded_draft: 'Cambios descartados',
   created_content_type: 'Tipo de contenido añadido',
   archived_content_type: 'Tipo de contenido archivado',
+  removed_content_type: 'Tipo de contenido eliminado',
 }
 
 function formatDate(iso) {

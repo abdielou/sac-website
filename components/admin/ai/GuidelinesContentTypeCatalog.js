@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import GuidelinesContentTypePreview from '@/components/admin/ai/GuidelinesContentTypePreview'
+import GuidelinesTemplatePreview from '@/components/admin/ai/GuidelinesTemplatePreview'
 import { listPlatformEntries } from '@/lib/ai-guidelines-draft'
 import {
   BACKGROUND_SOURCES,
@@ -9,7 +10,6 @@ import {
   IMAGE_POLICIES,
   SUPPORTED_TEMPLATE_IDS,
   TITLE_SOURCES,
-  VISUAL_MODES,
   createContentType,
   duplicateContentType,
   listContentTypeDefinitions,
@@ -24,27 +24,15 @@ const TITLE_SOURCE_LABELS = {
   topic: 'El tema de la publicación',
 }
 
-const VISUAL_MODE_LABELS = {
-  none: 'No usar imagen',
-  ai_image: 'Crear una imagen completa',
-  template: 'Usar un diseño del SAC',
-}
-
-const VISUAL_MODE_HELP = {
-  none: 'El formulario se concentra únicamente en el texto.',
-  ai_image: 'El asistente puede crear una imagen desde cero para acompañar el contenido.',
-  template: 'El contenido usa uno de los diseños visuales aprobados por el SAC.',
-}
-
 const TEMPLATE_LABELS = {
   event: 'Diseño para eventos',
   simple: 'Diseño sencillo',
 }
 
-const IMAGE_POLICY_LABELS = {
-  prohibited: 'No permitir',
-  optional: 'Permitir',
-  required: 'Pedir siempre',
+const IMAGE_REQUIREMENT_LABELS = {
+  prohibited: 'No lleva imagen',
+  optional: 'La imagen es opcional',
+  required: 'La imagen es obligatoria',
 }
 
 const BACKGROUND_LABELS = {
@@ -52,13 +40,22 @@ const BACKGROUND_LABELS = {
   ai_generated: 'Permitir fondos creados por IA',
 }
 
+const VISUAL_INPUT_KEYS = new Set(['image_style', 'image_constraints', 'sponsor'])
+
 const TABS = [
   { id: 'information', label: 'Información' },
   { id: 'fields', label: 'Campos' },
-  { id: 'validation', label: 'Al validar' },
-  { id: 'generation', label: 'Al generar' },
-  { id: 'image', label: 'Imagen' },
+  { id: 'assistant', label: 'Asistente' },
 ]
+
+const ASSISTANT_MODES = [
+  { id: 'validation', label: 'Validar' },
+  { id: 'generation', label: 'Generar' },
+]
+
+function mainPanelFor(panel) {
+  return ['validation', 'generation', 'assistant'].includes(panel) ? 'assistant' : panel
+}
 
 const inputClass =
   'w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-950 shadow-sm outline-none transition focus:border-[#560647] focus:ring-2 focus:ring-[#C8ABDB] disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-[#d7add0] dark:focus:ring-[#560647] dark:disabled:bg-gray-800 dark:disabled:text-gray-500'
@@ -102,6 +99,10 @@ function policies(value, platformIds = []) {
   return Object.fromEntries(platformIds.map((platform) => [platform, value]))
 }
 
+function contentFieldCount(definition) {
+  return (definition?.fields || []).filter(({ key }) => !VISUAL_INPUT_KEYS.has(key)).length
+}
+
 function ImageModeBadge({ mode }) {
   const label =
     mode === 'template' ? 'Diseño SAC' : mode === 'ai_image' ? 'Imagen IA' : 'Solo texto'
@@ -139,8 +140,6 @@ export default function GuidelinesContentTypeCatalog({
   onChange,
   editable = false,
   loading = false,
-  publishedIds = [],
-  protectObservationNight = true,
   selectedId: controlledSelectedId,
   onSelectedIdChange,
   panel: controlledPanel,
@@ -151,17 +150,25 @@ export default function GuidelinesContentTypeCatalog({
     () => listContentTypeDefinitions(document, { includeArchived: true }),
     [document]
   )
-  const published = useMemo(() => new Set(publishedIds), [publishedIds])
   const archivedCount = definitions.filter(({ status }) => status === 'archived').length
+  const activeCount = definitions.filter(({ status }) => status === 'active').length
   const [showArchived, setShowArchived] = useState(false)
   const [internalSelectedId, setInternalSelectedId] = useState(definitions[0]?.id || '')
   const [internalPanel, setInternalPanel] = useState(
-    TABS.some(({ id }) => id === initialPanel) ? initialPanel : 'information'
+    TABS.some(({ id }) => id === mainPanelFor(initialPanel))
+      ? mainPanelFor(initialPanel)
+      : 'information'
+  )
+  const [internalAssistantMode, setInternalAssistantMode] = useState(
+    initialPanel === 'generation' ? 'generation' : 'validation'
   )
   const [newFieldKey, setNewFieldKey] = useState('')
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewIsDrawer, setPreviewIsDrawer] = useState(true)
   const [mobileEditorOpen, setMobileEditorOpen] = useState(Boolean(controlledSelectedId))
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [newTypeName, setNewTypeName] = useState('')
+  const [archiveConfirmationId, setArchiveConfirmationId] = useState(null)
   const previewTriggerRef = useRef(null)
   const previewDialogRef = useRef(null)
 
@@ -179,20 +186,49 @@ export default function GuidelinesContentTypeCatalog({
     (requestedDefinition && (showArchived || requestedDefinition.status !== 'archived')
       ? requestedDefinition
       : visibleDefinitions[0]) || null
-  const activePanel = TABS.some(({ id }) => id === controlledPanel)
-    ? controlledPanel
+  const controlledMainPanel = mainPanelFor(controlledPanel)
+  const activePanel = TABS.some(({ id }) => id === controlledMainPanel)
+    ? controlledMainPanel
     : internalPanel
-  const isProtectedObservation = protectObservationNight && selected?.id === 'observation_night'
-  const protectedObservationFields = new Set(['date', 'time', 'location', 'cta', 'sponsor'])
+  const assistantMode = ['validation', 'generation'].includes(controlledPanel)
+    ? controlledPanel
+    : internalAssistantMode
   const disabled = !editable || loading
   const selectedIndex = selected ? definitions.findIndex(({ id }) => id === selected.id) : -1
   const selectedFieldKeys = new Set((selected?.fields || []).map(({ key }) => key))
+  const contentFieldEntries = (selected?.fields || [])
+    .map((field, index) => ({ field, index }))
+    .filter(({ field }) => !VISUAL_INPUT_KEYS.has(field.key))
   const availableFieldKeys = Object.keys(FIELD_LIBRARY).filter(
-    (key) => !selectedFieldKeys.has(key) && !(isProtectedObservation && key === 'event_name')
+    (key) => !VISUAL_INPUT_KEYS.has(key) && !selectedFieldKeys.has(key)
   )
   const fieldToAdd = availableFieldKeys.includes(newFieldKey)
     ? newFieldKey
     : availableFieldKeys[0] || ''
+  const selectedPlatformIds = Array.isArray(selected?.platforms)
+    ? selected.platforms
+    : previewPlatforms.map(({ id }) => id)
+  const imagePolicies = selectedPlatformIds.map(
+    (id) => selected?.visual?.imagePolicyByPlatform?.[id] || 'prohibited'
+  )
+  const imageRequirement =
+    selected?.visual?.mode === 'none'
+      ? 'prohibited'
+      : imagePolicies.length > 0 && imagePolicies.every((policy) => policy === 'required')
+        ? 'required'
+        : 'optional'
+  const followsSacDesign = selected?.visual?.mode === 'template' ? 'yes' : 'no'
+  const instagramSelected = selectedPlatformIds.includes('instagram')
+  const normalizedNewTypeName = newTypeName.trim().toLocaleLowerCase('es-PR')
+  const duplicateNewTypeName = Boolean(
+    normalizedNewTypeName &&
+    definitions.some(
+      ({ label }) =>
+        String(label || '')
+          .trim()
+          .toLocaleLowerCase('es-PR') === normalizedNewTypeName
+    )
+  )
 
   const selectDefinition = (id, { openOnMobile = true } = {}) => {
     if (controlledSelectedId === undefined) setInternalSelectedId(id)
@@ -203,7 +239,13 @@ export default function GuidelinesContentTypeCatalog({
   const selectPanel = (id) => {
     if (!TABS.some((tab) => tab.id === id)) return
     if (controlledPanel === undefined) setInternalPanel(id)
-    onPanelChange?.(id)
+    onPanelChange?.(id === 'assistant' ? assistantMode : id)
+  }
+
+  const selectAssistantMode = (mode) => {
+    if (!ASSISTANT_MODES.some(({ id }) => id === mode)) return
+    setInternalAssistantMode(mode)
+    onPanelChange?.(mode)
   }
 
   const closePreview = useCallback(() => {
@@ -315,13 +357,20 @@ export default function GuidelinesContentTypeCatalog({
     }))
   }
 
-  const moveField = (index, offset) => {
+  const moveContentField = (position, offset) => {
     updateSelected((entry) => {
       const fields = [...(entry.fields || [])]
-      const target = Math.max(0, Math.min(fields.length - 1, index + offset))
-      if (target === index) return entry
-      const [field] = fields.splice(index, 1)
-      fields.splice(target, 0, field)
+      const contentIndexes = fields
+        .map((field, index) => ({ field, index }))
+        .filter(({ field }) => !VISUAL_INPUT_KEYS.has(field.key))
+        .map(({ index }) => index)
+      const targetPosition = Math.max(0, Math.min(contentIndexes.length - 1, position + offset))
+      if (targetPosition === position) return entry
+      const currentIndex = contentIndexes[position]
+      const targetIndex = contentIndexes[targetPosition]
+      const currentField = fields[currentIndex]
+      fields[currentIndex] = fields[targetIndex]
+      fields[targetIndex] = currentField
       return { ...entry, fields }
     })
   }
@@ -352,12 +401,37 @@ export default function GuidelinesContentTypeCatalog({
     setNewFieldKey('')
   }
 
+  const changeVisualInputField = (key, setting) => {
+    updateSelected((entry) => {
+      const fields = entry.fields || []
+      const exists = fields.some((field) => field.key === key)
+      if (setting === 'off') {
+        return { ...entry, fields: fields.filter((field) => field.key !== key) }
+      }
+      if (!exists) {
+        return {
+          ...entry,
+          fields: [...fields, { ...fieldFromLibrary(key), required: setting === 'required' }],
+        }
+      }
+      return {
+        ...entry,
+        fields: fields.map((field) =>
+          field.key === key ? { ...field, required: setting === 'required' } : field
+        ),
+      }
+    })
+  }
+
   const createNewType = () => {
-    if (!document) return
+    const label = newTypeName.trim()
+    if (!document || !label || duplicateNewTypeName) return
     const previousIds = new Set(definitions.map(({ id }) => id))
-    const next = createContentType(document, { label: 'Nuevo tipo' })
+    const next = createContentType(document, { label })
     const created = next.contentTypeCatalog.find(({ id }) => !previousIds.has(id))
     emit(next)
+    setNewTypeName('')
+    setCreateDialogOpen(false)
     if (created) {
       selectDefinition(created.id)
       selectPanel('information')
@@ -381,9 +455,9 @@ export default function GuidelinesContentTypeCatalog({
     emit(moveContentType(document, selected.id, direction))
   }
 
-  const changeStatus = (status) => {
-    if (!selected || !document) return
-    const currentId = selected.id
+  const changeStatus = (status, requestedId = selected?.id) => {
+    if (!requestedId || !document) return
+    const currentId = requestedId
     emit(setContentTypeStatus(document, currentId, status))
     if (status === 'archived' && !showArchived) {
       const nextVisible = definitions.find(
@@ -394,11 +468,17 @@ export default function GuidelinesContentTypeCatalog({
     }
   }
 
-  const changeId = (nextId) => {
-    if (!selected || published.has(selected.id)) return
-    const previousId = selected.id
-    replaceDefinition(previousId, { ...selected, id: nextId })
-    selectDefinition(nextId, { openOnMobile: false })
+  const stopUsingType = (id) => {
+    if (!id || !document || activeCount <= 1) return
+    emit({
+      ...document,
+      contentTypeCatalog: (document.contentTypeCatalog || []).filter((entry) => entry.id !== id),
+    })
+    const nextVisible = definitions.find(
+      ({ id: entryId, status }) => entryId !== id && status === 'active'
+    )
+    if (nextVisible) selectDefinition(nextVisible.id, { openOnMobile: false })
+    else setMobileEditorOpen(false)
   }
 
   const changeVisualMode = (mode) => {
@@ -408,7 +488,7 @@ export default function GuidelinesContentTypeCatalog({
       if (mode === 'none') {
         return {
           ...entry,
-          fields: (entry.fields || []).filter(({ key }) => key !== 'sponsor'),
+          fields: (entry.fields || []).filter(({ key }) => !VISUAL_INPUT_KEYS.has(key)),
           visual: {
             ...visual,
             mode,
@@ -452,6 +532,94 @@ export default function GuidelinesContentTypeCatalog({
             visual.mode === 'none'
               ? policies('optional', platformIds)
               : { ...visual.imagePolicyByPlatform },
+        },
+      }
+    })
+  }
+
+  const changeSacDesign = (answer) => {
+    if (answer === 'yes') {
+      changeVisualMode('template')
+      return
+    }
+    if (selected?.visual?.mode === 'template') changeVisualMode('ai_image')
+  }
+
+  const changeImageRequirement = (requirement) => {
+    const platformIds = selectedPlatformIds
+    if (instagramSelected && requirement !== 'required') return
+    if (requirement === 'prohibited') {
+      changeVisualMode('none')
+      return
+    }
+    updateSelected((entry) => {
+      const visual = entry.visual || {}
+      const mode = visual.mode === 'none' ? 'template' : visual.mode
+      return {
+        ...entry,
+        visual: {
+          ...visual,
+          mode,
+          template:
+            mode === 'template'
+              ? SUPPORTED_TEMPLATE_IDS.includes(visual.template)
+                ? visual.template
+                : suggestedTemplate(entry.fields || [])
+              : null,
+          backgroundSources:
+            mode === 'template'
+              ? visual.backgroundSources?.length
+                ? [...visual.backgroundSources]
+                : ['stock']
+              : [],
+          sponsorAllowed: mode === 'template' && visual.sponsorAllowed === true,
+          imagePolicyByPlatform: {
+            ...visual.imagePolicyByPlatform,
+            ...policies(requirement, platformIds),
+          },
+        },
+      }
+    })
+  }
+
+  const toggleTypePlatform = (platform, checked) => {
+    updateSelected((entry) => {
+      const current = Array.isArray(entry.platforms)
+        ? entry.platforms
+        : previewPlatforms.map(({ id }) => id)
+      if (!checked && current.length <= 1) return entry
+      const platforms = checked
+        ? current.includes(platform)
+          ? current
+          : [...current, platform]
+        : current.filter((id) => id !== platform)
+      if (!checked || platform !== 'instagram') return { ...entry, platforms }
+
+      const visual = entry.visual || {}
+      const mode = visual.mode === 'none' ? 'template' : visual.mode
+      return {
+        ...entry,
+        platforms,
+        visual: {
+          ...visual,
+          mode,
+          template:
+            mode === 'template'
+              ? SUPPORTED_TEMPLATE_IDS.includes(visual.template)
+                ? visual.template
+                : suggestedTemplate(entry.fields || [])
+              : null,
+          backgroundSources:
+            mode === 'template'
+              ? visual.backgroundSources?.length
+                ? [...visual.backgroundSources]
+                : ['stock']
+              : [],
+          sponsorAllowed: mode === 'template' && visual.sponsorAllowed === true,
+          imagePolicyByPlatform: {
+            ...visual.imagePolicyByPlatform,
+            ...policies('required', platforms),
+          },
         },
       }
     })
@@ -517,6 +685,24 @@ export default function GuidelinesContentTypeCatalog({
     })
   }
 
+  const handleAssistantModeKeyDown = (event, modeId) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    const currentIndex = ASSISTANT_MODES.findIndex(({ id }) => id === modeId)
+    const nextIndex =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? ASSISTANT_MODES.length - 1
+          : (currentIndex + (event.key === 'ArrowRight' ? 1 : -1) + ASSISTANT_MODES.length) %
+            ASSISTANT_MODES.length
+    const nextMode = ASSISTANT_MODES[nextIndex]
+    selectAssistantMode(nextMode.id)
+    window.requestAnimationFrame(() => {
+      window.document.getElementById(`content-type-assistant-mode-${nextMode.id}`)?.focus()
+    })
+  }
+
   const gridColumns = previewOpen
     ? 'md:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_320px]'
     : 'md:grid-cols-[240px_minmax(0,1fr)]'
@@ -545,7 +731,7 @@ export default function GuidelinesContentTypeCatalog({
         {editable && (
           <button
             type="button"
-            onClick={createNewType}
+            onClick={() => setCreateDialogOpen(true)}
             disabled={loading || !document}
             className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-[#560647] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#6d0b5b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#560647] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#c78bbb] dark:text-gray-950 dark:hover:bg-[#d7add0] dark:focus-visible:ring-[#d7add0] dark:focus-visible:ring-offset-gray-900"
           >
@@ -574,7 +760,7 @@ export default function GuidelinesContentTypeCatalog({
                     onChange={(event) => setShowArchived(event.target.checked)}
                     className="rounded border-gray-300 text-[#560647] focus:ring-[#560647] dark:border-gray-600"
                   />
-                  Ver archivados
+                  Ver fuera de uso
                 </label>
               )}
             </div>
@@ -613,14 +799,14 @@ export default function GuidelinesContentTypeCatalog({
                           </span>
                           {entry.status === 'archived' && (
                             <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-                              Archivado
+                              Fuera de uso
                             </span>
                           )}
                         </span>
                         <span className="mt-2 flex items-center justify-between gap-2">
                           <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                            {(entry.fields || []).length}{' '}
-                            {(entry.fields || []).length === 1 ? 'campo' : 'campos'}
+                            {contentFieldCount(entry)}{' '}
+                            {contentFieldCount(entry) === 1 ? 'campo' : 'campos'}
                           </span>
                           <ImageModeBadge mode={entry.visual?.mode} />
                         </span>
@@ -636,7 +822,7 @@ export default function GuidelinesContentTypeCatalog({
                 </p>
                 <p className="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">
                   {archivedCount
-                    ? 'Activa “Ver archivados” para encontrar los tipos guardados.'
+                    ? 'Activa “Ver fuera de uso” para encontrar los tipos retirados.'
                     : 'Crea el primer tipo para comenzar.'}
                 </p>
               </div>
@@ -664,13 +850,13 @@ export default function GuidelinesContentTypeCatalog({
                       </h4>
                       {selected.status === 'archived' && (
                         <span className="rounded-full bg-amber-100 px-2 py-1 text-[11px] font-semibold text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-                          Archivado
+                          Fuera de uso
                         </span>
                       )}
                     </div>
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      {(selected.fields || []).length}{' '}
-                      {(selected.fields || []).length === 1
+                      {contentFieldEntries.length}{' '}
+                      {contentFieldEntries.length === 1
                         ? 'dato en el formulario'
                         : 'datos en el formulario'}
                     </p>
@@ -737,19 +923,16 @@ export default function GuidelinesContentTypeCatalog({
                               disabled={disabled}
                               className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 dark:text-gray-200 dark:hover:bg-gray-800"
                             >
-                              Restaurar tipo
+                              Volver a usar este tipo
                             </button>
                           ) : (
                             <button
                               type="button"
-                              onClick={() => changeStatus('archived')}
-                              disabled={disabled || isProtectedObservation}
-                              aria-describedby={
-                                isProtectedObservation ? 'observation-night-protection' : undefined
-                              }
+                              onClick={() => setArchiveConfirmationId(selected.id)}
+                              disabled={disabled || activeCount <= 1}
                               className="w-full px-4 py-2.5 text-left text-sm text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-red-300 dark:hover:bg-red-950/30"
                             >
-                              Archivar tipo
+                              Dejar de usar este tipo
                             </button>
                           )}
                         </div>
@@ -799,17 +982,6 @@ export default function GuidelinesContentTypeCatalog({
                 tabIndex={0}
                 className="mx-auto max-w-3xl px-4 py-6 focus-visible:outline-none sm:px-6 sm:py-8"
               >
-                {isProtectedObservation && selected.status !== 'archived' && (
-                  <p
-                    id="observation-night-protection"
-                    className="mb-6 border-l-4 border-amber-400 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900 dark:border-amber-500 dark:bg-amber-950/30 dark:text-amber-200"
-                  >
-                    <strong>Noche de Observación es un tipo esencial.</strong> Su nombre, datos
-                    principales y diseño están protegidos para que el asistente siempre lo reconozca
-                    correctamente.
-                  </p>
-                )}
-
                 {activePanel === 'information' && (
                   <fieldset disabled={disabled} className="space-y-6">
                     <SectionIntroduction
@@ -821,7 +993,7 @@ export default function GuidelinesContentTypeCatalog({
                         htmlFor={`content-type-${domId(selected.id)}-label`}
                         className={labelClass}
                       >
-                        Nombre para el equipo
+                        Nombre
                       </label>
                       <input
                         id={`content-type-${domId(selected.id)}-label`}
@@ -830,7 +1002,7 @@ export default function GuidelinesContentTypeCatalog({
                         onChange={(event) =>
                           updateSelected((entry) => ({ ...entry, label: event.target.value }))
                         }
-                        disabled={disabled || isProtectedObservation}
+                        disabled={disabled}
                         className={inputClass}
                       />
                     </div>
@@ -854,6 +1026,216 @@ export default function GuidelinesContentTypeCatalog({
                         className={textareaClass}
                       />
                     </div>
+
+                    <div>
+                      <p className={labelClass}>¿En qué redes se publica este tipo?</p>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {previewPlatforms.map(({ id, label }) => {
+                          const checked = selectedPlatformIds.includes(id)
+                          return (
+                            <label
+                              key={id}
+                              className="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-3 text-sm font-medium text-gray-800 dark:border-gray-700 dark:text-gray-200"
+                            >
+                              <input
+                                id={`content-type-${domId(selected.id)}-platform-${domId(id)}`}
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(event) => toggleTypePlatform(id, event.target.checked)}
+                                disabled={disabled || (checked && selectedPlatformIds.length <= 1)}
+                                className="rounded border-gray-300 text-[#560647] focus:ring-[#560647] dark:border-gray-600"
+                              />
+                              <span>{label}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                      <p className={hintClass}>
+                        Solo se generará y validará contenido para las redes marcadas. Debe quedar
+                        al menos una.
+                      </p>
+                    </div>
+
+                    <div className="border-y border-gray-200 py-6 dark:border-gray-700">
+                      <div>
+                        <label
+                          htmlFor={`content-type-${domId(selected.id)}-image-requirement`}
+                          className={labelClass}
+                        >
+                          ¿Este tipo lleva imagen?
+                        </label>
+                        <select
+                          id={`content-type-${domId(selected.id)}-image-requirement`}
+                          value={imageRequirement}
+                          onChange={(event) => changeImageRequirement(event.target.value)}
+                          disabled={disabled}
+                          className={inputClass}
+                        >
+                          {IMAGE_POLICIES.map((policy) => (
+                            <option
+                              key={policy}
+                              value={policy}
+                              disabled={policy !== 'required' && instagramSelected}
+                            >
+                              {IMAGE_REQUIREMENT_LABELS[policy]}
+                            </option>
+                          ))}
+                        </select>
+                        {instagramSelected && (
+                          <p className={hintClass}>Instagram requiere imagen.</p>
+                        )}
+                      </div>
+
+                      {selected.visual?.mode !== 'none' && (
+                        <div className="mt-6">
+                          <label
+                            htmlFor={`content-type-${domId(selected.id)}-visual-mode`}
+                            className={labelClass}
+                          >
+                            ¿Esta generación sigue un diseño del SAC?
+                          </label>
+                          <select
+                            id={`content-type-${domId(selected.id)}-visual-mode`}
+                            value={followsSacDesign}
+                            onChange={(event) => changeSacDesign(event.target.value)}
+                            disabled={disabled}
+                            className={inputClass}
+                          >
+                            <option value="yes">Sí</option>
+                            <option value="no">No</option>
+                          </select>
+                        </div>
+                      )}
+
+                      {selected.visual?.mode !== 'none' && (
+                        <div className="mt-6 space-y-6">
+                          {selected.visual?.mode === 'ai_image' && (
+                            <p className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm leading-6 text-gray-700 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-200">
+                              Se generará una imagen libre con IA.
+                            </p>
+                          )}
+                          {selected.visual?.mode === 'template' && (
+                            <>
+                              <p className="rounded-lg border border-[#C8ABDB] bg-[#560647]/[0.05] px-4 py-3 text-sm leading-6 text-[#560647] dark:border-[#7f4773] dark:bg-[#c78bbb]/10 dark:text-[#e5b9dc]">
+                                Se generará un cartel con la marca del SAC.
+                              </p>
+                              <div>
+                                <label
+                                  htmlFor={`content-type-${domId(selected.id)}-template`}
+                                  className={labelClass}
+                                >
+                                  Diseño del SAC
+                                </label>
+                                <select
+                                  id={`content-type-${domId(selected.id)}-template`}
+                                  value={selected.visual?.template || SUPPORTED_TEMPLATE_IDS[0]}
+                                  onChange={(event) => changeTemplate(event.target.value)}
+                                  disabled={disabled}
+                                  className={inputClass}
+                                >
+                                  {SUPPORTED_TEMPLATE_IDS.map((template) => (
+                                    <option key={template} value={template}>
+                                      {TEMPLATE_LABELS[template] || template}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div>
+                                <p className={labelClass}>De dónde puede salir el fondo</p>
+                                <div className="space-y-3">
+                                  {BACKGROUND_SOURCES.map((source) => (
+                                    <label
+                                      key={source}
+                                      className="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-200"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={
+                                          selected.visual?.backgroundSources?.includes(source) ||
+                                          false
+                                        }
+                                        onChange={() => toggleBackground(source)}
+                                        className="mt-0.5 rounded border-gray-300 text-[#560647] focus:ring-[#560647] dark:border-gray-600"
+                                      />
+                                      <span>{BACKGROUND_LABELS[source] || source}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {selected.visual?.backgroundSources?.includes('stock') && (
+                                <GuidelinesTemplatePreview
+                                  layoutId={selected.visual?.template || 'event'}
+                                />
+                              )}
+
+                              <label className="flex items-start gap-3 border-y border-gray-200 py-4 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-200">
+                                <input
+                                  type="checkbox"
+                                  checked={selected.visual?.sponsorAllowed === true}
+                                  onChange={(event) => toggleSponsor(event.target.checked)}
+                                  disabled={disabled || selected.visual?.template !== 'event'}
+                                  className="mt-0.5 rounded border-gray-300 text-[#560647] focus:ring-[#560647] dark:border-gray-600"
+                                />
+                                <span>
+                                  <span className="block font-medium">Permitir auspiciador</span>
+                                  <span className="mt-0.5 block text-xs leading-5 text-gray-500 dark:text-gray-400">
+                                    Añade al formulario la opción de subir el logo de un
+                                    auspiciador.
+                                  </span>
+                                </span>
+                              </label>
+                            </>
+                          )}
+
+                          <details className="rounded-lg border border-gray-200 px-4 py-3 dark:border-gray-700">
+                            <summary className="cursor-pointer text-sm font-medium text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#560647] dark:text-gray-200">
+                              Datos opcionales para crear la imagen
+                            </summary>
+                            <div className="mt-3 space-y-4 border-t border-gray-200 pt-4 dark:border-gray-700">
+                              {['image_style', 'image_constraints'].map((key) => {
+                                const field = (selected.fields || []).find(
+                                  (entry) => entry.key === key
+                                )
+                                const setting = field
+                                  ? field.required
+                                    ? 'required'
+                                    : 'optional'
+                                  : 'off'
+                                return (
+                                  <div
+                                    key={key}
+                                    className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_180px] sm:items-center"
+                                  >
+                                    <label
+                                      htmlFor={`content-type-${domId(selected.id)}-${key}`}
+                                      className="text-sm font-medium text-gray-800 dark:text-gray-200"
+                                    >
+                                      {FIELD_LIBRARY[key].label}
+                                    </label>
+                                    <select
+                                      id={`content-type-${domId(selected.id)}-${key}`}
+                                      value={setting}
+                                      onChange={(event) =>
+                                        changeVisualInputField(key, event.target.value)
+                                      }
+                                      disabled={disabled}
+                                      className={inputClass}
+                                    >
+                                      <option value="off">No pedir</option>
+                                      <option value="optional">Opcional</option>
+                                      <option value="required">Pedir siempre</option>
+                                    </select>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </details>
+                        </div>
+                      )}
+                    </div>
+
                     <div>
                       <label
                         htmlFor={`content-type-${domId(selected.id)}-title-source`}
@@ -870,7 +1252,7 @@ export default function GuidelinesContentTypeCatalog({
                             titleSource: event.target.value,
                           }))
                         }
-                        disabled={disabled || isProtectedObservation}
+                        disabled={disabled}
                         className={inputClass}
                       >
                         {TITLE_SOURCES.map((source) => (
@@ -890,34 +1272,6 @@ export default function GuidelinesContentTypeCatalog({
                         Las opciones dependen de los datos incluidos en el formulario.
                       </p>
                     </div>
-
-                    <details className="border-t border-gray-200 pt-5 dark:border-gray-700">
-                      <summary className="cursor-pointer text-sm font-semibold text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#560647] dark:text-gray-300">
-                        Opciones avanzadas
-                      </summary>
-                      <div className="mt-4">
-                        <label
-                          htmlFor={`content-type-${domId(selected.id)}-id`}
-                          className={labelClass}
-                        >
-                          Identificador interno
-                        </label>
-                        <input
-                          id={`content-type-${domId(selected.id)}-id`}
-                          type="text"
-                          value={selected.id}
-                          onChange={(event) => changeId(event.target.value)}
-                          disabled={disabled || published.has(selected.id)}
-                          pattern="[a-z][a-z0-9_]{1,63}"
-                          className={`${inputClass} font-mono text-xs`}
-                        />
-                        <p className={hintClass}>
-                          {published.has(selected.id)
-                            ? 'Ya está en uso y no se puede cambiar.'
-                            : 'Solo minúsculas, números y guion bajo. Se bloquea al activar.'}
-                        </p>
-                      </div>
-                    </details>
                   </fieldset>
                 )}
 
@@ -959,11 +1313,9 @@ export default function GuidelinesContentTypeCatalog({
                       </button>
                     </div>
 
-                    {(selected.fields || []).length ? (
+                    {contentFieldEntries.length ? (
                       <ol className="divide-y divide-gray-200 dark:divide-gray-700">
-                        {(selected.fields || []).map((field, index) => {
-                          const protectedField =
-                            isProtectedObservation && protectedObservationFields.has(field.key)
+                        {contentFieldEntries.map(({ field, index }, position) => {
                           return (
                             <li key={`${field.key}-${index}`} className="py-6 first:pt-0">
                               <div className="mb-4 flex items-start justify-between gap-3">
@@ -972,15 +1324,14 @@ export default function GuidelinesContentTypeCatalog({
                                     {field.label || FIELD_LIBRARY[field.key]?.label || 'Sin nombre'}
                                   </p>
                                   <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                                    Dato {index + 1} de {(selected.fields || []).length}
-                                    {protectedField ? ' · Protegido' : ''}
+                                    Dato {position + 1} de {contentFieldEntries.length}
                                   </p>
                                 </div>
                                 <div className="flex items-center">
                                   <button
                                     type="button"
-                                    onClick={() => moveField(index, -1)}
-                                    disabled={disabled || index === 0}
+                                    onClick={() => moveContentField(position, -1)}
+                                    disabled={disabled || position === 0}
                                     className={iconButtonClass}
                                     aria-label={`Mover ${field.label || field.key} hacia arriba`}
                                   >
@@ -988,9 +1339,9 @@ export default function GuidelinesContentTypeCatalog({
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => moveField(index, 1)}
+                                    onClick={() => moveContentField(position, 1)}
                                     disabled={
-                                      disabled || index === (selected.fields || []).length - 1
+                                      disabled || position === contentFieldEntries.length - 1
                                     }
                                     className={iconButtonClass}
                                     aria-label={`Mover ${field.label || field.key} hacia abajo`}
@@ -1000,7 +1351,7 @@ export default function GuidelinesContentTypeCatalog({
                                   <button
                                     type="button"
                                     onClick={() => removeField(index)}
-                                    disabled={disabled || protectedField}
+                                    disabled={disabled}
                                     className="rounded-lg px-2 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 disabled:cursor-not-allowed disabled:opacity-35 dark:text-red-300 dark:hover:bg-red-950/30"
                                   >
                                     Quitar
@@ -1069,31 +1420,11 @@ export default function GuidelinesContentTypeCatalog({
                                   onChange={(event) =>
                                     updateField(index, { required: event.target.checked })
                                   }
-                                  disabled={disabled || protectedField}
+                                  disabled={disabled}
                                   className="rounded border-gray-300 text-[#560647] focus:ring-[#560647] dark:border-gray-600"
                                 />
                                 Pedir este dato siempre
                               </label>
-
-                              <details className="mt-4">
-                                <summary className="cursor-pointer text-xs font-medium text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#560647] dark:text-gray-400">
-                                  Información técnica
-                                </summary>
-                                <dl className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-gray-50 px-3 py-2 text-xs dark:bg-gray-800/60">
-                                  <div>
-                                    <dt className="text-gray-500 dark:text-gray-400">Campo</dt>
-                                    <dd className="mt-0.5 font-mono text-gray-800 dark:text-gray-200">
-                                      {field.key}
-                                    </dd>
-                                  </div>
-                                  <div>
-                                    <dt className="text-gray-500 dark:text-gray-400">Formato</dt>
-                                    <dd className="mt-0.5 font-mono text-gray-800 dark:text-gray-200">
-                                      {FIELD_LIBRARY[field.key]?.inputType || 'desconocido'}
-                                    </dd>
-                                  </div>
-                                </dl>
-                              </details>
                             </li>
                           )
                         })}
@@ -1106,235 +1437,109 @@ export default function GuidelinesContentTypeCatalog({
                   </fieldset>
                 )}
 
-                {activePanel === 'validation' && (
-                  <fieldset disabled={disabled} className="space-y-6">
+                {activePanel === 'assistant' && (
+                  <div className="space-y-6">
                     <SectionIntroduction
-                      title="Qué debe revisar el asistente"
-                      description="Escribe criterios específicos para este tipo. Las reglas generales y las de cada red social también se aplicarán."
+                      title="Cómo debe trabajar el asistente"
+                      description="Define por separado qué debe revisar y qué debe crear para este tipo de contenido."
                     />
-                    <div>
-                      <label
-                        htmlFor={`content-type-${domId(selected.id)}-validation-rules`}
-                        className={labelClass}
-                      >
-                        Indicaciones para validar
-                      </label>
-                      <textarea
-                        id={`content-type-${domId(selected.id)}-validation-rules`}
-                        value={selected.validation?.rules || ''}
-                        onChange={(event) =>
-                          updateSelected((entry) => ({
-                            ...entry,
-                            validation: { ...entry.validation, rules: event.target.value },
-                          }))
-                        }
-                        placeholder="Por ejemplo: comprueba que la fecha, hora y lugar coincidan con la información oficial."
-                        className={`${textareaClass} min-h-[260px]`}
-                      />
-                      <p className={hintClass}>
-                        Describe resultados observables. Evita instrucciones sobre cómo funciona el
-                        sistema por dentro.
-                      </p>
-                    </div>
-                  </fieldset>
-                )}
 
-                {activePanel === 'generation' && (
-                  <fieldset disabled={disabled} className="space-y-6">
-                    <SectionIntroduction
-                      title="Qué debe crear el asistente"
-                      description="Indica qué hace que una publicación de este tipo esté completa y sea útil para la audiencia."
-                    />
-                    <div>
-                      <label
-                        htmlFor={`content-type-${domId(selected.id)}-generation-rules`}
-                        className={labelClass}
-                      >
-                        Indicaciones para generar
-                      </label>
-                      <textarea
-                        id={`content-type-${domId(selected.id)}-generation-rules`}
-                        value={selected.generation?.rules || ''}
-                        onChange={(event) =>
-                          updateSelected((entry) => ({
-                            ...entry,
-                            generation: { ...entry.generation, rules: event.target.value },
-                          }))
-                        }
-                        placeholder="Por ejemplo: prepara una invitación clara que destaque la fecha, hora, lugar y qué debe llevar la persona."
-                        className={`${textareaClass} min-h-[260px]`}
-                      />
-                      <p className={hintClass}>
-                        Las indicaciones deben complementar la voz del SAC, no repetirla.
-                      </p>
-                    </div>
-                  </fieldset>
-                )}
-
-                {activePanel === 'image' && (
-                  <fieldset disabled={disabled} className="space-y-6">
-                    <SectionIntroduction
-                      title="Cómo se trabaja la imagen"
-                      description="Decide si este contenido lleva imagen, de dónde puede salir y qué exige cada red social."
-                    />
-                    <div>
-                      <label
-                        htmlFor={`content-type-${domId(selected.id)}-visual-mode`}
-                        className={labelClass}
-                      >
-                        Forma de crear la publicación
-                      </label>
-                      <select
-                        id={`content-type-${domId(selected.id)}-visual-mode`}
-                        value={selected.visual?.mode || 'none'}
-                        onChange={(event) => changeVisualMode(event.target.value)}
-                        disabled={disabled || isProtectedObservation}
-                        className={inputClass}
-                      >
-                        {VISUAL_MODES.map((mode) => (
-                          <option key={mode} value={mode}>
-                            {VISUAL_MODE_LABELS[mode] || mode}
-                          </option>
-                        ))}
-                      </select>
-                      <p className={hintClass}>
-                        {VISUAL_MODE_HELP[selected.visual?.mode || 'none']}
-                      </p>
+                    <div
+                      className="inline-flex rounded-lg bg-gray-100 p-1 dark:bg-gray-800"
+                      role="tablist"
+                      aria-label="Modo del asistente"
+                    >
+                      {ASSISTANT_MODES.map((mode) => (
+                        <button
+                          key={mode.id}
+                          id={`content-type-assistant-mode-${mode.id}`}
+                          type="button"
+                          role="tab"
+                          aria-selected={assistantMode === mode.id}
+                          aria-controls={`content-type-assistant-panel-${mode.id}`}
+                          tabIndex={assistantMode === mode.id ? 0 : -1}
+                          onClick={() => selectAssistantMode(mode.id)}
+                          onKeyDown={(event) => handleAssistantModeKeyDown(event, mode.id)}
+                          className={`rounded-md px-5 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#560647] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 ${
+                            assistantMode === mode.id
+                              ? 'bg-white text-[#560647] shadow-sm dark:bg-gray-700 dark:text-[#e5b9dc]'
+                              : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                          }`}
+                        >
+                          {mode.label}
+                        </button>
+                      ))}
                     </div>
 
-                    {selected.visual?.mode === 'template' && (
-                      <>
+                    {assistantMode === 'validation' && (
+                      <fieldset
+                        id="content-type-assistant-panel-validation"
+                        role="tabpanel"
+                        aria-labelledby="content-type-assistant-mode-validation"
+                        disabled={disabled}
+                        className="space-y-6"
+                      >
                         <div>
                           <label
-                            htmlFor={`content-type-${domId(selected.id)}-template`}
+                            htmlFor={`content-type-${domId(selected.id)}-validation-rules`}
                             className={labelClass}
                           >
-                            Diseño del SAC
+                            ¿Qué debe revisar?
                           </label>
-                          <select
-                            id={`content-type-${domId(selected.id)}-template`}
-                            value={selected.visual?.template || SUPPORTED_TEMPLATE_IDS[0]}
-                            onChange={(event) => changeTemplate(event.target.value)}
-                            disabled={disabled || isProtectedObservation}
-                            className={inputClass}
-                          >
-                            {SUPPORTED_TEMPLATE_IDS.map((template) => (
-                              <option key={template} value={template}>
-                                {TEMPLATE_LABELS[template] || template}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div>
-                          <p className={labelClass}>Fondos permitidos</p>
-                          <div className="space-y-3">
-                            {BACKGROUND_SOURCES.map((source) => (
-                              <label
-                                key={source}
-                                className="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-200"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={
-                                    selected.visual?.backgroundSources?.includes(source) || false
-                                  }
-                                  onChange={() => toggleBackground(source)}
-                                  className="mt-0.5 rounded border-gray-300 text-[#560647] focus:ring-[#560647] dark:border-gray-600"
-                                />
-                                <span>{BACKGROUND_LABELS[source] || source}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-
-                        <label className="flex items-start gap-3 border-y border-gray-200 py-4 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-200">
-                          <input
-                            type="checkbox"
-                            checked={selected.visual?.sponsorAllowed === true}
-                            onChange={(event) => toggleSponsor(event.target.checked)}
-                            disabled={
-                              disabled ||
-                              isProtectedObservation ||
-                              selected.visual?.template !== 'event'
+                          <textarea
+                            id={`content-type-${domId(selected.id)}-validation-rules`}
+                            value={selected.validation?.rules || ''}
+                            onChange={(event) =>
+                              updateSelected((entry) => ({
+                                ...entry,
+                                validation: { ...entry.validation, rules: event.target.value },
+                              }))
                             }
-                            className="mt-0.5 rounded border-gray-300 text-[#560647] focus:ring-[#560647] dark:border-gray-600"
+                            placeholder="Por ejemplo: comprueba que la fecha, hora y lugar coincidan con la información oficial."
+                            className={`${textareaClass} min-h-[260px]`}
                           />
-                          <span>
-                            <span className="block font-medium">Permitir auspiciador</span>
-                            <span className="mt-0.5 block text-xs leading-5 text-gray-500 dark:text-gray-400">
-                              Añade al formulario la opción de subir el logo de un auspiciador.
-                            </span>
-                          </span>
-                        </label>
-                      </>
+                          <p className={hintClass}>
+                            Las reglas generales y las de cada red también se aplicarán.
+                          </p>
+                        </div>
+                      </fieldset>
                     )}
 
-                    <div>
-                      <p className={labelClass}>Qué pide cada red social</p>
-                      <div className="divide-y divide-gray-200 border-y border-gray-200 dark:divide-gray-700 dark:border-gray-700">
-                        {previewPlatforms.map(({ id: platform, label }) => (
-                          <div
-                            key={platform}
-                            className="grid grid-cols-[minmax(0,1fr)_minmax(130px,180px)] items-center gap-4 py-3"
+                    {assistantMode === 'generation' && (
+                      <fieldset
+                        id="content-type-assistant-panel-generation"
+                        role="tabpanel"
+                        aria-labelledby="content-type-assistant-mode-generation"
+                        disabled={disabled}
+                        className="space-y-6"
+                      >
+                        <div>
+                          <label
+                            htmlFor={`content-type-${domId(selected.id)}-generation-rules`}
+                            className={labelClass}
                           >
-                            <label
-                              htmlFor={`content-type-${domId(selected.id)}-policy-${platform}`}
-                              className="text-sm font-medium text-gray-800 dark:text-gray-200"
-                            >
-                              {label}
-                            </label>
-                            <select
-                              id={`content-type-${domId(selected.id)}-policy-${platform}`}
-                              value={
-                                selected.visual?.imagePolicyByPlatform?.[platform] || 'prohibited'
-                              }
-                              onChange={(event) =>
-                                updateSelected((entry) => ({
-                                  ...entry,
-                                  visual: {
-                                    ...entry.visual,
-                                    imagePolicyByPlatform: {
-                                      ...entry.visual.imagePolicyByPlatform,
-                                      [platform]: event.target.value,
-                                    },
-                                  },
-                                }))
-                              }
-                              disabled={disabled || selected.visual?.mode === 'none'}
-                              className={inputClass}
-                            >
-                              {IMAGE_POLICIES.map((policy) => (
-                                <option key={policy} value={policy}>
-                                  {IMAGE_POLICY_LABELS[policy] || policy}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <details className="border-t border-gray-200 pt-5 dark:border-gray-700">
-                      <summary className="cursor-pointer text-sm font-semibold text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#560647] dark:text-gray-300">
-                        Opciones avanzadas
-                      </summary>
-                      <dl className="mt-4 grid grid-cols-1 gap-3 rounded-lg bg-gray-50 p-4 text-xs sm:grid-cols-2 dark:bg-gray-800/60">
-                        <div>
-                          <dt className="text-gray-500 dark:text-gray-400">Modo interno</dt>
-                          <dd className="mt-1 font-mono text-gray-800 dark:text-gray-200">
-                            {selected.visual?.mode || 'none'}
-                          </dd>
+                            ¿Qué debe crear y cómo?
+                          </label>
+                          <textarea
+                            id={`content-type-${domId(selected.id)}-generation-rules`}
+                            value={selected.generation?.rules || ''}
+                            onChange={(event) =>
+                              updateSelected((entry) => ({
+                                ...entry,
+                                generation: { ...entry.generation, rules: event.target.value },
+                              }))
+                            }
+                            placeholder="Por ejemplo: prepara una invitación clara que destaque la fecha, hora, lugar y qué debe llevar la persona."
+                            className={`${textareaClass} min-h-[260px]`}
+                          />
+                          <p className={hintClass}>
+                            Estas indicaciones complementan la voz del SAC y el alcance definido en
+                            Información.
+                          </p>
                         </div>
-                        <div>
-                          <dt className="text-gray-500 dark:text-gray-400">Plantilla interna</dt>
-                          <dd className="mt-1 font-mono text-gray-800 dark:text-gray-200">
-                            {selected.visual?.template || 'ninguna'}
-                          </dd>
-                        </div>
-                      </dl>
-                    </details>
-                  </fieldset>
+                      </fieldset>
+                    )}
+                  </div>
                 )}
               </div>
             </>
@@ -1373,6 +1578,135 @@ export default function GuidelinesContentTypeCatalog({
               />
             </aside>
           </>
+        )}
+
+        {archiveConfirmationId && (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-950/45 p-4"
+            role="presentation"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setArchiveConfirmationId(null)
+            }}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="archive-content-type-title"
+              className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
+            >
+              <h3
+                id="archive-content-type-title"
+                className="text-lg font-semibold text-gray-950 dark:text-white"
+              >
+                Dejar de usar este tipo de contenido
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-300">
+                Dejará de aparecer en Generar y Validar cuando actives esta versión. Las versiones
+                anteriores y su historial no cambiarán.
+              </p>
+              <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setArchiveConfirmationId(null)}
+                  className={quietButtonClass}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    stopUsingType(archiveConfirmationId)
+                    setArchiveConfirmationId(null)
+                  }}
+                  className="rounded-lg bg-red-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
+                >
+                  Dejar de usar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {createDialogOpen && (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-950/45 p-4"
+            role="presentation"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                setCreateDialogOpen(false)
+                setNewTypeName('')
+              }
+            }}
+          >
+            <form
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="create-content-type-title"
+              className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
+              onSubmit={(event) => {
+                event.preventDefault()
+                createNewType()
+              }}
+            >
+              <h3
+                id="create-content-type-title"
+                className="text-lg font-semibold text-gray-950 dark:text-white"
+              >
+                Crear tipo de contenido
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-300">
+                Escribe el nombre que verá el equipo. Luego podrás definir cuándo usarlo y qué
+                información pedir.
+              </p>
+              <div className="mt-5">
+                <label htmlFor="new-content-type-name" className={labelClass}>
+                  Nombre
+                </label>
+                <input
+                  id="new-content-type-name"
+                  type="text"
+                  value={newTypeName}
+                  onChange={(event) => setNewTypeName(event.target.value)}
+                  autoFocus
+                  required
+                  maxLength={160}
+                  aria-invalid={duplicateNewTypeName || undefined}
+                  aria-describedby={
+                    duplicateNewTypeName ? 'new-content-type-name-error' : undefined
+                  }
+                  className={inputClass}
+                  placeholder="Ej. Actividad educativa"
+                />
+                {duplicateNewTypeName && (
+                  <p
+                    id="new-content-type-name-error"
+                    className="mt-1.5 text-xs text-red-700 dark:text-red-300"
+                  >
+                    Ya existe un tipo con ese nombre.
+                  </p>
+                )}
+              </div>
+              <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreateDialogOpen(false)
+                    setNewTypeName('')
+                  }}
+                  className={quietButtonClass}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={!newTypeName.trim() || duplicateNewTypeName}
+                  className="rounded-lg bg-[#560647] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#6d0b5b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#560647] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#c78bbb] dark:text-gray-950 dark:hover:bg-[#d7add0] dark:focus-visible:ring-[#d7add0] dark:focus-visible:ring-offset-gray-900"
+                >
+                  Crear tipo
+                </button>
+              </div>
+            </form>
+          </div>
         )}
       </div>
     </section>

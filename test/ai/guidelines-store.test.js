@@ -22,6 +22,7 @@ import {
   discardGuidelineDraft,
   getActiveGuidelines,
   getActiveGuidelinesStrict,
+  getGuidelineVersion,
   listGuidelineVersions,
   nextPublishedVersion,
   rollbackGuidelineVersion,
@@ -72,17 +73,11 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value))
 }
 
-function legacyV1Document() {
-  const document = clone(getDefaultGuidelines())
-  delete document.schemaVersion
-  delete document.contentTypeCatalog
-  return document
-}
 
 describe('guidelines-store helpers', () => {
   test('nextPublishedVersion increments from published vN entries', () => {
     expect(nextPublishedVersion([])).toBe('v2')
-    expect(nextPublishedVersion([{ version: 'mvp-default-v1' }])).toBe('v2')
+    expect(nextPublishedVersion([{ version: 'default-v1' }])).toBe('v2')
     expect(nextPublishedVersion([{ version: 'v2' }, { version: 'v5' }])).toBe('v6')
   })
 
@@ -164,14 +159,14 @@ describe('guidelines-store S3 lifecycle', () => {
 
   test('getActiveGuidelines seeds defaults when store is empty', async () => {
     const active = await getActiveGuidelines()
-    expect(active.version).toBe('mvp-default-v1')
+    expect(active.version).toBe('default-v1')
     expect(active.schemaVersion).toBe(GUIDELINES_SCHEMA_VERSION)
     expect(active.contentTypeCatalog[0].id).toBe('observation_night')
     expect(objects.has('guidelines/state.json')).toBe(true)
-    expect(objects.has('guidelines/versions/mvp-default-v1.json')).toBe(true)
+    expect(objects.has('guidelines/versions/default-v1.json')).toBe(true)
 
     const seedPut = mockPutObject.mock.calls.find(
-      ([request]) => request.Key === 'guidelines/versions/mvp-default-v1.json'
+      ([request]) => request.Key === 'guidelines/versions/default-v1.json'
     )
     expect(seedPut?.[0].IfNoneMatch).toBe('*')
   })
@@ -183,11 +178,11 @@ describe('guidelines-store S3 lifecycle', () => {
       if (request.Key === 'guidelines/state.json' && request.IfNoneMatch === '*' && !injected) {
         injected = true
         objects.set('guidelines/state.json', {
-          activeVersion: 'mvp-default-v1',
+          activeVersion: 'default-v1',
           draft: null,
           versions: [
             {
-              version: 'mvp-default-v1',
+              version: 'default-v1',
               activatedAt: '2026-08-01T10:00:00.000Z',
               activatedBy: 'other-seeder',
             },
@@ -199,7 +194,7 @@ describe('guidelines-store S3 lifecycle', () => {
       return normalPut(request)
     })
 
-    await expect(getActiveGuidelines()).resolves.toMatchObject({ version: 'mvp-default-v1' })
+    await expect(getActiveGuidelines()).resolves.toMatchObject({ version: 'default-v1' })
     expect(objects.get('guidelines/state.json').versions[0].activatedBy).toBe('other-seeder')
     expect(
       mockPutObject.mock.calls.find(
@@ -212,20 +207,20 @@ describe('guidelines-store S3 lifecycle', () => {
     const restoreAudit = makeAuditUnavailable()
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
 
-    await expect(getActiveGuidelines()).resolves.toMatchObject({ version: 'mvp-default-v1' })
+    await expect(getActiveGuidelines()).resolves.toMatchObject({ version: 'default-v1' })
     expect(objects.get('guidelines/state.json').pendingAuditEvents).toEqual([
-      expect.objectContaining({ action: 'activated', version: 'mvp-default-v1' }),
+      expect.objectContaining({ action: 'activated', version: 'default-v1' }),
     ])
     expect(objects.has('guidelines/audit.json')).toBe(false)
 
     restoreAudit()
-    await expect(getActiveGuidelines()).resolves.toMatchObject({ version: 'mvp-default-v1' })
+    await expect(getActiveGuidelines()).resolves.toMatchObject({ version: 'default-v1' })
     expect(objects.get('guidelines/state.json').pendingAuditEvents).toEqual([])
     expect(
       objects
         .get('guidelines/audit.json')
         .events.filter(
-          ({ action, version }) => action === 'activated' && version === 'mvp-default-v1'
+          ({ action, version }) => action === 'activated' && version === 'default-v1'
         )
     ).toHaveLength(1)
 
@@ -261,7 +256,7 @@ describe('guidelines-store S3 lifecycle', () => {
     await expect(getActiveGuidelinesStrict()).rejects.toMatchObject({
       code: 'ACTIVE_GUIDELINES_UNAVAILABLE',
     })
-    expect(objects.has('guidelines/versions/mvp-default-v1.json')).toBe(false)
+    expect(objects.has('guidelines/versions/default-v1.json')).toBe(false)
     expect(objects.get('guidelines/state.json').activeVersion).toBe('v404')
   })
 
@@ -270,7 +265,7 @@ describe('guidelines-store S3 lifecycle', () => {
 
     const created = await createGuidelineDraft({ createdBy: 'Elena' })
     expect(created.draft.id).toMatch(/^draft_/)
-    expect(created.draft.document.version).toBe('mvp-default-v1')
+    expect(created.draft.document.version).toBe('default-v1')
 
     const edited = {
       ...created.draft.document,
@@ -286,20 +281,26 @@ describe('guidelines-store S3 lifecycle', () => {
     const activated = await activateGuidelineVersion(created.draft.id, {
       activatedBy: 'Elena',
       expectedRevision: saved.draft.revision,
+      versionName: 'Nueva voz de marca',
     })
     expect(activated.active.version).toBe('v2')
+    expect(activated.active.versionName).toBe('Nueva voz de marca')
     expect(activated.active.global).toContain('actualizada')
     expect(activated.idempotent).toBe(false)
 
     const versions = await listGuidelineVersions()
-    expect(versions[0]).toMatchObject({ version: 'v2', status: 'active' })
-    expect(versions.some((v) => v.version === 'mvp-default-v1' && v.status === 'historical')).toBe(
+    expect(versions[0]).toMatchObject({
+      version: 'v2',
+      versionName: 'Nueva voz de marca',
+      status: 'active',
+    })
+    expect(versions.some((v) => v.version === 'default-v1' && v.status === 'historical')).toBe(
       true
     )
 
     // Published version object is immutable on disk.
     expect(objects.get('guidelines/versions/v2.json').global).toContain('actualizada')
-    expect(objects.get('guidelines/versions/mvp-default-v1.json').version).toBe('mvp-default-v1')
+    expect(objects.get('guidelines/versions/default-v1.json').version).toBe('default-v1')
     const publishedPut = mockPutObject.mock.calls.find(
       ([request]) => request.Key === 'guidelines/versions/v2.json'
     )
@@ -429,7 +430,7 @@ describe('guidelines-store S3 lifecycle', () => {
       })
     ).rejects.toMatchObject({ code: 'VALIDATION_FAILED' })
     expect(objects.get('guidelines/state.json')).toMatchObject({
-      activeVersion: 'mvp-default-v1',
+      activeVersion: 'default-v1',
       draft: { id: created.draft.id, revision: 2 },
     })
   })
@@ -511,6 +512,7 @@ describe('guidelines-store S3 lifecycle', () => {
     const first = await activateGuidelineVersion(created.draft.id, {
       activatedBy: 'Elena',
       expectedRevision: created.draft.revision,
+      versionName: 'Primera activación',
     })
     const storedVersion = clone(objects.get('guidelines/versions/v2.json'))
     const versionPutsBeforeRetry = mockPutObject.mock.calls.filter(
@@ -520,10 +522,14 @@ describe('guidelines-store S3 lifecycle', () => {
     const retry = await activateGuidelineVersion(created.draft.id, {
       activatedBy: 'Elena',
       expectedRevision: created.draft.revision,
+      versionName: 'Nombre de un reintento tardío',
     })
 
     expect(first).toMatchObject({ idempotent: false, active: { version: 'v2' } })
-    expect(retry).toMatchObject({ idempotent: true, active: { version: 'v2' } })
+    expect(retry).toMatchObject({
+      idempotent: true,
+      active: { version: 'v2', versionName: 'Primera activación' },
+    })
     expect(objects.get('guidelines/versions/v2.json')).toEqual(storedVersion)
     expect(
       mockPutObject.mock.calls.filter(([request]) => request.Key === 'guidelines/versions/v2.json')
@@ -563,22 +569,22 @@ describe('guidelines-store S3 lifecycle', () => {
 
     const restoreRollbackAudit = makeAuditUnavailable()
     await expect(
-      rollbackGuidelineVersion('mvp-default-v1', { rolledBackBy: 'Marco' })
-    ).resolves.toMatchObject({ active: { version: 'mvp-default-v1' } })
+      rollbackGuidelineVersion('default-v1', { rolledBackBy: 'Marco' })
+    ).resolves.toMatchObject({ active: { version: 'default-v1' } })
     expect(objects.get('guidelines/state.json').pendingAuditEvents).toEqual([
-      expect.objectContaining({ action: 'rollback', version: 'mvp-default-v1' }),
+      expect.objectContaining({ action: 'rollback', version: 'default-v1' }),
     ])
 
     restoreRollbackAudit()
     await expect(
-      rollbackGuidelineVersion('mvp-default-v1', { rolledBackBy: 'Marco' })
+      rollbackGuidelineVersion('default-v1', { rolledBackBy: 'Marco' })
     ).rejects.toMatchObject({ code: 'ALREADY_ACTIVE' })
     expect(objects.get('guidelines/state.json').pendingAuditEvents).toEqual([])
     expect(
       objects
         .get('guidelines/audit.json')
         .events.filter(
-          ({ action, version }) => action === 'rollback' && version === 'mvp-default-v1'
+          ({ action, version }) => action === 'rollback' && version === 'default-v1'
         )
     ).toHaveLength(1)
 
@@ -663,7 +669,7 @@ describe('guidelines-store S3 lifecycle', () => {
     ).rejects.toMatchObject({ code: 'DRAFT_CONFLICT' })
     expect(objects.has('guidelines/versions/v2.json')).toBe(false)
     expect(objects.get('guidelines/state.json')).toMatchObject({
-      activeVersion: 'mvp-default-v1',
+      activeVersion: 'default-v1',
       draft: { id: created.draft.id, revision: 2 },
     })
 
@@ -705,7 +711,7 @@ describe('guidelines-store S3 lifecycle', () => {
   test('activation fails closed when its declared base version is missing', async () => {
     await getActiveGuidelines()
     const created = await createGuidelineDraft({ createdBy: 'Elena' })
-    objects.delete('guidelines/versions/mvp-default-v1.json')
+    objects.delete('guidelines/versions/default-v1.json')
 
     await expect(
       activateGuidelineVersion(created.draft.id, {
@@ -716,126 +722,76 @@ describe('guidelines-store S3 lifecycle', () => {
 
     expect(objects.has('guidelines/versions/v2.json')).toBe(false)
     expect(objects.get('guidelines/state.json')).toMatchObject({
-      activeVersion: 'mvp-default-v1',
+      activeVersion: 'default-v1',
       draft: { id: created.draft.id, revision: 1 },
     })
   })
 
-  test('published technical IDs stay reserved after rollback', async () => {
+  test('rollback preserves the human name of a published version', async () => {
     await getActiveGuidelines()
-    const originalDraft = await createGuidelineDraft({ createdBy: 'Elena' })
-    const withHistoricalType = duplicateContentType(originalDraft.draft.document, 'caption', {
+    const created = await createGuidelineDraft({ createdBy: 'Elena' })
+    await activateGuidelineVersion(created.draft.id, {
+      activatedBy: 'Elena',
+      expectedRevision: created.draft.revision,
+      versionName: 'Reglas para Instagram',
+    })
+
+    await rollbackGuidelineVersion('default-v1', { rolledBackBy: 'Marco' })
+    await rollbackGuidelineVersion('v2', { rolledBackBy: 'Marco' })
+
+    const versions = await listGuidelineVersions()
+    expect(versions[0]).toMatchObject({
+      version: 'v2',
+      versionName: 'Reglas para Instagram',
+      status: 'active',
+    })
+  })
+
+  test('removed content types remain only in historical versions', async () => {
+    await getActiveGuidelines()
+    const created = await createGuidelineDraft({ createdBy: 'Elena' })
+    const withHistoricalType = duplicateContentType(created.draft.document, 'caption', {
       id: 'historical_campaign',
       label: 'Campaña histórica',
     })
-    const savedOriginal = await saveGuidelineDraft(originalDraft.draft.id, withHistoricalType, {
+    const saved = await saveGuidelineDraft(created.draft.id, withHistoricalType, {
       updatedBy: 'Elena',
-      expectedRevision: originalDraft.draft.revision,
+      expectedRevision: created.draft.revision,
     })
-    const firstPublished = await activateGuidelineVersion(originalDraft.draft.id, {
+    const firstPublished = await activateGuidelineVersion(created.draft.id, {
       activatedBy: 'Elena',
-      expectedRevision: savedOriginal.draft.revision,
+      expectedRevision: saved.draft.revision,
     })
-    const historicalEntry = clone(
-      firstPublished.active.contentTypeCatalog.find(({ id }) => id === 'historical_campaign')
-    )
-    const laterDraft = await createGuidelineDraft({ createdBy: 'Elena' })
-    const withLaterType = duplicateContentType(laterDraft.draft.document, 'regular_post', {
-      id: 'later_series',
-      label: 'Serie posterior',
-    })
-    const savedLater = await saveGuidelineDraft(laterDraft.draft.id, withLaterType, {
-      updatedBy: 'Elena',
-      expectedRevision: laterDraft.draft.revision,
-    })
-    const laterPublished = await activateGuidelineVersion(laterDraft.draft.id, {
-      activatedBy: 'Elena',
-      expectedRevision: savedLater.draft.revision,
-    })
-    const laterEntry = clone(
-      laterPublished.active.contentTypeCatalog.find(({ id }) => id === 'later_series')
-    )
-    await rollbackGuidelineVersion('mvp-default-v1', { rolledBackBy: 'Marco' })
-
-    const rollbackDraft = await createGuidelineDraft({ createdBy: 'Marco' })
-    expect(
-      rollbackDraft.draft.document.contentTypeCatalog.find(({ id }) => id === 'historical_campaign')
-    ).toMatchObject({ label: 'Campaña histórica', status: 'archived' })
-    expect(
-      rollbackDraft.draft.document.contentTypeCatalog.find(({ id }) => id === 'later_series')
-    ).toMatchObject({ label: 'Serie posterior', status: 'archived' })
-
-    const missingHistory = {
-      ...rollbackDraft.draft.document,
-      contentTypeCatalog: rollbackDraft.draft.document.contentTypeCatalog.filter(
-        ({ id }) => !['historical_campaign', 'later_series'].includes(id)
+    const nextDraft = await createGuidelineDraft({ createdBy: 'Marco' })
+    const withoutHistoricalType = {
+      ...nextDraft.draft.document,
+      contentTypeCatalog: nextDraft.draft.document.contentTypeCatalog.filter(
+        ({ id }) => id !== 'historical_campaign'
       ),
     }
-    const savedMissing = await saveGuidelineDraft(rollbackDraft.draft.id, missingHistory, {
+    const savedRemoval = await saveGuidelineDraft(nextDraft.draft.id, withoutHistoricalType, {
       updatedBy: 'Marco',
-      expectedRevision: rollbackDraft.draft.revision,
+      expectedRevision: nextDraft.draft.revision,
     })
-    await expect(
-      activateGuidelineVersion(rollbackDraft.draft.id, {
-        activatedBy: 'Marco',
-        expectedRevision: savedMissing.draft.revision,
-      })
-    ).rejects.toMatchObject({
-      code: 'VALIDATION_FAILED',
-      errors: expect.arrayContaining([
-        expect.stringMatching(/historical_campaign.*conservarse o archivarse/i),
-        expect.stringMatching(/later_series.*conservarse o archivarse/i),
-      ]),
-    })
-
-    const reusedId = duplicateContentType(savedMissing.draft.document, 'regular_post', {
-      id: 'historical_campaign',
-      label: 'Otro propósito',
-    })
-    const savedReuse = await saveGuidelineDraft(rollbackDraft.draft.id, reusedId, {
-      updatedBy: 'Marco',
-      expectedRevision: savedMissing.draft.revision,
-    })
-
-    await expect(
-      activateGuidelineVersion(rollbackDraft.draft.id, {
-        activatedBy: 'Marco',
-        expectedRevision: savedReuse.draft.revision,
-      })
-    ).rejects.toMatchObject({
-      code: 'VALIDATION_FAILED',
-      errors: expect.arrayContaining([expect.stringMatching(/historical_campaign.*reservado/i)]),
-    })
-    expect(objects.get('guidelines/state.json')).toMatchObject({
-      activeVersion: 'mvp-default-v1',
-      draft: { id: rollbackDraft.draft.id, revision: 3 },
-    })
-    expect(objects.has('guidelines/versions/v4.json')).toBe(false)
-
-    const preservedHistory = {
-      ...savedReuse.draft.document,
-      contentTypeCatalog: savedReuse.draft.document.contentTypeCatalog
-        .map((entry) =>
-          entry.id === 'historical_campaign' ? { ...historicalEntry, status: 'archived' } : entry
-        )
-        .concat({ ...laterEntry, status: 'archived' }),
-    }
-    const savedHistory = await saveGuidelineDraft(rollbackDraft.draft.id, preservedHistory, {
-      updatedBy: 'Marco',
-      expectedRevision: savedReuse.draft.revision,
-    })
-    const republished = await activateGuidelineVersion(rollbackDraft.draft.id, {
+    const activated = await activateGuidelineVersion(nextDraft.draft.id, {
       activatedBy: 'Marco',
-      expectedRevision: savedHistory.draft.revision,
+      expectedRevision: savedRemoval.draft.revision,
     })
 
-    expect(republished.active.version).toBe('v4')
+    expect(activated.active.contentTypeCatalog.some(({ id }) => id === 'historical_campaign')).toBe(
+      false
+    )
     expect(
-      republished.active.contentTypeCatalog.find(({ id }) => id === 'historical_campaign')
-    ).toMatchObject({ label: 'Campaña histórica', status: 'archived' })
-    expect(
-      republished.active.contentTypeCatalog.find(({ id }) => id === 'later_series')
-    ).toMatchObject({ label: 'Serie posterior', status: 'archived' })
+      (await getGuidelineVersion(firstPublished.active.version)).contentTypeCatalog.some(
+        ({ id }) => id === 'historical_campaign'
+      )
+    ).toBe(true)
+    expect(activated.diff.removed).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'historical_campaign' })])
+    )
+    expect(activated.auditLog).toEqual(
+      expect.arrayContaining([expect.objectContaining({ action: 'removed_content_type' })])
+    )
   })
 
   test('audits content type creation and archival during activation', async () => {
@@ -909,7 +865,7 @@ describe('guidelines-store S3 lifecycle', () => {
     let injected = false
     mockPutObject.mockImplementation((request) => {
       const body = request.Key === 'guidelines/state.json' ? JSON.parse(request.Body) : null
-      if (body?.activeVersion === 'mvp-default-v1' && !injected) {
+      if (body?.activeVersion === 'default-v1' && !injected) {
         injected = true
         const current = objects.get('guidelines/state.json')
         const revisionTwo = {
@@ -934,85 +890,14 @@ describe('guidelines-store S3 lifecycle', () => {
     })
 
     await expect(
-      rollbackGuidelineVersion('mvp-default-v1', { rolledBackBy: 'Marco' })
-    ).resolves.toMatchObject({ active: { version: 'mvp-default-v1' } })
+      rollbackGuidelineVersion('default-v1', { rolledBackBy: 'Marco' })
+    ).resolves.toMatchObject({ active: { version: 'default-v1' } })
     expect(objects.get('guidelines/state.json')).toMatchObject({
-      activeVersion: 'mvp-default-v1',
+      activeVersion: 'default-v1',
       draft: { id: currentDraft.draft.id, revision: 2 },
     })
   })
 
-  test('migrates a stored v1 document in memory and rolls back without rewriting it', async () => {
-    const legacy = legacyV1Document()
-    objects.set('guidelines/versions/mvp-default-v1.json', clone(legacy))
-    objects.set('guidelines/state.json', {
-      activeVersion: 'mvp-default-v1',
-      draft: null,
-      versions: [
-        {
-          version: 'mvp-default-v1',
-          activatedAt: '2026-07-01T00:00:00.000Z',
-          activatedBy: 'system',
-        },
-      ],
-      activations: [],
-      updatedAt: '2026-07-01T00:00:00.000Z',
-    })
 
-    const activeLegacy = await getActiveGuidelines()
-    expect(activeLegacy.schemaVersion).toBe(GUIDELINES_SCHEMA_VERSION)
-    expect(activeLegacy.contentTypeCatalog[0].id).toBe('observation_night')
-    expect(objects.get('guidelines/versions/mvp-default-v1.json')).toEqual(legacy)
 
-    const created = await createGuidelineDraft({ createdBy: 'Marco' })
-    expect(created.draft.document.schemaVersion).toBe(GUIDELINES_SCHEMA_VERSION)
-    await activateGuidelineVersion(created.draft.id, {
-      activatedBy: 'Marco',
-      expectedRevision: created.draft.revision,
-    })
-
-    const before = clone(objects.get('guidelines/versions/mvp-default-v1.json'))
-    const rolled = await rollbackGuidelineVersion('mvp-default-v1', { rolledBackBy: 'Marco' })
-    expect(rolled.active.version).toBe('mvp-default-v1')
-    expect(rolled.active.schemaVersion).toBe(GUIDELINES_SCHEMA_VERSION)
-    expect(rolled.active.contentTypeCatalog[0].id).toBe('observation_night')
-    expect(objects.get('guidelines/versions/mvp-default-v1.json')).toEqual(before)
-
-    const versions = await listGuidelineVersions()
-    expect(versions.find((v) => v.version === 'mvp-default-v1')?.status).toBe('active')
-  })
-
-  test('migrates stored v2 platform rules in memory without rewriting the version', async () => {
-    const storedV2 = clone(getDefaultGuidelines())
-    storedV2.schemaVersion = 2
-    storedV2.platforms.x = 'Revisar la expectativa anterior de X.'
-    storedV2.generation.platforms = { x: 'Generar la expectativa anterior de X.' }
-    objects.set('guidelines/versions/mvp-default-v1.json', clone(storedV2))
-    objects.set('guidelines/state.json', {
-      activeVersion: 'mvp-default-v1',
-      draft: null,
-      versions: [{ version: 'mvp-default-v1' }],
-      activations: [],
-    })
-
-    const active = await getActiveGuidelines()
-
-    expect(active.schemaVersion).toBe(GUIDELINES_SCHEMA_VERSION)
-    expect(active.generation.platforms).toBeUndefined()
-    expect(active.platforms.x).toContain('Generar la expectativa anterior de X.')
-    expect(active.platforms.x).toContain('Revisar la expectativa anterior de X.')
-    expect(objects.get('guidelines/versions/mvp-default-v1.json')).toEqual(storedV2)
-  })
-})
-
-describe('guidelines-store without bucket', () => {
-  beforeEach(() => {
-    delete process.env.S3_ARTICLES_BUCKET_NAME
-  })
-
-  test('getActiveGuidelines returns defaults', async () => {
-    const active = await getActiveGuidelines()
-    expect(active).toEqual(getDefaultGuidelines())
-    await expect(getActiveGuidelinesStrict()).resolves.toEqual(getDefaultGuidelines())
-  })
 })

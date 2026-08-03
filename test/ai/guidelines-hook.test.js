@@ -649,7 +649,7 @@ describe('useGuidelinesDraft', () => {
   })
 
   test('flushes before activation and returns to the active view', async () => {
-    let activatedRevision
+    let activationBody
     let getCount = 0
     fetch.mockImplementation(async (url, options) => {
       if (!options?.method) {
@@ -665,7 +665,7 @@ describe('useGuidelinesDraft', () => {
         return jsonResponse({ draft: draftRecord(body.document, 2), auditLog: [] })
       }
       if (options.method === 'POST' && url.endsWith('/activate')) {
-        activatedRevision = JSON.parse(options.body).expectedRevision
+        activationBody = JSON.parse(options.body)
         return jsonResponse({ active: { version: 'v2', voice: 'Publicada' }, auditLog: [] })
       }
       throw new Error(`Unexpected request: ${options.method} ${url}`)
@@ -673,9 +673,9 @@ describe('useGuidelinesDraft', () => {
     await renderHarness()
 
     act(() => current.updateDraft({ voice: 'Lista para publicar' }))
-    await act(async () => current.activateDraftVersion())
+    await act(async () => current.activateDraftVersion('  Ajustes para X  '))
 
-    expect(activatedRevision).toBe(2)
+    expect(activationBody).toEqual({ expectedRevision: 2, versionName: 'Ajustes para X' })
     expect(current.draft).toBeNull()
     expect(current.viewMode).toBe('active')
     expect(current.displayDoc.voice).toBe('Publicada')

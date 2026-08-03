@@ -1,9 +1,11 @@
 import {
   getActiveGuidelines,
   getDefaultGuidelines,
+  resolveGenerationGuidelinesFromDocument,
   resolveGenerationGuidelinesForRequest,
   resolveGuidelinesForRequest,
 } from '../../lib/ai-guidelines'
+import defaultGuidelinesDocument from '../../data/guidelines/default-v1.json'
 
 describe('ai-guidelines', () => {
   const originalBucket = process.env.S3_ARTICLES_BUCKET_NAME
@@ -21,10 +23,22 @@ describe('ai-guidelines', () => {
     }
   })
 
+  test('getDefaultGuidelines clones the frozen default-v1 snapshot', () => {
+    const guidelines = getDefaultGuidelines()
+    expect(guidelines.version).toBe('default-v1')
+    expect(guidelines.schemaVersion).toBe(3)
+    expect(guidelines).toEqual({
+      ...JSON.parse(JSON.stringify(defaultGuidelinesDocument)),
+      version: 'default-v1',
+    })
+    guidelines.global = 'mutated'
+    expect(defaultGuidelinesDocument.global).not.toBe('mutated')
+  })
+
   test('getActiveGuidelines returns version and platform rules', async () => {
     const guidelines = await getActiveGuidelines()
-    expect(guidelines.version).toBe('mvp-default-v1')
-    expect(guidelines.global).toContain('Español')
+    expect(guidelines.version).toBe('default-v1')
+    expect(guidelines.global).toMatch(/español/i)
     expect(guidelines.platforms.x).toBeTruthy()
     expect(guidelines.platforms.instagram).toBeTruthy()
     expect(guidelines.platforms.facebook).toBeTruthy()
@@ -39,13 +53,30 @@ describe('ai-guidelines', () => {
     expect(getDefaultGuidelines()).toEqual(await getActiveGuidelines())
   })
 
+  test('keeps editable instructions in plain language without system field names', () => {
+    const guidelines = getDefaultGuidelines()
+    const editableInstructions = [
+      guidelines.global,
+      guidelines.prohibited,
+      guidelines.imageValidation,
+      guidelines.generation.imagePrompt,
+      ...Object.values(guidelines.contentTypes),
+      ...Object.values(guidelines.generation.contentTypes),
+    ].join('\n')
+
+    expect(editableInstructions).not.toMatch(
+      /uncertainty_factual_risk|humanReviewRequired|missingInformation|assumptions|imageRationale|completeness/
+    )
+    expect(guidelines.generation.global).toBe(guidelines.global)
+  })
+
   test('resolveGuidelinesForRequest merges platform and content type', async () => {
     const resolved = await resolveGuidelinesForRequest({
       platform: 'instagram',
       contentType: 'event_promotion',
     })
-    expect(resolved.version).toBe('mvp-default-v1')
-    expect(resolved.global).toContain('Español')
+    expect(resolved.version).toBe('default-v1')
+    expect(resolved.global).toMatch(/español/i)
     expect(resolved.platform).toContain('Instagram')
     expect(resolved.contentType).toContain('evento')
     expect(resolved.prohibited).toBeTruthy()
@@ -69,5 +100,23 @@ describe('ai-guidelines', () => {
 
     expect(generation.platform).toBe(validation.platform)
     expect(generation.captionMaxCharacters).toBe(validation.captionMaxCharacters)
+  })
+
+  test('generation uses voice once and ignores the retired legacy generation field', async () => {
+    const document = getDefaultGuidelines()
+    document.generation.global = 'LEGACY_GENERATION_RULE_SHOULD_NOT_APPEAR'
+
+    const resolved = await resolveGenerationGuidelinesForRequest({
+      platform: 'facebook',
+      contentType: 'regular_post',
+    })
+    const legacyResolved = resolveGenerationGuidelinesFromDocument(document, {
+      platform: 'facebook',
+      contentType: 'regular_post',
+    })
+
+    expect(resolved.global).toBe(getDefaultGuidelines().global)
+    expect(legacyResolved.global).toBe(document.global)
+    expect(legacyResolved.global).not.toContain('LEGACY_GENERATION_RULE_SHOULD_NOT_APPEAR')
   })
 })

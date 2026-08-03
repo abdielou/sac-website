@@ -1,0 +1,908 @@
+{
+  "schemaVersion": 3,
+  "version": "default-v1",
+  "global": "Escribe en español claro, con un tono cercano, educativo y preciso.\nDa prioridad al contexto y a la comunidad de Puerto Rico.\nExplica la astronomía de forma accesible, sin perder rigor.",
+  "platforms": {
+    "x": "X: redacción concisa; CTA breve si aplica. No añadir hashtags por defecto.",
+    "instagram": "Instagram: caption claro, visual y cercano, con un gancho en la primera línea y CTA clara si aplica. No añadir hashtags por defecto. Cuando incluya imagen, el texto y la imagen deben estar alineados.",
+    "facebook": "Facebook: redacción completa y de tono comunitario. Para eventos, incluir toda la información provista (nombre, fecha, hora y lugar) y una CTA explícita si aplica. No añadir hashtags por defecto."
+  },
+  "platformLabels": {
+    "x": "X",
+    "instagram": "Instagram",
+    "facebook": "Facebook"
+  },
+  "platformConstraints": {
+    "x": {
+      "captionMaxCharacters": 280
+    },
+    "instagram": {
+      "captionMaxCharacters": null
+    },
+    "facebook": {
+      "captionMaxCharacters": null
+    }
+  },
+  "prohibited": "No publicidad comercial no autorizada.\nNo comentario político partidista.\nNo afirmaciones pseudocientíficas presentadas como hechos verificados.\nNo imágenes generadas por IA que parezcan fotos documentales reales sin etiqueta clara.",
+  "imageValidation": "Verificar accesibilidad (texto alternativo cuando aplique).\nResolución mínima recomendada: 1080p para publicaciones con imagen.\nPrecisión astronómica razonable: mapas estelares coherentes, iluminación realista.\nValidar alineación entre texto e imagen.",
+  "contentTypes": {
+    "observation_night": "Noche de Observación: debe incluir fecha, hora y lugar. La invitación a participar es opcional. Si falta un dato necesario, indícalo claramente.",
+    "regular_post": "Publicación regular: el mensaje debe ser claro, autocontenido y tener la información necesaria para entenderlo.",
+    "caption": "Texto de acompañamiento: debe ser breve, claro y coherente con el tono general.",
+    "image_post": "La imagen debe ser apropiada y estar claramente relacionada con el texto.",
+    "carousel": "Cada imagen debe ser apropiada y estar relacionada con el texto que la acompaña.",
+    "reel_caption": "Revisa únicamente el texto que acompaña al video.",
+    "event_promotion": "Promoción de evento: debe incluir el nombre, la fecha, la hora, el lugar y una invitación clara a participar. Si falta alguno de esos datos, indícalo claramente.",
+    "educational_astronomy": "No presentes como confirmado un dato astronómico que no esté respaldado por la información provista.",
+    "member_update": "No incluir datos privados de miembros."
+  },
+  "generation": {
+    "contentTypes": {
+      "observation_night": "Noche de Observación: usa únicamente la fecha, la hora y el lugar provistos. La invitación a participar es opcional; si no se provee, no la inventes ni la señales como un dato faltante.",
+      "regular_post": "Publicación regular: mensaje claro y autocontenido, fiel a los datos provistos.",
+      "caption": "Caption: texto breve de acompañamiento, fiel a los datos provistos.",
+      "image_post": "Publicación con imagen: el texto debe funcionar como caption; no describas una imagen inexistente como si fuera real.",
+      "carousel": "Carrusel: el caption debe presentar el tema general; no inventes el contenido de cada lámina.",
+      "reel_caption": "Caption de reel: solo texto; no prometas contenido de video no provisto.",
+      "event_promotion": "Promoción de evento: usa únicamente el nombre, la fecha, la hora, el lugar y la información de registro que fueron provistos. Señala claramente cualquier dato necesario que falte.",
+      "educational_astronomy": "Educación astronómica: presenta solo afirmaciones respaldadas por la información provista y deja claro cualquier supuesto.",
+      "member_update": "Actualización para miembros: no incluir datos privados de miembros (nombres completos, contacto, pagos)."
+    },
+    "imagePrompt": "La imagen debe representar el tema de la publicación sin añadir datos nuevos.\nNo incluyas personas identificables, datos privados, logos oficiales ni imitaciones de estilos protegidos. Si aparecen menores porque el tema lo requiere, deben ser figuras no identificables, completamente vestidas y en un contexto familiar cotidiano y seguro.\nNo muestres fechas, horarios, lugares, costos ni enlaces que no estén en la información provista.\nNo presentes la imagen como una foto documental real ni como una comunicación oficial aprobada.\nEvita rostros identificables, el logo del SAC y el texto superpuesto que no haya sido solicitado.\nSi el tipo de publicación exige un saludo o una felicitación dentro de la imagen, usa exactamente ese mensaje con tipografía legible.\nExplica por qué la imagen propuesta apoya el mensaje y respeta el estilo y las restricciones visuales que indique la persona.",
+    "global": "Escribe en español claro, con un tono cercano, educativo y preciso.\nDa prioridad al contexto y a la comunidad de Puerto Rico.\nExplica la astronomía de forma accesible, sin perder rigor."
+  },
+  "contentTypeCatalog": [
+    {
+      "id": "observation_night",
+      "label": "Noche de Observación",
+      "status": "active",
+      "platforms": [
+        "x",
+        "instagram",
+        "facebook"
+      ],
+      "description": "Invitación recurrente a una Noche de Observación de SAC.",
+      "fields": [
+        {
+          "key": "date",
+          "label": "Fecha",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "time",
+          "label": "Hora",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "location",
+          "label": "Lugar",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "cta",
+          "label": "Llamado a la acción",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "sponsor",
+          "label": "Auspiciador",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        }
+      ],
+      "titleSource": "type_label",
+      "validation": {
+        "rules": "Noche de Observación: debe incluir fecha, hora y lugar. La invitación a participar es opcional. Si falta un dato necesario, indícalo claramente."
+      },
+      "generation": {
+        "rules": "Noche de Observación: usa únicamente la fecha, la hora y el lugar provistos. La invitación a participar es opcional; si no se provee, no la inventes ni la señales como un dato faltante."
+      },
+      "visual": {
+        "mode": "template",
+        "template": "event",
+        "backgroundSources": [
+          "stock",
+          "ai_generated"
+        ],
+        "sponsorAllowed": true,
+        "imagePolicyByPlatform": {
+          "x": "required",
+          "instagram": "required",
+          "facebook": "required"
+        }
+      }
+    },
+    {
+      "id": "regular_post",
+      "label": "Publicación regular",
+      "status": "active",
+      "platforms": [
+        "x",
+        "instagram",
+        "facebook"
+      ],
+      "description": "Publicación general para informar o conversar con la comunidad de SAC.",
+      "fields": [
+        {
+          "key": "intent",
+          "label": "Intención",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "topic",
+          "label": "Tema",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "cta",
+          "label": "Llamado a la acción",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "tone",
+          "label": "Tono",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "audience",
+          "label": "Audiencia",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "known_facts",
+          "label": "Datos confirmados",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "hashtags",
+          "label": "Hashtags",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "links",
+          "label": "Enlaces",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "image_style",
+          "label": "Estilo de imagen",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "image_constraints",
+          "label": "Restricciones visuales",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        }
+      ],
+      "titleSource": "topic",
+      "validation": {
+        "rules": "Publicación regular: el mensaje debe ser claro, autocontenido y tener la información necesaria para entenderlo."
+      },
+      "generation": {
+        "rules": "Publicación regular: mensaje claro y autocontenido, fiel a los datos provistos."
+      },
+      "visual": {
+        "mode": "template",
+        "template": "simple",
+        "backgroundSources": [
+          "stock",
+          "ai_generated"
+        ],
+        "sponsorAllowed": false,
+        "imagePolicyByPlatform": {
+          "x": "required",
+          "instagram": "required",
+          "facebook": "required"
+        }
+      }
+    },
+    {
+      "id": "caption",
+      "label": "Caption",
+      "status": "active",
+      "platforms": [
+        "x",
+        "instagram",
+        "facebook"
+      ],
+      "description": "Texto breve que acompaña una pieza ya definida.",
+      "fields": [
+        {
+          "key": "intent",
+          "label": "Intención",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "topic",
+          "label": "Tema",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "cta",
+          "label": "Llamado a la acción",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "tone",
+          "label": "Tono",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "audience",
+          "label": "Audiencia",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "known_facts",
+          "label": "Datos confirmados",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "hashtags",
+          "label": "Hashtags",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "links",
+          "label": "Enlaces",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "image_style",
+          "label": "Estilo de imagen",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "image_constraints",
+          "label": "Restricciones visuales",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        }
+      ],
+      "titleSource": "topic",
+      "validation": {
+        "rules": "Texto de acompañamiento: debe ser breve, claro y coherente con el tono general."
+      },
+      "generation": {
+        "rules": "Caption: texto breve de acompañamiento, fiel a los datos provistos."
+      },
+      "visual": {
+        "mode": "ai_image",
+        "template": null,
+        "backgroundSources": [],
+        "sponsorAllowed": false,
+        "imagePolicyByPlatform": {
+          "x": "required",
+          "instagram": "required",
+          "facebook": "required"
+        }
+      }
+    },
+    {
+      "id": "image_post",
+      "label": "Publicación con imagen",
+      "status": "active",
+      "platforms": [
+        "x",
+        "instagram",
+        "facebook"
+      ],
+      "description": "Publicación centrada en una imagen y su mensaje.",
+      "fields": [
+        {
+          "key": "intent",
+          "label": "Intención",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "topic",
+          "label": "Tema",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "cta",
+          "label": "Llamado a la acción",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "tone",
+          "label": "Tono",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "audience",
+          "label": "Audiencia",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "known_facts",
+          "label": "Datos confirmados",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "hashtags",
+          "label": "Hashtags",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "links",
+          "label": "Enlaces",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "image_style",
+          "label": "Estilo de imagen",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "image_constraints",
+          "label": "Restricciones visuales",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        }
+      ],
+      "titleSource": "topic",
+      "validation": {
+        "rules": "La imagen debe ser apropiada y estar claramente relacionada con el texto."
+      },
+      "generation": {
+        "rules": "Publicación con imagen: el texto debe funcionar como caption; no describas una imagen inexistente como si fuera real."
+      },
+      "visual": {
+        "mode": "template",
+        "template": "simple",
+        "backgroundSources": [
+          "stock",
+          "ai_generated"
+        ],
+        "sponsorAllowed": false,
+        "imagePolicyByPlatform": {
+          "x": "required",
+          "instagram": "required",
+          "facebook": "required"
+        }
+      }
+    },
+    {
+      "id": "carousel",
+      "label": "Carrusel",
+      "status": "active",
+      "platforms": [
+        "x",
+        "instagram",
+        "facebook"
+      ],
+      "description": "Publicación que presenta un tema mediante varias láminas.",
+      "fields": [
+        {
+          "key": "intent",
+          "label": "Intención",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "topic",
+          "label": "Tema",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "cta",
+          "label": "Llamado a la acción",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "tone",
+          "label": "Tono",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "audience",
+          "label": "Audiencia",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "known_facts",
+          "label": "Datos confirmados",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "hashtags",
+          "label": "Hashtags",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "links",
+          "label": "Enlaces",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "image_style",
+          "label": "Estilo de imagen",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "image_constraints",
+          "label": "Restricciones visuales",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        }
+      ],
+      "titleSource": "topic",
+      "validation": {
+        "rules": "Cada imagen debe ser apropiada y estar relacionada con el texto que la acompaña."
+      },
+      "generation": {
+        "rules": "Carrusel: el caption debe presentar el tema general; no inventes el contenido de cada lámina."
+      },
+      "visual": {
+        "mode": "template",
+        "template": "simple",
+        "backgroundSources": [
+          "stock",
+          "ai_generated"
+        ],
+        "sponsorAllowed": false,
+        "imagePolicyByPlatform": {
+          "x": "required",
+          "instagram": "required",
+          "facebook": "required"
+        }
+      }
+    },
+    {
+      "id": "reel_caption",
+      "label": "Caption de reel",
+      "status": "active",
+      "platforms": [
+        "x",
+        "facebook"
+      ],
+      "description": "Texto de acompañamiento para un reel existente.",
+      "fields": [
+        {
+          "key": "intent",
+          "label": "Intención",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "topic",
+          "label": "Tema",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "cta",
+          "label": "Llamado a la acción",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "tone",
+          "label": "Tono",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "audience",
+          "label": "Audiencia",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "known_facts",
+          "label": "Datos confirmados",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "hashtags",
+          "label": "Hashtags",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "links",
+          "label": "Enlaces",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        }
+      ],
+      "titleSource": "topic",
+      "validation": {
+        "rules": "Revisa únicamente el texto que acompaña al video."
+      },
+      "generation": {
+        "rules": "Caption de reel: solo texto; no prometas contenido de video no provisto."
+      },
+      "visual": {
+        "mode": "none",
+        "template": null,
+        "backgroundSources": [],
+        "sponsorAllowed": false,
+        "imagePolicyByPlatform": {
+          "x": "prohibited",
+          "instagram": "prohibited",
+          "facebook": "prohibited"
+        }
+      }
+    },
+    {
+      "id": "event_promotion",
+      "label": "Promoción de evento",
+      "status": "active",
+      "platforms": [
+        "x",
+        "instagram",
+        "facebook"
+      ],
+      "description": "Promoción de un evento de SAC distinto a Noche de Observación.",
+      "fields": [
+        {
+          "key": "event_name",
+          "label": "Nombre del evento",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "date",
+          "label": "Fecha",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "time",
+          "label": "Hora",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "location",
+          "label": "Lugar",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "cta",
+          "label": "Llamado a la acción",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "sponsor",
+          "label": "Auspiciador",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        }
+      ],
+      "titleSource": "event_name",
+      "validation": {
+        "rules": "Promoción de evento: debe incluir el nombre, la fecha, la hora, el lugar y una invitación clara a participar. Si falta alguno de esos datos, indícalo claramente."
+      },
+      "generation": {
+        "rules": "Promoción de evento: usa únicamente el nombre, la fecha, la hora, el lugar y la información de registro que fueron provistos. Señala claramente cualquier dato necesario que falte."
+      },
+      "visual": {
+        "mode": "template",
+        "template": "event",
+        "backgroundSources": [
+          "stock",
+          "ai_generated"
+        ],
+        "sponsorAllowed": true,
+        "imagePolicyByPlatform": {
+          "x": "required",
+          "instagram": "required",
+          "facebook": "required"
+        }
+      }
+    },
+    {
+      "id": "educational_astronomy",
+      "label": "Educación astronómica",
+      "status": "active",
+      "platforms": [
+        "x",
+        "instagram",
+        "facebook"
+      ],
+      "description": "Contenido educativo de astronomía para la comunidad de SAC.",
+      "fields": [
+        {
+          "key": "intent",
+          "label": "Intención",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "topic",
+          "label": "Tema",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "cta",
+          "label": "Llamado a la acción",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "tone",
+          "label": "Tono",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "audience",
+          "label": "Audiencia",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "known_facts",
+          "label": "Datos confirmados",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "hashtags",
+          "label": "Hashtags",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "links",
+          "label": "Enlaces",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "image_style",
+          "label": "Estilo de imagen",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "image_constraints",
+          "label": "Restricciones visuales",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        }
+      ],
+      "titleSource": "topic",
+      "validation": {
+        "rules": "No presentes como confirmado un dato astronómico que no esté respaldado por la información provista."
+      },
+      "generation": {
+        "rules": "Educación astronómica: presenta solo afirmaciones respaldadas por la información provista y deja claro cualquier supuesto."
+      },
+      "visual": {
+        "mode": "template",
+        "template": "simple",
+        "backgroundSources": [
+          "stock",
+          "ai_generated"
+        ],
+        "sponsorAllowed": false,
+        "imagePolicyByPlatform": {
+          "x": "required",
+          "instagram": "required",
+          "facebook": "required"
+        }
+      }
+    },
+    {
+      "id": "member_update",
+      "label": "Actualización para miembros",
+      "status": "active",
+      "platforms": [
+        "x",
+        "instagram",
+        "facebook"
+      ],
+      "description": "Actualización institucional dirigida a miembros de SAC.",
+      "fields": [
+        {
+          "key": "intent",
+          "label": "Intención",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "topic",
+          "label": "Tema",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "cta",
+          "label": "Llamado a la acción",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "tone",
+          "label": "Tono",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "audience",
+          "label": "Audiencia",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "known_facts",
+          "label": "Datos confirmados",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "hashtags",
+          "label": "Hashtags",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "links",
+          "label": "Enlaces",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "image_style",
+          "label": "Estilo de imagen",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "image_constraints",
+          "label": "Restricciones visuales",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        }
+      ],
+      "titleSource": "topic",
+      "validation": {
+        "rules": "No incluir datos privados de miembros."
+      },
+      "generation": {
+        "rules": "Actualización para miembros: no incluir datos privados de miembros (nombres completos, contacto, pagos)."
+      },
+      "visual": {
+        "mode": "template",
+        "template": "simple",
+        "backgroundSources": [
+          "stock",
+          "ai_generated"
+        ],
+        "sponsorAllowed": false,
+        "imagePolicyByPlatform": {
+          "x": "required",
+          "instagram": "required",
+          "facebook": "required"
+        }
+      }
+    }
+  ]
+}

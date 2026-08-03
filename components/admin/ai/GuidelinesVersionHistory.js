@@ -60,7 +60,7 @@ export default function GuidelinesVersionHistory({
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="truncate text-sm font-semibold text-gray-950 dark:text-white">
-                        {entry.version}
+                        {entry.versionName || entry.version}
                       </p>
                       {isActive && (
                         <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/40 dark:text-green-200">
@@ -69,8 +69,9 @@ export default function GuidelinesVersionHistory({
                       )}
                     </div>
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      {entry.versionName ? `${entry.version} · ` : ''}
+                      {entry.activatedBy ? `${entry.activatedBy} · ` : ''}
                       {formatDate(entry.activatedAt)}
-                      {entry.activatedBy ? ` · ${entry.activatedBy}` : ''}
                     </p>
                   </div>
                   {canWrite && !isActive && (

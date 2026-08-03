@@ -1,7 +1,5 @@
 import {
-  activateDraft,
   addPlatform,
-  bumpLocalVersion,
   cloneGuidelines,
   createAuditEvent,
   createGuidelineDocument,
@@ -25,22 +23,6 @@ describe('ai-guidelines-draft', () => {
     const copy = cloneGuidelines(doc)
     copy.global = 'changed'
     expect(doc.global).not.toBe('changed')
-  })
-
-  test('bumpLocalVersion increments local versions', () => {
-    expect(bumpLocalVersion('mvp-default-v1')).toBe('local-v2')
-    expect(bumpLocalVersion('local-v2')).toBe('local-v3')
-    expect(bumpLocalVersion('local-v9')).toBe('local-v10')
-  })
-
-  test('activateDraft promotes draft with new version and audit event', () => {
-    const draft = createGuidelineDocument({ version: 'mvp-default-v1', seed })
-    const { active, auditEvent } = activateDraft(draft, 'Elena R.')
-    expect(active.version).toBe('local-v2')
-    expect(active.updatedBy).toBe('Elena R.')
-    expect(active.updatedAt).toBeTruthy()
-    expect(auditEvent.action).toBe('activated')
-    expect(auditEvent.by).toBe('Elena R.')
   })
 
   test('prependAuditEvent caps history length', () => {
@@ -67,15 +49,15 @@ describe('ai-guidelines-draft', () => {
   })
 
   test('normalizeGuidelineDocument fills missing platformLabels from constants', () => {
-    const legacy = {
-      version: 'mvp-default-v1',
+    const partial = {
+      version: 'default-v1',
       global: 'g',
       platforms: { x: 'rules-x', instagram: 'rules-ig' },
       prohibited: 'p',
       imageValidation: 'i',
       contentTypes: {},
     }
-    const normalized = normalizeGuidelineDocument(legacy)
+    const normalized = normalizeGuidelineDocument(partial)
     expect(normalized.platformLabels.x).toBe('X')
     expect(normalized.platformLabels.instagram).toBe('Instagram')
     expect(normalized.platforms.x).toBe('rules-x')
@@ -111,8 +93,13 @@ describe('ai-guidelines-draft', () => {
     expect(Object.keys(next.platforms)).toHaveLength(4)
     for (const entry of next.contentTypeCatalog) {
       expect(entry.visual.imagePolicyByPlatform.threads).toBe(
-        entry.visual.mode === 'none' ? 'prohibited' : 'optional'
+        entry.visual.mode === 'none'
+          ? 'prohibited'
+          : entry.platforms.includes('instagram')
+            ? 'required'
+            : 'optional'
       )
+      expect(entry.platforms).toContain('threads')
     }
   })
 
@@ -130,6 +117,7 @@ describe('ai-guidelines-draft', () => {
     expect(Object.keys(next.platforms)).toHaveLength(2)
     for (const entry of next.contentTypeCatalog) {
       expect(entry.visual.imagePolicyByPlatform.facebook).toBeUndefined()
+      expect(entry.platforms).not.toContain('facebook')
     }
   })
 
@@ -207,6 +195,7 @@ describe('ai-guidelines-draft', () => {
       mode: 'generation',
     })
     expect(generation.mode).toBe('generation')
+    expect(generation.global).toBe(seed.global)
     expect(generation.platform).toBe(validation.platform)
     expect(generation.captionMaxCharacters).toBeNull()
     expect(generation.platform).not.toMatch(/280/)

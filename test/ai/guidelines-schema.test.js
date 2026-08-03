@@ -4,70 +4,35 @@ import {
   diffGuidelineDocuments,
   duplicateContentType,
   listContentTypeDefinitions,
-  migrateGuidelineDocumentToV3,
   moveContentType,
+  normalizeGuidelineDocumentV3,
   resolveContentTypeDefinition,
   setContentTypeStatus,
   summarizeGuidelineDocumentChanges,
   validateGuidelineForActivation,
 } from '../../lib/ai-guidelines-schema'
-
-function legacyGuidelines() {
-  return {
-    version: 'mvp-default-v1',
-    global: 'Voz social de SAC en español.',
-    platforms: {
-      x: 'Reglas para X.',
-      instagram: 'Reglas para Instagram.',
-      facebook: 'Reglas para Facebook.',
-    },
-    platformLabels: {
-      x: 'X',
-      instagram: 'Instagram',
-      facebook: 'Facebook',
-    },
-    prohibited: 'Restricciones adicionales de SAC.',
-    imageValidation: 'Validar que cada imagen corresponda a la publicación.',
-    contentTypes: {
-      observation_night: 'Validar fecha, hora y lugar de la noche de observación.',
-      event_promotion: 'Validar la información confirmada del evento.',
-    },
-    generation: {
-      global: 'Generar contenido social fiel a los datos provistos.',
-      platforms: {
-        x: 'Generación para X.',
-        instagram: 'Generación para Instagram.',
-        facebook: 'Generación para Facebook.',
-      },
-      contentTypes: {
-        observation_night: 'Generar una invitación de Noche de Observación.',
-        event_promotion: 'Generar una promoción del evento.',
-      },
-      imagePrompt: 'Crear una imagen relacionada con la publicación.',
-    },
-  }
-}
+import { getDefaultGuidelines } from '../../lib/ai-guidelines'
 
 function validGuidelines() {
-  return migrateGuidelineDocumentToV3(legacyGuidelines())
+  return getDefaultGuidelines()
 }
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value))
 }
 
-describe('Guidelines schema v3 migration', () => {
-  test('migrates an older document to v3 once and is idempotent', () => {
+describe('Guidelines schema v3 seed', () => {
+  test('default guidelines are schema v3 with a content-type catalog', () => {
     const migrated = validGuidelines()
-    const migratedAgain = migrateGuidelineDocumentToV3(migrated)
+    const migratedAgain = normalizeGuidelineDocumentV3(migrated)
 
     expect(migrated.schemaVersion).toBe(GUIDELINES_SCHEMA_VERSION)
     expect(migrated.contentTypeCatalog).toBeInstanceOf(Array)
     expect(migrated.contentTypes.observation_night).toContain('fecha, hora y lugar')
     expect(migrated.generation.contentTypes.observation_night).toContain('invitación')
     expect(migrated.generation.platforms).toBeUndefined()
-    expect(migrated.platforms.x).toContain('Generación para X.')
-    expect(migrated.platforms.x).toContain('Reglas para X.')
+    expect(migrated.generation.global).toBe(migrated.global)
+    expect(migrated.version).toBe('default-v1')
     expect(migratedAgain).toEqual(migrated)
   })
 
@@ -85,25 +50,31 @@ describe('Guidelines schema v3 migration', () => {
     expect(migrated.contentTypeCatalog.some(({ id }) => id === 'event_promotion')).toBe(true)
   })
 
-  test('migrates the historic X limit into an editable platform constraint', () => {
-    const legacy = legacyGuidelines()
-    legacy.generation.platforms.x = 'Redacción concisa; máximo 280 caracteres.'
-    const migrated = migrateGuidelineDocumentToV3(legacy)
+  test('preserves customized guideline copy when normalizing', () => {
+    const customized = validGuidelines()
+    const customVoice = 'Voz personalizada por el equipo editorial.'
+    const customImageRule = 'Usa ilustraciones creadas por artistas de la comunidad.'
+    const customTypeRule = 'Explica el tema con una analogía cotidiana propia del SAC.'
+    customized.global = customVoice
+    customized.generation.imagePrompt = customImageRule
+    customized.contentTypeCatalog.find(
+      ({ id }) => id === 'educational_astronomy'
+    ).generation.rules = customTypeRule
 
-    expect(migrated.platformConstraints.x.captionMaxCharacters).toBe(280)
-    expect(migrated.platforms.x).not.toContain('280')
-    migrated.platformConstraints.x.captionMaxCharacters = null
+    const normalized = normalizeGuidelineDocumentV3(customized)
 
-    expect(validateGuidelineForActivation(migrated).ok).toBe(true)
+    expect(normalized.global).toBe(customVoice)
+    expect(normalized.generation.global).toBe(customVoice)
+    expect(normalized.generation.imagePrompt).toBe(customImageRule)
     expect(
-      migrateGuidelineDocumentToV3(migrated).platformConstraints.x.captionMaxCharacters
-    ).toBeNull()
+      normalized.contentTypeCatalog.find(({ id }) => id === 'educational_astronomy').generation
+        .rules
+    ).toBe(customTypeRule)
   })
 
-  test('does not invent a character limit from the platform name', () => {
+  test('keeps the structured X character limit from the seed', () => {
     const migrated = validGuidelines()
-
-    expect(migrated.platformConstraints.x.captionMaxCharacters).toBeNull()
+    expect(migrated.platformConstraints.x.captionMaxCharacters).toBe(280)
   })
 
   test('keeps character limits in the structured field instead of free text', () => {
@@ -122,7 +93,7 @@ describe('Guidelines schema v3 migration', () => {
 
   test('does not reactivate an archived type when normalizing an existing document', () => {
     const archived = setContentTypeStatus(validGuidelines(), 'observation_night', 'archived')
-    const normalizedAgain = migrateGuidelineDocumentToV3(archived)
+    const normalizedAgain = normalizeGuidelineDocumentV3(archived)
 
     expect(
       resolveContentTypeDefinition(normalizedAgain, 'observation_night', {
@@ -130,26 +101,6 @@ describe('Guidelines schema v3 migration', () => {
       })?.status
     ).toBe('archived')
     expect(resolveContentTypeDefinition(normalizedAgain, 'observation_night')).toBeNull()
-  })
-
-  test('migrates a v2 catalog without losing custom types or either platform rule', () => {
-    const v2 = validGuidelines()
-    v2.schemaVersion = 2
-    v2.platforms.x = 'Revisar el resultado legado de X.'
-    v2.generation.platforms = { x: 'Crear el resultado legado de X.' }
-    v2.contentTypeCatalog.push({
-      ...clone(v2.contentTypeCatalog.find(({ id }) => id === 'regular_post')),
-      id: 'community_story',
-      label: 'Historia de la comunidad',
-    })
-
-    const migrated = migrateGuidelineDocumentToV3(v2)
-
-    expect(migrated.schemaVersion).toBe(GUIDELINES_SCHEMA_VERSION)
-    expect(migrated.generation.platforms).toBeUndefined()
-    expect(migrated.platforms.x).toContain('Crear el resultado legado de X.')
-    expect(migrated.platforms.x).toContain('Revisar el resultado legado de X.')
-    expect(migrated.contentTypeCatalog.some(({ id }) => id === 'community_story')).toBe(true)
   })
 })
 
@@ -159,6 +110,17 @@ describe('Guidelines schema v3 activation validation', () => {
       ok: true,
       errors: [],
       issues: [],
+    })
+  })
+
+  test('does not require the retired global generation field', () => {
+    const document = validGuidelines()
+    delete document.generation.global
+
+    expect(validateGuidelineForActivation(document)).toMatchObject({
+      ok: true,
+      issues: [],
+      document: { generation: { global: document.global } },
     })
   })
 
@@ -193,6 +155,7 @@ describe('Guidelines schema v3 activation validation', () => {
     delete document.platforms.x
     delete document.platformLabels.x
     for (const entry of document.contentTypeCatalog) {
+      entry.platforms = entry.platforms.filter((platform) => platform !== 'x')
       if (entry.visual?.imagePolicyByPlatform) {
         delete entry.visual.imagePolicyByPlatform.x
       }
@@ -251,6 +214,23 @@ describe('Guidelines schema v3 activation validation', () => {
 
     expect(validation.ok).toBe(false)
     expect(validation.errors).toEqual(expect.arrayContaining([expect.stringMatching(/duplicado/i)]))
+  })
+
+  test('rejects duplicate content type names regardless of capitalization', () => {
+    const document = validGuidelines()
+    document.contentTypeCatalog[1].label = document.contentTypeCatalog[0].label.toUpperCase()
+
+    const validation = validateGuidelineForActivation(document)
+
+    expect(validation.ok).toBe(false)
+    expect(validation.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'duplicate_label',
+          path: 'contentTypeCatalog.1.label',
+        }),
+      ])
+    )
   })
 
   test('does not recreate a missing v3 catalog during activation', () => {
@@ -321,6 +301,8 @@ describe('Guidelines schema v3 activation validation', () => {
       name: 'visual mode prohibited on every platform',
       mutate(document) {
         const type = document.contentTypeCatalog.find(({ id }) => id === 'regular_post')
+        type.platforms = ['x']
+        type.visual.imagePolicyByPlatform.x = 'prohibited'
         type.visual.imagePolicyByPlatform = {
           x: 'prohibited',
           instagram: 'prohibited',
@@ -379,6 +361,8 @@ describe('Guidelines schema v3 activation validation', () => {
       name: 'required sponsor on a text-only supported platform',
       mutate(document) {
         const type = document.contentTypeCatalog.find(({ id }) => id === 'regular_post')
+        type.platforms = ['x']
+        type.visual.imagePolicyByPlatform.x = 'prohibited'
         type.fields.push({
           key: 'sponsor',
           label: 'Auspiciador',
@@ -401,23 +385,19 @@ describe('Guidelines schema v3 activation validation', () => {
     expect(validation.errors).toEqual(expect.arrayContaining([expect.stringMatching(error)]))
   })
 
-  test('requires published IDs to be archived instead of removed', () => {
+  test('allows a published type to be removed from the new version', () => {
     const published = validGuidelines()
     const removed = clone(published)
     removed.contentTypeCatalog = removed.contentTypeCatalog.filter(({ id }) => id !== 'caption')
 
-    const invalid = validateGuidelineForActivation(removed, { baseDocument: published })
-    const archived = setContentTypeStatus(published, 'caption', 'archived')
-    const valid = validateGuidelineForActivation(archived, { baseDocument: published })
+    const validation = validateGuidelineForActivation(removed)
 
-    expect(invalid.ok).toBe(false)
-    expect(invalid.errors).toEqual(
-      expect.arrayContaining([expect.stringMatching(/publicado "caption" no puede eliminarse/i)])
-    )
-    expect(valid.ok).toBe(true)
+    expect(validation.ok).toBe(true)
+    expect(validation.document.contentTypeCatalog.some(({ id }) => id === 'caption')).toBe(false)
+    expect(published.contentTypeCatalog.some(({ id }) => id === 'caption')).toBe(true)
   })
 
-  test('keeps the ADR-defined observation night identity and logistics', () => {
+  test('allows the team to adapt observation night while preserving its internal ID', () => {
     const document = validGuidelines()
     const observation = document.contentTypeCatalog.find(({ id }) => id === 'observation_night')
     observation.label = 'Evento genérico'
@@ -436,26 +416,20 @@ describe('Guidelines schema v3 activation validation', () => {
 
     const validation = validateGuidelineForActivation(document)
 
-    expect(validation.ok).toBe(false)
-    expect(validation.errors).toEqual(
+    expect(validation.ok).toBe(true)
+    expect(validation.document.contentTypeCatalog).toEqual(
       expect.arrayContaining([
-        expect.stringMatching(/conservar la etiqueta/i),
-        expect.stringMatching(/date como campo requerido/i),
-        expect.stringMatching(/sponsor como campo opcional/i),
-        expect.stringMatching(/no puede sustituir su identidad/i),
+        expect.objectContaining({ id: 'observation_night', label: 'Evento genérico' }),
       ])
     )
   })
 
-  test('does not allow observation_night to be archived without an authorization mechanism', () => {
+  test('allows observation_night to be archived like any other content type', () => {
     const document = setContentTypeStatus(validGuidelines(), 'observation_night', 'archived')
 
     const validation = validateGuidelineForActivation(document)
 
-    expect(validation.ok).toBe(false)
-    expect(validation.errors).toEqual(
-      expect.arrayContaining([expect.stringMatching(/permanecer activo/i)])
-    )
+    expect(validation.ok).toBe(true)
   })
 })
 
@@ -481,6 +455,20 @@ describe('Guidelines schema v3 catalog operations', () => {
       label: 'Otra historia',
       status: 'active',
     })
+  })
+
+  test('derives valid bounded IDs from nontechnical names', () => {
+    const base = validGuidelines()
+    const numeric = createContentType(base, { label: '123' })
+    const collision = createContentType(numeric, { label: '123!' })
+    const longName = `Actividad ${'educativa '.repeat(20)}`
+    const long = createContentType(collision, { label: longName })
+    const createdIds = long.contentTypeCatalog
+      .slice(base.contentTypeCatalog.length)
+      .map(({ id }) => id)
+
+    expect(createdIds).toEqual(expect.arrayContaining(['type_123', 'type_123_2']))
+    expect(createdIds.every((id) => /^[a-z][a-z0-9_]{1,63}$/.test(id))).toBe(true)
   })
 
   test('duplicates as a new type and archives the original only when requested', () => {
@@ -589,7 +577,9 @@ describe('Guidelines schema v3 catalog operations', () => {
       ])
     )
     expect(summary.generalRules.items).toEqual(
-      expect.arrayContaining([expect.objectContaining({ label: 'Voz al validar', path: 'global' })])
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Voz y tono general', path: 'global' }),
+      ])
     )
     expect(summary.platforms.items).toEqual(
       expect.arrayContaining([
@@ -643,6 +633,18 @@ describe('Guidelines schema v3 catalog operations', () => {
         ({ changed, items }) => changed === false && items.length === 0
       )
     ).toBe(true)
+  })
+
+  test('replaces the retired global generation field with an ignored compatibility alias', () => {
+    const active = validGuidelines()
+    const withLegacyField = clone(active)
+    withLegacyField.generation.global = 'Instrucción técnica heredada.'
+
+    expect(normalizeGuidelineDocumentV3(withLegacyField).generation.global).toBe(active.global)
+    expect(summarizeGuidelineDocumentChanges(active, withLegacyField)).toMatchObject({
+      hasChanges: false,
+      totalChanges: 0,
+    })
   })
 
   test('lists and resolves active types separately from archived types', () => {

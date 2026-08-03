@@ -9,6 +9,7 @@ import {
   summarizeGuidelineDocumentChanges,
   validateGuidelineForActivation,
 } from '@/lib/ai-guidelines-schema'
+import { suggestGuidelineVersionName } from '@/lib/guideline-version-name'
 import { useGuidelinesDraft } from '@/lib/hooks/useGuidelinesDraft'
 import GuidelinesActivationReview from '@/components/admin/ai/GuidelinesActivationReview'
 import GuidelinesContentTypeCatalog from '@/components/admin/ai/GuidelinesContentTypeCatalog'
@@ -58,7 +59,13 @@ function LoadError({ message, loading, onRetry }) {
   )
 }
 
-const CONTENT_TYPE_PANELS = new Set(['information', 'fields', 'validation', 'generation', 'image'])
+const CONTENT_TYPE_PANELS = new Set([
+  'information',
+  'fields',
+  'assistant',
+  'validation',
+  'generation',
+])
 
 function domId(value) {
   return String(value || 'new').replace(/[^a-zA-Z0-9_-]/g, '-')
@@ -69,7 +76,7 @@ function contentTypePanelForPath(path) {
   if (/\.fields(?:\.|$)/.test(value)) return 'fields'
   if (/\.validation(?:\.|$)/.test(value)) return 'validation'
   if (/\.generation(?:\.|$)/.test(value)) return 'generation'
-  if (/\.visual(?:\.|$)/.test(value)) return 'image'
+  if (/\.visual(?:\.|$)/.test(value)) return 'information'
   return 'information'
 }
 
@@ -84,7 +91,6 @@ function focusTargetId(path, document, selectedTypeId) {
   const value = String(path || '')
   const generalTargets = {
     global: 'guidelines-brand-voice',
-    'generation.global': 'guidelines-generation-global',
     prohibited: 'guidelines-prohibited',
     imageValidation: 'guidelines-image-validation',
     'generation.imagePrompt': 'guidelines-image-generation',
@@ -131,7 +137,8 @@ function focusTargetId(path, document, selectedTypeId) {
     return `field-${safeTypeId}-${domId(field.key)}-${fieldIndex}-${part}`
   }
 
-  return `content-type-tab-${contentTypePanelForPath(value)}`
+  const panel = contentTypePanelForPath(value)
+  return `content-type-tab-${['validation', 'generation'].includes(panel) ? 'assistant' : panel}`
 }
 
 export default function GuidelinesClient() {
@@ -167,6 +174,7 @@ export default function GuidelinesClient() {
   } = useGuidelinesDraft({ canWrite })
 
   const [platformError, setPlatformError] = useState(null)
+  const [versionName, setVersionName] = useState('')
   const [showDiscardConfirmation, setShowDiscardConfirmation] = useState(false)
   const [pendingRollbackVersion, setPendingRollbackVersion] = useState(null)
   const discardDialogRef = useRef(null)
@@ -175,6 +183,8 @@ export default function GuidelinesClient() {
   const rollbackDialogRef = useRef(null)
   const rollbackCancelRef = useRef(null)
   const rollbackTriggerRef = useRef(null)
+  const versionNameDraftIdRef = useRef(null)
+  const versionNameEditedRef = useRef(false)
 
   const sectionParam = searchParams.get('section')
   const activeSection = GUIDELINES_SECTIONS.includes(sectionParam) ? sectionParam : 'types'
@@ -210,13 +220,6 @@ export default function GuidelinesClient() {
   const actionLoading = operationLoading || saving
   const draftDoc = draft?.document
   const platformEntries = useMemo(() => listPlatformEntries(displayDoc), [displayDoc])
-  const publishedIds = useMemo(
-    () =>
-      active
-        ? listContentTypeDefinitions(active, { includeArchived: true }).map(({ id }) => id)
-        : [],
-    [active]
-  )
   const defaultTypeId = useMemo(
     () =>
       displayDoc
@@ -226,10 +229,8 @@ export default function GuidelinesClient() {
   )
   const activationValidation = useMemo(
     () =>
-      draftDoc
-        ? validateGuidelineForActivation(draftDoc, { baseDocument: active })
-        : { ok: false, errors: [], issues: [] },
-    [active, draftDoc]
+      draftDoc ? validateGuidelineForActivation(draftDoc) : { ok: false, errors: [], issues: [] },
+    [draftDoc]
   )
   const changeSummary = useMemo(
     () =>
@@ -238,6 +239,25 @@ export default function GuidelinesClient() {
         : null,
     [activationValidation.document, active, draftDoc]
   )
+  const suggestedVersionName = useMemo(
+    () => suggestGuidelineVersionName(changeSummary),
+    [changeSummary]
+  )
+
+  useEffect(() => {
+    if (!draft?.id) {
+      versionNameDraftIdRef.current = null
+      versionNameEditedRef.current = false
+      setVersionName('')
+      return
+    }
+
+    if (versionNameDraftIdRef.current !== draft.id) {
+      versionNameDraftIdRef.current = draft.id
+      versionNameEditedRef.current = false
+    }
+    if (!versionNameEditedRef.current) setVersionName(suggestedVersionName)
+  }, [draft?.id, suggestedVersionName])
 
   useEffect(() => {
     if (!hydrated) return
@@ -399,8 +419,13 @@ export default function GuidelinesClient() {
   }
 
   const handleActivate = async () => {
-    const result = await activateDraftVersion()
+    const result = await activateDraftVersion(versionName)
     if (result) updateRoute({ view: 'active', review: null })
+  }
+
+  const handleVersionNameChange = (nextName) => {
+    versionNameEditedRef.current = true
+    setVersionName(nextName)
   }
 
   const handleDiscard = async () => {
@@ -562,6 +587,8 @@ export default function GuidelinesClient() {
           summary={changeSummary}
           canWrite={canWrite}
           loading={actionLoading}
+          versionName={versionName}
+          onVersionNameChange={handleVersionNameChange}
           onBack={() => updateRoute({ review: null })}
           onActivate={handleActivate}
           onNavigate={handleReviewNavigate}
@@ -576,7 +603,6 @@ export default function GuidelinesClient() {
               onChange={(nextDocument) => updateDraft(() => nextDocument)}
               editable={editable}
               loading={operationLoading}
-              publishedIds={publishedIds}
               protectObservationNight
               selectedId={selectedTypeId}
               onSelectedIdChange={handleSelectType}
