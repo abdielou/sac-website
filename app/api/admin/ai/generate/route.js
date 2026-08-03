@@ -2,7 +2,7 @@ import { auth } from '../../../../../auth'
 import { NextResponse } from 'next/server'
 import sharp from 'sharp'
 import { checkPermission } from '../../../../../lib/api-permissions'
-import { AI_BASE_POLICY_VERSION } from '../../../../../lib/ai-base-policy'
+import { AI_BASE_POLICY_VERSION } from '../../../../../lib/ai-agent'
 import { shouldGenerateImagePrompt } from '../../../../../lib/ai-constants'
 import {
   contentDataToLegacyInput,
@@ -10,7 +10,10 @@ import {
   validateContentData,
 } from '../../../../../lib/ai-content-data'
 import { getActiveGuidelinesStrict } from '../../../../../lib/ai-guidelines'
-import { resolveContentTypeDefinition } from '../../../../../lib/ai-guidelines-schema'
+import {
+  resolveContentTypeDefinition,
+  resolveContentTypePlatforms,
+} from '../../../../../lib/ai-guidelines-schema'
 import { checkWorkflowStartRateLimit } from '../../../../../lib/ai-rate-limit'
 import { listBackgroundOptions } from '../../../../../lib/social-template/backgroundCatalog'
 import { validateSponsorLogo } from '../../../../../lib/social-template/eventFormHelpers'
@@ -248,12 +251,13 @@ export const POST = auth(async function POST(req) {
     contentTypeDefinition
   )
   const sponsorLogo = normalizedLegacyInput.sponsorLogo
-  const platforms = Object.keys(activeGuidelines.platforms || {})
+  const configuredPlatforms = Object.keys(activeGuidelines.platforms || {})
+  const platforms = resolveContentTypePlatforms(contentTypeDefinition, configuredPlatforms)
   if (!platforms.length) {
     return NextResponse.json(
       {
         error: 'Plataforma no disponible',
-        details: 'Las Guidelines activas deben declarar al menos una plataforma.',
+        details: `El tipo de contenido "${contentTypeDefinition.label}" no tiene redes disponibles.`,
       },
       { status: 400 }
     )

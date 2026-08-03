@@ -28,8 +28,11 @@ describe('resolveGenerationGuidelinesForRequest', () => {
       contentType: 'event_promotion',
     })
 
-    expect(resolved.version).toBe((await getActiveGuidelines()).version)
-    expect(resolved.global).toContain('Español')
+    const active = await getActiveGuidelines()
+    expect(resolved.version).toBe(active.version)
+    expect(resolved.global).toMatch(/español/i)
+    expect(resolved.global).toBe(active.global)
+    expect(resolved.global).not.toContain('Usa los datos provistos')
     expect(resolved.captionMaxCharacters).toBe(280)
     expect(resolved.platform).not.toContain('280')
     expect(resolved.contentType).toContain('evento')
@@ -42,18 +45,18 @@ describe('resolveGenerationGuidelinesForRequest', () => {
       contentType: 'educational_astronomy',
     })
 
-    // Validation rules talk about marking issues; generation rules talk about drafting.
+    // Editable rules use plain language instead of internal validation categories.
     expect(resolved.contentType).not.toContain('uncertainty_factual_risk')
-    expect(resolved.contentType).toContain('cautela factual')
+    expect(resolved.contentType).toContain('afirmaciones respaldadas')
   })
 
-  test('does not recommend hashtags in the default generation rules', async () => {
+  test('keeps hashtag limits out of the global voice field', async () => {
     const resolved = await resolveGenerationGuidelinesForRequest({
       platform: 'instagram',
       contentType: 'regular_post',
     })
 
-    expect(resolved.global).toContain('no incluir ni sugerir por defecto')
+    expect(resolved.global).not.toMatch(/hashtags/i)
     expect(resolved.platform).toContain('No añadir hashtags por defecto')
     expect(resolved.platform).not.toMatch(/3-5 hashtags/i)
   })

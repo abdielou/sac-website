@@ -1,5 +1,9 @@
 import { AI_AGENT_IDENTITY_PROMPT, AI_AGENT_IDENTITY_VERSION } from '../../lib/ai-agent'
-import { classifyAiPolicyRequest, reviewAiPolicyResult } from '../../lib/ai-policy-review'
+import {
+  AI_POLICY_REVIEW_CATEGORIES,
+  classifyAiPolicyRequest,
+  reviewAiPolicyResult,
+} from '../../lib/ai-policy-review'
 
 const SAFE_REQUEST = {
   intent: 'Promover una noche de observación de SAC.',
@@ -71,10 +75,51 @@ describe('classifyAiPolicyRequest', () => {
     expect(body.messages[1].content[0].text).toContain('<SOLICITUD_NO_CONFIABLE>')
   })
 
+  test('defers thematic image relevance until a real holiday image exists', async () => {
+    const fetchImpl = jest.fn(async () =>
+      openRouterResponse({
+        decision: 'block',
+        categories: ['unrelated_image'],
+        reason: 'Un pavo no es un objeto astronómico.',
+      })
+    )
+
+    const result = await classifyAiPolicyRequest(
+      {
+        request: {
+          contentType: 'holiday',
+          intent: 'Felicitar a la comunidad de SAC por Acción de Gracias.',
+          topic: 'Día de Acción de Gracias',
+          imageStyle: 'Ilustración festiva con un pavo.',
+        },
+        guidelines: {
+          contentType: 'Celebraciones y días festivos para la comunidad de SAC.',
+        },
+        images: [],
+      },
+      { fetchImpl, model: 'test/multimodal', apiKey: 'test-key' }
+    )
+
+    expect(result).toMatchObject({
+      decision: 'allow',
+      evaluatedDecision: 'allow',
+      categories: [],
+      failClosed: false,
+    })
+    expect(result.reason).toMatch(/resultado real/i)
+
+    const body = JSON.parse(fetchImpl.mock.calls[0][1].body)
+    expect(body.messages[0].content).toContain('Motivos culturales, estacionales')
+    expect(body.messages[0].content).toContain('no exijas que cada objeto sea astronómico')
+    expect(body.messages[0].content).toContain('Guidelines puede imponer restricciones visuales')
+    expect(body.messages[0].content).toContain('dirección creativa parcial')
+  })
+
   test.each([
     ['Dame un consejo médico sobre esta enfermedad.', 'medical_advice'],
     ['Redacta un contrato para este acuerdo.', 'legal_advice'],
     ['Genera este anuncio para otra empresa.', 'out_of_scope'],
+    ['Incluye una imagen al azar sin relación con el tema.', 'unrelated_image'],
   ])('blocks an obvious request locally: %s', async (request, category) => {
     const fetchImpl = jest.fn()
 
@@ -205,6 +250,13 @@ describe('reviewAiPolicyResult', () => {
 
     const body = JSON.parse(fetchImpl.mock.calls[0][1].body)
     const content = body.messages[1].content
+    expect(body.messages[0].content).toContain(
+      'El subtítulo y el cuerpo creativo de un afiche no son hechos inventados'
+    )
+    expect(body.messages[0].content).toContain('Una invitación genérica como “Acompáñanos”')
+    expect(body.messages[0].content).toContain('Omitir el año o reformatear una fecha provista')
+    expect(body.messages[0].content).toContain('Una imagen relacionada que omite una felicitación')
+    expect(body.messages[0].content).toContain('guideline_noncompliance')
     expect(content[0].text).toContain('<RESULTADO_NO_CONFIABLE>')
     expect(content[0].text).toContain('Acompáñanos a observar Saturno.')
     expect(content.slice(1)).toEqual([
@@ -235,6 +287,65 @@ describe('reviewAiPolicyResult', () => {
       decision: 'block',
       evaluatedDecision: 'block',
       categories: ['unrelated_image'],
+      failClosed: false,
+    })
+  })
+
+  test('ignores an unrelated-image verdict when no image was attached', async () => {
+    const fetchImpl = jest.fn(async () =>
+      openRouterResponse({
+        decision: 'block',
+        categories: ['unrelated_image'],
+        reason:
+          'La imagen generada muestra un paisaje terrestre con flores y no se relaciona con SAC.',
+      })
+    )
+
+    const result = await reviewAiPolicyResult(
+      {
+        request: { ...SAFE_REQUEST, topic: 'Día del Padre' },
+        result: { draftText: 'Feliz Día del Padre a nuestra comunidad.' },
+        guidelines: { contentType: 'La imagen debe incluir la felicitación.' },
+        images: [],
+      },
+      { fetchImpl, model: 'test/multimodal', apiKey: 'test-key' }
+    )
+
+    expect(result).toMatchObject({
+      decision: 'allow',
+      evaluatedDecision: 'allow',
+      categories: [],
+      failClosed: false,
+    })
+    expect(result.reason).toMatch(/no había una imagen adjunta/i)
+
+    const body = JSON.parse(fetchImpl.mock.calls[0][1].body)
+    expect(body.messages[0].content).toContain('No se adjuntó ninguna imagen')
+    expect(body.messages[0].content).toContain('nunca uses unrelated_image')
+    expect(body.messages[1].content).not.toContain('image_url')
+  })
+
+  test('accepts guideline noncompliance without misclassifying it as unrelated', async () => {
+    const fetchImpl = async () =>
+      openRouterResponse({
+        decision: 'block',
+        categories: [AI_POLICY_REVIEW_CATEGORIES.GUIDELINE_NONCOMPLIANCE],
+        reason: 'La imagen corresponde al tema, pero omite la felicitación requerida.',
+      })
+
+    const result = await reviewAiPolicyResult(
+      {
+        request: { ...SAFE_REQUEST, topic: 'Día del Padre' },
+        result: { draftText: 'Feliz Día del Padre.' },
+        guidelines: { contentType: 'La imagen debe incluir la felicitación.' },
+        images: ['data:image/png;base64,AAAA'],
+      },
+      { fetchImpl, model: 'test/multimodal', apiKey: 'test-key' }
+    )
+
+    expect(result).toMatchObject({
+      decision: 'block',
+      categories: ['guideline_noncompliance'],
       failClosed: false,
     })
   })

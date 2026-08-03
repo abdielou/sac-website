@@ -15,7 +15,6 @@ describe('ai-validation-draft', () => {
     expect(mergeFormState({ draftText: 'Hola', platform: 'x' })).toEqual({
       ...DEFAULT_FORM,
       draftText: 'Hola',
-      platform: 'x',
     })
   })
 

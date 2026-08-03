@@ -1,7 +1,7 @@
 import { auth } from '../../../../../auth'
 import { NextResponse } from 'next/server'
 import { checkPermission } from '../../../../../lib/api-permissions'
-import { AI_BASE_POLICY_VERSION } from '../../../../../lib/ai-base-policy'
+import { AI_BASE_POLICY_VERSION } from '../../../../../lib/ai-agent'
 import {
   MAX_IMAGE_SIZE_BYTES,
   MAX_VALIDATION_IMAGES,
@@ -14,7 +14,10 @@ import {
   validateContentData,
 } from '../../../../../lib/ai-content-data'
 import { getActiveGuidelinesStrict } from '../../../../../lib/ai-guidelines'
-import { resolveContentTypeDefinition } from '../../../../../lib/ai-guidelines-schema'
+import {
+  resolveContentTypeDefinition,
+  resolveContentTypePlatforms,
+} from '../../../../../lib/ai-guidelines-schema'
 import { checkWorkflowStartRateLimit } from '../../../../../lib/ai-rate-limit'
 import {
   VALIDATION_IMAGE_MIME_TYPES,
@@ -106,6 +109,7 @@ export const POST = auth(async function POST(req) {
     const contentTypeHeader = req.headers.get('content-type') || ''
 
     let platform
+    let platforms
     let contentType
     let draftText
     let goal
@@ -123,6 +127,7 @@ export const POST = auth(async function POST(req) {
       const formData = await req.formData()
 
       platform = formData.get('platform')
+      platforms = parseStringArray(formData.get('platforms'))
       contentType = formData.get('contentType')
       draftText = formData.get('draftText')
 
@@ -202,6 +207,7 @@ export const POST = auth(async function POST(req) {
       const body = await req.json()
 
       platform = body.platform
+      platforms = parseStringArray(body.platforms)
       contentType = body.contentType
       draftText = body.draftText
       goal = body.goal
@@ -229,15 +235,20 @@ export const POST = auth(async function POST(req) {
       typeof platform === 'string'
         ? platform.trim().toLowerCase()
         : platform?.toString().trim().toLowerCase()
+    platforms = (platforms?.length ? platforms : platform ? [platform] : []).map((value) =>
+      String(value).trim().toLowerCase()
+    )
+    platforms = [...new Set(platforms)]
+    platform = platforms[0]
     contentType =
       typeof contentType === 'string' ? contentType.trim() : contentType?.toString().trim()
     draftText = typeof draftText === 'string' ? draftText : draftText?.toString()
 
-    if (!platform || !contentType || !draftText || !draftText.trim()) {
+    if (!platforms.length || !contentType || !draftText || !draftText.trim()) {
       return NextResponse.json(
         {
           error: 'Campos requeridos',
-          details: 'platform, contentType y draftText son obligatorios',
+          details: 'platforms, contentType y draftText son obligatorios',
         },
         { status: 400 }
       )
@@ -260,16 +271,6 @@ export const POST = auth(async function POST(req) {
       includeArchived: true,
     })
 
-    if (!Object.prototype.hasOwnProperty.call(activeGuidelines.platforms || {}, platform)) {
-      return NextResponse.json(
-        {
-          error: 'Plataforma no disponible',
-          details: `La plataforma "${platform}" no existe en Guidelines activas.`,
-        },
-        { status: 400 }
-      )
-    }
-
     if (!contentTypeDefinition) {
       return NextResponse.json(
         {
@@ -285,6 +286,34 @@ export const POST = auth(async function POST(req) {
         {
           error: 'Tipo de contenido archivado',
           details: `El tipo de contenido "${contentTypeDefinition.label}" ya no admite ejecuciones nuevas.`,
+        },
+        { status: 400 }
+      )
+    }
+
+    const unavailableRequestedPlatform = platforms.find(
+      (id) => !Object.prototype.hasOwnProperty.call(activeGuidelines.platforms || {}, id)
+    )
+    if (unavailableRequestedPlatform) {
+      return NextResponse.json(
+        {
+          error: 'Plataforma no disponible',
+          details: `La plataforma "${unavailableRequestedPlatform}" ya no está configurada en Guidelines.`,
+        },
+        { status: 400 }
+      )
+    }
+
+    platforms = resolveContentTypePlatforms(
+      contentTypeDefinition,
+      Object.keys(activeGuidelines.platforms || {})
+    )
+    platform = platforms[0]
+    if (!platforms.length) {
+      return NextResponse.json(
+        {
+          error: 'Plataforma no disponible',
+          details: `El tipo de contenido "${contentTypeDefinition.label}" no tiene redes disponibles.`,
         },
         { status: 400 }
       )
@@ -325,25 +354,29 @@ export const POST = auth(async function POST(req) {
 
     if (
       (images?.length > 0 || normalizedLegacyInput.sponsorLogo?.dataUrl) &&
-      !contentTypeAcceptsImages(platform, contentTypeDefinition.id, contentTypeDefinition)
+      !platforms.some((id) =>
+        contentTypeAcceptsImages(id, contentTypeDefinition.id, contentTypeDefinition)
+      )
     ) {
       return NextResponse.json(
         {
           error: 'Imagen no permitida',
-          details: 'Este tipo de contenido no admite imágenes en la plataforma seleccionada',
+          details: 'Este tipo de contenido no admite imágenes en las redes configuradas',
         },
         { status: 400 }
       )
     }
 
     if (
-      contentTypeRequiresImages(platform, contentTypeDefinition.id, contentTypeDefinition) &&
+      platforms.some((id) =>
+        contentTypeRequiresImages(id, contentTypeDefinition.id, contentTypeDefinition)
+      ) &&
       (!images || images.length === 0)
     ) {
       return NextResponse.json(
         {
           error: 'Imagen requerida',
-          details: 'Se requiere al menos una imagen para esta plataforma y tipo de contenido',
+          details: 'Se requiere al menos una imagen para este paquete y tipo de contenido',
         },
         { status: 400 }
       )
@@ -353,6 +386,7 @@ export const POST = auth(async function POST(req) {
       userId: String(userId),
       userEmail,
       platform,
+      platforms,
       contentType: contentTypeDefinition.id,
       contentData: contentDataValidation.data,
       contentTypeDefinition,

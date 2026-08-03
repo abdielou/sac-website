@@ -54,6 +54,7 @@ export const AiValidationResultSchema = z.object({
   summary: z.string(),
   issues: z.array(IssueSchema),
   platformNotes: z.string().optional(),
+  platformNotesByPlatform: z.record(z.string()).optional(),
   imageNotes: z.string().optional(),
   suggestedRevision: z.string().optional(),
   humanReviewRequired: z.literal(true),
@@ -105,6 +106,7 @@ export const ValidateInputSchema = z
     userId: z.string().trim().min(1).max(256),
     userEmail: z.string().trim().email().max(254),
     platform: z.string().trim().min(1).max(64),
+    platforms: z.array(z.string().trim().min(1).max(64)).min(1).max(10).optional(),
     contentType: ContentTypeIdSchema,
     contentData: z.record(z.any()),
     contentTypeDefinition: ContentTypeDefinitionSchema,
@@ -179,6 +181,14 @@ function extractFirstJsonObject(text) {
   }
 }
 
+function resolveInputPlatforms(input) {
+  const platforms =
+    Array.isArray(input?.platforms) && input.platforms.length
+      ? input.platforms
+      : [input?.platform].filter(Boolean)
+  return [...new Set(platforms)]
+}
+
 export function buildFallbackResult(input, reason) {
   return AiValidationResultSchema.parse({
     overallOutcome: 'fail',
@@ -190,7 +200,8 @@ export function buildFallbackResult(input, reason) {
         category: 'uncertainty_factual_risk',
         message: `Validación fallida: ${reason}`,
         suggestedFix: 'Revisar el borrador y, si aplica, contrastar detalles con fuentes internas.',
-        affectedPlatform: input.platform,
+        affectedPlatform:
+          resolveInputPlatforms(input).length === 1 ? resolveInputPlatforms(input)[0] : undefined,
       },
     ],
     platformNotes: 'La validación automática falló; no bloquea el flujo manual.',
@@ -215,6 +226,7 @@ async function validatePayloadStep(input) {
           userId: input.userId || 'unknown',
           userEmail: input.userEmail || 'unknown@example.com',
           platform: input.platform || 'unknown',
+          platforms: input.platforms,
           contentType: input.contentType || 'unknown',
           draftText: input.draftText || '',
           images: input.images,
@@ -241,14 +253,25 @@ async function loadGuidelinesStep(input) {
     if (!document || document.version !== input.guidelineVersion) {
       return { ok: false, reason: 'guideline_version_unavailable' }
     }
-    if (!Object.prototype.hasOwnProperty.call(document.platforms || {}, input.platform)) {
+    const requestedPlatforms = resolveInputPlatforms(input)
+    if (
+      requestedPlatforms.some(
+        (platform) => !Object.prototype.hasOwnProperty.call(document.platforms || {}, platform)
+      )
+    ) {
       return { ok: false, reason: 'platform_unavailable' }
     }
 
-    const resolved = resolveGuidelinesFromDocument(document, {
-      platform: input.platform,
-      contentType: input.contentType,
-    })
+    const byPlatform = Object.fromEntries(
+      requestedPlatforms.map((platform) => [
+        platform,
+        resolveGuidelinesFromDocument(document, {
+          platform,
+          contentType: input.contentType,
+        }),
+      ])
+    )
+    const resolved = byPlatform[requestedPlatforms[0]]
     const definition = resolved.contentTypeDefinition
     if (!definition || definition.status !== 'active') {
       return { ok: false, reason: 'content_type_unavailable' }
@@ -278,8 +301,10 @@ async function loadGuidelinesStep(input) {
     return {
       ...resolved,
       ok: true,
+      platforms: byPlatform,
       input: {
         ...exactInputResult.data,
+        platforms: requestedPlatforms,
         ...normalizedLegacyInput,
         goal:
           normalizedLegacyInput.intent || normalizedLegacyInput.topic || exactInputResult.data.goal,
@@ -296,6 +321,7 @@ async function loadGuidelinesStep(input) {
 function buildPolicyRequest(input) {
   return {
     platform: input.platform,
+    platforms: resolveInputPlatforms(input),
     contentType: input.contentType,
     contentData: input.contentData,
     draftText: input.draftText,
@@ -315,10 +341,22 @@ function buildPolicyRequest(input) {
 }
 
 function buildPolicyGuidelines(guidelines) {
+  const byPlatform = guidelines.platforms || null
   return {
     version: guidelines.version,
     global: guidelines.global,
     platform: guidelines.platform,
+    platforms: byPlatform
+      ? Object.fromEntries(
+          Object.entries(byPlatform).map(([platform, value]) => [
+            platform,
+            {
+              rules: value.platform,
+              captionMaxCharacters: value.captionMaxCharacters ?? null,
+            },
+          ])
+        )
+      : undefined,
     captionMaxCharacters: guidelines.captionMaxCharacters ?? null,
     contentType: guidelines.contentType,
     prohibited: guidelines.prohibited,
@@ -328,22 +366,36 @@ function buildPolicyGuidelines(guidelines) {
 }
 
 export function applyConfiguredCaptionLimit(result, input, guidelines) {
-  const limit = guidelines?.captionMaxCharacters
-  if (!Number.isInteger(limit) || limit < 1 || input.draftText.length <= limit) return result
-
   const issues = Array.isArray(result.issues) ? [...result.issues] : []
-  const alreadyReported = issues.some(
-    (issue) => issue.category === 'platform_fit' && /caracter/i.test(issue.message || '')
-  )
-  if (!alreadyReported) {
-    issues.push({
-      severity: 'major',
-      category: 'platform_fit',
-      message: `El caption tiene ${input.draftText.length} caracteres y el máximo configurado para ${input.platform} es ${limit}.`,
-      suggestedFix: `Acortar el caption a ${limit} caracteres o menos.`,
-      affectedPlatform: input.platform,
-    })
+  const configured = guidelines?.platforms
+    ? resolveInputPlatforms(input).map((platform) => ({
+        platform,
+        limit: guidelines.platforms?.[platform]?.captionMaxCharacters,
+      }))
+    : [{ platform: input.platform, limit: guidelines?.captionMaxCharacters }]
+  let hasViolation = false
+
+  for (const { platform, limit } of configured) {
+    if (!Number.isInteger(limit) || limit < 1 || input.draftText.length <= limit) continue
+    hasViolation = true
+    const alreadyReported = issues.some(
+      (issue) =>
+        issue.category === 'platform_fit' &&
+        /caracter/i.test(issue.message || '') &&
+        (!issue.affectedPlatform || issue.affectedPlatform === platform)
+    )
+    if (!alreadyReported) {
+      issues.push({
+        severity: 'major',
+        category: 'platform_fit',
+        message: `El caption tiene ${input.draftText.length} caracteres y el máximo configurado para ${platform} es ${limit}.`,
+        suggestedFix: `Acortar el caption a ${limit} caracteres o menos.`,
+        affectedPlatform: platform,
+      })
+    }
   }
+
+  if (!hasViolation) return result
 
   return AiValidationResultSchema.parse({
     ...result,
@@ -364,7 +416,36 @@ function collectValidationImageUrls(input) {
 
 export function buildPolicyValidationResult(input, decision) {
   const unavailable = decision.failClosed === true
-  const categories = Array.isArray(decision.categories) ? decision.categories.join(', ') : ''
+  const categoryList = Array.isArray(decision.categories) ? decision.categories : []
+  const guidelineOnly =
+    categoryList.length > 0 &&
+    categoryList.every((category) => category === 'guideline_noncompliance')
+  const categories = categoryList.join(', ')
+
+  if (guidelineOnly) {
+    return AiValidationResultSchema.parse({
+      overallOutcome: 'fail',
+      approvalRecommendation: 'needs_edits',
+      summary: 'El contenido necesita cambios para cumplir las Guías antes de publicarse.',
+      issues: [
+        {
+          severity: 'major',
+          category: 'guideline_compliance',
+          message: decision.reason || 'El contenido no cumple una regla de Guías.',
+          suggestedFix: 'Corrige el requisito indicado y vuelve a validar el contenido.',
+          affectedPlatform:
+            resolveInputPlatforms(input).length === 1 ? resolveInputPlatforms(input)[0] : undefined,
+        },
+      ],
+      platformNotes: 'Categoría de revisión: guideline_noncompliance.',
+      imageNotes:
+        input.images?.length > 0
+          ? 'La imagen se conserva como borrador, pero debe corregirse antes de publicarse.'
+          : undefined,
+      humanReviewRequired: true,
+    })
+  }
+
   return AiValidationResultSchema.parse({
     overallOutcome: 'fail',
     approvalRecommendation: 'do_not_publish',
@@ -379,7 +460,8 @@ export function buildPolicyValidationResult(input, decision) {
         suggestedFix: unavailable
           ? 'Solicita una revisión humana antes de continuar.'
           : 'Ajusta el contenido al alcance social y a las restricciones de SAC.',
-        affectedPlatform: input.platform,
+        affectedPlatform:
+          resolveInputPlatforms(input).length === 1 ? resolveInputPlatforms(input)[0] : undefined,
       },
     ],
     platformNotes: categories ? `Categorías de política: ${categories}.` : undefined,
@@ -438,7 +520,7 @@ async function callOpenRouterStep(input, guidelines) {
   const systemPrompt = buildAgentSystemPrompt({
     modeInstructions: `INSTRUCCIONES OPERATIVAS DEL VALIDADOR
 
-En modo validación, evalúa publicaciones para SAC.
+En modo validación, evalúa un paquete compartido para las redes sociales de SAC.
 Devuelve EXACTAMENTE un objeto JSON (sin texto adicional, sin markdown) con esta forma:
 
 {
@@ -455,6 +537,7 @@ Devuelve EXACTAMENTE un objeto JSON (sin texto adicional, sin markdown) con esta
     }
   ],
   "platformNotes": string (opcional),
+  "platformNotesByPlatform": { "id_de_red": string } (opcional),
   "imageNotes": string (opcional),
   "suggestedRevision": string (opcional),
   "humanReviewRequired": true
@@ -463,6 +546,10 @@ Devuelve EXACTAMENTE un objeto JSON (sin texto adicional, sin markdown) con esta
 Reglas:
 - Usa EXACTAMENTE esas claves y esos valores permitidos. "humanReviewRequired" debe ser siempre true.
 - "issues" siempre es un arreglo (usa [] si no hay problemas).
+- Evalúa el mismo caption y la misma imagen en TODAS las plataformas indicadas.
+- Aplica conjuntamente las reglas generales, las del tipo y las de cada plataforma.
+- Usa "affectedPlatform" cuando un problema corresponde solo a una red.
+- Resume las observaciones particulares en "platformNotesByPlatform" usando los IDs recibidos.
 - No inventes datos no provistos (fechas, lugares, costos, enlaces, hechos científicos verificables).
 - Astronomía: NO verificas hechos; si hay riesgo de afirmaciones no verificables, marca uncertainty_factual_risk.
 `,
@@ -470,6 +557,7 @@ Reglas:
 
   const userText = {
     platform: input.platform,
+    platforms: resolveInputPlatforms(input),
     contentType: input.contentType,
     draftText: input.draftText,
     goal: input.goal,

@@ -49,6 +49,13 @@ function jsonRequest(body) {
   }
 }
 
+const image = {
+  dataUrl: 'data:image/png;base64,AA==',
+  mimeType: 'image/png',
+  fileName: 'post.png',
+  size: 1,
+}
+
 describe('POST /api/admin/ai/validate contract', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -65,6 +72,7 @@ describe('POST /api/admin/ai/validate contract', () => {
         platform: 'facebook',
         contentType: 'caption',
         draftText: 'Mira el cielo con nosotros esta noche.',
+        images: [image],
       })
     )
 
@@ -73,17 +81,37 @@ describe('POST /api/admin/ai/validate contract', () => {
     expect(input).toMatchObject({
       userId: 'session-user',
       userEmail: 'user@example.com',
+      platforms: ['x', 'instagram', 'facebook'],
       contentType: 'caption',
-      guidelineVersion: 'mvp-default-v1',
+      guidelineVersion: 'default-v1',
       contentTypeIdentity: {
         id: 'caption',
         label: 'Caption',
-        guidelineVersion: 'mvp-default-v1',
+        guidelineVersion: 'default-v1',
       },
       contentData: {
         intent: 'Validar borrador existente',
         topic: 'Mira el cielo con nosotros esta noche.',
       },
+    })
+  })
+
+  test('starts one validation workflow for the complete configured package', async () => {
+    const response = await POST(
+      jsonRequest({
+        platforms: ['x', 'instagram', 'facebook'],
+        contentType: 'caption',
+        draftText: 'Un caption compartido.',
+        images: [image],
+      })
+    )
+
+    expect(response.status).toBe(202)
+    expect(start).toHaveBeenCalledTimes(1)
+    expect(start.mock.calls[0][1][0]).toMatchObject({
+      platform: 'x',
+      platforms: ['x', 'instagram', 'facebook'],
+      draftText: 'Un caption compartido.',
     })
   })
 
@@ -105,6 +133,7 @@ describe('POST /api/admin/ai/validate contract', () => {
         platform: 'facebook',
         contentType: 'caption',
         draftText: 'Borrador',
+        images: [image],
         contentData: {
           intent: 'Revisar claridad',
           topic: 'Astronomía para principiantes',
@@ -202,6 +231,8 @@ describe('POST /api/admin/ai/validate contract', () => {
     })
     definition.visual.template = 'event'
     definition.visual.sponsorAllowed = true
+    definition.platforms = ['x']
+    definition.visual.imagePolicyByPlatform.x = 'prohibited'
     getActiveGuidelinesStrict.mockResolvedValue(document)
 
     const response = await POST(

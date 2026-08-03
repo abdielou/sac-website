@@ -82,7 +82,7 @@ describe('buildValidationHistoryRecord', () => {
       runId: 'wrun_fail',
       status: 'failed',
       error: { message: 'Provider timeout', retryable: true },
-      guidelineVersion: 'mvp-default-v1',
+      guidelineVersion: 'default-v1',
     })
     expect(record.status).toBe('failed')
     expect(record.error.message).toBe('Provider timeout')
@@ -252,7 +252,7 @@ describe('buildGenerationHistoryRecord', () => {
       runId: 'wrun_gen_fail',
       status: 'failed',
       error: { message: 'Provider timeout', retryable: true },
-      guidelineVersion: 'mvp-default-v1',
+      guidelineVersion: 'default-v1',
     })
 
     expect(record.platform).toBe('x')

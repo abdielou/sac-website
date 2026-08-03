@@ -1,11 +1,12 @@
 import {
   AiGenerationResultSchema,
   GenerateInputSchema,
+  applyGenerationGuardrails,
   buildFallbackGenerationResult,
   mergeImagePromptsIntoResult,
 } from '../../workflows/ai-social-media-designer/generation/generateAiWorkflow'
 import { GENERATION_INPUT_LIMITS } from '../../lib/ai-constants'
-import { AI_BASE_POLICY_VERSION } from '../../lib/ai-base-policy'
+import { AI_BASE_POLICY_VERSION } from '../../lib/ai-agent'
 import { legacyInputToContentData } from '../../lib/ai-content-data'
 import { getDefaultGuidelines } from '../../lib/ai-guidelines'
 import { resolveContentTypeDefinition } from '../../lib/ai-guidelines-schema'
@@ -58,6 +59,44 @@ describe('generateAiWorkflow schema', () => {
     expect(AiGenerationResultSchema.safeParse(result).success).toBe(true)
   })
 
+  test('removes an invented free-admission claim before policy review', () => {
+    const result = applyGenerationGuardrails(
+      {
+        caption: {
+          contentType: baseInput.contentType,
+          draftText:
+            'Acompáñanos a observar el cielo. Evento libre de costo para toda la familia.',
+          assumptions: [],
+          missingInformation: [],
+        },
+        recommendedNextStep: 'Validar antes de publicar.',
+        humanReviewRequired: true,
+      },
+      baseInput
+    )
+
+    expect(result.drafts[0].draftText).toBe('Acompáñanos a observar el cielo.')
+    expect(result.drafts[0].draftText).not.toMatch(/libre de costo/i)
+  })
+
+  test('preserves free admission when it was supplied as a known fact', () => {
+    const result = applyGenerationGuardrails(
+      {
+        caption: {
+          contentType: baseInput.contentType,
+          draftText: 'Acompáñanos a observar el cielo. Evento libre de costo.',
+          assumptions: [],
+          missingInformation: [],
+        },
+        recommendedNextStep: 'Validar antes de publicar.',
+        humanReviewRequired: true,
+      },
+      { ...baseInput, knownFacts: ['Evento libre de costo'] }
+    )
+
+    expect(result.drafts[0].draftText).toContain('Evento libre de costo')
+  })
+
   test('AiGenerationResultSchema rejects humanReviewRequired false', () => {
     const invalid = {
       drafts: [
@@ -103,7 +142,7 @@ describe('generateAiWorkflow schema', () => {
     expect(valid.drafts[0].imagePrompt).toBe(valid.drafts[1].imagePrompt)
   })
 
-  test('keeps image prompts only on platforms whose active definition allows images', () => {
+  test('keeps the shared image prompt across the scoped package', () => {
     const definition = resolveContentTypeDefinition(guidelineDocument, 'regular_post')
     const textResult = {
       drafts: [
@@ -135,7 +174,9 @@ describe('generateAiWorkflow schema', () => {
       }
     )
 
-    expect(result.drafts.find(({ platform }) => platform === 'x').imagePrompt).toBeUndefined()
+    expect(result.drafts.find(({ platform }) => platform === 'x').imagePrompt).toContain(
+      'Prompt compartido'
+    )
     expect(result.drafts.find(({ platform }) => platform === 'instagram').imagePrompt).toContain(
       'Prompt compartido'
     )

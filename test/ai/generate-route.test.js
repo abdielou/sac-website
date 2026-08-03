@@ -108,11 +108,11 @@ describe('POST /api/admin/ai/generate contract', () => {
     expect(startedInput.platforms).toEqual(['x', 'instagram', 'facebook'])
     expect(startedInput.userId).toBe('session-user')
     expect(startedInput.userEmail).toBe('user@example.com')
-    expect(startedInput.guidelineVersion).toBe('mvp-default-v1')
+    expect(startedInput.guidelineVersion).toBe('default-v1')
     expect(startedInput.contentTypeIdentity).toEqual({
       id: 'event_promotion',
       label: 'Promoción de evento',
-      guidelineVersion: 'mvp-default-v1',
+      guidelineVersion: 'default-v1',
     })
     expect(startedInput.contentData).toMatchObject({
       event_name: 'Noche de Observación',

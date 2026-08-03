@@ -5,7 +5,7 @@ import {
   buildFallbackResult,
   buildPolicyValidationResult,
 } from '../../workflows/ai-social-media-designer/validation/validateAiWorkflow'
-import { AI_BASE_POLICY_VERSION } from '../../lib/ai-base-policy'
+import { AI_BASE_POLICY_VERSION } from '../../lib/ai-agent'
 import { extractOpenRouterUsage, mergeOpenRouterUsage } from '../../lib/ai-openrouter'
 
 describe('validateAiWorkflow schema', () => {
@@ -55,6 +55,33 @@ describe('validateAiWorkflow schema', () => {
     expect(AiValidationResultSchema.safeParse(result).success).toBe(true)
   })
 
+  test('treats a Guidelines mismatch as an edit, not a base-policy safety violation', () => {
+    const result = buildPolicyValidationResult(
+      {
+        ...baseInput,
+        images: [{ dataUrl: 'data:image/png;base64,AAAA', mimeType: 'image/png' }],
+      },
+      {
+        decision: 'block',
+        categories: ['guideline_noncompliance'],
+        reason: 'La imagen corresponde al tema, pero omite la felicitación requerida.',
+        failClosed: false,
+      }
+    )
+
+    expect(result).toMatchObject({
+      overallOutcome: 'fail',
+      approvalRecommendation: 'needs_edits',
+      humanReviewRequired: true,
+    })
+    expect(result.issues[0]).toMatchObject({
+      category: 'guideline_compliance',
+      severity: 'major',
+    })
+    expect(result.summary).not.toMatch(/política base/i)
+    expect(result.imageNotes).toMatch(/se conserva como borrador/i)
+  })
+
   test('AiValidationResultSchema accepts valid warning outcome', () => {
     const valid = {
       overallOutcome: 'warning',
@@ -70,6 +97,7 @@ describe('validateAiWorkflow schema', () => {
         },
       ],
       platformNotes: 'Revisar CTA.',
+      platformNotesByPlatform: { facebook: 'Añadir un llamado a la acción.' },
       humanReviewRequired: true,
     }
     expect(AiValidationResultSchema.safeParse(valid).success).toBe(true)
@@ -95,6 +123,34 @@ describe('validateAiWorkflow schema', () => {
       approvalRecommendation: 'needs_edits',
     })
     expect(limited.issues[0].message).toContain('280')
+  })
+
+  test('validates the shared caption against every configured platform limit', () => {
+    const result = {
+      overallOutcome: 'pass',
+      approvalRecommendation: 'ready_for_review',
+      summary: 'El caption cumple.',
+      issues: [],
+      humanReviewRequired: true,
+    }
+    const input = {
+      ...baseInput,
+      platforms: ['x', 'instagram', 'facebook'],
+      draftText: 'a'.repeat(300),
+    }
+    const validated = applyConfiguredCaptionLimit(result, input, {
+      platforms: {
+        x: { captionMaxCharacters: 280 },
+        instagram: { captionMaxCharacters: null },
+        facebook: { captionMaxCharacters: 250 },
+      },
+    })
+
+    expect(validated.overallOutcome).toBe('warning')
+    expect(validated.issues.map(({ affectedPlatform }) => affectedPlatform)).toEqual([
+      'x',
+      'facebook',
+    ])
   })
 
   test('ValidateInputSchema accepts a pinned custom content type and rejects identity drift', () => {

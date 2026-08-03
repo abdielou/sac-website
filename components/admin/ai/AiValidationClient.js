@@ -49,8 +49,18 @@ export default function AiValidationClient() {
   } = useAiValidationRun({ canValidate })
 
   const handleSubmit = () => {
-    submitValidation(formState, images, selectedContentType?.definition)
+    submitValidation(
+      formState,
+      images,
+      selectedContentType?.definition,
+      platforms.map(({ id }) => id)
+    )
   }
+
+  const platformLabels = useMemo(
+    () => Object.fromEntries(platforms.map(({ id, label }) => [id, label])),
+    [platforms]
+  )
 
   return (
     <div className="max-w-3xl">
@@ -58,7 +68,7 @@ export default function AiValidationClient() {
         Validar publicación
       </h2>
       <p className="text-gray-600 dark:text-gray-400 mb-6">
-        Revisa tu publicación contra las guías de SAC antes de publicar.
+        Revisa el caption y la imagen como un solo paquete para las redes configuradas.
       </p>
 
       <ValidationForm
@@ -121,6 +131,7 @@ export default function AiValidationClient() {
             guidelineVersion={guidelineVersion}
             policyVersion={policyVersion}
             contentTypeIdentity={contentTypeIdentity}
+            platformLabels={platformLabels}
             onCopyFeedback={showCopyFeedback}
           />
           <div className="mt-6">

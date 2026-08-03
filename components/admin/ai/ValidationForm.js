@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
   contentTypeAcceptsImages,
   contentTypeRequiresImages,
@@ -18,10 +18,17 @@ import {
 import ContentTypeFields, {
   formStateKeyForContentField,
 } from '@/components/admin/ai/ContentTypeFields'
+import { resolveContentTypePlatforms } from '@/lib/ai-guidelines-schema'
 
 const inputClass =
   'w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-60 disabled:cursor-not-allowed'
 const labelClass = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'
+
+function formatPlatformList(labels) {
+  if (labels.length <= 1) return labels[0] || 'las redes configuradas'
+  if (labels.length === 2) return `${labels[0]} y ${labels[1]}`
+  return `${labels.slice(0, -1).join(', ')} y ${labels.at(-1)}`
+}
 
 /**
  * @param {Object} props
@@ -59,16 +66,22 @@ export default function ValidationForm({
   const contentTypeDefinition = contentTypes.find(
     ({ id }) => id === formState.contentType
   )?.definition
-  const showImages = contentTypeAcceptsImages(
-    formState.platform,
-    formState.contentType,
-    contentTypeDefinition
+  const destinationPlatforms = resolveContentTypePlatforms(
+    contentTypeDefinition,
+    platforms.map(({ id }) => id)
   )
-  const requiresImages = contentTypeRequiresImages(
-    formState.platform,
-    formState.contentType,
-    contentTypeDefinition
+  const platformLabelById = Object.fromEntries(platforms.map(({ id, label }) => [id, label]))
+  const destinationLabels = destinationPlatforms.map(
+    (platform) => platformLabelById[platform] || platform
   )
+  const imagePlatforms = destinationPlatforms.filter((platform) =>
+    contentTypeAcceptsImages(platform, formState.contentType, contentTypeDefinition)
+  )
+  const requiredImagePlatforms = destinationPlatforms.filter((platform) =>
+    contentTypeRequiresImages(platform, formState.contentType, contentTypeDefinition)
+  )
+  const showImages = imagePlatforms.length > 0
+  const requiresImages = requiredImagePlatforms.length > 0
   const showEventFields = isEventContentType(formState.contentType, contentTypeDefinition)
   const canonicalEventName = getCanonicalEventName(formState.contentType, contentTypeDefinition)
   const formDisabled = disabled || !canValidate
@@ -98,15 +111,6 @@ export default function ValidationForm({
       })
   )
   const hasDynamicFieldErrors = Object.values(dynamicFieldErrors).some(Boolean)
-
-  useEffect(() => {
-    if (!platforms.length) return
-    const ids = platforms.map((p) => p.id)
-    if (ids.includes(formState.platform)) return
-    onFormChange({ ...formState, platform: ids[0] })
-    // Only re-sync when the available platform list or current selection changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional narrow deps
-  }, [platforms, formState.platform])
 
   useEffect(() => {
     if (!contentTypes.length) return
@@ -246,9 +250,7 @@ export default function ValidationForm({
     setShowFieldErrors(true)
     if (hasDynamicFieldErrors) return
     if (requiresImages && images.length === 0) {
-      setLocalImageError(
-        'Se requiere al menos una imagen para esta plataforma y tipo de contenido.'
-      )
+      setLocalImageError('Se requiere al menos una imagen para este paquete y tipo de contenido.')
       return
     }
     setLocalImageError(null)
@@ -264,44 +266,35 @@ export default function ValidationForm({
         </p>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="ai-platform" className={labelClass}>
-            Plataforma
-          </label>
-          <select
-            id="ai-platform"
-            value={formState.platform}
-            onChange={handleChange('platform')}
-            disabled={formDisabled}
-            className={inputClass}
-          >
-            {platforms.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label}
-              </option>
-            ))}
-          </select>
-        </div>
+      <section className="rounded-xl border border-gray-200 bg-gray-50/70 p-4 dark:border-gray-700 dark:bg-gray-900/40">
+        <p className="text-sm font-medium text-gray-900 dark:text-white">Paquete multired</p>
+        <p className="mt-1 text-sm leading-6 text-gray-600 dark:text-gray-300">
+          El caption se validará para {formatPlatformList(destinationLabels)}.
+          {showImages
+            ? ` La imagen se revisará para ${formatPlatformList(
+                platforms.filter(({ id }) => imagePlatforms.includes(id)).map(({ label }) => label)
+              )}, según Guidelines.`
+            : ' Este tipo de contenido no usa imagen, según Guidelines.'}
+        </p>
+      </section>
 
-        <div>
-          <label htmlFor="ai-content-type" className={labelClass}>
-            Tipo de contenido
-          </label>
-          <select
-            id="ai-content-type"
-            value={formState.contentType}
-            onChange={handleChange('contentType')}
-            disabled={formDisabled}
-            className={inputClass}
-          >
-            {contentTypes.map((ct) => (
-              <option key={ct.id} value={ct.id}>
-                {ct.label}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div>
+        <label htmlFor="ai-content-type" className={labelClass}>
+          Tipo de contenido
+        </label>
+        <select
+          id="ai-content-type"
+          value={formState.contentType}
+          onChange={handleChange('contentType')}
+          disabled={formDisabled}
+          className={inputClass}
+        >
+          {contentTypes.map((ct) => (
+            <option key={ct.id} value={ct.id}>
+              {ct.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Media-first when images apply (Instagram compose flow: media → caption). */}

@@ -1,5 +1,5 @@
 import sharp from 'sharp'
-import { AI_BASE_POLICY_VERSION } from '../../lib/ai-base-policy'
+import { AI_BASE_POLICY_VERSION } from '../../lib/ai-agent'
 import { legacyInputToContentData } from '../../lib/ai-content-data'
 import { getDefaultGuidelines } from '../../lib/ai-guidelines'
 import { resolveContentTypeDefinition } from '../../lib/ai-guidelines-schema'
@@ -210,6 +210,7 @@ describe('buildGenerationPayload', () => {
       id: 'club_event',
       label: 'Evento del club',
       status: 'active',
+      platforms: ['instagram'],
       fields: [
         { key: 'event_name', label: 'Nombre', required: true },
         { key: 'date', label: 'Fecha', required: true },
@@ -229,12 +230,13 @@ describe('buildGenerationPayload', () => {
         contentType: definition.id,
         eventName: 'Encuentro mensual',
         eventDate: '2026-08-15',
-        platforms: ['instagram'],
+        platforms: ['x', 'instagram', 'facebook'],
       },
       definition
     )
 
     expect(payload.eventDetails.name).toBe('Evento del club')
+    expect(payload.platforms).toEqual(['instagram'])
     expect(payload.contentData).toMatchObject({
       event_name: 'Encuentro mensual',
       date: '2026-08-15',
@@ -404,6 +406,29 @@ describe('buildTemplateTextFields', () => {
     })
   })
 
+  test('uses the required holiday greeting as the headline composed by a template', () => {
+    const definition = {
+      id: 'holiday_greeting',
+      label: 'Día festivo',
+      visual: { mode: 'template', template: 'simple' },
+      generation: {
+        rules:
+          'Debe generar una felicitación de acuerdo al día festivo. La imagen generada debe incluir la felicitación.',
+      },
+    }
+    const fields = buildTemplateTextFields({
+      input: {
+        contentType: 'holiday_greeting',
+        contentTypeDefinition: definition,
+        topic: 'Día del Padre',
+        backgroundMode: 'stock',
+      },
+      contentTypeDefinition: definition,
+    })
+
+    expect(fields).toEqual({ layout: 'simple', headline: 'Feliz Día del Padre' })
+  })
+
   test('returns null for caption / reel_caption', () => {
     expect(
       buildTemplateTextFields({
@@ -570,11 +595,13 @@ describe('buildTemplateSvg', () => {
     expect(svg).toContain('>estrellas<')
     expect(svg).toContain('Observación pública')
     expect(svg).toContain('Una noche para mirar al cielo.')
-    expect(svg).toContain('>15<')
-    expect(svg).toContain('AGO')
-    expect(svg).toContain('>8<')
-    expect(svg).toContain('>PM<')
-    expect(svg).toContain('ARECIBO')
+    expect(svg).toContain('>15 AGO<')
+    expect(svg).toContain('>8 PM<')
+    expect(svg).toContain('Arecibo')
+    expect(svg).toContain('FECHA')
+    expect(svg).toContain('HORA')
+    expect(svg).toContain('LUGAR')
+    expect(svg).toContain('data-role="info-rail"')
     expect(svg).toContain(EVENT_WEATHER_DISCLAIMER)
     expect(svg).toContain('Auspicia')
     expect(svg).toContain('data-logo-left="820.00"')
@@ -617,7 +644,7 @@ describe('buildTemplateSvg', () => {
     }
   })
 
-  test('keeps the approved observation-night hierarchy and geometry', () => {
+  test('keeps an editorial hierarchy and gives the location the dominant width', () => {
     const svg = buildTemplateSvg({
       layout: 'event',
       canvas: getSocialCanvas(),
@@ -641,30 +668,22 @@ describe('buildTemplateSvg', () => {
     const bodyMetrics = svg.match(
       /<text x="540" y="([\d.]+)"[^>]*font-size="([\d.]+)" font-weight="400"[^>]*><tspan[^>]*>Una noche/
     )
-    const dateCardMetrics = svg.match(
-      /data-kind="date"[^>]*data-card-top="([\d.]+)" data-card-bottom="([\d.]+)"[^>]*>[\s\S]*?<rect[^>]*width="([\d.]+)" height="([\d.]+)"/
+    const cardWidths = Object.fromEntries(
+      [...svg.matchAll(/data-kind="(date|time|location)"[^>]*data-card-width="([\d.]+)"/g)].map(
+        ([, kind, cardWidth]) => [kind, Number(cardWidth)]
+      )
     )
 
-    expect(headlineMetrics.slice(1).map(Number)).toEqual([
-      expect.closeTo(476.64),
-      expect.closeTo(132.84),
-    ])
-    expect(subtitleMetrics.slice(1).map(Number)).toEqual([
-      expect.closeTo(683.6),
-      expect.closeTo(54),
-    ])
-    expect(bodyMetrics.slice(1).map(Number)).toEqual([expect.closeTo(839.3), expect.closeTo(37.8)])
-    expect(dateCardMetrics.slice(1).map(Number)).toEqual([
-      expect.closeTo(936),
-      expect.closeTo(1127.52),
-      expect.closeTo(181.08),
-      expect.closeTo(191.52),
-    ])
+    expect(Number(headlineMetrics[2])).toBeLessThan(120)
+    expect(Number(subtitleMetrics[2])).toBeLessThan(50)
+    expect(Number(bodyMetrics[2])).toBeLessThan(36)
     expect(Number(headlineMetrics[1])).toBeLessThan(Number(subtitleMetrics[1]))
     expect(Number(subtitleMetrics[1])).toBeLessThan(Number(bodyMetrics[1]))
-    expect(Number(bodyMetrics[1])).toBeLessThan(Number(dateCardMetrics[1]))
-    expect(svg).toContain('>PITA<')
-    expect(svg).toContain('>HAYA<')
+    expect(cardWidths.location).toBeGreaterThan(cardWidths.date * 2)
+    expect(cardWidths.location).toBeGreaterThan(cardWidths.time * 2)
+    expect(svg).toContain('>Pitahaya, Cabo Rojo<')
+    expect(svg).not.toContain('>PITA<')
+    expect(svg).not.toContain('>HAYA<')
   })
 
   test('preserves location word boundaries when punctuation has no following space', () => {
@@ -683,8 +702,36 @@ describe('buildTemplateSvg', () => {
     })
 
     expect(svg).not.toContain('PITAHAYACABO')
-    expect(svg).toContain('>PITA<')
-    expect(svg).toContain('>HAYA<')
+    expect(svg).toContain('>Pitahaya, Cabo Rojo<')
+    expect(svg).not.toContain('>PITA<')
+    expect(svg).not.toContain('>HAYA<')
+  })
+
+  test('fits a real long venue without truncating or breaking place names', () => {
+    const svg = buildTemplateSvg({
+      layout: 'event',
+      canvas: getSocialCanvas(),
+      textFields: {
+        headline: 'Noche de Observación',
+        subtitle: 'Acompáñanos bajo las estrellas.',
+        body: 'Una noche para mirar al cielo.',
+        dateLabel: 'SÁB 08 AGO',
+        timeLabel: '7:00 PM',
+        locationLabel: 'Castillo San Felipe del Morro, San Juan',
+        weatherDisclaimer: EVENT_WEATHER_DISCLAIMER,
+      },
+    })
+
+    const locationMetrics = svg.match(
+      /data-kind="location"[^>]*data-line-count="([\d.]+)" data-font-size="([\d.]+)"[^>]*data-card-width="([\d.]+)"/
+    )
+    expect(locationMetrics).not.toBeNull()
+    expect(Number(locationMetrics[1])).toBeLessThanOrEqual(2)
+    expect(Number(locationMetrics[2])).toBeGreaterThanOrEqual(22)
+    expect(Number(locationMetrics[3])).toBeGreaterThan(470)
+    expect(svg).toContain('Castillo San Felipe')
+    expect(svg).toContain('>Morro, San Juan<')
+    expect(svg).not.toContain('…')
   })
 
   test('escapes XML special characters', () => {

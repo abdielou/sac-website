@@ -46,6 +46,7 @@ function formatIssuesForCopy(issues) {
  * @param {string} [props.guidelineVersion]
  * @param {string} [props.policyVersion]
  * @param {{ id: string, label: string }} [props.contentTypeIdentity]
+ * @param {Record<string, string>} [props.platformLabels]
  * @param {Function} [props.onCopyFeedback]
  */
 export default function ValidationResult({
@@ -54,6 +55,7 @@ export default function ValidationResult({
   guidelineVersion,
   policyVersion,
   contentTypeIdentity,
+  platformLabels = {},
   onCopyFeedback,
 }) {
   const sortedIssues = useMemo(() => {
@@ -155,6 +157,11 @@ export default function ValidationResult({
                   <span className="text-xs text-gray-500 dark:text-gray-400">
                     {CATEGORY_LABELS[issue.category] || issue.category}
                   </span>
+                  {issue.affectedPlatform && (
+                    <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                      {platformLabels[issue.affectedPlatform] || issue.affectedPlatform}
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm text-gray-800 dark:text-gray-200">{issue.message}</p>
                 {issue.suggestedFix && (
@@ -176,6 +183,26 @@ export default function ValidationResult({
           <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
             {result.platformNotes}
           </p>
+        </div>
+      )}
+
+      {result.platformNotesByPlatform && (
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-white">
+            Revisión por red
+          </h3>
+          <div className="divide-y divide-gray-200 rounded-xl border border-gray-200 dark:divide-gray-700 dark:border-gray-700">
+            {Object.entries(result.platformNotesByPlatform).map(([platform, notes]) => (
+              <div key={platform} className="p-3">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  {platformLabels[platform] || platform}
+                </p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">
+                  {notes}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

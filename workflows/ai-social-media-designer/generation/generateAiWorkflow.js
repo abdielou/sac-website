@@ -3,6 +3,7 @@ import { z } from 'zod'
 import {
   AI_AGENT_IDENTITY_PROMPT,
   AI_BASE_POLICY_VERSION,
+  BASE_POLICY_REQUEST_CATEGORIES,
   buildAgentSystemPrompt,
   formatUntrustedGuidelines,
   formatUntrustedRequest,
@@ -20,6 +21,7 @@ import {
   shouldGenerateImagePrompt,
 } from '../../../lib/ai-constants'
 import { contentDataToLegacyInput, validateContentData } from '../../../lib/ai-content-data'
+import { resolveImageTextPolicy, stripNoTextInstructions } from '../../../lib/ai-image-text-policy'
 import { resolveGenerationGuidelinesFromDocument } from '../../../lib/ai-guidelines'
 import { getGuidelineVersion } from '../../../lib/guidelines-store'
 import {
@@ -52,6 +54,7 @@ const OPENROUTER_TEXT_TIMEOUT_MS = 30_000
 const OPENROUTER_IMAGE_TIMEOUT_MS = 60_000
 const OPENROUTER_TEXT_MAX_TOKENS = 2_000
 const OPENROUTER_IMAGE_MAX_TOKENS = 2_048
+const GUIDELINE_NONCOMPLIANCE_CATEGORY = 'guideline_noncompliance'
 
 // ---------- Generation schemas (Phase 2A text; Phase 2D prompts; Phase 2E assets) ----------
 
@@ -165,6 +168,16 @@ export const AiDraftVariantSchema = z
   })
   .strict()
 
+const AiPolicyReviewSchema = z
+  .object({
+    stage: z.enum(['caption', 'result']),
+    disposition: z.enum(['block', 'review']),
+    categories: z.array(boundedRequiredString(100)).min(1).max(20),
+    reason: boundedRequiredString(1000),
+    failClosed: z.boolean(),
+  })
+  .strict()
+
 export const AiSharedCaptionResultSchema = z
   .object({
     caption: z
@@ -205,6 +218,7 @@ export const AiGenerationResultSchema = z
     imagePlatforms: z.array(PlatformIdSchema).min(1).max(MAX_GUIDELINE_PLATFORMS).optional(),
     templateRequest: AiTemplateRequestSchema.optional(),
     templateAssets: AiTemplateAssetsSchema.optional(),
+    policyReview: AiPolicyReviewSchema.optional(),
   })
   .strict()
   .superRefine((value, ctx) => {
@@ -493,6 +507,14 @@ const HASHTAG_PATTERN = /(^|\s)#[\p{L}\p{N}_-]+/gu
 const CAMPAIGN_PATTERN = /\b(?:campa(?:ñ|n)a|campaign)\b/i
 const REQUIRED_HASHTAG_PATTERN =
   /(?:requier\w*|obligatori\w*|debe[n]?\s+incluir|incluir\s+obligatoriamente)[^\n.]{0,80}hashtags?|hashtags?[^\n.]{0,80}(?:requerid\w*|obligatori\w*)/i
+const COST_FACT_PATTERN =
+  /\b(?:costo|coste|precio|tarifa|donativo|entrada\s+libre|libre\s+de\s+costo|sin\s+costo|gratis|gratuit[oa]s?)\b/iu
+const UNSUPPORTED_FREE_ADMISSION_PATTERNS = [
+  /\b(?:este\s+|el\s+|un\s+)?(?:evento|actividad)\s+(?:es\s+|ser[aá]\s+)?(?:totalmente\s+|completamente\s+)?(?:libre\s+de\s+costo|sin\s+costo|gratuit[oa])(?:\s+para\s+(?:toda\s+)?(?:la\s+)?(?:familia|comunidad|p[uú]blico))?/giu,
+  /\b(?:la\s+)?(?:entrada|admisi[oó]n)\s+(?:es\s+|ser[aá]\s+)?(?:totalmente\s+|completamente\s+)?(?:libre|libre\s+de\s+costo|sin\s+costo|gratuit[oa])(?:\s+para\s+(?:toda\s+)?(?:la\s+)?(?:familia|comunidad|p[uú]blico))?/giu,
+  /\b(?:de\s+forma\s+)?gratuit[oa](?:mente)?\b/giu,
+  /\b(?:libre\s+de\s+costo|sin\s+costo|gratis)\b/giu,
+]
 
 const APPROVAL_CLAIM_PATTERNS = [
   /aprobad[oa]s?\s+(?:oficialmente\s+)?por\s+(?:la\s+)?SAC/i,
@@ -559,6 +581,36 @@ function removeUnrequestedHashtags(text) {
     .replace(/[ \t]+([,.;:!?])/g, '$1')
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/[ \t]+\n/g, '\n')
+    .trim()
+}
+
+function inputSuppliesCostInformation(input) {
+  const supplied = [
+    input?.intent,
+    input?.topic,
+    input?.cta,
+    ...(Array.isArray(input?.knownFacts) ? input.knownFacts : []),
+    ...(Array.isArray(input?.links) ? input.links : []),
+    ...Object.values(input?.eventDetails || {}),
+  ]
+    .filter((value) => typeof value === 'string')
+    .join(' ')
+
+  return COST_FACT_PATTERN.test(supplied)
+}
+
+function removeUnsupportedFreeAdmissionClaims(text, input) {
+  if (!text || inputSuppliesCostInformation(input)) return text
+
+  return UNSUPPORTED_FREE_ADMISSION_PATTERNS.reduce(
+    (caption, pattern) => caption.replace(pattern, ''),
+    text
+  )
+    .replace(/[ \t]+([,.;:!?])/g, '$1')
+    .replace(/([.!?])\s*[.!?]+/g, '$1')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/^\s*[,;:.!?]+\s*/g, '')
     .trim()
 }
 
@@ -649,7 +701,10 @@ export function applyGenerationGuardrails(
   const normalizedCaption = {
     ...existing,
     contentType: input.contentType,
-    draftText: allowHashtags ? existing.draftText : removeUnrequestedHashtags(existing.draftText),
+    draftText: removeUnsupportedFreeAdmissionClaims(
+      allowHashtags ? existing.draftText : removeUnrequestedHashtags(existing.draftText),
+      input
+    ),
     assumptions,
     missingInformation,
     imagePrompt: existing.imagePrompt,
@@ -673,16 +728,16 @@ export function applyGenerationGuardrails(
 // ---------- Image prompt guardrails (Phase 2D) ----------
 
 const DEFAULT_IMAGE_SAFETY_SUFFIX =
-  'No identifiable faces, no minors, no private information, no official logos, no text overlay, no copyrighted art styles.'
+  'No identifiable faces, no private information, no official logos, no copyrighted art styles. If a child is relevant to the theme, show them non-identifiably, fully clothed, and only in an ordinary family-safe context.'
+const CHILD_CONTEXT_SAFETY_SUFFIX =
+  'Show any child non-identifiably, fully clothed, and only in an ordinary family-safe context.'
+const DEFAULT_IMAGE_TEXT_PREFERENCE = 'No unrequested text overlay.'
+const CHILD_REFERENCE_PATTERN = /\b(?:child|children|minor|niñ[oa]s?|menor(?:es)?)\b/i
 
 const IMAGE_PROMPT_RISK_PATTERNS = [
   {
     pattern: /\b(?:portrait|retrato)\s+of\b/i,
     message: 'El prompt de imagen sugiere retrato identificable; revisar antes de generar.',
-  },
-  {
-    pattern: /\b(?:minor|child|children|niñ[oa]s?)\b/i,
-    message: 'El prompt de imagen menciona menores; revisar antes de generar.',
   },
   {
     pattern: /(?:SAC|Sociedad de Astronomía).{0,30}(?:logo|emblema|sello)/i,
@@ -723,10 +778,39 @@ function imagePromptHasSafetyConstraints(imagePrompt) {
   )
 }
 
-function ensureImagePromptSafetySuffix(imagePrompt) {
+function usesTemplateTextOverlay(input) {
+  return (
+    Boolean(resolveTemplateLayoutId(input.contentType, input.contentTypeDefinition)) &&
+    (input.backgroundMode === 'stock' || input.backgroundMode === 'ai_generated')
+  )
+}
+
+function buildRequiredImageTextSuffix(textPolicy) {
+  const requiredCopy = textPolicy.suggestedText
+    ? `Required on-image text: "${textPolicy.suggestedText}".`
+    : 'Include the greeting or message required by the content-type rule, derived only from the supplied topic and caption.'
+  return `${requiredCopy} Render it as clearly legible, high-contrast typography with an intentional social-poster hierarchy. Keep the visual subject aligned with the publication topic, occasion, and caption, and follow every active Guidelines visual restriction. Do not add unsupported dates, places, costs, links, or institutional claims.`
+}
+
+function ensureImagePromptSafetySuffix(imagePrompt, input) {
   if (!imagePrompt?.trim()) return imagePrompt
-  if (imagePromptHasSafetyConstraints(imagePrompt)) return imagePrompt.trim()
-  return `${imagePrompt.trim()}; ${DEFAULT_IMAGE_SAFETY_SUFFIX}`
+  const textPolicy = resolveImageTextPolicy(input, input.contentTypeDefinition?.generation?.rules)
+  const renderRequiredText = textPolicy.required && !usesTemplateTextOverlay(input)
+  let normalizedPrompt = renderRequiredText
+    ? stripNoTextInstructions(imagePrompt)
+    : imagePrompt.trim()
+
+  if (!imagePromptHasSafetyConstraints(normalizedPrompt)) {
+    normalizedPrompt = `${normalizedPrompt}; ${DEFAULT_IMAGE_SAFETY_SUFFIX}`
+  }
+  if (CHILD_REFERENCE_PATTERN.test(normalizedPrompt) && !/fully clothed/i.test(normalizedPrompt)) {
+    normalizedPrompt = `${normalizedPrompt}; ${CHILD_CONTEXT_SAFETY_SUFFIX}`
+  }
+
+  const textInstruction = renderRequiredText
+    ? buildRequiredImageTextSuffix(textPolicy)
+    : DEFAULT_IMAGE_TEXT_PREFERENCE
+  return `${normalizedPrompt}; ${textInstruction}`
 }
 
 /**
@@ -766,7 +850,7 @@ export function applyImagePromptGuardrailsToDraft(draft, input) {
     }
   }
 
-  imagePrompt = ensureImagePromptSafetySuffix(imagePrompt)
+  imagePrompt = ensureImagePromptSafetySuffix(imagePrompt, input)
 
   if (input.imageConstraints?.trim()) {
     const constraintLower = input.imageConstraints.trim().toLowerCase()
@@ -1013,12 +1097,109 @@ async function reviewPolicyResultStep(input, guidelines, result) {
   return reviewAiPolicyResult(
     {
       request: buildPolicyRequest(input),
-      result,
+      result: { ...result, policyContext: buildPolicyReviewContext(input) },
       guidelines: buildPolicyGuidelines(guidelines),
       images,
     },
     { fetchImpl: fetch }
   )
+}
+
+function buildPolicyReviewContext(input) {
+  const imageTextPolicy = resolveImageTextPolicy(
+    input,
+    input.contentTypeDefinition?.generation?.rules
+  )
+  return {
+    currentDate: new Date().toISOString().slice(0, 10),
+    suppliedLogistics: {
+      eventDetails: input.eventDetails,
+      cta: input.cta,
+      links: input.links,
+      sponsorProvided: Boolean(input.sponsorLogo?.dataUrl),
+    },
+    posterCreativeText:
+      'El subtítulo y cuerpo del afiche son redacción creativa, no datos logísticos. Solo son afirmaciones factuales si añaden fecha, hora, lugar, costo, enlace, auspiciador, instrucciones concretas o datos científicos.',
+    imageTextRequirement: {
+      required: imageTextPolicy.required,
+      suggestedText: imageTextPolicy.suggestedText,
+      guidance:
+        'Omitir texto, saludo, branding, estilo o layout requerido es un incumplimiento de Guidelines, no una imagen no relacionada cuando la escena sí corresponde al tema.',
+    },
+  }
+}
+
+async function reviewCaptionPolicyStep(input, guidelines, textResult, posterText) {
+  'use step'
+  return reviewAiPolicyResult(
+    {
+      request: buildPolicyRequest(input),
+      result: {
+        ...textResult,
+        ...(posterText ? { posterCreativeText: posterText } : null),
+        policyContext: buildPolicyReviewContext(input),
+      },
+      guidelines: buildPolicyGuidelines(guidelines),
+      images: [],
+    },
+    { fetchImpl: fetch }
+  )
+}
+
+const HARD_POLICY_CATEGORIES = new Set([
+  BASE_POLICY_REQUEST_CATEGORIES.MEDICAL_ADVICE,
+  BASE_POLICY_REQUEST_CATEGORIES.LEGAL_ADVICE,
+  BASE_POLICY_REQUEST_CATEGORIES.SEXUAL_CONTENT,
+  BASE_POLICY_REQUEST_CATEGORIES.DOUBLE_ENTENDRE,
+  BASE_POLICY_REQUEST_CATEGORIES.DECEPTIVE_CONTENT,
+  BASE_POLICY_REQUEST_CATEGORIES.OUT_OF_SCOPE,
+  BASE_POLICY_REQUEST_CATEGORIES.UNRELATED_IMAGE,
+  BASE_POLICY_REQUEST_CATEGORIES.DIRECT_PUBLISHING,
+  BASE_POLICY_REQUEST_CATEGORIES.BYPASS_HUMAN_REVIEW,
+])
+
+function resolvePolicyDisposition(decision) {
+  if (decision.failClosed === true) return 'review'
+  return decision.categories.some((category) => HARD_POLICY_CATEGORIES.has(category))
+    ? 'block'
+    : 'review'
+}
+
+function attachPolicyReview(result, decision, stage) {
+  const disposition = resolvePolicyDisposition(decision)
+  const hasGuidelineNoncompliance = decision.categories.includes(GUIDELINE_NONCOMPLIANCE_CATEGORY)
+  const removeVisual = stage === 'caption' || disposition === 'block'
+  const safeResult = removeVisual
+    ? (({
+        generatedImage: _generatedImage,
+        imagePlatforms: _imagePlatforms,
+        templateRequest: _templateRequest,
+        templateAssets: _templateAssets,
+        ...textResult
+      }) => textResult)(result)
+    : result
+  return AiGenerationResultSchema.parse({
+    ...safeResult,
+    drafts: removeVisual
+      ? safeResult.drafts.map(
+          ({ imagePrompt: _prompt, imageRationale: _rationale, ...draft }) => draft
+        )
+      : safeResult.drafts,
+    policyReview: {
+      stage,
+      disposition,
+      categories: decision.categories,
+      reason: decision.reason,
+      failClosed: decision.failClosed === true,
+    },
+    recommendedNextStep:
+      disposition === 'block'
+        ? 'Corrige la solicitud o los datos provistos antes de volver a generar.'
+        : hasGuidelineNoncompliance
+          ? 'Corrige el incumplimiento indicado o vuelve a generar; el borrador se conserva para revisión.'
+          : 'Revisa el motivo, confirma los hechos con la información oficial y decide si conservas o corriges el borrador.',
+    humanReviewRequired: true,
+  })
 }
 
 async function prepareFinalImageStep(input, result) {
@@ -1164,6 +1345,7 @@ ${captionLimitInstruction}
     }. Solo se permiten si el usuario los solicitó, hay una campaña identificable o las guías activas los requieren explícitamente.
 - Preserva los hechos provistos (knownFacts, eventDetails, enlaces) tal cual, sin alterarlos.
 - NO inventes fechas, horarios, lugares, costos, enlaces ni hechos científicos no provistos.
+- Si la solicitud no dice explícitamente que la entrada es gratis, NO escribas “evento libre de costo”, “entrada libre”, “sin costo”, “gratis” ni expresiones equivalentes.
 - Si falta información crítica, deja huecos claros en "missingInformation" y NO rellenes con datos inventados.
 - Registra en "assumptions" cualquier supuesto tomado; usa [] si no hay.
 - NO afirmes aprobación oficial de SAC ni que el contenido está listo para publicar sin revisión humana.
@@ -1345,6 +1527,34 @@ async function generateImagePromptsStep(input, textResult, guidelines) {
   const siteUrl = process.env.OPENROUTER_SITE_URL
   const openRouterTitle = process.env.OPENROUTER_TITLE
   const imagePlatforms = resolveImagePlatforms(input)
+  const firstContentTypeRules = guidelines.platforms?.[imagePlatforms[0]]?.contentType || ''
+  const imageTextPolicy = resolveImageTextPolicy(input, firstContentTypeRules)
+  const templateWillComposeText = imageTextPolicy.required && usesTemplateTextOverlay(input)
+
+  const imageTextRules = imageTextPolicy.required
+    ? templateWillComposeText
+      ? `
+TEXTO EN IMAGEN: LO COMPONE LA PLANTILLA
+- La regla específica del tipo exige texto en el arte final.
+- Genera únicamente el fondo limpio; la plantilla añadirá la felicitación después.
+- No intentes dibujar letras, captions ni logos dentro del fondo.
+`
+      : `
+TEXTO EN IMAGEN: REQUERIDO
+- La regla específica del tipo exige una felicitación o mensaje visible y prevalece sobre cualquier preferencia general de "sin texto" incluida en Guidelines o restricciones.
+- El imagePrompt debe pedir una pieza gráfica, no una foto decorativa sin texto.
+- Debe indicar literalmente el texto principal entre comillas y pedir tipografía clara, legible y de alto contraste.
+- Integra el mensaje con una escena relacionada con el tema, la ocasión y el caption. Puede usar motivos culturales, estacionales, comunitarios, humorísticos o simbólicos pertinentes aunque no sean astronómicos. Respeta cualquier limitación visual adicional definida en Guidelines.
+${
+  imageTextPolicy.suggestedText
+    ? `- Texto principal requerido: "${imageTextPolicy.suggestedText}".`
+    : '- Deriva el mensaje únicamente del tema y caption provistos; no inventes logística ni afirmaciones institucionales.'
+}
+`
+    : `
+TEXTO EN IMAGEN: NO SOLICITADO
+- Evita texto superpuesto cuando la regla específica del tipo no lo exige.
+`
 
   const backdropOnlyRules =
     input.backgroundMode === 'ai_generated'
@@ -1352,7 +1562,7 @@ async function generateImagePromptsStep(input, textResult, guidelines) {
 Reglas adicionales (fondo para plantilla):
 - Describe un fondo visual limpio apto para sobreimpresionar texto después.
 - SIN texto, SIN logos, SIN captions, SIN tipografía, SIN marcas de agua en la imagen.
-- Espacio negativo central amplio para tipografía; atmósfera astronómica / Caribe coherente con SAC.
+- Espacio negativo central amplio para tipografía; atmósfera coherente con el tema de la publicación y las Guidelines activas.
 `
       : ''
 
@@ -1371,11 +1581,13 @@ Devuelve EXACTAMENTE un objeto JSON (sin texto adicional, sin markdown) con esta
 Reglas:
 - Genera UN SOLO imagePrompt compartido para las plataformas que admiten imagen.
 - Alinea el prompt con el tema y los borradores de texto; NO inventes hechos no provistos.
-- NO personas identificables, menores, datos privados, logos oficiales ni estilos con copyright.
+- NO personas identificables, datos privados, logos oficiales ni estilos con copyright.
+- Si el tema requiere una familia o niñez, permite únicamente figuras no identificables, completamente vestidas y en un contexto cotidiano, seguro y pertinente al mensaje.
 - NO fechas, horarios, lugares, costos ni enlaces específicos que no estén en los datos provistos.
 - Incluye restricciones de seguridad explícitas en el imagePrompt.
 - Respeta imageStyle e imageConstraints del usuario cuando estén provistos.
 - NO generes assets de imagen; solo el prompt de texto.
+${imageTextRules}
 ${backdropOnlyRules}`,
   })
 
@@ -1387,6 +1599,11 @@ ${backdropOnlyRules}`,
     imageConstraints: input.imageConstraints,
     knownFacts: input.knownFacts,
     eventDetails: input.eventDetails,
+    imageTextPolicy: {
+      required: imageTextPolicy.required,
+      suggestedText: imageTextPolicy.suggestedText,
+      renderedByTemplate: templateWillComposeText,
+    },
     drafts: textResult.drafts.map((d) => ({
       platform: d.platform,
       draftText: d.draftText,
@@ -1789,7 +2006,9 @@ export async function generateAiWorkflow(input) {
         usage: requestPolicy.usage,
       })
     }
-    throw new Error('La solicitud no cumple la política de contenido de SAC.')
+    throw new Error(
+      `Solicitud bloqueada por política. Categorías: ${requestPolicy.categories.join(', ')}. Motivo: ${requestPolicy.reason}`
+    )
   }
 
   const textResult = await generateTextStep(validatedInput, guidelines)
@@ -1812,6 +2031,41 @@ export async function generateAiWorkflow(input) {
     throw new Error('No se pudieron generar los borradores. Intenta nuevamente.')
   }
 
+  const captionPolicy = await reviewCaptionPolicyStep(
+    validatedInput,
+    guidelines,
+    textResult.result,
+    textResult.posterText
+  )
+  let usage = mergeOpenRouterUsage(textResult.usage, captionPolicy.usage)
+  if (captionPolicy.decision !== 'allow') {
+    const blockedResult = attachPolicyReview(textResult.result, captionPolicy, 'caption')
+    usage = mergeOpenRouterUsage(requestPolicy.usage, usage)
+    const completedAt = new Date().toISOString()
+    if (runId) {
+      await persistGenerationHistoryStep({
+        input: validatedInput,
+        runId,
+        status: 'completed',
+        result: blockedResult,
+        startedAt,
+        completedAt,
+        guidelineVersion: guidelines.version,
+        policyVersion: AI_BASE_POLICY_VERSION,
+        contentTypeIdentity: guidelines.contentTypeIdentity,
+        model: captionPolicy.model,
+        usage,
+      })
+    }
+    return {
+      result: blockedResult,
+      usage,
+      guidelineVersion: guidelines.version,
+      policyVersion: AI_BASE_POLICY_VERSION,
+      contentTypeIdentity: guidelines.contentTypeIdentity,
+    }
+  }
+
   const usesTemplate =
     shouldGenerateImagePrompt(
       validatedInput.contentType,
@@ -1825,8 +2079,6 @@ export async function generateAiWorkflow(input) {
     )
 
   let finalResult
-  let usage
-
   if (usesTemplate && validatedInput.backgroundMode === 'stock') {
     if (!getBackgroundById(validatedInput.backgroundId)) {
       const drafts = textResult.result.drafts.map((draft) => ({
@@ -1841,9 +2093,7 @@ export async function generateAiWorkflow(input) {
         drafts,
         humanReviewRequired: true,
       })
-      usage = textResult.usage
     } else {
-      usage = textResult.usage
       finalResult = AiGenerationResultSchema.parse(
         attachTemplateRequestsToResult(textResult.result, validatedInput, {
           posterText: textResult.posterText,
@@ -1856,7 +2106,7 @@ export async function generateAiWorkflow(input) {
       textResult.result,
       guidelines
     )
-    const usageAfterPrompts = mergeOpenRouterUsage(textResult.usage, imagePromptResult.usage)
+    const usageAfterPrompts = mergeOpenRouterUsage(usage, imagePromptResult.usage)
     const backdropResult = await generateSharedBackdropStep(
       validatedInput,
       imagePromptResult.result
@@ -1879,7 +2129,7 @@ export async function generateAiWorkflow(input) {
       textResult.result,
       guidelines
     )
-    const usageAfterPrompts = mergeOpenRouterUsage(textResult.usage, imagePromptResult.usage)
+    const usageAfterPrompts = mergeOpenRouterUsage(usage, imagePromptResult.usage)
     const imageAssetResult = await generateImageAssetsStep(validatedInput, imagePromptResult.result)
     usage = mergeOpenRouterUsage(usageAfterPrompts, imageAssetResult.usage)
     finalResult = imageAssetResult.result
@@ -1917,31 +2167,12 @@ export async function generateAiWorkflow(input) {
     }
     throw new Error('No se pudo preparar la imagen requerida por Guidelines.')
   }
-  const resultPolicy = await reviewPolicyResultStep(validatedInput, guidelines, finalResult)
-  usage = mergeOpenRouterUsage(usage, resultPolicy.usage)
-  if (resultPolicy.decision !== 'allow') {
-    const completedAt = new Date().toISOString()
-    if (runId) {
-      await persistGenerationHistoryStep({
-        input: validatedInput,
-        runId,
-        status: 'failed',
-        error: {
-          message: resultPolicy.failClosed
-            ? 'policy_review_unavailable'
-            : `policy_result_blocked:${resultPolicy.categories.join(',')}`,
-          retryable: resultPolicy.failClosed,
-        },
-        startedAt,
-        completedAt,
-        guidelineVersion: guidelines.version,
-        policyVersion: AI_BASE_POLICY_VERSION,
-        contentTypeIdentity: guidelines.contentTypeIdentity,
-        model: resultPolicy.model,
-        usage,
-      })
+  if (finalResult.generatedImage?.dataUrl) {
+    const resultPolicy = await reviewPolicyResultStep(validatedInput, guidelines, finalResult)
+    usage = mergeOpenRouterUsage(usage, resultPolicy.usage)
+    if (resultPolicy.decision !== 'allow') {
+      finalResult = attachPolicyReview(finalResult, resultPolicy, 'result')
     }
-    throw new Error('El resultado no superó la revisión de política de SAC.')
   }
 
   const completedAt = new Date().toISOString()

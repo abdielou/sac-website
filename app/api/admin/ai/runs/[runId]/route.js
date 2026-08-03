@@ -30,18 +30,29 @@ function extractOwnerFromHydratedInput(hydrated) {
   return null
 }
 
-async function getRunOwner(runId) {
+function toIsoTimestamp(value) {
+  if (!value) return undefined
+  const date = value instanceof Date ? value : new Date(value)
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString()
+}
+
+async function inspectRun(runId) {
   const world = await getWorld()
   const run = await world.runs.get(runId, { resolveData: 'all' })
   const hydrated = hydrateResourceIO(run, observabilityRevivers)
-  return extractOwnerFromHydratedInput(hydrated)
+  return {
+    owner: extractOwnerFromHydratedInput(hydrated),
+    createdAt: toIsoTimestamp(run.createdAt),
+    startedAt: toIsoTimestamp(run.startedAt),
+    updatedAt: toIsoTimestamp(run.updatedAt),
+  }
 }
 
 function safeWorkflowErrorMessage(error) {
   // Avoid leaking internals; PRD says safe failures.
   const message = error?.message ? String(error.message) : ''
   if (!message) return 'La generación falló'
-  return message.length > 200 ? `${message.slice(0, 200)}...` : message
+  return message.length > 1200 ? `${message.slice(0, 1200)}...` : message
 }
 
 /**
@@ -151,15 +162,17 @@ export const GET = auth(async function GET(req, { params }) {
   }
 
   // Ownership must be checked before returning any status/result to avoid leaking info.
-  let owner
+  let inspection
   try {
-    owner = await getRunOwner(runId)
+    inspection = await inspectRun(runId)
   } catch {
     // If run doesn't exist or can't be inspected, respond generically.
     return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
   }
 
-  const matches = owner?.userId === String(userId) || owner?.userEmail?.toLowerCase() === userEmail
+  const matches =
+    inspection.owner?.userId === String(userId) ||
+    inspection.owner?.userEmail?.toLowerCase() === userEmail
 
   if (!matches) {
     // PRD: 403/404 without leaking status/result/error details for forbidden/cross-user runId.
@@ -197,6 +210,16 @@ export const GET = auth(async function GET(req, { params }) {
     return NextResponse.json({ runId, status }, { status: 200 })
   }
 
-  // pending / running / cancelled: just return status.
-  return NextResponse.json({ runId, status }, { status: 200 })
+  // Timestamps let the client distinguish an active run from a stale local run
+  // left behind when the development server was interrupted.
+  return NextResponse.json(
+    {
+      runId,
+      status,
+      createdAt: inspection.createdAt,
+      startedAt: inspection.startedAt,
+      updatedAt: inspection.updatedAt,
+    },
+    { status: 200 }
+  )
 })
