@@ -318,6 +318,36 @@ describe('generateAiWorkflow schema', () => {
     })
     expect(parsed.success).toBe(true)
   })
+  test('GenerateInputSchema accepts internal run coordination without requiring it for legacy inputs', () => {
+    expect(GenerateInputSchema.safeParse(baseInput).success).toBe(true)
+
+    const coordinated = GenerateInputSchema.safeParse({
+      ...baseInput,
+      runCoordination: {
+        claimId: 'claim-generation-1',
+        coordination: 's3',
+      },
+    })
+    expect(coordinated.success).toBe(true)
+    expect(coordinated.data.runCoordination).toEqual({
+      claimId: 'claim-generation-1',
+      coordination: 's3',
+    })
+
+    expect(
+      GenerateInputSchema.safeParse({
+        ...baseInput,
+        runCoordination: { claimId: '', coordination: 's3' },
+      }).success
+    ).toBe(false)
+    expect(
+      GenerateInputSchema.safeParse({
+        ...baseInput,
+        runCoordination: { claimId: 'claim-generation-1', coordination: 'shared' },
+      }).success
+    ).toBe(false)
+  })
+
 
   test('GenerateInputSchema deduplicates platforms', () => {
     const parsed = GenerateInputSchema.safeParse({

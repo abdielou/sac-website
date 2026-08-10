@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import { useAiRunHref } from '@/lib/hooks/AiRunProvider'
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', exactMatch: true, feature: 'dashboard', roles: ['admin'] },
@@ -25,6 +26,7 @@ const navItems = [
 export function DashboardNavTabs() {
   const pathname = usePathname()
   const { data: session } = useSession()
+  const aiHref = useAiRunHref()
 
   const isAdmin = session?.user?.isAdmin
   const isMember = session?.user?.isMember
@@ -60,7 +62,7 @@ export function DashboardNavTabs() {
         return (
           <Link
             key={item.href}
-            href={item.href}
+            href={item.feature === 'ai' ? aiHref : item.href}
             className={`flex-shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
               active
                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'

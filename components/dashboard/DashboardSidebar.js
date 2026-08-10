@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
+import { useAiRunHref } from '@/lib/hooks/AiRunProvider'
 
 const navItems = [
   {
@@ -176,6 +177,7 @@ export function DashboardSidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const pathname = usePathname()
   const { data: session } = useSession()
+  const aiHref = useAiRunHref()
 
   const isAdmin = session?.user?.isAdmin
   const isMember = session?.user?.isMember
@@ -258,7 +260,7 @@ export function DashboardSidebar() {
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={item.feature === 'ai' ? aiHref : item.href}
               title={collapsed ? item.label : undefined}
               className={`flex items-center text-sm font-medium rounded-lg transition-colors ${
                 collapsed ? 'justify-center px-2 py-3' : 'px-4 py-3'

@@ -20,6 +20,12 @@ jest.mock('../../lib/ai-rate-limit', () => ({
   checkWorkflowStartRateLimit: jest.fn(() => null),
 }))
 
+jest.mock('../../lib/ai-run-lease-store', () => ({
+  reserveAiRun: jest.fn(),
+  activateAiRunLease: jest.fn(),
+  releaseAiRunReservation: jest.fn(),
+}))
+
 jest.mock('../../lib/ai-guidelines', () => {
   const actual = jest.requireActual('../../lib/ai-guidelines')
   return {
@@ -34,9 +40,16 @@ jest.mock('workflow/api', () => ({
 
 const { getActiveGuidelinesStrict, getDefaultGuidelines } = require('../../lib/ai-guidelines')
 const { start } = require('workflow/api')
+const {
+  reserveAiRun,
+  activateAiRunLease,
+  releaseAiRunReservation,
+} = require('../../lib/ai-run-lease-store')
 const { POST } = require('../../app/api/admin/ai/validate/route')
 
-function jsonRequest(body) {
+const RUN_TOKEN = '22222222-2222-4222-8222-222222222222'
+
+function jsonRequest(body, { runToken = RUN_TOKEN } = {}) {
   return {
     auth: {
       user: {
@@ -44,7 +57,13 @@ function jsonRequest(body) {
         email: 'USER@example.com',
       },
     },
-    headers: { get: () => 'application/json' },
+    headers: {
+      get: (name) => {
+        if (name.toLowerCase() === 'content-type') return 'application/json'
+        if (name.toLowerCase() === 'x-ai-run-token') return runToken
+        return null
+      },
+    },
     json: jest.fn().mockResolvedValue(body),
   }
 }
@@ -58,19 +77,34 @@ const image = {
 
 describe('POST /api/admin/ai/validate contract', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    jest.resetAllMocks()
     getActiveGuidelinesStrict.mockResolvedValue(getDefaultGuidelines())
     start.mockResolvedValue({
       runId: 'run-validate-123',
       status: Promise.resolve('pending'),
     })
+    reserveAiRun.mockResolvedValue({
+      claimId: 'claim-validate-1',
+      coordination: 's3',
+      reused: false,
+      status: 'starting',
+    })
+    activateAiRunLease.mockResolvedValue({
+      claimId: 'claim-validate-1',
+      runId: 'run-validate-123',
+      mode: 'validate',
+      status: 'pending',
+      coordination: 's3',
+      reused: false,
+    })
+    releaseAiRunReservation.mockResolvedValue(true)
   })
 
   test('converts a legacy request and pins its content type identity', async () => {
     const response = await POST(
       jsonRequest({
         platform: 'facebook',
-        contentType: 'caption',
+        contentType: 'regular_post',
         draftText: 'Mira el cielo con nosotros esta noche.',
         images: [image],
       })
@@ -82,25 +116,96 @@ describe('POST /api/admin/ai/validate contract', () => {
       userId: 'session-user',
       userEmail: 'user@example.com',
       platforms: ['x', 'instagram', 'facebook'],
-      contentType: 'caption',
+      contentType: 'regular_post',
       guidelineVersion: 'default-v1',
       contentTypeIdentity: {
-        id: 'caption',
-        label: 'Caption',
+        id: 'regular_post',
+        label: 'Publicación regular',
         guidelineVersion: 'default-v1',
       },
       contentData: {
         intent: 'Validar borrador existente',
         topic: 'Mira el cielo con nosotros esta noche.',
       },
+      runCoordination: {
+        claimId: 'claim-validate-1',
+        coordination: 's3',
+      },
     })
+  })
+
+  test('normalizes draft line endings before starting the workflow', async () => {
+    const response = await POST(
+      jsonRequest({
+        platforms: ['facebook'],
+        contentType: 'regular_post',
+        draftText: 'Primera línea.\r\n\r\nSegunda línea.',
+        images: [image],
+      })
+    )
+
+    expect(response.status).toBe(202)
+    expect(start.mock.calls[0][1][0].draftText).toBe('Primera línea.\n\nSegunda línea.')
+  })
+
+  test('returns the same validation run for an idempotent browser token', async () => {
+    reserveAiRun.mockResolvedValueOnce({
+      claimId: 'claim-existing',
+      runId: 'run-existing',
+      mode: 'validate',
+      status: 'running',
+      coordination: 's3',
+      reused: true,
+    })
+
+    const response = await POST(
+      jsonRequest({
+        platform: 'facebook',
+        contentType: 'regular_post',
+        draftText: 'Borrador',
+        images: [image],
+      })
+    )
+
+    expect(response.status).toBe(202)
+    expect(response.body).toMatchObject({
+      runId: 'run-existing',
+      mode: 'validate',
+      recovered: true,
+    })
+    expect(start).not.toHaveBeenCalled()
+  })
+
+  test('blocks validation while generation is active without leaking runId', async () => {
+    reserveAiRun.mockRejectedValueOnce(
+      Object.assign(new Error('active'), {
+        code: 'AI_RUN_ACTIVE',
+        mode: 'generate',
+        status: 'pending',
+        coordination: 's3',
+      })
+    )
+
+    const response = await POST(
+      jsonRequest({
+        platform: 'facebook',
+        contentType: 'regular_post',
+        draftText: 'Borrador',
+        images: [image],
+      })
+    )
+
+    expect(response.status).toBe(409)
+    expect(response.body.active).toEqual({ mode: 'generate', status: 'pending' })
+    expect(response.body.runId).toBeUndefined()
+    expect(start).not.toHaveBeenCalled()
   })
 
   test('starts one validation workflow for the complete configured package', async () => {
     const response = await POST(
       jsonRequest({
         platforms: ['x', 'instagram', 'facebook'],
-        contentType: 'caption',
+        contentType: 'regular_post',
         draftText: 'Un caption compartido.',
         images: [image],
       })
@@ -115,11 +220,35 @@ describe('POST /api/admin/ai/validate contract', () => {
     })
   })
 
+  test('returns a recoverable run when lease activation fails after start', async () => {
+    activateAiRunLease.mockRejectedValueOnce(
+      Object.assign(new Error('CAS busy'), { code: 'AI_RUN_COORDINATION_BUSY' })
+    )
+
+    const response = await POST(
+      jsonRequest({
+        platform: 'facebook',
+        contentType: 'regular_post',
+        draftText: 'Borrador',
+        images: [image],
+      })
+    )
+
+    expect(response.status).toBe(202)
+    expect(response.body).toMatchObject({
+      runId: 'run-validate-123',
+      mode: 'validate',
+      recovered: true,
+      coordination: 's3',
+    })
+    expect(releaseAiRunReservation).not.toHaveBeenCalled()
+  })
+
   test('fails closed when the active Guidelines version cannot be pinned', async () => {
     getActiveGuidelinesStrict.mockRejectedValueOnce(new Error('S3 unavailable'))
 
     const response = await POST(
-      jsonRequest({ platform: 'facebook', contentType: 'caption', draftText: 'Borrador' })
+      jsonRequest({ platform: 'facebook', contentType: 'regular_post', draftText: 'Borrador' })
     )
 
     expect(response.status).toBe(503)
@@ -131,7 +260,7 @@ describe('POST /api/admin/ai/validate contract', () => {
     const valid = await POST(
       jsonRequest({
         platform: 'facebook',
-        contentType: 'caption',
+        contentType: 'regular_post',
         draftText: 'Borrador',
         images: [image],
         contentData: {
@@ -145,7 +274,7 @@ describe('POST /api/admin/ai/validate contract', () => {
     const invalid = await POST(
       jsonRequest({
         platform: 'facebook',
-        contentType: 'caption',
+        contentType: 'regular_post',
         draftText: 'Borrador',
         contentData: {
           intent: 'Revisar claridad',
@@ -170,11 +299,11 @@ describe('POST /api/admin/ai/validate contract', () => {
 
     const archived = getDefaultGuidelines()
     archived.contentTypeCatalog = archived.contentTypeCatalog.map((entry) =>
-      entry.id === 'caption' ? { ...entry, status: 'archived' } : entry
+      entry.id === 'regular_post' ? { ...entry, status: 'archived' } : entry
     )
     getActiveGuidelinesStrict.mockResolvedValue(archived)
     const archivedResponse = await POST(
-      jsonRequest({ platform: 'facebook', contentType: 'caption', draftText: 'Borrador' })
+      jsonRequest({ platform: 'facebook', contentType: 'regular_post', draftText: 'Borrador' })
     )
 
     expect(archivedResponse.status).toBe(400)
@@ -189,7 +318,7 @@ describe('POST /api/admin/ai/validate contract', () => {
     getActiveGuidelinesStrict.mockResolvedValue(document)
 
     const response = await POST(
-      jsonRequest({ platform: 'facebook', contentType: 'caption', draftText: 'Borrador' })
+      jsonRequest({ platform: 'facebook', contentType: 'regular_post', draftText: 'Borrador' })
     )
 
     expect(response.status).toBe(400)
@@ -198,10 +327,25 @@ describe('POST /api/admin/ai/validate contract', () => {
   })
 
   test('enforces the active image policy for the selected platform', async () => {
+    const document = getDefaultGuidelines()
+    const definition = document.contentTypeCatalog.find(({ id }) => id === 'regular_post')
+    definition.visual = {
+      mode: 'none',
+      template: null,
+      backgroundSources: [],
+      sponsorAllowed: false,
+      imagePolicyByPlatform: {
+        x: 'prohibited',
+        instagram: 'prohibited',
+        facebook: 'prohibited',
+      },
+    }
+    getActiveGuidelinesStrict.mockResolvedValue(document)
+
     const response = await POST(
       jsonRequest({
         platform: 'facebook',
-        contentType: 'reel_caption',
+        contentType: 'regular_post',
         draftText: 'Borrador para reel.',
         images: [
           {
@@ -279,7 +423,7 @@ describe('POST /api/admin/ai/validate contract', () => {
     const response = await POST(
       jsonRequest({
         platform: 'facebook',
-        contentType: 'caption',
+        contentType: 'regular_post',
         draftText: 'Borrador.',
         images: [image],
       })

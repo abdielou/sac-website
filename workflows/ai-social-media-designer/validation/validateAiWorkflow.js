@@ -16,6 +16,7 @@ import {
   mergeOpenRouterUsage,
 } from '../../../lib/ai-openrouter'
 import { buildValidationHistoryRecord } from '../../../lib/ai-run-history'
+import { confirmAiRunClaim } from '../../../lib/ai-run-lease-store'
 import {
   MAX_VALIDATION_IMAGE_DATA_URL_LENGTH,
   VALIDATION_IMAGE_MIME_TYPES,
@@ -90,6 +91,13 @@ const ContentTypeIdentitySchema = z
   })
   .strict()
 
+const AiRunCoordinationSchema = z
+  .object({
+    claimId: z.string().trim().min(1).max(200),
+    coordination: z.enum(['s3', 'local']),
+  })
+  .strict()
+
 export const ValidateInputSchema = z
   .object({
     userId: z.string().trim().min(1).max(256),
@@ -119,6 +127,7 @@ export const ValidateInputSchema = z
     imageConstraints: z.string().trim().min(1).max(1000).optional(),
     altText: z.string().trim().min(1).max(2000).optional(),
     images: z.array(ImageInputSchema).max(4).optional(),
+    runCoordination: AiRunCoordinationSchema.optional(),
   })
   .strict()
   .superRefine((value, ctx) => {
@@ -173,6 +182,18 @@ function extractFirstJsonObject(text) {
   }
 }
 
+async function confirmRunClaimStep(input, runId) {
+  'use step'
+  if (!input?.runCoordination) return { ok: true, skipped: true }
+
+  return confirmAiRunClaim({
+    userId: input.userId,
+    mode: 'validate',
+    claimId: input.runCoordination.claimId,
+    runId,
+    coordination: input.runCoordination.coordination,
+  })
+}
 
 async function validatePayloadStep(input) {
   'use step'
@@ -579,6 +600,9 @@ export async function validateAiWorkflow(input) {
     meta?.workflowStartedAt instanceof Date
       ? meta.workflowStartedAt.toISOString()
       : new Date().toISOString()
+
+  const claimConfirmation = await confirmRunClaimStep(input, runId)
+  if (!claimConfirmation?.ok) throw new Error('AI_RUN_CLAIM_LOST')
 
   const validatedInputResult = await validatePayloadStep(input)
   if (!validatedInputResult.ok) {

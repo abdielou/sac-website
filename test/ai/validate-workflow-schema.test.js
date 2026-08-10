@@ -346,6 +346,33 @@ describe('validateAiWorkflow schema', () => {
 
     expect(ValidateInputSchema.safeParse(input).success).toBe(true)
     expect(
+      ValidateInputSchema.parse({
+        ...input,
+        draftText: 'Primera línea.\r\n\r\nSegunda línea.',
+      }).draftText
+    ).toBe('Primera línea.\n\nSegunda línea.')
+    expect(
+      ValidateInputSchema.safeParse({
+        ...input,
+        runCoordination: {
+          claimId: 'claim-validation-1',
+          coordination: 'local',
+        },
+      }).success
+    ).toBe(true)
+    expect(
+      ValidateInputSchema.safeParse({
+        ...input,
+        runCoordination: { claimId: '', coordination: 'local' },
+      }).success
+    ).toBe(false)
+    expect(
+      ValidateInputSchema.safeParse({
+        ...input,
+        runCoordination: { claimId: 'claim-validation-1', coordination: 'shared' },
+      }).success
+    ).toBe(false)
+    expect(
       ValidateInputSchema.safeParse({
         ...input,
         contentTypeIdentity: { ...input.contentTypeIdentity, label: 'Etiqueta anterior' },

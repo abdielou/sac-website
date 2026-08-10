@@ -1,6 +1,7 @@
 'use client'
 
 import { QueryClient, QueryClientProvider, isServer } from '@tanstack/react-query'
+import { AiRunProvider } from '@/lib/hooks/AiRunProvider'
 
 /**
  * Create a new QueryClient with admin-specific defaults
@@ -40,8 +41,12 @@ function getQueryClient() {
  * AdminProviders wraps admin pages with QueryClientProvider
  * Use in app/admin/layout.js to enable TanStack Query for all admin routes
  */
-export function AdminProviders({ children }) {
+export function AdminProviders({ children, aiUserKey }) {
   const queryClient = getQueryClient()
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AiRunProvider userKey={aiUserKey}>{children}</AiRunProvider>
+    </QueryClientProvider>
+  )
 }

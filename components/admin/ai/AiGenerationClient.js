@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef } from 'react'
 import { useSession } from 'next-auth/react'
-import GenerationForm, { DEFAULT_GENERATION_FORM } from '@/components/admin/ai/GenerationForm'
+import GenerationForm from '@/components/admin/ai/GenerationForm'
 import GenerationResult from '@/components/admin/ai/GenerationResult'
 import { useAiGenerationRun } from '@/lib/hooks/useAiGenerationRun'
 import { useActiveGuidelines } from '@/lib/hooks/useActiveGuidelines'
+import { useGenerationDraft } from '@/lib/hooks/GenerationDraftProvider'
 import { resolveContentTypeOptions, resolvePlatformOptions } from '@/lib/ai-guidelines-draft'
 import { ErrorState } from '@/components/admin/ErrorState'
 
@@ -26,8 +27,9 @@ export default function AiGenerationClient() {
     [platformOptions]
   )
 
-  const [formState, setFormState] = useState(DEFAULT_GENERATION_FORM)
+  const { formState, setFormState } = useGenerationDraft()
   const selectedContentType = contentTypes.find(({ id }) => id === formState.contentType)
+  const formReady = guidelinesHydrated && Boolean(selectedContentType)
   const resultRef = useRef(null)
 
   useEffect(() => {
@@ -37,7 +39,7 @@ export default function AiGenerationClient() {
       if (ids.includes(prev.contentType)) return prev
       return { ...prev, contentType: ids[0] }
     })
-  }, [guidelinesHydrated, contentTypes])
+  }, [guidelinesHydrated, contentTypes, setFormState])
 
   const {
     phase,
@@ -47,13 +49,21 @@ export default function AiGenerationClient() {
     policyVersion,
     contentTypeIdentity,
     error,
+    failure,
     isBusy,
+    isBlockedByOtherRun,
+    canRetry,
     submitGeneration,
+    retryGeneration,
     resetRun,
   } = useAiGenerationRun({ canGenerate })
 
   const handleSubmit = () => {
     submitGeneration(formState, selectedContentType?.definition, platforms)
+  }
+
+  const handleRetry = () => {
+    retryGeneration(formState, selectedContentType?.definition, platforms)
   }
 
   useEffect(() => {
@@ -74,7 +84,7 @@ export default function AiGenerationClient() {
         Generado conforme a las guías activas. Requiere revisión humana antes de publicar.
       </p>
 
-      {!guidelinesHydrated && !isBusy && (
+      {!formReady && !isBusy && (
         <p
           className="mb-4 text-sm text-gray-600 dark:text-gray-400"
           role="status"
@@ -114,8 +124,8 @@ export default function AiGenerationClient() {
 
       <GenerationForm
         canGenerate={canGenerate}
-        loading={!guidelinesHydrated}
-        busy={isBusy}
+        loading={!formReady}
+        busy={isBusy || isBlockedByOtherRun}
         formState={formState}
         onFormChange={setFormState}
         onSubmit={handleSubmit}
@@ -126,7 +136,21 @@ export default function AiGenerationClient() {
 
       {error && (phase === 'failed' || phase === 'timeout') && (
         <div className="mt-6">
-          <ErrorState message={error} onRetry={resetRun} actionLabel="Volver al formulario" />
+          {canRetry && formReady ? (
+            <ErrorState
+              message={failure?.message || error}
+              onRetry={handleRetry}
+              actionLabel="Intentar de nuevo"
+              onSecondaryAction={resetRun}
+              secondaryActionLabel="Volver al formulario"
+            />
+          ) : (
+            <ErrorState
+              message={failure?.message || error}
+              onRetry={resetRun}
+              actionLabel="Volver al formulario"
+            />
+          )}
         </div>
       )}
 

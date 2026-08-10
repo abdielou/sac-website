@@ -36,6 +36,7 @@ import {
   parseOpenRouterImageResponse,
 } from '../../../lib/ai-image-generation'
 import { buildGenerationHistoryRecord } from '../../../lib/ai-run-history'
+import { confirmAiRunClaim } from '../../../lib/ai-run-lease-store'
 import { persistRunHistory } from '../../../lib/run-history-store'
 import { getBackgroundById } from '../../../lib/social-template/backgroundCatalog'
 import { attachTemplateRequestsToResult } from '../../../lib/social-template/buildTemplateTextFields'
@@ -286,6 +287,13 @@ const ContentTypeIdentitySchema = z
   })
   .strict()
 
+const AiRunCoordinationSchema = z
+  .object({
+    claimId: boundedRequiredString(200),
+    coordination: z.enum(['s3', 'local']),
+  })
+  .strict()
+
 export const GenerateInputSchema = z
   .object({
     userId: boundedRequiredString(256),
@@ -311,6 +319,7 @@ export const GenerateInputSchema = z
     backgroundMode: z.enum(['stock', 'ai_generated']).optional(),
     backgroundId: boundedOptionalString(100),
     sponsorLogo: AiSponsorLogoSchema.optional(),
+    runCoordination: AiRunCoordinationSchema.optional(),
   })
   .strict()
   .superRefine((value, ctx) => {
@@ -907,6 +916,19 @@ function resolveImagePlatforms(input) {
   return input.platforms.filter((platform) =>
     contentTypeAcceptsImages(platform, input.contentType, input.contentTypeDefinition)
   )
+}
+
+async function confirmRunClaimStep(input, runId) {
+  'use step'
+  if (!input?.runCoordination) return { ok: true, skipped: true }
+
+  return confirmAiRunClaim({
+    userId: input.userId,
+    mode: 'generate',
+    claimId: input.runCoordination.claimId,
+    runId,
+    coordination: input.runCoordination.coordination,
+  })
 }
 
 async function validatePayloadStep(input) {
@@ -1944,6 +1966,9 @@ export async function generateAiWorkflow(input) {
     meta?.workflowStartedAt instanceof Date
       ? meta.workflowStartedAt.toISOString()
       : new Date().toISOString()
+
+  const claimConfirmation = await confirmRunClaimStep(input, runId)
+  if (!claimConfirmation?.ok) throw new Error('AI_RUN_CLAIM_LOST')
 
   const validatedInputResult = await validatePayloadStep(input)
   if (!validatedInputResult.ok) {

@@ -3,6 +3,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { AI_RUN_MODES, useOptionalAiRunCoordinator } from '@/lib/hooks/AiRunProvider'
 
 export const AI_TABS = [
   { id: 'validar', label: 'Validar' },
@@ -17,13 +18,19 @@ export function resolveAiTab(tabParam) {
   return AI_TABS.some((t) => t.id === id) ? id : DEFAULT_AI_TAB
 }
 
-/** Build /admin/ai href for a tab. Clears runId when leaving Validar. */
-export function buildAiTabHref(tabId, { runId } = {}) {
+function modeForTab(tabId) {
+  if (tabId === 'generar') return AI_RUN_MODES.GENERATE
+  if (tabId === 'validar') return AI_RUN_MODES.VALIDATE
+  return null
+}
+
+/** Build a tab href, carrying a run only into the tab that owns it. */
+export function buildAiTabHref(tabId, { runId, runMode = AI_RUN_MODES.VALIDATE } = {}) {
   const params = new URLSearchParams()
   if (tabId && tabId !== DEFAULT_AI_TAB) {
     params.set('tab', tabId)
   }
-  if (tabId === 'validar' && runId) {
+  if (runId && modeForTab(tabId) === runMode) {
     params.set('runId', runId)
   }
   const qs = params.toString()
@@ -31,6 +38,9 @@ export function buildAiTabHref(tabId, { runId } = {}) {
 }
 
 export default function AiDesignerTabs({ activeTab }) {
+  const coordinator = useOptionalAiRunCoordinator()
+  const activeRun = coordinator?.slot
+
   return (
     <nav
       className="mb-6 flex border-b border-gray-200 dark:border-gray-700 overflow-x-auto"
@@ -41,7 +51,10 @@ export default function AiDesignerTabs({ activeTab }) {
         return (
           <Link
             key={tab.id}
-            href={buildAiTabHref(tab.id)}
+            href={buildAiTabHref(tab.id, {
+              runId: activeRun?.runId,
+              runMode: activeRun?.mode,
+            })}
             className={`flex-shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
               active
                 ? 'border-sac-primary-violet text-sac-primary-violet dark:border-sac-secondary dark:text-sac-secondary'

@@ -1,6 +1,7 @@
 import { auth } from '../../../../../../auth'
 import { NextResponse } from 'next/server'
 import { checkReadAccess } from '../../../../../../lib/api-permissions'
+import { syncAiRunLeaseFromStatus } from '../../../../../../lib/ai-run-lease-store'
 import { markGeneratedImageAssetPrepared } from '../../../../../../lib/social-template/prepareGeneratedImageAsset'
 import { getWorld } from 'workflow/runtime'
 import { getRun } from 'workflow/api'
@@ -146,7 +147,7 @@ export const GET = auth(async function GET(req, { params }) {
   if (readError) return readError
 
   const userEmail = req.auth.user.email?.toLowerCase()
-  const userId = req.auth.user.id || req.auth.user.email
+  const userId = req.auth.user.id || req.auth.user.email?.toLowerCase()
 
   if (!userEmail) {
     return NextResponse.json(
@@ -192,10 +193,25 @@ export const GET = auth(async function GET(req, { params }) {
 
   const status = await run.status
 
+  const leaseState = await syncAiRunLeaseFromStatus({
+    userId: String(userId),
+    runId,
+    status,
+  }).catch((error) => {
+    console.error('GET /api/admin/ai/runs/[runId]: lease sync failed', error)
+    return null
+  })
+  const leaseMetadata = leaseState
+    ? { mode: leaseState.mode, coordination: leaseState.coordination }
+    : {}
+
   if (status === 'completed') {
     const result = await run.returnValue
     const withTemplates = await applyTemplateRendersToWorkflowResult(result)
-    return NextResponse.json({ runId, status, result: withTemplates }, { status: 200 })
+    return NextResponse.json(
+      { runId, status, result: withTemplates, ...leaseMetadata },
+      { status: 200 }
+    )
   }
 
   if (status === 'failed') {
@@ -219,6 +235,7 @@ export const GET = auth(async function GET(req, { params }) {
       createdAt: inspection.createdAt,
       startedAt: inspection.startedAt,
       updatedAt: inspection.updatedAt,
+      ...leaseMetadata,
     },
     { status: 200 }
   )

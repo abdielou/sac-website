@@ -42,6 +42,7 @@ export default function AiValidationClient() {
     contentTypeIdentity,
     error,
     isBusy,
+    isBlockedByOtherRun,
     copyFeedback,
     submitValidation,
     resetRun,
@@ -68,12 +69,13 @@ export default function AiValidationClient() {
         Validar publicación
       </h2>
       <p className="text-gray-600 dark:text-gray-400 mb-6">
-        Revisa el caption y la imagen como un solo paquete para las redes configuradas.
+        Revisa el texto y la imagen de la publicación como un solo paquete para las redes
+        configuradas.
       </p>
 
       <ValidationForm
         canValidate={canValidate}
-        disabled={isBusy || !formReady}
+        disabled={isBusy || isBlockedByOtherRun || !formReady}
         formState={formState}
         onFormChange={setFormState}
         images={images}

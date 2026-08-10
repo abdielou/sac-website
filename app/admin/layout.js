@@ -5,6 +5,7 @@ import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar'
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
 import { DashboardNavTabs } from '@/components/dashboard/DashboardNavTabs'
 import LayoutWrapper from '@/components/LayoutWrapper'
+import { buildAiClientStorageUserKey } from '@/lib/ai-run-client-identity'
 
 export const metadata = {
   title: 'Admin - SAC',
@@ -16,10 +17,11 @@ export default async function AdminLayout({ children }) {
   if (!session?.user?.isAdmin) {
     redirect('/auth/signin')
   }
+  const aiStorageUserKey = buildAiClientStorageUserKey(session.user)
 
   return (
     <LayoutWrapper fullWidth>
-      <AdminProviders>
+      <AdminProviders aiUserKey={aiStorageUserKey}>
         <div className="flex">
           <DashboardSidebar />
           <div className="flex-1 flex flex-col min-w-0">

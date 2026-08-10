@@ -3,6 +3,11 @@ import { NextResponse } from 'next/server'
 import sharp from 'sharp'
 import { checkPermission } from '../../../../../lib/api-permissions'
 import { AI_BASE_POLICY_VERSION } from '../../../../../lib/ai-agent'
+import {
+  activateAiRunLease,
+  releaseAiRunReservation,
+  reserveAiRun,
+} from '../../../../../lib/ai-run-lease-store'
 import { shouldGenerateImagePrompt } from '../../../../../lib/ai-constants'
 import {
   contentDataToLegacyInput,
@@ -151,7 +156,8 @@ export const POST = auth(async function POST(req) {
   if (permissionError) return permissionError
 
   const userEmail = req.auth.user.email?.toLowerCase()
-  const userId = req.auth.user.id || req.auth.user.email
+  const userId = req.auth.user.id || req.auth.user.email?.toLowerCase()
+  const requestToken = req.headers?.get?.('x-ai-run-token') || ''
 
   if (!userEmail) {
     return NextResponse.json(
@@ -176,9 +182,6 @@ export const POST = auth(async function POST(req) {
       { status: 400 }
     )
   }
-
-  const rateLimitError = checkWorkflowStartRateLimit(userEmail)
-  if (rateLimitError) return rateLimitError
 
   const contentType = normalizeOptionalString(body.contentType)
   const eventDetails = normalizeEventDetails(body.eventDetails)
@@ -359,17 +362,142 @@ export const POST = auth(async function POST(req) {
     }
   }
 
+  let reservation = null
+  let startedRun = null
   try {
+    reservation = await reserveAiRun({
+      userId: String(userId),
+      mode: 'generate',
+      requestToken,
+    })
+
+    if (reservation.runId) {
+      return NextResponse.json(
+        {
+          runId: reservation.runId,
+          status: reservation.status,
+          mode: reservation.mode,
+          coordination: reservation.coordination,
+          recovered: true,
+        },
+        { status: 202 }
+      )
+    }
+
+    if (reservation.reused) {
+      return NextResponse.json(
+        {
+          runId: null,
+          status: reservation.status || 'starting',
+          mode: reservation.mode,
+          coordination: reservation.coordination,
+          recovered: true,
+        },
+        { status: 202 }
+      )
+    }
+
+    const rateLimitError = checkWorkflowStartRateLimit(userEmail)
+    if (rateLimitError) {
+      await releaseAiRunReservation({
+        userId: String(userId),
+        claimId: reservation.claimId,
+        coordination: reservation.coordination,
+      }).catch(() => {})
+      reservation = null
+      return rateLimitError
+    }
+
     const workflowTarget =
       generateAiWorkflow && typeof generateAiWorkflow.workflowId === 'string'
         ? generateAiWorkflow
         : { workflowId: GENERATE_WORKFLOW_ID }
 
-    const run = await start(workflowTarget, [parsedInput.data])
-    const status = await run.status
+    const coordinatedInput = {
+      ...parsedInput.data,
+      runCoordination: {
+        claimId: reservation.claimId,
+        coordination: reservation.coordination,
+      },
+    }
+    const run = await start(workflowTarget, [coordinatedInput])
+    startedRun = run
+    const activated = await activateAiRunLease({
+      userId: String(userId),
+      mode: 'generate',
+      requestToken,
+      claimId: reservation.claimId,
+      runId: run.runId,
+      coordination: reservation.coordination,
+    })
+    const status = await run.status.catch(() => activated.status || 'pending')
 
-    return NextResponse.json({ runId: run.runId, status }, { status: 202 })
+    return NextResponse.json(
+      {
+        runId: run.runId,
+        status,
+        mode: 'generate',
+        coordination: activated.coordination,
+        recovered: false,
+      },
+      { status: 202 }
+    )
   } catch (error) {
+    if (startedRun?.runId) {
+      const status = await startedRun.status.catch(() => 'pending')
+      return NextResponse.json(
+        {
+          runId: startedRun.runId,
+          status,
+          mode: 'generate',
+          coordination: reservation?.coordination || 'local',
+          recovered: true,
+        },
+        { status: 202 }
+      )
+    }
+
+    if (reservation?.claimId) {
+      await releaseAiRunReservation({
+        userId: String(userId),
+        claimId: reservation.claimId,
+        coordination: reservation.coordination,
+      }).catch(() => {})
+    }
+
+    if (error?.code === 'INVALID_RUN_TOKEN') {
+      return NextResponse.json(
+        { error: 'Solicitud inválida', details: 'X-AI-Run-Token es obligatorio.' },
+        { status: 400 }
+      )
+    }
+    if (error?.code === 'AI_RUN_ACTIVE') {
+      return NextResponse.json(
+        {
+          error: 'Ya hay una ejecución AI en curso.',
+          code: 'AI_RUN_ACTIVE',
+          active: {
+            mode: error.mode || null,
+            status: error.status || 'running',
+          },
+          coordination: error.coordination || 'local',
+        },
+        { status: 409, headers: { 'Retry-After': '5' } }
+      )
+    }
+    if (
+      error?.code === 'AI_RUN_COORDINATION_BUSY' ||
+      error?.code === 'AI_RUN_COORDINATION_UNAVAILABLE'
+    ) {
+      return NextResponse.json(
+        {
+          error: 'Coordinación AI no disponible',
+          code: error.code,
+          details: 'No se pudo verificar de forma segura si existe otra ejecución activa.',
+        },
+        { status: 503 }
+      )
+    }
     console.error('Error starting AI generation workflow:', error)
     return NextResponse.json(
       { error: 'Error interno del servidor', details: 'No se pudo iniciar la generación' },

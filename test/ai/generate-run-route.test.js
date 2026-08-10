@@ -29,9 +29,18 @@ jest.mock('../../lib/social-template/renderSocialTemplateImage', () => ({
   renderSocialTemplateImage: jest.fn(),
 }))
 
+jest.mock('../../lib/ai-run-lease-store', () => ({
+  syncAiRunLeaseFromStatus: jest.fn(async () => null),
+}))
+
 const sharp = require('sharp')
+const { getWorld } = require('workflow/runtime')
+const { getRun } = require('workflow/api')
+const { hydrateResourceIO } = require('workflow/observability')
+const { syncAiRunLeaseFromStatus } = require('../../lib/ai-run-lease-store')
 const { renderSocialTemplateImage } = require('../../lib/social-template/renderSocialTemplateImage')
 const {
+  GET,
   applyTemplateRendersToWorkflowResult,
 } = require('../../app/api/admin/ai/runs/[runId]/route')
 
@@ -194,5 +203,67 @@ describe('generation run result asset contract', () => {
     expect(output.result.generatedImage.dataUrl).toBe(jpegDataUrl)
     expect(output.result.generatedImage.preparedForDisplay).toBeUndefined()
     expect(output.result.imagePlatforms).toEqual(['instagram'])
+  })
+})
+
+describe('GET /api/admin/ai/runs/[runId] lease synchronization', () => {
+  function requestFor(email = 'user@example.com', id = 'session-user') {
+    return { auth: { user: { id, email } } }
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    getWorld.mockResolvedValue({
+      runs: {
+        get: jest.fn().mockResolvedValue({
+          createdAt: new Date('2026-08-07T10:00:00.000Z'),
+          startedAt: new Date('2026-08-07T10:00:01.000Z'),
+          updatedAt: new Date('2026-08-07T10:00:02.000Z'),
+        }),
+      },
+    })
+    hydrateResourceIO.mockReturnValue({
+      input: { userId: 'session-user', userEmail: 'user@example.com' },
+    })
+  })
+
+  test('renews the matching account lease for an active run', async () => {
+    syncAiRunLeaseFromStatus.mockResolvedValueOnce({
+      runId: 'wrun_active',
+      status: 'running',
+      mode: 'generate',
+      coordination: 'local',
+    })
+    getRun.mockReturnValue({
+      exists: Promise.resolve(true),
+      status: Promise.resolve('running'),
+    })
+
+    const response = await GET(requestFor(), {
+      params: Promise.resolve({ runId: 'wrun_active' }),
+    })
+
+    expect(response.status).toBe(200)
+    expect(response.body.status).toBe('running')
+    expect(response.body).toMatchObject({ mode: 'generate', coordination: 'local' })
+    expect(syncAiRunLeaseFromStatus).toHaveBeenCalledWith({
+      userId: 'session-user',
+      runId: 'wrun_active',
+      status: 'running',
+    })
+  })
+
+  test('does not reveal or touch a run owned by another account', async () => {
+    hydrateResourceIO.mockReturnValue({
+      input: { userId: 'different-user', userEmail: 'other@example.com' },
+    })
+
+    const response = await GET(requestFor(), {
+      params: Promise.resolve({ runId: 'wrun_private' }),
+    })
+
+    expect(response.status).toBe(404)
+    expect(response.body).toEqual({ error: 'No encontrado' })
+    expect(syncAiRunLeaseFromStatus).not.toHaveBeenCalled()
   })
 })

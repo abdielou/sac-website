@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { GenerationDraftProvider } from '@/lib/hooks/GenerationDraftProvider'
 
 /**
  * Dev-only gate for the AI section. Content lives in page.js under a single /admin/ai URL.
@@ -8,5 +9,5 @@ export default function AdminAiLayout({ children }) {
     redirect('/admin')
   }
 
-  return children
+  return <GenerationDraftProvider>{children}</GenerationDraftProvider>
 }

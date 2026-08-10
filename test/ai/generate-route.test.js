@@ -20,6 +20,12 @@ jest.mock('../../lib/ai-rate-limit', () => ({
   checkWorkflowStartRateLimit: jest.fn(() => null),
 }))
 
+jest.mock('../../lib/ai-run-lease-store', () => ({
+  reserveAiRun: jest.fn(),
+  activateAiRunLease: jest.fn(),
+  releaseAiRunReservation: jest.fn(),
+}))
+
 jest.mock('../../lib/ai-guidelines', () => {
   const actual = jest.requireActual('../../lib/ai-guidelines')
   return {
@@ -33,16 +39,27 @@ jest.mock('workflow/api', () => ({
 }))
 
 const { start } = require('workflow/api')
+const { checkWorkflowStartRateLimit } = require('../../lib/ai-rate-limit')
+const {
+  reserveAiRun,
+  activateAiRunLease,
+  releaseAiRunReservation,
+} = require('../../lib/ai-run-lease-store')
 const { getActiveGuidelinesStrict, getDefaultGuidelines } = require('../../lib/ai-guidelines')
 const { POST } = require('../../app/api/admin/ai/generate/route')
 
-function requestWithBody(body) {
+const RUN_TOKEN = '11111111-1111-4111-8111-111111111111'
+
+function requestWithBody(body, { runToken = RUN_TOKEN } = {}) {
   return {
     auth: {
       user: {
         id: 'session-user',
         email: 'USER@example.com',
       },
+    },
+    headers: {
+      get: (name) => (name.toLowerCase() === 'x-ai-run-token' ? runToken : null),
     },
     json: jest.fn().mockResolvedValue(body),
   }
@@ -67,11 +84,27 @@ const validEventBody = {
 describe('POST /api/admin/ai/generate contract', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    checkWorkflowStartRateLimit.mockReturnValue(null)
     getActiveGuidelinesStrict.mockResolvedValue(getDefaultGuidelines())
     start.mockResolvedValue({
       runId: 'run-123',
       status: Promise.resolve('pending'),
     })
+    reserveAiRun.mockResolvedValue({
+      claimId: 'claim-generate-1',
+      coordination: 's3',
+      reused: false,
+      status: 'starting',
+    })
+    activateAiRunLease.mockResolvedValue({
+      claimId: 'claim-generate-1',
+      runId: 'run-123',
+      mode: 'generate',
+      status: 'pending',
+      coordination: 's3',
+      reused: false,
+    })
+    releaseAiRunReservation.mockResolvedValue(true)
   })
 
   test('returns 400 for malformed JSON and does not start a workflow', async () => {
@@ -109,6 +142,10 @@ describe('POST /api/admin/ai/generate contract', () => {
     expect(startedInput.userId).toBe('session-user')
     expect(startedInput.userEmail).toBe('user@example.com')
     expect(startedInput.guidelineVersion).toBe('default-v1')
+    expect(startedInput.runCoordination).toEqual({
+      claimId: 'claim-generate-1',
+      coordination: 's3',
+    })
     expect(startedInput.contentTypeIdentity).toEqual({
       id: 'event_promotion',
       label: 'Promoción de evento',
@@ -121,6 +158,94 @@ describe('POST /api/admin/ai/generate contract', () => {
       location: 'Cabo Rojo',
       cta: 'Confirma tu asistencia',
     })
+  })
+
+  test('returns an existing run idempotently for the same browser token', async () => {
+    reserveAiRun.mockResolvedValueOnce({
+      claimId: 'claim-existing',
+      runId: 'run-existing',
+      mode: 'generate',
+      status: 'running',
+      coordination: 's3',
+      reused: true,
+    })
+
+    const response = await POST(requestWithBody(validEventBody))
+
+    expect(response.status).toBe(202)
+    expect(response.body).toMatchObject({
+      runId: 'run-existing',
+      mode: 'generate',
+      recovered: true,
+    })
+    expect(start).not.toHaveBeenCalled()
+    expect(checkWorkflowStartRateLimit).not.toHaveBeenCalled()
+  })
+
+  test('releases a new reservation when the actual workflow start is rate limited', async () => {
+    checkWorkflowStartRateLimit.mockReturnValueOnce({
+      status: 429,
+      body: { error: 'Demasiadas solicitudes' },
+    })
+
+    const response = await POST(requestWithBody(validEventBody))
+
+    expect(response.status).toBe(429)
+    expect(releaseAiRunReservation).toHaveBeenCalledWith({
+      userId: 'session-user',
+      claimId: 'claim-generate-1',
+      coordination: 's3',
+    })
+    expect(start).not.toHaveBeenCalled()
+  })
+
+  test('blocks a second mode without exposing the active run id', async () => {
+    reserveAiRun.mockRejectedValueOnce(
+      Object.assign(new Error('active'), {
+        code: 'AI_RUN_ACTIVE',
+        mode: 'validate',
+        status: 'running',
+        coordination: 's3',
+      })
+    )
+
+    const response = await POST(requestWithBody(validEventBody))
+
+    expect(response.status).toBe(409)
+    expect(response.body).toMatchObject({
+      code: 'AI_RUN_ACTIVE',
+      active: { mode: 'validate', status: 'running' },
+    })
+    expect(response.body.runId).toBeUndefined()
+    expect(start).not.toHaveBeenCalled()
+  })
+
+  test('requires a browser run token before reserving a run', async () => {
+    reserveAiRun.mockRejectedValueOnce(
+      Object.assign(new Error('invalid token'), { code: 'INVALID_RUN_TOKEN' })
+    )
+
+    const response = await POST(requestWithBody(validEventBody, { runToken: null }))
+
+    expect(response.status).toBe(400)
+    expect(start).not.toHaveBeenCalled()
+  })
+
+  test('returns a recoverable run when lease activation fails after start', async () => {
+    activateAiRunLease.mockRejectedValueOnce(
+      Object.assign(new Error('CAS busy'), { code: 'AI_RUN_COORDINATION_BUSY' })
+    )
+
+    const response = await POST(requestWithBody(validEventBody))
+
+    expect(response.status).toBe(202)
+    expect(response.body).toMatchObject({
+      runId: 'run-123',
+      mode: 'generate',
+      recovered: true,
+      coordination: 's3',
+    })
+    expect(releaseAiRunReservation).not.toHaveBeenCalled()
   })
 
   test('starts observation_night without converting it to event_promotion', async () => {

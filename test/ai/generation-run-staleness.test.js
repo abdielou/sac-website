@@ -1,38 +1,14 @@
-const { isStaleGenerationRun } = require('../../lib/hooks/useAiGenerationRun')
+const { isAiRunBusy } = require('../../lib/hooks/AiRunProvider')
 
-describe('generation run staleness', () => {
-  const now = new Date('2026-08-03T09:00:00.000Z').getTime()
-
-  test('detects an active workflow with no activity for over five minutes', () => {
+describe('generation run lifetime', () => {
+  test('keeps an old workflow active until the workflow reports a terminal status', () => {
     expect(
-      isStaleGenerationRun(
-        {
-          status: 'running',
-          createdAt: '2026-08-03T08:30:27.596Z',
-          startedAt: '2026-08-03T08:30:28.962Z',
-          updatedAt: '2026-08-03T08:30:28.962Z',
-        },
-        now
-      )
+      isAiRunBusy({
+        mode: 'generate',
+        status: 'running',
+        updatedAt: '2020-01-01T00:00:00.000Z',
+      })
     ).toBe(true)
-  })
-
-  test('keeps a recently updated workflow active', () => {
-    expect(
-      isStaleGenerationRun(
-        {
-          status: 'running',
-          startedAt: '2026-08-03T08:50:00.000Z',
-          updatedAt: '2026-08-03T08:59:30.000Z',
-        },
-        now
-      )
-    ).toBe(false)
-  })
-
-  test('never marks a terminal workflow as stale', () => {
-    expect(
-      isStaleGenerationRun({ status: 'completed', updatedAt: '2026-08-03T08:00:00.000Z' }, now)
-    ).toBe(false)
+    expect(isAiRunBusy({ mode: 'generate', status: 'completed' })).toBe(false)
   })
 })
