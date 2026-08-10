@@ -24,6 +24,7 @@ import { contentDataToLegacyInput, validateContentData } from '../../../lib/ai-c
 import { resolveImageTextPolicy, stripNoTextInstructions } from '../../../lib/ai-image-text-policy'
 import { resolveGenerationGuidelinesFromDocument } from '../../../lib/ai-guidelines'
 import { getGuidelineVersion } from '../../../lib/guidelines-store'
+import { buildAiRunFailure } from '../../../lib/ai-run-failure'
 import {
   buildOpenRouterChatBody,
   extractOpenRouterUsage,
@@ -37,7 +38,7 @@ import {
 } from '../../../lib/ai-image-generation'
 import { buildGenerationHistoryRecord } from '../../../lib/ai-run-history'
 import { confirmAiRunClaim } from '../../../lib/ai-run-lease-store'
-import { persistRunHistory } from '../../../lib/run-history-store'
+import { persistAiRunFailure, persistRunHistory } from '../../../lib/run-history-store'
 import { getBackgroundById } from '../../../lib/social-template/backgroundCatalog'
 import { attachTemplateRequestsToResult } from '../../../lib/social-template/buildTemplateTextFields'
 import {
@@ -56,6 +57,85 @@ const OPENROUTER_IMAGE_TIMEOUT_MS = 60_000
 const OPENROUTER_TEXT_MAX_TOKENS = 2_000
 const OPENROUTER_IMAGE_MAX_TOKENS = 2_048
 const GUIDELINE_NONCOMPLIANCE_CATEGORY = 'guideline_noncompliance'
+
+const RETRYABLE_POLICY_REVIEW_ERRORS = new Set([
+  'network_error',
+  'response_error',
+  'provider_error',
+  'empty_response',
+  'wrong_modality',
+  'invalid_model_output',
+])
+
+function buildRequestPolicyFailure(policyDecision) {
+  if (!policyDecision?.failClosed) {
+    const reason = String(policyDecision?.reason || '').trim()
+    return buildAiRunFailure({
+      code: 'policy_request_blocked',
+      stage: 'request_policy',
+      retryable: false,
+      message: reason
+        ? `La solicitud no puede generarse porque la revisión confirmó un problema de contenido: ${reason}`
+        : 'La solicitud no puede generarse porque no cumple las reglas de contenido.',
+    })
+  }
+
+  const errorCode = policyDecision.errorCode || 'policy_review_unavailable'
+  if (errorCode === 'wrong_modality') {
+    return buildAiRunFailure({
+      code: 'policy_review_wrong_modality',
+      stage: 'request_policy',
+      retryable: true,
+      message:
+        'La revisión automática respondió con una imagen cuando debía responder con texto. No se confirmó una infracción y la generación no llegó a comenzar.',
+    })
+  }
+
+  if (errorCode === 'model_uncertain') {
+    return buildAiRunFailure({
+      code: 'policy_review_inconclusive',
+      stage: 'request_policy',
+      retryable: false,
+      message:
+        'La revisión automática no pudo determinar con seguridad si la solicitud cumple las reglas. Añade más contexto o simplifica la solicitud.',
+    })
+  }
+
+  const configurationError = ['missing_api_key', 'missing_fetch', 'provider_rejection'].includes(
+    errorCode
+  )
+  const inputError = [
+    'invalid_images',
+    'invalid_result',
+    'too_many_images',
+    'invalid_image',
+    'invalid_input',
+  ].includes(errorCode)
+
+  if (configurationError || inputError) {
+    return buildAiRunFailure({
+      code: configurationError ? 'policy_review_configuration_error' : 'policy_review_input_error',
+      stage: 'request_policy',
+      retryable: false,
+      message: configurationError
+        ? 'La revisión automática no está disponible por un problema de configuración. Contacta al administrador de SAC.'
+        : 'La revisión automática no pudo procesar los datos de la solicitud. Revisa el formulario e inténtalo nuevamente.',
+    })
+  }
+
+  return buildAiRunFailure({
+    code:
+      errorCode === 'empty_response'
+        ? 'policy_review_empty_response'
+        : errorCode === 'invalid_model_output'
+          ? 'policy_review_invalid_response'
+          : 'policy_review_unavailable',
+    stage: 'request_policy',
+    retryable: RETRYABLE_POLICY_REVIEW_ERRORS.has(errorCode),
+    message:
+      'No pudimos completar la revisión automática. No se confirmó una infracción y la generación no llegó a comenzar.',
+  })
+}
 
 // ---------- Generation schemas (Phase 2A text; Phase 2D prompts; Phase 2E assets) ----------
 
@@ -1950,9 +2030,13 @@ async function persistGenerationHistoryStep(payload) {
   'use step'
   try {
     const record = buildGenerationHistoryRecord(payload)
-    await persistRunHistory(record)
+    const failure = payload.status === 'failed' ? payload.failure || payload.error : null
+    await Promise.all([
+      persistRunHistory(record),
+      failure && payload.runId ? persistAiRunFailure(payload.runId, failure) : null,
+    ])
   } catch (error) {
-    console.error('generateAiWorkflow: failed to persist run history', error)
+    console.error('generateAiWorkflow: failed to persist run terminal metadata', error)
   }
   return null
 }
@@ -1972,12 +2056,19 @@ export async function generateAiWorkflow(input) {
 
   const validatedInputResult = await validatePayloadStep(input)
   if (!validatedInputResult.ok) {
+    const failure = buildAiRunFailure({
+      code: 'generation_payload_invalid',
+      stage: 'input',
+      retryable: false,
+      message:
+        'No pudimos leer algunos datos del formulario. Revisa la solicitud e inténtalo nuevamente.',
+    })
     if (runId) {
       await persistGenerationHistoryStep({
         input,
         runId,
         status: 'failed',
-        error: { message: 'payload_invalid', retryable: false },
+        failure,
         startedAt,
         completedAt: new Date().toISOString(),
         guidelineVersion: null,
@@ -1985,18 +2076,25 @@ export async function generateAiWorkflow(input) {
         contentTypeIdentity: input?.contentTypeIdentity,
       })
     }
-    throw new Error('La solicitud de generación no es válida.')
+    throw new Error(failure.message)
   }
 
   const pinnedInput = validatedInputResult.value
   const guidelines = await loadGuidelinesStep(pinnedInput)
   if (!guidelines.ok) {
+    const failure = buildAiRunFailure({
+      code: 'guidelines_version_unavailable',
+      stage: 'guidelines',
+      retryable: false,
+      message:
+        'Las guías seleccionadas para esta generación ya no están disponibles. Recarga el formulario antes de intentarlo nuevamente.',
+    })
     if (runId) {
       await persistGenerationHistoryStep({
         input: pinnedInput,
         runId,
         status: 'failed',
-        error: { message: guidelines.reason, retryable: false },
+        failure,
         startedAt,
         completedAt: new Date().toISOString(),
         guidelineVersion: pinnedInput.guidelineVersion,
@@ -2004,24 +2102,20 @@ export async function generateAiWorkflow(input) {
         contentTypeIdentity: pinnedInput.contentTypeIdentity,
       })
     }
-    throw new Error('La versión de Guidelines fijada para esta ejecución no está disponible.')
+    throw new Error(failure.message)
   }
 
   const validatedInput = guidelines.input
   const requestPolicy = await classifyPolicyRequestStep(validatedInput, guidelines)
   if (requestPolicy.decision !== 'allow') {
+    const failure = buildRequestPolicyFailure(requestPolicy)
     const completedAt = new Date().toISOString()
     if (runId) {
       await persistGenerationHistoryStep({
         input: validatedInput,
         runId,
         status: 'failed',
-        error: {
-          message: requestPolicy.failClosed
-            ? 'policy_classification_unavailable'
-            : `policy_request_blocked:${requestPolicy.categories.join(',')}`,
-          retryable: requestPolicy.failClosed,
-        },
+        failure,
         startedAt,
         completedAt,
         guidelineVersion: guidelines.version,
@@ -2031,20 +2125,24 @@ export async function generateAiWorkflow(input) {
         usage: requestPolicy.usage,
       })
     }
-    throw new Error(
-      `Solicitud bloqueada por política. Categorías: ${requestPolicy.categories.join(', ')}. Motivo: ${requestPolicy.reason}`
-    )
+    throw new Error(failure.message)
   }
 
   const textResult = await generateTextStep(validatedInput, guidelines)
   if (!textResult.ok) {
     console.error('generateAiWorkflow: text provider failed', textResult.reason)
+    const failure = buildAiRunFailure({
+      code: 'publication_text_generation_failed',
+      stage: 'publication_text',
+      retryable: true,
+      message: 'El servicio no pudo generar el caption de la publicación. Intenta nuevamente.',
+    })
     if (runId) {
       await persistGenerationHistoryStep({
         input: validatedInput,
         runId,
         status: 'failed',
-        error: { message: 'provider_generation_failed', retryable: true },
+        failure,
         startedAt,
         completedAt: new Date().toISOString(),
         guidelineVersion: guidelines.version,
@@ -2053,7 +2151,7 @@ export async function generateAiWorkflow(input) {
         usage: mergeOpenRouterUsage(requestPolicy.usage, textResult.usage),
       })
     }
-    throw new Error('No se pudieron generar los borradores. Intenta nuevamente.')
+    throw new Error(failure.message)
   }
 
   const captionPolicy = await reviewCaptionPolicyStep(
@@ -2176,12 +2274,18 @@ export async function generateAiWorkflow(input) {
     (requiredImagePlatforms.length > 0 || sponsorMustAppear) &&
     !finalResult.generatedImage?.preparedForDisplay
   ) {
+    const failure = buildAiRunFailure({
+      code: 'required_image_unavailable',
+      stage: 'image_generation',
+      retryable: true,
+      message: 'No se pudo preparar la imagen requerida por las guías. Intenta nuevamente.',
+    })
     if (runId) {
       await persistGenerationHistoryStep({
         input: validatedInput,
         runId,
         status: 'failed',
-        error: { message: 'required_image_unavailable', retryable: true },
+        failure,
         startedAt,
         completedAt: new Date().toISOString(),
         guidelineVersion: guidelines.version,
@@ -2190,7 +2294,7 @@ export async function generateAiWorkflow(input) {
         usage,
       })
     }
-    throw new Error('No se pudo preparar la imagen requerida por Guidelines.')
+    throw new Error(failure.message)
   }
   if (finalResult.generatedImage?.dataUrl) {
     const resultPolicy = await reviewPolicyResultStep(validatedInput, guidelines, finalResult)

@@ -277,7 +277,7 @@ describe('classifyAiPolicyRequest', () => {
     expect(result).toMatchObject({
       decision: 'block',
       failClosed: true,
-      errorCode: 'provider_error',
+      errorCode: 'provider_rejection',
     })
   })
 

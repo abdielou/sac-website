@@ -1,7 +1,9 @@
 import { auth } from '../../../../../../auth'
 import { NextResponse } from 'next/server'
 import { checkReadAccess } from '../../../../../../lib/api-permissions'
+import { buildLegacyAiRunFailure } from '../../../../../../lib/ai-run-failure'
 import { syncAiRunLeaseFromStatus } from '../../../../../../lib/ai-run-lease-store'
+import { readAiRunFailure } from '../../../../../../lib/run-history-store'
 import { markGeneratedImageAssetPrepared } from '../../../../../../lib/social-template/prepareGeneratedImageAsset'
 import { getWorld } from 'workflow/runtime'
 import { getRun } from 'workflow/api'
@@ -51,7 +53,11 @@ async function inspectRun(runId) {
 
 function safeWorkflowErrorMessage(error) {
   // Avoid leaking internals; PRD says safe failures.
-  const message = error?.message ? String(error.message) : ''
+  const causeMessage = error?.cause?.message ? String(error.cause.message) : ''
+  const outerMessage = error?.message ? String(error.message) : ''
+  const message = (causeMessage || outerMessage)
+    .replace(/^Workflow run\s+(?:"[^"]+"|'[^']+'|\S+)\s+failed:\s*/i, '')
+    .trim()
   if (!message) return 'La generación falló'
   return message.length > 1200 ? `${message.slice(0, 1200)}...` : message
 }
@@ -215,15 +221,26 @@ export const GET = auth(async function GET(req, { params }) {
   }
 
   if (status === 'failed') {
+    let legacyError = 'La generación falló'
     try {
       await run.returnValue
     } catch (error) {
-      return NextResponse.json(
-        { runId, status, error: safeWorkflowErrorMessage(error) },
-        { status: 200 }
-      )
+      legacyError = safeWorkflowErrorMessage(error)
     }
-    return NextResponse.json({ runId, status }, { status: 200 })
+
+    const storedFailure = await readAiRunFailure(runId).catch((error) => {
+      console.error(
+        'GET /api/admin/ai/runs/[runId]: failure sidecar read failed',
+        error?.code || error?.message || 'unknown_error'
+      )
+      return null
+    })
+    const failure = storedFailure || buildLegacyAiRunFailure(legacyError)
+
+    return NextResponse.json(
+      { runId, status, error: failure.message, failure, ...leaseMetadata },
+      { status: 200 }
+    )
   }
 
   // Timestamps let the client distinguish an active run from a stale local run

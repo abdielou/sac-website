@@ -1,4 +1,15 @@
-import { buildUserKey, buildHistoryKey } from '../../lib/run-history-store'
+import {
+  buildUserKey,
+  buildHistoryKey,
+  buildAiRunFailureKey,
+  persistAiRunFailure,
+  readAiRunFailure,
+} from '../../lib/run-history-store'
+import {
+  AI_RUN_FAILURE_SCHEMA_VERSION,
+  buildAiRunFailure,
+  parseAiRunFailure,
+} from '../../lib/ai-run-failure'
 import {
   buildValidationHistoryRecord,
   buildGenerationHistoryRecord,
@@ -24,6 +35,56 @@ describe('run-history-store', () => {
       /^workflow-runs\/abcd1234ef567890\/2026\/07\/10\/\d{8}T\d{6}\.\d{3}Z-wrun_test123\.json$/
     )
   })
+
+  test('uses a deterministic run-keyed failure sidecar with a local fallback', async () => {
+    const previousBucket = process.env.S3_ARTICLES_BUCKET_NAME
+    delete process.env.S3_ARTICLES_BUCKET_NAME
+
+    try {
+      const runId = 'wrun_failure_sidecar_test'
+      const failure = buildAiRunFailure({
+        code: 'wrong_modality',
+        stage: 'request',
+        retryable: false,
+        message: 'La revisión respondió en un formato incorrecto.',
+        prompt: 'no persistir',
+      })
+
+      expect(buildAiRunFailureKey(runId)).toBe(
+        'workflow-run-failures/wrun_failure_sidecar_test.json'
+      )
+      await expect(persistAiRunFailure(runId, failure)).resolves.toBe(buildAiRunFailureKey(runId))
+      await expect(readAiRunFailure(runId)).resolves.toEqual(failure)
+      expect(JSON.stringify(await readAiRunFailure(runId))).not.toContain('no persistir')
+    } finally {
+      if (previousBucket === undefined) delete process.env.S3_ARTICLES_BUCKET_NAME
+      else process.env.S3_ARTICLES_BUCKET_NAME = previousBucket
+    }
+  })
+})
+
+describe('AiRunFailureV1', () => {
+  test('keeps only safe structured fields and rejects invalid stored versions', () => {
+    const failure = buildAiRunFailure({
+      code: 'WRONG_MODALITY',
+      stage: 'REQUEST',
+      retryable: true,
+      message: 'Respuesta incorrecta.\nIntenta nuevamente.',
+      stack: 'secret stack',
+      rawResponse: { prompt: 'secret prompt' },
+    })
+
+    expect(failure).toEqual({
+      schemaVersion: AI_RUN_FAILURE_SCHEMA_VERSION,
+      code: 'wrong_modality',
+      stage: 'request',
+      retryable: true,
+      message: 'Respuesta incorrecta. Intenta nuevamente.',
+    })
+    expect(JSON.stringify(failure)).not.toMatch(/secret|stack|prompt|rawResponse/)
+    expect(parseAiRunFailure(failure)).toEqual(failure)
+    expect(parseAiRunFailure({ ...failure, schemaVersion: 2 })).toBeNull()
+  })
 })
 
 describe('buildValidationHistoryRecord', () => {
@@ -41,6 +102,7 @@ describe('buildValidationHistoryRecord', () => {
       result: {
         overallOutcome: 'warning',
         approvalRecommendation: 'needs_edits',
+        resultSource: 'validator',
         issues: [{ severity: 'major', category: 'clarity', message: 'test' }],
       },
       startedAt: '2026-07-10T12:00:00.000Z',
@@ -68,6 +130,8 @@ describe('buildValidationHistoryRecord', () => {
       guidelineVersion: 'v2',
     })
     expect(record.validationOutcome).toBe('warning')
+    expect(record.validationResultSource).toBe('validator')
+    expect(record.outcomeSummary.resultSource).toBe('validator')
     expect(record.inputSummary.draftTextLength).toBeGreaterThan(0)
     expect(record.inputSummary.imageCount).toBe(1)
     expect(JSON.stringify(record)).not.toContain('data:image')
@@ -262,6 +326,37 @@ describe('buildGenerationHistoryRecord', () => {
     expect(record.outcomeSummary).toBeUndefined()
     expect(record.policyVersion).toBe('legacy-unversioned')
     expect(record.contentTypeIdentity).toBe('legacy-unversioned')
+  })
+
+  test('retains a structured failure without copying diagnostic payloads', () => {
+    const record = buildGenerationHistoryRecord({
+      input: {
+        userId: 'u1',
+        platforms: ['facebook'],
+        contentType: 'post_educativo',
+        topic: 'Binoculares',
+      },
+      runId: 'wrun_structured_failure',
+      status: 'failed',
+      failure: {
+        schemaVersion: 1,
+        code: 'wrong_modality',
+        stage: 'request',
+        retryable: false,
+        message: 'La revisión respondió en un formato incorrecto.',
+        prompt: 'no persistir este prompt',
+        rawResponse: { images: ['secret'] },
+      },
+    })
+
+    expect(record.error).toEqual({
+      schemaVersion: 1,
+      code: 'wrong_modality',
+      stage: 'request',
+      retryable: false,
+      message: 'La revisión respondió en un formato incorrecto.',
+    })
+    expect(JSON.stringify(record)).not.toMatch(/no persistir|rawResponse|secret/)
   })
 
   test('marks explicitly legacy generation runs without inventing current versions', () => {

@@ -33,11 +33,16 @@ jest.mock('../../lib/ai-run-lease-store', () => ({
   syncAiRunLeaseFromStatus: jest.fn(async () => null),
 }))
 
+jest.mock('../../lib/run-history-store', () => ({
+  readAiRunFailure: jest.fn(async () => null),
+}))
+
 const sharp = require('sharp')
 const { getWorld } = require('workflow/runtime')
 const { getRun } = require('workflow/api')
 const { hydrateResourceIO } = require('workflow/observability')
 const { syncAiRunLeaseFromStatus } = require('../../lib/ai-run-lease-store')
+const { readAiRunFailure } = require('../../lib/run-history-store')
 const { renderSocialTemplateImage } = require('../../lib/social-template/renderSocialTemplateImage')
 const {
   GET,
@@ -265,5 +270,65 @@ describe('GET /api/admin/ai/runs/[runId] lease synchronization', () => {
     expect(response.status).toBe(404)
     expect(response.body).toEqual({ error: 'No encontrado' })
     expect(syncAiRunLeaseFromStatus).not.toHaveBeenCalled()
+    expect(readAiRunFailure).not.toHaveBeenCalled()
+  })
+
+  test('returns a structured failure sidecar with the legacy error string', async () => {
+    const failure = {
+      schemaVersion: 1,
+      code: 'policy_review_wrong_modality',
+      stage: 'request_policy',
+      retryable: true,
+      message: 'La revisión automática respondió con una imagen cuando debía responder con texto.',
+    }
+    readAiRunFailure.mockResolvedValueOnce(failure)
+    const run = {
+      exists: Promise.resolve(true),
+      status: Promise.resolve('failed'),
+    }
+    Object.defineProperty(run, 'returnValue', {
+      get: () => Promise.reject(new Error('Mensaje compatible para clientes anteriores')),
+    })
+    getRun.mockReturnValue(run)
+
+    const response = await GET(requestFor(), {
+      params: Promise.resolve({ runId: 'wrun_wrong_modality' }),
+    })
+
+    expect(response.status).toBe(200)
+    expect(response.body).toMatchObject({
+      runId: 'wrun_wrong_modality',
+      status: 'failed',
+      error: 'La revisión automática respondió con una imagen cuando debía responder con texto.',
+      failure,
+    })
+    expect(readAiRunFailure).toHaveBeenCalledWith('wrun_wrong_modality')
+  })
+
+  test('builds a safe structured fallback for failed legacy runs', async () => {
+    const run = {
+      exists: Promise.resolve(true),
+      status: Promise.resolve('failed'),
+    }
+    Object.defineProperty(run, 'returnValue', {
+      get: () =>
+        Promise.reject(
+          new Error('Workflow run "wrun_legacy_failure" failed: Fallo histórico sin sidecar')
+        ),
+    })
+    getRun.mockReturnValue(run)
+
+    const response = await GET(requestFor(), {
+      params: Promise.resolve({ runId: 'wrun_legacy_failure' }),
+    })
+
+    expect(response.body.error).toBe('Fallo histórico sin sidecar')
+    expect(response.body.failure).toEqual({
+      schemaVersion: 1,
+      code: 'workflow_failed',
+      stage: 'workflow',
+      retryable: false,
+      message: 'Fallo histórico sin sidecar',
+    })
   })
 })
