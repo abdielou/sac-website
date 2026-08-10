@@ -1,5 +1,7 @@
 import {
   buildOpenRouterChatBody,
+  buildOpenRouterImageChatBody,
+  buildOpenRouterTextChatBody,
   modelSupportsJsonObjectResponseFormat,
 } from '../../lib/ai-openrouter'
 
@@ -12,6 +14,34 @@ describe('modelSupportsJsonObjectResponseFormat', () => {
   test('returns true for text models', () => {
     expect(modelSupportsJsonObjectResponseFormat('openai/gpt-5.4-nano')).toBe(true)
     expect(modelSupportsJsonObjectResponseFormat('google/gemini-3.1-flash-lite')).toBe(true)
+  })
+})
+
+describe('intent-specific OpenRouter chat bodies', () => {
+  test('text requests always ask for text and omit image generation settings', () => {
+    const body = buildOpenRouterTextChatBody({
+      model: 'google/gemini-3.1-flash-lite-image',
+      messages: [{ role: 'user', content: 'review' }],
+      temperature: 0,
+      forceJson: true,
+      modalities: ['image', 'text'],
+      imageConfig: { aspect_ratio: '3:4' },
+    })
+
+    expect(body.modalities).toEqual(['text'])
+    expect(body.image_config).toBeUndefined()
+  })
+
+  test('image requests always ask for image and text and accept image_config', () => {
+    const body = buildOpenRouterImageChatBody({
+      model: 'google/gemini-3.1-flash-lite-image',
+      messages: [{ role: 'user', content: 'draw' }],
+      modalities: ['text'],
+      imageConfig: { aspect_ratio: '3:4' },
+    })
+
+    expect(body.modalities).toEqual(['image', 'text'])
+    expect(body.image_config).toEqual({ aspect_ratio: '3:4' })
   })
 })
 
@@ -44,5 +74,18 @@ describe('buildOpenRouterChatBody', () => {
       modalities: ['image', 'text'],
     })
     expect(body.modalities).toEqual(['image', 'text'])
+    expect(body.image_config).toBeUndefined()
+  })
+
+  test('maps image generation options to image_config', () => {
+    const body = buildOpenRouterChatBody({
+      model: 'google/gemini-3.1-flash-lite-image',
+      messages: [{ role: 'user', content: 'draw' }],
+      modalities: ['image', 'text'],
+      imageConfig: { aspect_ratio: '3:4' },
+    })
+
+    expect(body.image_config).toEqual({ aspect_ratio: '3:4' })
+    expect(body.imageConfig).toBeUndefined()
   })
 })

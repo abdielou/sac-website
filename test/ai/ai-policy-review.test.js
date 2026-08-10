@@ -20,6 +20,7 @@ function openRouterResponse(decision, overrides = {}) {
         {
           message: {
             content: overrides.content === undefined ? JSON.stringify(decision) : overrides.content,
+            ...(overrides.images ? { images: overrides.images } : null),
           },
         },
       ],
@@ -68,6 +69,8 @@ describe('classifyAiPolicyRequest', () => {
     expect(url).toBe('https://openrouter.ai/api/v1/chat/completions')
     expect(options.headers.Authorization).toBe('Bearer test-key')
     expect(body.model).toBe('test/multimodal')
+    expect(body.modalities).toEqual(['text'])
+    expect(body.image_config).toBeUndefined()
     expect(body.messages[0].role).toBe('system')
     expect(body.messages[0].content.startsWith(AI_AGENT_IDENTITY_PROMPT)).toBe(true)
     expect(body.messages[0].content).not.toContain('Usar un tono educativo.')
@@ -113,6 +116,69 @@ describe('classifyAiPolicyRequest', () => {
     expect(body.messages[0].content).toContain('no exijas que cada objeto sea astronómico')
     expect(body.messages[0].content).toContain('Guidelines puede imponer restricciones visuales')
     expect(body.messages[0].content).toContain('dirección creativa parcial')
+  })
+
+  test('keeps Guidelines findings inside the validator in validation mode', async () => {
+    const fetchImpl = jest.fn(async () => openRouterResponse(allowDecision()))
+
+    await classifyAiPolicyRequest(
+      {
+        request: { ...SAFE_REQUEST, draftText: 'Un borrador que será validado.' },
+        guidelines: { global: 'Revisar ortografía.' },
+        images: [],
+        reviewMode: 'validation',
+      },
+      { fetchImpl, model: 'test/multimodal', apiKey: 'test-key' }
+    )
+
+    const body = JSON.parse(fetchImpl.mock.calls[0][1].body)
+    expect(body.messages[0].content).toContain('pide VALIDAR un borrador')
+    expect(body.messages[0].content).toContain('No uses guideline_noncompliance')
+  })
+
+  test('scopes image-only reviews to the visual result without rewriting provided text', async () => {
+    const bodies = []
+    const fetchImpl = jest.fn(async (_url, options) => {
+      bodies.push(JSON.parse(options.body))
+      return openRouterResponse(allowDecision())
+    })
+    const request = {
+      ...SAFE_REQUEST,
+      generationMode: 'image_only',
+      publicationText: '🔭 Binoculares vs. telescopios\n\nTexto ya escrito.',
+    }
+    const dependencies = { fetchImpl, model: 'test/multimodal', apiKey: 'test-key' }
+
+    await classifyAiPolicyRequest(
+      {
+        request,
+        guidelines: { image: 'La imagen debe relacionarse con el tema.' },
+        reviewMode: 'image_only_generation',
+      },
+      dependencies
+    )
+    await reviewAiPolicyResult(
+      {
+        request,
+        result: {
+          publicationTextSource: 'provided',
+          drafts: [{ draftText: request.publicationText }],
+        },
+        guidelines: { image: 'La imagen debe relacionarse con el tema.' },
+        images: ['data:image/png;base64,AAAA'],
+        reviewMode: 'image_only_generation',
+      },
+      dependencies
+    )
+
+    expect(bodies).toHaveLength(2)
+    expect(bodies[0].messages[0].content).toContain('GENERAR SOLO UNA IMAGEN')
+    expect(bodies[0].messages[0].content).toContain('No bloquees por ortografía')
+    expect(bodies[1].messages[0].content).toContain('RESULTADO DE SOLO IMAGEN')
+    expect(bodies[1].messages[0].content).toContain('No los corrijas, reescribas')
+    expect(bodies[1].messages[1].content[0].text).toContain(
+      `\"publicationText\":${JSON.stringify(request.publicationText)}`
+    )
   })
 
   test.each([
@@ -174,6 +240,74 @@ describe('classifyAiPolicyRequest', () => {
     })
   })
 
+  test('retries when the provider response body times out before it can be parsed', async () => {
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => {
+          throw new Error('body stream aborted')
+        },
+      })
+      .mockResolvedValueOnce(openRouterResponse(allowDecision()))
+
+    const result = await classifyAiPolicyRequest(
+      { request: SAFE_REQUEST, guidelines: {} },
+      { fetchImpl, model: 'test/multimodal', apiKey: 'test-key' }
+    )
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2)
+    expect(result).toMatchObject({
+      decision: 'allow',
+      evaluatedDecision: 'allow',
+      failClosed: false,
+      errorCode: null,
+    })
+  })
+
+  test('does not retry a non-transient provider rejection', async () => {
+    const fetchImpl = jest.fn(async () => ({ ok: false, status: 400 }))
+
+    const result = await classifyAiPolicyRequest(
+      { request: SAFE_REQUEST, guidelines: {} },
+      { fetchImpl, model: 'test/multimodal', apiKey: 'test-key' }
+    )
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
+    expect(result).toMatchObject({
+      decision: 'block',
+      failClosed: true,
+      errorCode: 'provider_error',
+    })
+  })
+
+  test.each([
+    [
+      'an image without text',
+      { content: null, images: [{ image_url: { url: 'data:image/png;base64,AAAA' } }] },
+      'wrong_modality',
+    ],
+    ['a truly empty response', { content: '   ' }, 'empty_response'],
+  ])(
+    'distinguishes %s from other empty provider responses',
+    async (_label, response, errorCode) => {
+      const fetchImpl = jest.fn(async () => openRouterResponse(null, response))
+
+      const result = await classifyAiPolicyRequest(
+        { request: SAFE_REQUEST, guidelines: {} },
+        { fetchImpl, model: 'test/multimodal', apiKey: 'test-key' }
+      )
+
+      expect(fetchImpl).toHaveBeenCalledTimes(2)
+      expect(result).toMatchObject({
+        decision: 'block',
+        evaluatedDecision: 'uncertain',
+        failClosed: true,
+        errorCode,
+      })
+    }
+  )
+
   test('accepts a single fenced JSON object from the configured model', async () => {
     const fetchImpl = async () =>
       openRouterResponse(null, {
@@ -230,6 +364,63 @@ describe('reviewAiPolicyResult', () => {
     expect(fetchImpl).not.toHaveBeenCalled()
   })
 
+  test.each([undefined, '   '])(
+    'skips post-review when a validation report has no publishable candidate (%p)',
+    async (suggestedRevision) => {
+      const fetchImpl = jest.fn()
+
+      const result = await reviewAiPolicyResult(
+        {
+          request: SAFE_REQUEST,
+          result: {
+            overallOutcome: 'pass',
+            issues: [],
+            suggestedRevision,
+          },
+          guidelines: {},
+          images: [],
+          reviewMode: 'validation',
+        },
+        { fetchImpl, model: 'test/multimodal', apiKey: 'test-key' }
+      )
+
+      expect(result).toMatchObject({
+        decision: 'allow',
+        evaluatedDecision: 'allow',
+        categories: [],
+        skipped: true,
+        skipReason: 'no_publishable_candidate',
+      })
+      expect(fetchImpl).not.toHaveBeenCalled()
+    }
+  )
+
+  test('still blocks an unsafe suggested revision locally', async () => {
+    const fetchImpl = jest.fn()
+
+    const result = await reviewAiPolicyResult(
+      {
+        request: SAFE_REQUEST,
+        result: {
+          overallOutcome: 'warning',
+          suggestedRevision: 'Publícalo ahora en Instagram.',
+        },
+        guidelines: {},
+        images: [],
+        reviewMode: 'validation',
+      },
+      { fetchImpl, model: 'test/multimodal', apiKey: 'test-key' }
+    )
+
+    expect(result).toMatchObject({
+      decision: 'block',
+      evaluatedDecision: 'block',
+      categories: ['direct_publishing'],
+      failClosed: false,
+    })
+    expect(fetchImpl).not.toHaveBeenCalled()
+  })
+
   test('reviews result text and every image as untrusted multimodal data', async () => {
     const fetchImpl = jest.fn(async () =>
       openRouterResponse(allowDecision('Texto e imagen alineados.'))
@@ -250,6 +441,8 @@ describe('reviewAiPolicyResult', () => {
 
     const body = JSON.parse(fetchImpl.mock.calls[0][1].body)
     const content = body.messages[1].content
+    expect(body.modalities).toEqual(['text'])
+    expect(body.image_config).toBeUndefined()
     expect(body.messages[0].content).toContain(
       'El subtítulo y el cuerpo creativo de un afiche no son hechos inventados'
     )
@@ -348,6 +541,39 @@ describe('reviewAiPolicyResult', () => {
       categories: ['guideline_noncompliance'],
       failClosed: false,
     })
+  })
+
+  test('treats validation findings as diagnostic context, not publishable content', async () => {
+    const fetchImpl = jest.fn(async () => openRouterResponse(allowDecision('Diagnóstico seguro.')))
+
+    await reviewAiPolicyResult(
+      {
+        request: {
+          ...SAFE_REQUEST,
+          draftText: 'Texto con errores que las Guidelines deben detectar.',
+        },
+        result: {
+          overallOutcome: 'warning',
+          issues: [{ message: 'El borrador incumple las Guidelines.' }],
+          suggestedRevision: 'Texto corregido.',
+        },
+        guidelines: { global: 'Revisar ortografía y gramática.' },
+        images: [],
+        reviewMode: 'validation',
+      },
+      { fetchImpl, model: 'test/multimodal', apiKey: 'test-key' }
+    )
+
+    const body = JSON.parse(fetchImpl.mock.calls[0][1].body)
+    expect(body.messages[0].content).toContain('INFORME DE VALIDACIÓN')
+    expect(body.messages[0].content).toContain('El borrador original puede incumplir')
+    expect(body.messages[0].content).toContain('únicamente suggestedRevision')
+    expect(body.messages[0].content).toContain('no infieras ni evalúes imágenes hipotéticas')
+    expect(body.messages[1].content[0].text).toContain('Texto corregido.')
+    expect(body.messages[1].content[0].text).not.toContain(
+      'Texto con errores que las Guidelines deben detectar.'
+    )
+    expect(body.messages[1].content[0].text).not.toContain('El borrador incumple las Guidelines.')
   })
 
   test('uses one injected model for request classification and result review', async () => {

@@ -1,9 +1,13 @@
 import {
+  AiValidationModelResultSchema,
   AiValidationResultSchema,
   ValidateInputSchema,
   applyConfiguredCaptionLimit,
+  applySuggestedRevisionConsistency,
   buildFallbackResult,
   buildPolicyValidationResult,
+  normalizeModelValidationVerdict,
+  shouldApplyPostValidationPolicyBlock,
 } from '../../workflows/ai-social-media-designer/validation/validateAiWorkflow'
 import { AI_BASE_POLICY_VERSION } from '../../lib/ai-agent'
 import { extractOpenRouterUsage, mergeOpenRouterUsage } from '../../lib/ai-openrouter'
@@ -14,6 +18,26 @@ describe('validateAiWorkflow schema', () => {
     contentType: 'caption',
     draftText: 'Borrador de prueba',
   }
+
+  test('normalizes Markdown emphasis out of diagnostic fields', () => {
+    const result = AiValidationModelResultSchema.parse({
+      summary: 'Mejora el *engagement* sin usar **afirmaciones absolutas**.',
+      issues: [
+        {
+          severity: 'minor',
+          category: 'clarity',
+          message: 'Revisa el término `engagement`.',
+          suggestedFix: 'Usa _interacción_.',
+        },
+      ],
+      imageNotes: 'Mantén ~~mucho~~ buen contraste.',
+    })
+
+    expect(result.summary).toBe('Mejora el engagement sin usar afirmaciones absolutas.')
+    expect(result.issues[0].message).toBe('Revisa el término engagement.')
+    expect(result.issues[0].suggestedFix).toBe('Usa interacción.')
+    expect(result.imageNotes).toBe('Mantén mucho buen contraste.')
+  })
 
   test('buildFallbackResult always sets humanReviewRequired true', () => {
     const result = buildFallbackResult(baseInput, 'test reason')
@@ -32,6 +56,21 @@ describe('validateAiWorkflow schema', () => {
       humanReviewRequired: false,
     }
     expect(AiValidationResultSchema.safeParse(invalid).success).toBe(false)
+  })
+
+  test('model output contains findings while the server owns the verdict', () => {
+    const parsed = AiValidationModelResultSchema.parse({
+      summary: 'Se revisó el borrador.',
+      issues: [],
+      overallOutcome: 'fail',
+      approvalRecommendation: 'do_not_publish',
+      humanReviewRequired: false,
+    })
+
+    expect(parsed).toEqual({
+      summary: 'Se revisó el borrador.',
+      issues: [],
+    })
   })
 
   test('buildPolicyValidationResult never returns unsafe source text as advice', () => {
@@ -82,6 +121,30 @@ describe('validateAiWorkflow schema', () => {
     expect(result.imageNotes).toMatch(/se conserva como borrador/i)
   })
 
+  test('ignores only definitive guideline-only blocks after validation', () => {
+    expect(
+      shouldApplyPostValidationPolicyBlock({
+        decision: 'block',
+        categories: ['guideline_noncompliance'],
+        failClosed: false,
+      })
+    ).toBe(false)
+    expect(
+      shouldApplyPostValidationPolicyBlock({
+        decision: 'block',
+        categories: ['safety'],
+        failClosed: false,
+      })
+    ).toBe(true)
+    expect(
+      shouldApplyPostValidationPolicyBlock({
+        decision: 'block',
+        categories: ['guideline_noncompliance'],
+        failClosed: true,
+      })
+    ).toBe(true)
+  })
+
   test('AiValidationResultSchema accepts valid warning outcome', () => {
     const valid = {
       overallOutcome: 'warning',
@@ -101,6 +164,40 @@ describe('validateAiWorkflow schema', () => {
       humanReviewRequired: true,
     }
     expect(AiValidationResultSchema.safeParse(valid).success).toBe(true)
+  })
+
+  test.each([
+    {
+      label: 'minor finding',
+      issues: [{ severity: 'minor', category: 'clarity', message: 'Aclarar esta frase.' }],
+      outcome: 'warning',
+      recommendation: 'needs_edits',
+    },
+    {
+      label: 'critical finding',
+      issues: [{ severity: 'critical', category: 'safety', message: 'No publicar.' }],
+      outcome: 'fail',
+      recommendation: 'do_not_publish',
+    },
+    {
+      label: 'no findings',
+      issues: [],
+      outcome: 'pass',
+      recommendation: 'ready_for_review',
+    },
+  ])('derives a consistent verdict from $label', ({ issues, outcome, recommendation }) => {
+    const normalized = normalizeModelValidationVerdict({
+      overallOutcome: 'fail',
+      approvalRecommendation: 'do_not_publish',
+      summary: 'Resultado contradictorio del modelo.',
+      issues,
+      humanReviewRequired: true,
+    })
+
+    expect(normalized).toMatchObject({
+      overallOutcome: outcome,
+      approvalRecommendation: recommendation,
+    })
   })
 
   test('validates character limits from Guidelines and ignores unspecified limits', () => {
@@ -151,6 +248,62 @@ describe('validateAiWorkflow schema', () => {
       'x',
       'facebook',
     ])
+  })
+
+  test('treats an unexplained material revision as a validator inconsistency', () => {
+    const result = applySuggestedRevisionConsistency(
+      {
+        overallOutcome: 'pass',
+        approvalRecommendation: 'ready_for_review',
+        summary: 'El caption cumple.',
+        issues: [],
+        suggestedRevision: 'Ven y disfruta de la observación astronómica.',
+        humanReviewRequired: true,
+      },
+      {
+        ...baseInput,
+        draftText: 'Ven y disfruta de la observacion astronomica.',
+      }
+    )
+
+    expect(result).toMatchObject({
+      overallOutcome: 'fail',
+      approvalRecommendation: 'do_not_publish',
+      resultSource: 'system',
+    })
+    expect(result.issues[0]).toMatchObject({
+      severity: 'major',
+      category: 'uncertainty_factual_risk',
+    })
+    expect(result.summary).toMatch(/no fue posible validar/i)
+    expect(result.suggestedRevision).toBeUndefined()
+  })
+
+  test.each([
+    ['idéntica', 'Borrador de prueba', 'Borrador de prueba'],
+    ['saltos CRLF', 'Borrador\r\nde prueba', 'Borrador\nde prueba'],
+    ['espacios de transporte', 'Borrador de prueba', '  Borrador\u00a0de prueba\u200b  '],
+  ])('removes a redundant suggested revision with %s', (_label, draftText, suggestedRevision) => {
+    const result = {
+      overallOutcome: 'pass',
+      approvalRecommendation: 'ready_for_review',
+      summary: 'El caption cumple.',
+      issues: [],
+      suggestedRevision,
+      humanReviewRequired: true,
+    }
+
+    const reconciled = applySuggestedRevisionConsistency(result, {
+      ...baseInput,
+      draftText,
+    })
+
+    expect(reconciled).toMatchObject({
+      overallOutcome: 'pass',
+      approvalRecommendation: 'ready_for_review',
+      issues: [],
+    })
+    expect(reconciled.suggestedRevision).toBeUndefined()
   })
 
   test('ValidateInputSchema accepts a pinned custom content type and rejects identity drift', () => {

@@ -1,12 +1,13 @@
 'use client'
 
-import { useMemo } from 'react'
+import React, { useMemo } from 'react'
 import {
   OUTCOME_LABELS,
   APPROVAL_LABELS,
   SEVERITY_LABELS,
   CATEGORY_LABELS,
 } from '@/lib/ai-constants'
+import { normalizeAiDiagnosticText } from '@/lib/ai-diagnostic-text'
 
 const OUTCOME_STYLES = {
   pass: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
@@ -15,6 +16,13 @@ const OUTCOME_STYLES = {
 }
 
 const SEVERITY_ORDER = { critical: 0, major: 1, minor: 2 }
+
+const RESULT_SOURCE_LABELS = {
+  validator: 'Validador de Guidelines',
+  base_policy: 'Política base',
+  guidelines: 'Guidelines',
+  system: 'Sistema',
+}
 
 async function copyToClipboard(text, onCopied) {
   if (!text) return
@@ -32,8 +40,10 @@ function formatIssuesForCopy(issues) {
     .map((issue, i) => {
       const sev = SEVERITY_LABELS[issue.severity] || issue.severity
       const cat = CATEGORY_LABELS[issue.category] || issue.category
-      let line = `${i + 1}. [${sev}] ${cat}: ${issue.message}`
-      if (issue.suggestedFix) line += `\n   Sugerencia: ${issue.suggestedFix}`
+      let line = `${i + 1}. [${sev}] ${cat}: ${normalizeAiDiagnosticText(issue.message)}`
+      if (issue.suggestedFix) {
+        line += `\n   Sugerencia: ${normalizeAiDiagnosticText(issue.suggestedFix)}`
+      }
       return line
     })
     .join('\n\n')
@@ -68,10 +78,14 @@ export default function ValidationResult({
   if (!result) return null
 
   const outcome = result.overallOutcome
-  const outcomeStyle = OUTCOME_STYLES[outcome] || OUTCOME_STYLES.warning
+  const isSystemFailure = result.resultSource === 'system'
+  const outcomeStyle = isSystemFailure
+    ? OUTCOME_STYLES.warning
+    : OUTCOME_STYLES[outcome] || OUTCOME_STYLES.warning
   const costAmount = usage?.cost?.amount
   const hasCost = typeof costAmount === 'number'
   const hasTokens = typeof usage?.totalTokens === 'number'
+  const summaryText = normalizeAiDiagnosticText(result.summary)
 
   const handleCopy = (text) => {
     copyToClipboard(text, onCopyFeedback)
@@ -81,10 +95,12 @@ export default function ValidationResult({
     <div className="mt-8 space-y-6" data-testid="validation-result">
       <div className="flex flex-wrap items-center gap-3">
         <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${outcomeStyle}`}>
-          {OUTCOME_LABELS[outcome] || outcome}
+          {isSystemFailure ? 'Validación inconclusa' : OUTCOME_LABELS[outcome] || outcome}
         </span>
         <span className="text-sm text-gray-600 dark:text-gray-400">
-          {APPROVAL_LABELS[result.approvalRecommendation] || result.approvalRecommendation}
+          {isSystemFailure
+            ? 'Revisión manual necesaria'
+            : APPROVAL_LABELS[result.approvalRecommendation] || result.approvalRecommendation}
         </span>
       </div>
 
@@ -92,7 +108,8 @@ export default function ValidationResult({
         hasTokens ||
         guidelineVersion ||
         policyVersion ||
-        contentTypeIdentity?.label) && (
+        contentTypeIdentity?.label ||
+        result.resultSource) && (
         <p className="text-sm text-gray-500 dark:text-gray-400" data-testid="validation-run-cost">
           {(hasCost || hasTokens) && (
             <>
@@ -113,6 +130,17 @@ export default function ValidationResult({
                 hasCost || hasTokens || guidelineVersion || policyVersion ? ' · ' : ''
               }Tipo: ${contentTypeIdentity.label}`
             : ''}
+          {result.resultSource
+            ? `${
+                hasCost ||
+                hasTokens ||
+                guidelineVersion ||
+                policyVersion ||
+                contentTypeIdentity?.label
+                  ? ' · '
+                  : ''
+              }Origen: ${RESULT_SOURCE_LABELS[result.resultSource] || result.resultSource}`
+            : ''}
         </p>
       )}
 
@@ -121,29 +149,31 @@ export default function ValidationResult({
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Resumen</h2>
           <button
             type="button"
-            onClick={() => handleCopy(result.summary)}
+            onClick={() => handleCopy(summaryText)}
             className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
           >
             Copiar resumen
           </button>
         </div>
-        <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{result.summary}</p>
+        <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{summaryText}</p>
       </div>
 
-      {sortedIssues.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between gap-2 mb-3">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Problemas ({sortedIssues.length})
-            </h2>
+      <div>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Hallazgos ({sortedIssues.length})
+          </h2>
+          {sortedIssues.length > 0 && (
             <button
               type="button"
               onClick={() => handleCopy(formatIssuesForCopy(sortedIssues))}
               className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
             >
-              Copiar problemas
+              Copiar hallazgos
             </button>
-          </div>
+          )}
+        </div>
+        {sortedIssues.length > 0 ? (
           <ul className="space-y-3">
             {sortedIssues.map((issue, idx) => (
               <li
@@ -163,17 +193,28 @@ export default function ValidationResult({
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-gray-800 dark:text-gray-200">{issue.message}</p>
+                <p className="text-sm text-gray-800 dark:text-gray-200">
+                  {normalizeAiDiagnosticText(issue.message)}
+                </p>
                 {issue.suggestedFix && (
                   <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    <span className="font-medium">Sugerencia:</span> {issue.suggestedFix}
+                    <span className="font-medium">Sugerencia:</span>{' '}
+                    {normalizeAiDiagnosticText(issue.suggestedFix)}
                   </p>
                 )}
               </li>
             ))}
           </ul>
-        </div>
-      )}
+        ) : (
+          <div
+            className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-900 dark:border-green-900/60 dark:bg-green-900/20 dark:text-green-200"
+            data-testid="validation-no-findings"
+          >
+            La validación automática no reportó incumplimientos. El contenido aún necesita revisión
+            y aprobación humana antes de publicarse.
+          </div>
+        )}
+      </div>
 
       {result.platformNotes && (
         <div>
@@ -181,7 +222,7 @@ export default function ValidationResult({
             Notas de plataforma
           </h3>
           <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-            {result.platformNotes}
+            {normalizeAiDiagnosticText(result.platformNotes)}
           </p>
         </div>
       )}
@@ -198,7 +239,7 @@ export default function ValidationResult({
                   {platformLabels[platform] || platform}
                 </p>
                 <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">
-                  {notes}
+                  {normalizeAiDiagnosticText(notes)}
                 </p>
               </div>
             ))}
@@ -212,7 +253,7 @@ export default function ValidationResult({
             Notas de imagen
           </h3>
           <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-            {result.imageNotes}
+            {normalizeAiDiagnosticText(result.imageNotes)}
           </p>
         </div>
       )}
@@ -221,14 +262,14 @@ export default function ValidationResult({
         <div>
           <div className="flex items-center justify-between gap-2 mb-2">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Borrador sugerido
+              Texto de la publicación corregido
             </h2>
             <button
               type="button"
               onClick={() => handleCopy(result.suggestedRevision)}
               className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
             >
-              Copiar borrador sugerido
+              Copiar texto
             </button>
           </div>
           <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-800/50">

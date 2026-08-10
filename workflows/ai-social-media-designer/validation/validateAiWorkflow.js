@@ -11,7 +11,7 @@ import { contentDataToLegacyInput, validateContentData } from '../../../lib/ai-c
 import { resolveGuidelinesFromDocument } from '../../../lib/ai-guidelines'
 import { getGuidelineVersion } from '../../../lib/guidelines-store'
 import {
-  buildOpenRouterChatBody,
+  buildOpenRouterTextChatBody,
   extractOpenRouterUsage,
   mergeOpenRouterUsage,
 } from '../../../lib/ai-openrouter'
@@ -22,43 +22,32 @@ import {
   validateSerializedValidationImage,
 } from '../../../lib/ai-validation-images'
 import { persistRunHistory } from '../../../lib/run-history-store'
+import {
+  AiValidationResultSchema,
+  AiValidationModelResultSchema,
+  buildFallbackResult,
+  finalizeValidationResult,
+  normalizeValidationDraftText,
+  reconcileModelSuggestedRevision,
+  resolveValidationPlatforms,
+  shouldApplyValidationPolicyBlock,
+} from '../../../lib/ai-validation-result'
 
 export { extractOpenRouterUsage, mergeOpenRouterUsage }
-
-// ---------- Validation output schema (must match PRD) ----------
-
-const IssueSchema = z.object({
-  severity: z.enum(['minor', 'major', 'critical']),
-  category: z.enum([
-    'brand_voice',
-    'guideline_compliance',
-    'platform_fit',
-    'clarity',
-    'completeness',
-    'uncertainty_factual_risk',
-    'accessibility',
-    'safety',
-    'formatting',
-    'privacy',
-    'image_text_alignment',
-    'image_suitability',
-  ]),
-  message: z.string(),
-  suggestedFix: z.string().optional(),
-  affectedPlatform: z.string().optional(),
-})
-
-export const AiValidationResultSchema = z.object({
-  overallOutcome: z.enum(['pass', 'warning', 'fail']),
-  approvalRecommendation: z.enum(['ready_for_review', 'needs_edits', 'do_not_publish']),
-  summary: z.string(),
-  issues: z.array(IssueSchema),
-  platformNotes: z.string().optional(),
-  platformNotesByPlatform: z.record(z.string()).optional(),
-  imageNotes: z.string().optional(),
-  suggestedRevision: z.string().optional(),
-  humanReviewRequired: z.literal(true),
-})
+export {
+  AiValidationResultSchema,
+  AiValidationModelResultSchema,
+  applyConfiguredCaptionLimit,
+  applySuggestedRevisionConsistency,
+  buildFallbackResult,
+  buildPolicyValidationResult,
+  finalizeValidationResult,
+  normalizeModelValidationVerdict,
+  normalizeValidationDraftText,
+  reconcileModelSuggestedRevision,
+  shouldApplyPostValidationPolicyBlock,
+  shouldApplyValidationPolicyBlock,
+} from '../../../lib/ai-validation-result'
 
 const ImageInputSchema = z
   .object({
@@ -113,7 +102,10 @@ export const ValidateInputSchema = z
     contentTypeIdentity: ContentTypeIdentitySchema,
     guidelineVersion: z.string().trim().min(1).max(100),
     policyVersion: z.string().trim().min(1).max(100),
-    draftText: z.string().trim().min(1).max(20_000),
+    draftText: z
+      .string()
+      .transform(normalizeValidationDraftText)
+      .pipe(z.string().trim().min(1).max(20_000)),
     goal: z.string().trim().min(1).max(600).optional(),
     topic: z.string().trim().min(1).max(600).optional(),
     audience: z.string().trim().min(1).max(200).optional(),
@@ -181,38 +173,6 @@ function extractFirstJsonObject(text) {
   }
 }
 
-function resolveInputPlatforms(input) {
-  const platforms =
-    Array.isArray(input?.platforms) && input.platforms.length
-      ? input.platforms
-      : [input?.platform].filter(Boolean)
-  return [...new Set(platforms)]
-}
-
-export function buildFallbackResult(input, reason) {
-  return AiValidationResultSchema.parse({
-    overallOutcome: 'fail',
-    approvalRecommendation: 'do_not_publish',
-    summary: `No fue posible validar automáticamente: ${reason}. Se requiere revisión humana.`,
-    issues: [
-      {
-        severity: 'major',
-        category: 'uncertainty_factual_risk',
-        message: `Validación fallida: ${reason}`,
-        suggestedFix: 'Revisar el borrador y, si aplica, contrastar detalles con fuentes internas.',
-        affectedPlatform:
-          resolveInputPlatforms(input).length === 1 ? resolveInputPlatforms(input)[0] : undefined,
-      },
-    ],
-    platformNotes: 'La validación automática falló; no bloquea el flujo manual.',
-    imageNotes:
-      input.images && input.images.length > 0
-        ? 'Incluiste imágenes, pero la validación automática no pudo completarse.'
-        : undefined,
-    suggestedRevision: input.draftText,
-    humanReviewRequired: true,
-  })
-}
 
 async function validatePayloadStep(input) {
   'use step'
@@ -253,7 +213,7 @@ async function loadGuidelinesStep(input) {
     if (!document || document.version !== input.guidelineVersion) {
       return { ok: false, reason: 'guideline_version_unavailable' }
     }
-    const requestedPlatforms = resolveInputPlatforms(input)
+    const requestedPlatforms = resolveValidationPlatforms(input)
     if (
       requestedPlatforms.some(
         (platform) => !Object.prototype.hasOwnProperty.call(document.platforms || {}, platform)
@@ -321,7 +281,7 @@ async function loadGuidelinesStep(input) {
 function buildPolicyRequest(input) {
   return {
     platform: input.platform,
-    platforms: resolveInputPlatforms(input),
+    platforms: resolveValidationPlatforms(input),
     contentType: input.contentType,
     contentData: input.contentData,
     draftText: input.draftText,
@@ -365,112 +325,11 @@ function buildPolicyGuidelines(guidelines) {
   }
 }
 
-export function applyConfiguredCaptionLimit(result, input, guidelines) {
-  const issues = Array.isArray(result.issues) ? [...result.issues] : []
-  const configured = guidelines?.platforms
-    ? resolveInputPlatforms(input).map((platform) => ({
-        platform,
-        limit: guidelines.platforms?.[platform]?.captionMaxCharacters,
-      }))
-    : [{ platform: input.platform, limit: guidelines?.captionMaxCharacters }]
-  let hasViolation = false
-
-  for (const { platform, limit } of configured) {
-    if (!Number.isInteger(limit) || limit < 1 || input.draftText.length <= limit) continue
-    hasViolation = true
-    const alreadyReported = issues.some(
-      (issue) =>
-        issue.category === 'platform_fit' &&
-        /caracter/i.test(issue.message || '') &&
-        (!issue.affectedPlatform || issue.affectedPlatform === platform)
-    )
-    if (!alreadyReported) {
-      issues.push({
-        severity: 'major',
-        category: 'platform_fit',
-        message: `El caption tiene ${input.draftText.length} caracteres y el máximo configurado para ${platform} es ${limit}.`,
-        suggestedFix: `Acortar el caption a ${limit} caracteres o menos.`,
-        affectedPlatform: platform,
-      })
-    }
-  }
-
-  if (!hasViolation) return result
-
-  return AiValidationResultSchema.parse({
-    ...result,
-    overallOutcome: result.overallOutcome === 'fail' ? 'fail' : 'warning',
-    approvalRecommendation:
-      result.approvalRecommendation === 'do_not_publish' ? 'do_not_publish' : 'needs_edits',
-    issues,
-    humanReviewRequired: true,
-  })
-}
-
 function collectValidationImageUrls(input) {
   const urls = (input.images || []).map(({ dataUrl }) => dataUrl)
   const sponsorDataUrl = input.contentData?.sponsor?.dataUrl
   if (typeof sponsorDataUrl === 'string' && sponsorDataUrl.trim()) urls.push(sponsorDataUrl.trim())
   return urls
-}
-
-export function buildPolicyValidationResult(input, decision) {
-  const unavailable = decision.failClosed === true
-  const categoryList = Array.isArray(decision.categories) ? decision.categories : []
-  const guidelineOnly =
-    categoryList.length > 0 &&
-    categoryList.every((category) => category === 'guideline_noncompliance')
-  const categories = categoryList.join(', ')
-
-  if (guidelineOnly) {
-    return AiValidationResultSchema.parse({
-      overallOutcome: 'fail',
-      approvalRecommendation: 'needs_edits',
-      summary: 'El contenido necesita cambios para cumplir las Guías antes de publicarse.',
-      issues: [
-        {
-          severity: 'major',
-          category: 'guideline_compliance',
-          message: decision.reason || 'El contenido no cumple una regla de Guías.',
-          suggestedFix: 'Corrige el requisito indicado y vuelve a validar el contenido.',
-          affectedPlatform:
-            resolveInputPlatforms(input).length === 1 ? resolveInputPlatforms(input)[0] : undefined,
-        },
-      ],
-      platformNotes: 'Categoría de revisión: guideline_noncompliance.',
-      imageNotes:
-        input.images?.length > 0
-          ? 'La imagen se conserva como borrador, pero debe corregirse antes de publicarse.'
-          : undefined,
-      humanReviewRequired: true,
-    })
-  }
-
-  return AiValidationResultSchema.parse({
-    overallOutcome: 'fail',
-    approvalRecommendation: 'do_not_publish',
-    summary: unavailable
-      ? 'No fue posible confirmar el cumplimiento de la política base. No publiques este contenido.'
-      : 'El contenido no cumple la política base de SAC y no debe publicarse.',
-    issues: [
-      {
-        severity: unavailable ? 'major' : 'critical',
-        category: unavailable ? 'uncertainty_factual_risk' : 'safety',
-        message: decision.reason || 'La revisión de política no pudo aprobar el contenido.',
-        suggestedFix: unavailable
-          ? 'Solicita una revisión humana antes de continuar.'
-          : 'Ajusta el contenido al alcance social y a las restricciones de SAC.',
-        affectedPlatform:
-          resolveInputPlatforms(input).length === 1 ? resolveInputPlatforms(input)[0] : undefined,
-      },
-    ],
-    platformNotes: categories ? `Categorías de política: ${categories}.` : undefined,
-    imageNotes:
-      input.images?.length > 0
-        ? 'Las imágenes tampoco deben usarse hasta completar una revisión segura.'
-        : undefined,
-    humanReviewRequired: true,
-  })
 }
 
 async function classifyPolicyRequestStep(input, guidelines) {
@@ -480,6 +339,7 @@ async function classifyPolicyRequestStep(input, guidelines) {
       request: buildPolicyRequest(input),
       guidelines: buildPolicyGuidelines(guidelines),
       images: collectValidationImageUrls(input),
+      reviewMode: 'validation',
     },
     { fetchImpl: fetch }
   )
@@ -493,6 +353,7 @@ async function reviewPolicyResultStep(input, guidelines, result) {
       result,
       guidelines: buildPolicyGuidelines(guidelines),
       images: collectValidationImageUrls(input),
+      reviewMode: 'validation',
     },
     { fetchImpl: fetch }
   )
@@ -524,8 +385,6 @@ En modo validación, evalúa un paquete compartido para las redes sociales de SA
 Devuelve EXACTAMENTE un objeto JSON (sin texto adicional, sin markdown) con esta forma:
 
 {
-  "overallOutcome": "pass" | "warning" | "fail",
-  "approvalRecommendation": "ready_for_review" | "needs_edits" | "do_not_publish",
   "summary": string,
   "issues": [
     {
@@ -539,16 +398,22 @@ Devuelve EXACTAMENTE un objeto JSON (sin texto adicional, sin markdown) con esta
   "platformNotes": string (opcional),
   "platformNotesByPlatform": { "id_de_red": string } (opcional),
   "imageNotes": string (opcional),
-  "suggestedRevision": string (opcional),
-  "humanReviewRequired": true
+  "suggestedRevision": string (opcional)
 }
 
 Reglas:
-- Usa EXACTAMENTE esas claves y esos valores permitidos. "humanReviewRequired" debe ser siempre true.
+- Usa EXACTAMENTE esas claves y esos valores permitidos.
 - "issues" siempre es un arreglo (usa [] si no hay problemas).
+- Todas las cadenas de diagnóstico deben ser texto plano. No uses Markdown, asteriscos, guiones bajos ni backticks para dar énfasis.
+- Tu responsabilidad es reportar hallazgos y correcciones. El sistema deriva el veredicto final de "issues"; no declares el contenido aprobado o listo para publicar.
 - Evalúa el mismo caption y la misma imagen en TODAS las plataformas indicadas.
 - Aplica conjuntamente las reglas generales, las del tipo y las de cada plataforma.
 - Usa "affectedPlatform" cuando un problema corresponde solo a una red.
+- Evalúa explícitamente cada regla recibida en las Guidelines. Si estas exigen revisar ortografía, acentuación, gramática o puntuación, reporta cada incumplimiento con category "guideline_compliance".
+- Si "suggestedRevision" cambia el texto original para cumplir una regla de Guidelines, explica esos cambios en "issues"; nunca devuelvas una revisión distinta sin el hallazgo correspondiente.
+- Si "issues" está vacío, omite "suggestedRevision". No repitas el borrador original ni propongas reescrituras cosméticas o de preferencia.
+- Incluye "suggestedRevision" solamente cuando corrija uno o más hallazgos concretos de "issues". Conserva los párrafos, emojis y formato original salvo que uno de esos hallazgos exija cambiarlos.
+- Si no se adjuntó una imagen y esta era opcional, puedes incluir una recomendación en "imageNotes", pero no la reportes como un issue ni como incumplimiento.
 - Resume las observaciones particulares en "platformNotesByPlatform" usando los IDs recibidos.
 - No inventes datos no provistos (fechas, lugares, costos, enlaces, hechos científicos verificables).
 - Astronomía: NO verificas hechos; si hay riesgo de afirmaciones no verificables, marca uncertainty_factual_risk.
@@ -557,7 +422,7 @@ Reglas:
 
   const userText = {
     platform: input.platform,
-    platforms: resolveInputPlatforms(input),
+    platforms: resolveValidationPlatforms(input),
     contentType: input.contentType,
     draftText: input.draftText,
     goal: input.goal,
@@ -601,7 +466,7 @@ ${formatUntrustedRequest(userText)}`,
     { role: 'user', content: messageContent },
   ]
 
-  const attempt = async () => {
+  const attempt = async (attemptMessages = messages) => {
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -611,9 +476,9 @@ ${formatUntrustedRequest(userText)}`,
         ...(openRouterTitle ? { 'X-OpenRouter-Title': openRouterTitle } : null),
       },
       body: JSON.stringify(
-        buildOpenRouterChatBody({
+        buildOpenRouterTextChatBody({
           model,
-          messages,
+          messages: attemptMessages,
           temperature: 0.2,
           forceJson: true,
         })
@@ -641,8 +506,14 @@ ${formatUntrustedRequest(userText)}`,
       throw err
     }
 
-    const validated = AiValidationResultSchema.parse(json)
-    return { result: validated, usage }
+    const parsed = AiValidationModelResultSchema.parse(json)
+    try {
+      const validated = reconcileModelSuggestedRevision(parsed, input)
+      return { result: validated, usage }
+    } catch (error) {
+      error.usage = usage
+      throw error
+    }
   }
 
   let accumulatedUsage = null
@@ -653,7 +524,17 @@ ${formatUntrustedRequest(userText)}`,
   } catch (err1) {
     accumulatedUsage = mergeOpenRouterUsage(accumulatedUsage, err1?.usage || null)
     try {
-      const second = await attempt()
+      const retryMessages =
+        err1?.code === 'UNEXPLAINED_SUGGESTED_REVISION'
+          ? [
+              {
+                ...messages[0],
+                content: `${messages[0].content}\n\nCORRECCIÓN DE CONTRATO: La respuesta anterior incluyó un borrador sugerido materialmente distinto sin ningún hallazgo. Si no detectas problemas, devuelve issues: [] y omite suggestedRevision. Si el cambio es necesario, reporta primero el hallazgo que corrige.`,
+              },
+              messages[1],
+            ]
+          : messages
+      const second = await attempt(retryMessages)
       return {
         ok: true,
         model,
@@ -749,7 +630,7 @@ export async function validateAiWorkflow(input) {
 
   const runtimeInput = guidelines.input
   const requestPolicy = await classifyPolicyRequestStep(runtimeInput, guidelines)
-  if (requestPolicy.decision !== 'allow') {
+  if (shouldApplyValidationPolicyBlock(requestPolicy)) {
     const policyResult = buildPolicyValidationResult(runtimeInput, requestPolicy)
     const completedAt = new Date().toISOString()
     if (runId) {
@@ -777,20 +658,23 @@ export async function validateAiWorkflow(input) {
   }
 
   const modelResult = await callOpenRouterStep(runtimeInput, guidelines)
-  let finalResult = modelResult.result
+  let resultPolicy = null
   let usage = mergeOpenRouterUsage(requestPolicy.usage, modelResult.usage)
   let finalModel = modelResult.model || requestPolicy.model
 
   if (modelResult.ok !== false) {
-    const resultPolicy = await reviewPolicyResultStep(runtimeInput, guidelines, modelResult.result)
+    resultPolicy = await reviewPolicyResultStep(runtimeInput, guidelines, modelResult.result)
     usage = mergeOpenRouterUsage(usage, resultPolicy.usage)
     finalModel = resultPolicy.model || finalModel
-    if (resultPolicy.decision !== 'allow') {
-      finalResult = buildPolicyValidationResult(runtimeInput, resultPolicy)
-    }
   }
 
-  finalResult = applyConfiguredCaptionLimit(finalResult, runtimeInput, guidelines)
+  const finalResult = finalizeValidationResult({
+    result: modelResult.result,
+    input: runtimeInput,
+    guidelines,
+    modelSucceeded: modelResult.ok !== false,
+    policyDecision: resultPolicy,
+  })
 
   const completedAt = new Date().toISOString()
 
