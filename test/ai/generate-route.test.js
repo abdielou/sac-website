@@ -141,6 +141,7 @@ describe('POST /api/admin/ai/generate contract', () => {
     expect(startedInput.platforms).toEqual(['x', 'instagram', 'facebook'])
     expect(startedInput.userId).toBe('session-user')
     expect(startedInput.userEmail).toBe('user@example.com')
+    expect(startedInput.generationMode).toBe('text_and_image')
     expect(startedInput.guidelineVersion).toBe('default-v1')
     expect(startedInput.runCoordination).toEqual({
       claimId: 'claim-generate-1',
@@ -158,6 +159,76 @@ describe('POST /api/admin/ai/generate contract', () => {
       location: 'Cabo Rojo',
       cta: 'Confirma tu asistencia',
     })
+  })
+
+  test('starts image_only with publicationText preserved exactly', async () => {
+    const publicationText = '  Caption existente\r\n\r\n#Conservar  '
+    const response = await POST(
+      requestWithBody({
+        ...validEventBody,
+        generationMode: 'image_only',
+        publicationText,
+      })
+    )
+
+    expect(response.status).toBe(202)
+    const startedInput = start.mock.calls[0][1][0]
+    expect(startedInput.generationMode).toBe('image_only')
+    expect(startedInput.publicationText).toBe(publicationText)
+  })
+
+  test('ignores an irrelevant publicationText in the default text_and_image mode', async () => {
+    const response = await POST(
+      requestWithBody({ ...validEventBody, publicationText: 'No usar como entrada.' })
+    )
+
+    expect(response.status).toBe(202)
+    const startedInput = start.mock.calls[0][1][0]
+    expect(startedInput.generationMode).toBe('text_and_image')
+    expect(startedInput.publicationText).toBeUndefined()
+  })
+
+  test('rejects image_only without publicationText before start', async () => {
+    const response = await POST(
+      requestWithBody({ ...validEventBody, generationMode: 'image_only' })
+    )
+
+    expect(response.status).toBe(400)
+    expect(response.body.details).toContain('publicationText')
+    expect(start).not.toHaveBeenCalled()
+  })
+
+  test('rejects image_only when Guidelines prohibit images', async () => {
+    const document = getDefaultGuidelines()
+    document.contentTypeCatalog = document.contentTypeCatalog.map((entry) =>
+      entry.id === 'post_educativo'
+        ? {
+            ...entry,
+            visual: {
+              mode: 'none',
+              template: null,
+              backgroundSources: [],
+              sponsorAllowed: false,
+              imagePolicyByPlatform: { facebook: 'prohibited' },
+            },
+          }
+        : entry
+    )
+    getActiveGuidelinesStrict.mockResolvedValue(document)
+
+    const response = await POST(
+      requestWithBody({
+        contentType: 'post_educativo',
+        topic: 'Saturno',
+        tone: 'Amigable',
+        generationMode: 'image_only',
+        publicationText: 'Caption existente.',
+      })
+    )
+
+    expect(response.status).toBe(400)
+    expect(response.body.error).toBe('Imagen no permitida')
+    expect(start).not.toHaveBeenCalled()
   })
 
   test('returns an existing run idempotently for the same browser token', async () => {
@@ -275,8 +346,21 @@ describe('POST /api/admin/ai/generate contract', () => {
     expect(start.mock.calls[0][1][0].cta).toBeUndefined()
   })
 
+  test('passes the selected event template presentation to the workflow', async () => {
+    const response = await POST(
+      requestWithBody({
+        ...validEventBody,
+        templatePresentation: 'pills',
+      })
+    )
+
+    expect(response.status).toBe(202)
+    expect(start.mock.calls[0][1][0].templatePresentation).toBe('pills')
+  })
+
   test.each([
     ['invalid explicit background mode', { backgroundMode: 'custom' }],
+    ['invalid template presentation', { templatePresentation: 'pill' }],
     ['unknown stock background', { backgroundId: 'unknown-background' }],
     [
       'incompatible template content type',

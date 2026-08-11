@@ -205,11 +205,11 @@ export default function GuidelinesPlatforms({
                 htmlFor={`platform-${selected.id}-caption-limit`}
                 className="text-base font-semibold text-gray-950 dark:text-white"
               >
-                Máximo de caracteres del caption
+                Máximo de caracteres del texto de la publicación
               </label>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-500 dark:text-gray-400">
-                Déjalo vacío si {selected.label} no impone un límite. Cuando un caption se comparte,
-                se respeta el menor límite de las redes donde se publicará.
+                Déjalo vacío si {selected.label} no impone un límite. Cuando el mismo texto se usa
+                en varias redes, se respeta el menor límite aplicable.
               </p>
               {editable ? (
                 <input

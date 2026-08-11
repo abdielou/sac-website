@@ -3,6 +3,7 @@ import {
   GenerateInputSchema,
   applyGenerationGuardrails,
   buildFallbackGenerationResult,
+  buildProvidedPublicationResult,
   mergeImagePromptsIntoResult,
 } from '../../workflows/ai-social-media-designer/generation/generateAiWorkflow'
 import { GENERATION_INPUT_LIMITS } from '../../lib/ai-constants'
@@ -64,8 +65,7 @@ describe('generateAiWorkflow schema', () => {
       {
         caption: {
           contentType: baseInput.contentType,
-          draftText:
-            'Acompáñanos a observar el cielo. Evento libre de costo para toda la familia.',
+          draftText: 'Acompáñanos a observar el cielo. Evento libre de costo para toda la familia.',
           assumptions: [],
           missingInformation: [],
         },
@@ -318,6 +318,58 @@ describe('generateAiWorkflow schema', () => {
     })
     expect(parsed.success).toBe(true)
   })
+
+  test('defaults to text_and_image and preserves provided publication text exactly', () => {
+    const defaultMode = GenerateInputSchema.parse(baseInput)
+    expect(defaultMode.generationMode).toBe('text_and_image')
+
+    const publicationText = '  Texto existente\r\n\r\n#SinCambios  '
+    const parsed = GenerateInputSchema.parse({
+      ...baseInput,
+      generationMode: 'image_only',
+      publicationText,
+    })
+    const result = buildProvidedPublicationResult(parsed, guidelineDocument)
+
+    expect(parsed.publicationText).toBe(publicationText)
+    expect(result.publicationTextSource).toBe('provided')
+    expect(result.drafts.every((draft) => draft.draftText === publicationText)).toBe(true)
+  })
+
+  test('requires a bounded publicationText and image-capable Guidelines for image_only', () => {
+    expect(
+      GenerateInputSchema.safeParse({ ...baseInput, generationMode: 'image_only' }).success
+    ).toBe(false)
+    expect(
+      GenerateInputSchema.safeParse({
+        ...baseInput,
+        generationMode: 'image_only',
+        publicationText: 'x'.repeat(20_001),
+      }).success
+    ).toBe(false)
+
+    const noImageDefinition = {
+      ...baseInput.contentTypeDefinition,
+      visual: {
+        mode: 'none',
+        template: null,
+        backgroundSources: [],
+        sponsorAllowed: false,
+        imagePolicyByPlatform: { instagram: 'prohibited', facebook: 'prohibited' },
+      },
+    }
+    expect(
+      GenerateInputSchema.safeParse({
+        ...baseInput,
+        generationMode: 'image_only',
+        publicationText: 'Texto existente.',
+        contentTypeDefinition: noImageDefinition,
+        backgroundMode: undefined,
+        backgroundId: undefined,
+      }).success
+    ).toBe(false)
+  })
+
   test('GenerateInputSchema accepts internal run coordination without requiring it for legacy inputs', () => {
     expect(GenerateInputSchema.safeParse(baseInput).success).toBe(true)
 
@@ -347,7 +399,6 @@ describe('generateAiWorkflow schema', () => {
       }).success
     ).toBe(false)
   })
-
 
   test('GenerateInputSchema deduplicates platforms', () => {
     const parsed = GenerateInputSchema.safeParse({
@@ -399,8 +450,8 @@ describe('generateAiWorkflow schema', () => {
     expect(
       GenerateInputSchema.safeParse({
         ...baseInput,
-        contentType: 'caption',
-        ...runtimeMetadata({ ...baseInput, contentType: 'caption' }),
+        contentType: 'holiday',
+        ...runtimeMetadata({ ...baseInput, contentType: 'holiday' }),
         backgroundMode: 'stock',
         backgroundId: 'telescope-nebula',
       }).success

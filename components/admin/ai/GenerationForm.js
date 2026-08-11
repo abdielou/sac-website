@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
   GENERATION_INPUT_LIMITS,
   DEFAULT_SEED_PLATFORMS,
@@ -13,7 +13,11 @@ import {
 import { listBackgroundOptions } from '@/lib/social-template/backgroundCatalog'
 import { DEFAULT_GENERATION_FORM } from '@/lib/social-template/buildGenerationPayload'
 import { SPONSOR_MAX_BYTES, isAllowedSponsorMimeType } from '@/lib/social-template/eventFormHelpers'
-import { resolveTemplateLayoutId } from '@/lib/social-template/templateLayouts'
+import {
+  DEFAULT_EVENT_TEMPLATE_PRESENTATION,
+  EVENT_TEMPLATE_PRESENTATIONS,
+  resolveTemplateLayoutId,
+} from '@/lib/social-template/templateLayouts'
 import { resolveContentTypePlatforms } from '@/lib/ai-guidelines-schema'
 import ContentTypeFields, {
   formStateKeyForContentField,
@@ -29,9 +33,22 @@ const labelClass = 'block text-sm font-medium text-gray-700 dark:text-gray-300 m
 const sectionClass =
   'rounded-xl border border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-900/40 p-4 sm:p-5 space-y-4'
 const sectionTitleClass = 'text-sm font-semibold tracking-wide text-gray-900 dark:text-gray-100'
+const templatePresentationOptions = [
+  {
+    id: 'rail',
+    label: 'Tarjeta dividida',
+    description: 'Fecha, hora y lugar en una sola tarjeta.',
+  },
+  {
+    id: 'pills',
+    label: 'Pills de color',
+    description: 'Tres pills separadas, incluida la violeta.',
+  },
+]
 const maxListInputLength =
   GENERATION_INPUT_LIMITS.listItems * GENERATION_INPUT_LIMITS.listItem +
   (GENERATION_INPUT_LIMITS.listItems - 1) * 2
+const PUBLICATION_TEXT_MAX_LENGTH = 20_000
 
 function validateListInput(value, separator, label) {
   const items = String(value || '')
@@ -92,22 +109,31 @@ export default function GenerationForm({
         )
         .map((platform) => platformLabelById[platform] || platform)
     : destinationLabels
-  const destinationSummary = imageDestinationLabels.length
-    ? imageDestinationLabels.length === destinationLabels.length
-      ? `Se generarán un caption y una imagen compartidos para ${formatPlatformList(destinationLabels)}, según Guidelines.`
-      : `Se generará un caption compartido para ${formatPlatformList(destinationLabels)}. La imagen se preparará para ${formatPlatformList(imageDestinationLabels)}, según Guidelines.`
-    : `Se generará un caption compartido para ${formatPlatformList(destinationLabels)}. Este tipo de contenido no usa imagen, según Guidelines.`
-  const isEvent = isEventContentType(formState.contentType, contentTypeDefinition)
-  const canonicalEventName = getCanonicalEventName(formState.contentType, contentTypeDefinition)
-  const requiresEventCta = contentTypeRequiresEventCta(formState.contentType, contentTypeDefinition)
   const supportsImageForSelection = shouldGenerateImagePrompt(
     formState.contentType,
     { platforms: resolvedPlatforms },
     contentTypeDefinition
   )
-  const supportsTemplate =
-    supportsImageForSelection &&
-    Boolean(resolveTemplateLayoutId(formState.contentType, contentTypeDefinition))
+  const imageOnly = supportsImageForSelection && formState.generationMode === 'image_only'
+  const publicationText = formState.publicationText || ''
+  const destinationSummary = imageOnly
+    ? `Se generará una imagen compartida para ${formatPlatformList(imageDestinationLabels)}, según Guidelines. El texto de la publicación se conservará sin cambios.`
+    : imageDestinationLabels.length
+      ? imageDestinationLabels.length === destinationLabels.length
+        ? `Se generarán el texto y la imagen de la publicación para ${formatPlatformList(destinationLabels)}, según Guidelines.`
+        : `Se generará el texto de la publicación para ${formatPlatformList(destinationLabels)}. La imagen se preparará para ${formatPlatformList(imageDestinationLabels)}, según Guidelines.`
+      : `Se generará el texto de la publicación para ${formatPlatformList(destinationLabels)}. Este tipo de contenido no usa imagen, según Guidelines.`
+  const isEvent = isEventContentType(formState.contentType, contentTypeDefinition)
+  const canonicalEventName = getCanonicalEventName(formState.contentType, contentTypeDefinition)
+  const requiresEventCta = contentTypeRequiresEventCta(formState.contentType, contentTypeDefinition)
+  const templateLayoutId = resolveTemplateLayoutId(formState.contentType, contentTypeDefinition)
+  const supportsTemplate = supportsImageForSelection && Boolean(templateLayoutId)
+  const supportsEventTemplate = supportsTemplate && templateLayoutId === 'event'
+  const selectedTemplatePresentation = EVENT_TEMPLATE_PRESENTATIONS.includes(
+    formState.templatePresentation
+  )
+    ? formState.templatePresentation
+    : DEFAULT_EVENT_TEMPLATE_PRESENTATION
   const supportsGeneratedImage = shouldGenerateImagePrompt(
     formState.contentType,
     { platforms: resolvedPlatforms },
@@ -138,6 +164,11 @@ export default function GenerationForm({
 
   const formDisabled = loading || busy || !canGenerate
 
+  useEffect(() => {
+    if (supportsImageForSelection || formState.generationMode !== 'image_only') return
+    onFormChange({ ...formState, generationMode: 'text_and_image' })
+  }, [formState, onFormChange, supportsImageForSelection])
+
   const handleChange = (field) => (e) => {
     onFormChange({ ...formState, [field]: e.target.value })
   }
@@ -152,8 +183,8 @@ export default function GenerationForm({
       { platforms: nextPlatforms },
       nextDefinition
     )
-    const nextSupportsTemplate =
-      nextSupportsGeneratedImage && Boolean(resolveTemplateLayoutId(contentType, nextDefinition))
+    const nextTemplateLayoutId = resolveTemplateLayoutId(contentType, nextDefinition)
+    const nextSupportsTemplate = nextSupportsGeneratedImage && Boolean(nextTemplateLayoutId)
     const nextBackgroundSources = nextDefinition?.visual?.backgroundSources || []
     const nextAllowsStock = nextDefinition
       ? nextBackgroundSources.includes('stock')
@@ -174,7 +205,13 @@ export default function GenerationForm({
       next.backgroundId =
         next.backgroundMode === 'stock' ? next.backgroundId || BACKGROUND_OPTIONS[0]?.id || '' : ''
     }
+    next.templatePresentation =
+      nextTemplateLayoutId === 'event' &&
+      EVENT_TEMPLATE_PRESENTATIONS.includes(next.templatePresentation)
+        ? next.templatePresentation
+        : DEFAULT_EVENT_TEMPLATE_PRESENTATION
     if (!nextSupportsGeneratedImage && !nextSupportsTemplate) {
+      next.generationMode = 'text_and_image'
       next.imageStyle = ''
       next.imageConstraints = ''
     }
@@ -247,6 +284,12 @@ export default function GenerationForm({
     knownFacts: validateListInput(formState.knownFacts, '\n', 'Datos confirmados'),
     hashtags: validateListInput(formState.hashtags, ',', 'Hashtags'),
     links: validateListInput(formState.links, ',', 'Enlaces'),
+    publicationText:
+      imageOnly && !publicationText.trim()
+        ? 'Indica el texto de la publicación'
+        : imageOnly && publicationText.length > PUBLICATION_TEXT_MAX_LENGTH
+          ? `El texto de la publicación admite hasta ${PUBLICATION_TEXT_MAX_LENGTH} caracteres`
+          : null,
   }
   const dynamicFieldErrors = Object.fromEntries(
     (contentTypeDefinition?.fields || []).map((field) => {
@@ -282,15 +325,21 @@ export default function GenerationForm({
       : supportsTemplate && formState.backgroundMode === 'stock' && !formState.backgroundId
         ? 'Selecciona un fondo'
         : null
-  const hasFieldErrors = contentTypeDefinition
-    ? Object.values(dynamicFieldErrors).some(Boolean)
-    : Object.values(fieldErrors).some(Boolean)
+  const hasFieldErrors =
+    Boolean(fieldErrors.publicationText) ||
+    (contentTypeDefinition
+      ? Object.values(dynamicFieldErrors).some(Boolean)
+      : Object.values(fieldErrors).some(Boolean))
   const submitDisabled = formDisabled
   const submitLabel = busy
-    ? 'Generando borradores...'
+    ? imageOnly
+      ? 'Generando imagen...'
+      : 'Generando borradores...'
     : loading
       ? 'Cargando opciones...'
-      : 'Generar borradores'
+      : imageOnly
+        ? 'Generar imagen'
+        : 'Generar borradores'
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -307,6 +356,7 @@ export default function GenerationForm({
       knownFacts: true,
       hashtags: true,
       links: true,
+      publicationText: true,
       dynamic: true,
     })
     if (backgroundError || hasFieldErrors || (supportsSponsor && sponsorError)) return
@@ -345,6 +395,11 @@ export default function GenerationForm({
             disabled={formDisabled}
             className={inputClass}
           >
+            {!formState.contentType && (
+              <option value="" disabled>
+                {loading ? 'Cargando tipos de contenido...' : 'Selecciona un tipo de contenido'}
+              </option>
+            )}
             {contentTypes.map((ct) => (
               <option key={ct.id} value={ct.id}>
                 {ct.label}
@@ -352,6 +407,66 @@ export default function GenerationForm({
             ))}
           </select>
         </div>
+
+        {supportsImageForSelection && (
+          <div className="space-y-3">
+            <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <input
+                type="checkbox"
+                checked={imageOnly}
+                onChange={(event) =>
+                  onFormChange({
+                    ...formState,
+                    generationMode: event.target.checked ? 'image_only' : 'text_and_image',
+                  })
+                }
+                disabled={formDisabled}
+                className="mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600"
+              />
+              <span>Ya tengo el texto de la publicación; generar solo la imagen</span>
+            </label>
+
+            {imageOnly && (
+              <div>
+                <label htmlFor="gen-publication-text" className={labelClass}>
+                  Texto de la publicación <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  id="gen-publication-text"
+                  value={publicationText}
+                  maxLength={PUBLICATION_TEXT_MAX_LENGTH}
+                  onChange={handleChange('publicationText')}
+                  onBlur={() => markTouched('publicationText')}
+                  disabled={formDisabled}
+                  rows={8}
+                  required
+                  aria-invalid={Boolean(touched.publicationText && fieldErrors.publicationText)}
+                  aria-describedby={
+                    touched.publicationText && fieldErrors.publicationText
+                      ? 'gen-publication-text-count gen-publication-text-error'
+                      : 'gen-publication-text-count'
+                  }
+                  className={inputClass}
+                />
+                <p
+                  id="gen-publication-text-count"
+                  className="mt-1 text-right text-xs text-gray-500 dark:text-gray-400"
+                >
+                  {publicationText.length}/{PUBLICATION_TEXT_MAX_LENGTH}
+                </p>
+                {touched.publicationText && fieldErrors.publicationText && (
+                  <p
+                    id="gen-publication-text-error"
+                    className="mt-1 text-sm text-red-600 dark:text-red-400"
+                    role="alert"
+                  >
+                    {fieldErrors.publicationText}.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       {/* 2. The active content-type definition controls the data contract. */}
@@ -627,6 +742,66 @@ export default function GenerationForm({
                   : 'Elige el fondo de plantilla para el arte.'
               : 'Este tipo genera una imagen completa con IA. Puedes ajustar el estilo en Opciones avanzadas.'}
           </p>
+
+          {supportsEventTemplate && (
+            <fieldset disabled={formDisabled}>
+              <legend className={labelClass}>Diseño de la plantilla</legend>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {templatePresentationOptions.map((option) => {
+                  const selected = selectedTemplatePresentation === option.id
+                  return (
+                    <label
+                      key={option.id}
+                      className={`cursor-pointer rounded-xl border p-3 transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-[#C8ABDB] disabled:cursor-not-allowed ${
+                        selected
+                          ? 'border-[#560647] bg-[#560647]/[0.05] dark:border-[#C8ABDB] dark:bg-[#C8ABDB]/10'
+                          : 'border-gray-200 hover:border-[#C8ABDB] dark:border-gray-700 dark:hover:border-[#7f4773]'
+                      }`}
+                    >
+                      <span className="flex items-start gap-2.5">
+                        <input
+                          type="radio"
+                          name="templatePresentation"
+                          value={option.id}
+                          checked={selected}
+                          onChange={() =>
+                            onFormChange({ ...formState, templatePresentation: option.id })
+                          }
+                          className="mt-0.5 border-gray-300 text-[#560647] focus:ring-[#560647] dark:border-gray-600"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium text-gray-800 dark:text-gray-100">
+                            {option.label}
+                          </span>
+                          <span className="mt-0.5 block text-xs leading-5 text-gray-500 dark:text-gray-400">
+                            {option.description}
+                          </span>
+                        </span>
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className="mt-3 flex h-10 items-center rounded-lg bg-[#0B081C] px-3"
+                      >
+                        {option.id === 'rail' ? (
+                          <span className="grid h-5 w-full grid-cols-[1fr_1fr_2fr] overflow-hidden rounded border border-white/30 bg-[#1B1751]/80">
+                            <span className="border-r border-white/20" />
+                            <span className="border-r border-white/20" />
+                            <span />
+                          </span>
+                        ) : (
+                          <span className="flex w-full items-center justify-center gap-2">
+                            <span className="h-5 w-1/4 rounded-full bg-white" />
+                            <span className="h-5 w-1/4 rounded-full bg-[#560647]" />
+                            <span className="h-5 w-1/3 rounded-full border border-white/70 bg-black/70" />
+                          </span>
+                        )}
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+            </fieldset>
+          )}
 
           {supportsTemplate && (
             <fieldset

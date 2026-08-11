@@ -269,7 +269,7 @@ export default function ValidationForm({
       <section className="rounded-xl border border-gray-200 bg-gray-50/70 p-4 dark:border-gray-700 dark:bg-gray-900/40">
         <p className="text-sm font-medium text-gray-900 dark:text-white">Paquete multired</p>
         <p className="mt-1 text-sm leading-6 text-gray-600 dark:text-gray-300">
-          El caption se validará para {formatPlatformList(destinationLabels)}.
+          El texto de la publicación se validará para {formatPlatformList(destinationLabels)}.
           {showImages
             ? ` La imagen se revisará para ${formatPlatformList(
                 platforms.filter(({ id }) => imagePlatforms.includes(id)).map(({ label }) => label)
@@ -297,7 +297,7 @@ export default function ValidationForm({
         </select>
       </div>
 
-      {/* Media-first when images apply (Instagram compose flow: media → caption). */}
+      {/* Media-first when images apply (Instagram compose flow: media → publication text). */}
       {showImages && (
         <div>
           <label className={labelClass}>
@@ -436,7 +436,7 @@ export default function ValidationForm({
 
       <div>
         <label htmlFor="ai-draft-text" className={labelClass}>
-          {showImages ? 'Pie de foto / texto' : 'Borrador'} <span className="text-red-500">*</span>
+          Texto de la publicación <span className="text-red-500">*</span>
         </label>
         <textarea
           id="ai-draft-text"
@@ -445,11 +445,7 @@ export default function ValidationForm({
           disabled={formDisabled}
           rows={8}
           required
-          placeholder={
-            showImages
-              ? 'Escribe el pie de foto o caption de la publicación...'
-              : 'Pega o escribe el texto de la publicación...'
-          }
+          placeholder="Pega o escribe el texto de la publicación..."
           className={inputClass}
         />
       </div>

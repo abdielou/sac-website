@@ -48,6 +48,20 @@ const completeEventDetails = {
   location: 'Pitahaya, Cabo Rojo',
 }
 
+function parseTemplateSvg(svg) {
+  const document = new DOMParser().parseFromString(svg, 'image/svg+xml')
+  expect(document.querySelector('parsererror')).toBeNull()
+  return document.documentElement
+}
+
+function getSvgTextValues(root) {
+  return [...root.querySelectorAll('text, tspan')].map((node) => node.textContent).filter(Boolean)
+}
+
+function getNumericAttribute(element, attribute) {
+  return Number(element.getAttribute(attribute))
+}
+
 describe('socialCanvas', () => {
   test('canonical canvas is 1080x1440 (3:4)', () => {
     expect(SOCIAL_CANVAS).toEqual({ width: 1080, height: 1440, label: expect.any(String) })
@@ -148,9 +162,12 @@ describe('buildGenerationPayload', () => {
   test('defaults are event-first with a stock template', () => {
     expect(DEFAULT_GENERATION_FORM.platforms).toBeUndefined()
     expect(DEFAULT_GENERATION_FORM.contentType).toBe('observation_night')
+    expect(DEFAULT_GENERATION_FORM.generationMode).toBe('text_and_image')
+    expect(DEFAULT_GENERATION_FORM.publicationText).toBe('')
     expect(DEFAULT_GENERATION_FORM.eventName).toBe('')
     expect(DEFAULT_GENERATION_FORM.backgroundMode).toBe('stock')
     expect(DEFAULT_GENERATION_FORM.backgroundId).toBe('telescope-nebula')
+    expect(DEFAULT_GENERATION_FORM.templatePresentation).toBe('rail')
   })
 
   test('derives topic/intent and includes sponsor for events', () => {
@@ -175,6 +192,71 @@ describe('buildGenerationPayload', () => {
     expect(payload.eventDetails).toEqual(completeEventDetails)
     expect(payload.sponsorLogo.fileName).toBe('sponsor.png')
     expect(payload.backgroundMode).toBe('stock')
+    expect(payload.templatePresentation).toBe('rail')
+    expect(payload.generationMode).toBe('text_and_image')
+    expect(payload).not.toHaveProperty('publicationText')
+  })
+
+  test('preserves raw publication text only for image-only generation', () => {
+    const publicationText = '  **Mira el cielo** 🔭\n\n- Esta noche  '
+    const imageOnlyPayload = buildGenerationPayload({
+      ...DEFAULT_GENERATION_FORM,
+      generationMode: 'image_only',
+      publicationText,
+      eventDate: '2026-07-11',
+      eventTime: '19:15',
+      eventLocation: 'Pitahaya, Cabo Rojo',
+    })
+    const fullPayload = buildGenerationPayload({
+      ...DEFAULT_GENERATION_FORM,
+      publicationText,
+      eventDate: '2026-07-11',
+      eventTime: '19:15',
+      eventLocation: 'Pitahaya, Cabo Rojo',
+    })
+
+    expect(imageOnlyPayload.generationMode).toBe('image_only')
+    expect(imageOnlyPayload.publicationText).toBe(publicationText)
+    expect(fullPayload.generationMode).toBe('text_and_image')
+    expect(fullPayload).not.toHaveProperty('publicationText')
+  })
+
+  test('coerces image-only payloads when Guidelines prohibit images', () => {
+    const definition = {
+      id: 'reel_caption',
+      label: 'Caption de reel',
+      fields: [],
+      platforms: ['facebook'],
+      visual: {
+        mode: 'none',
+        imagePolicyByPlatform: { facebook: 'prohibited' },
+      },
+    }
+    const payload = buildGenerationPayload(
+      {
+        ...DEFAULT_GENERATION_FORM,
+        contentType: definition.id,
+        generationMode: 'image_only',
+        publicationText: '  Texto intacto  ',
+      },
+      definition,
+      ['facebook']
+    )
+
+    expect(payload.generationMode).toBe('text_and_image')
+    expect(payload).not.toHaveProperty('publicationText')
+  })
+
+  test('includes the selected pills presentation for event templates', () => {
+    const payload = buildGenerationPayload({
+      ...DEFAULT_GENERATION_FORM,
+      templatePresentation: 'pills',
+      eventDate: '2026-07-11',
+      eventTime: '19:15',
+      eventLocation: 'Pitahaya, Cabo Rojo',
+    })
+
+    expect(payload.templatePresentation).toBe('pills')
   })
 
   test('events always use template mode (stock default, ai_generated preserved)', () => {
@@ -504,6 +586,7 @@ describe('attachTemplateRequestsToResult', () => {
     )
     expect(result.templateRequest).toMatchObject({
       layout: 'event',
+      templatePresentation: 'rail',
       textFields: {
         headline: 'Perseidas',
         subtitle: 'Ven a vernos.',
@@ -519,6 +602,27 @@ describe('attachTemplateRequestsToResult', () => {
     })
     expect(result.drafts[0]).not.toHaveProperty('templateRequest')
     expect(result.drafts[1]).not.toHaveProperty('templateRequest')
+  })
+
+  test('keeps the selected pills presentation in the template request', () => {
+    const result = attachTemplateRequestsToResult(
+      {
+        drafts: [{ platform: 'instagram', contentType: 'event_promotion', draftText: 'Hola' }],
+        recommendedNextStep: 'Validar',
+        humanReviewRequired: true,
+      },
+      {
+        contentType: 'event_promotion',
+        topic: 'Meteoros',
+        intent: 'Invitar',
+        backgroundMode: 'stock',
+        backgroundId: 'telescope-nebula',
+        templatePresentation: 'pills',
+        eventDetails: { name: 'Perseidas', date: '2026-08-12', time: '8 PM', location: 'PR' },
+      }
+    )
+
+    expect(result.templateRequest.templatePresentation).toBe('pills')
   })
 
   test('is a no-op when backgroundMode is omitted', () => {
@@ -791,7 +895,31 @@ describe('renderSocialTemplateImage', () => {
     expect(meta.chromaSubsampling).toBe('4:4:4')
   }, 30000)
 
-  test('composites from an in-memory AI backdrop data URL', async () => {
+  test('rasterizes the separated-pills event presentation as a canonical JPEG', async () => {
+    const rendered = await renderSocialTemplateImage({
+      templateRequest: {
+        layout: 'event',
+        templatePresentation: 'pills',
+        backgroundSource: { mode: 'stock', backgroundId: 'telescope-nebula' },
+        textFields: {
+          headline: 'Noche de Observación',
+          subtitle: 'Acompáñanos bajo las estrellas.',
+          body: 'Una noche para mirar al cielo.',
+          dateLabel: 'SÁB 11 JUL',
+          timeLabel: '7:15 PM',
+          locationLabel: 'Pitahaya, Cabo Rojo',
+          weatherDisclaimer: EVENT_WEATHER_DISCLAIMER,
+        },
+      },
+    })
+
+    const image = Buffer.from(rendered.dataUrl.replace(/^data:image\/jpeg;base64,/, ''), 'base64')
+    const metadata = await sharp(image).metadata()
+    expect(rendered).toMatchObject({ mimeType: 'image/jpeg', width: 1080, height: 1440 })
+    expect(metadata).toMatchObject({ format: 'jpeg', width: 1080, height: 1440 })
+  }, 30000)
+
+  test('rasterizes the simple layout from an in-memory AI backdrop data URL', async () => {
     const tinyPng = await sharp({
       create: {
         width: 64,
@@ -817,6 +945,73 @@ describe('renderSocialTemplateImage', () => {
     expect(rendered.width).toBe(1080)
     expect(rendered.height).toBe(1440)
     expect(rendered.dataUrl.startsWith('data:image/jpeg;base64,')).toBe(true)
+  }, 30000)
+
+  test('preserves both side edges when an AI backdrop ignores the 3:4 aspect ratio', async () => {
+    const edgeWidth = 8
+    const squareBackdrop = await sharp({
+      create: {
+        width: 80,
+        height: 80,
+        channels: 3,
+        background: { r: 0, g: 180, b: 0 },
+      },
+    })
+      .composite([
+        {
+          input: {
+            create: {
+              width: edgeWidth,
+              height: 80,
+              channels: 3,
+              background: { r: 240, g: 0, b: 0 },
+            },
+          },
+          left: 0,
+          top: 0,
+        },
+        {
+          input: {
+            create: {
+              width: edgeWidth,
+              height: 80,
+              channels: 3,
+              background: { r: 0, g: 0, b: 240 },
+            },
+          },
+          left: 80 - edgeWidth,
+          top: 0,
+        },
+      ])
+      .png()
+      .toBuffer()
+
+    const rendered = await renderSocialTemplateImage({
+      templateRequest: {
+        layout: 'simple',
+        backgroundSource: {
+          mode: 'ai_generated',
+          dataUrl: `data:image/png;base64,${squareBackdrop.toString('base64')}`,
+        },
+        textFields: { headline: 'Supernova' },
+      },
+    })
+
+    const image = Buffer.from(rendered.dataUrl.replace(/^data:image\/jpeg;base64,/, ''), 'base64')
+    const [leftRegion, rightRegion] = await Promise.all([
+      sharp(image).extract({ left: 10, top: 250, width: 40, height: 100 }).png().toBuffer(),
+      sharp(image).extract({ left: 1030, top: 250, width: 40, height: 100 }).png().toBuffer(),
+    ])
+    const [leftStats, rightStats] = await Promise.all([
+      sharp(leftRegion).stats(),
+      sharp(rightRegion).stats(),
+    ])
+
+    expect(rendered).toMatchObject({ mimeType: 'image/jpeg', width: 1080, height: 1440 })
+    expect(leftStats.channels[0].mean).toBeGreaterThan(leftStats.channels[1].mean + 80)
+    expect(leftStats.channels[0].mean).toBeGreaterThan(leftStats.channels[2].mean + 80)
+    expect(rightStats.channels[2].mean).toBeGreaterThan(rightStats.channels[0].mean + 80)
+    expect(rightStats.channels[2].mean).toBeGreaterThan(rightStats.channels[1].mean + 80)
   }, 30000)
 
   test('rejects corrupt image bytes instead of rendering partial input', async () => {

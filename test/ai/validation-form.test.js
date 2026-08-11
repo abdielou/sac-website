@@ -30,7 +30,7 @@ describe('ValidationForm multired package', () => {
     const formState = {
       ...DEFAULT_FORM,
       contentType: 'regular_post',
-      draftText: 'Caption compartido.',
+      draftText: 'Texto compartido.',
       intent: 'Informar',
       topic: 'Actividad del SAC',
     }
@@ -55,7 +55,11 @@ describe('ValidationForm multired package', () => {
     )
 
     expect(container.querySelector('#ai-platform')).toBeNull()
-    expect(container.textContent).toContain('El caption se validará para Instagram y Facebook.')
+    expect(container.textContent).toContain(
+      'El texto de la publicación se validará para Instagram y Facebook.'
+    )
+    expect(container.textContent).toContain('Texto de la publicación')
+    expect(container.textContent).not.toContain('Pie de foto')
     expect(container.textContent).toContain(
       'La imagen se revisará para Instagram y Facebook, según Guidelines.'
     )

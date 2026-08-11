@@ -159,6 +159,7 @@ export default function GenerationResult({
   const captionCharacterLimit = Number.isInteger(result.captionCharacterLimit)
     ? result.captionCharacterLimit
     : null
+  const isProvidedPublicationText = result.publicationTextSource === 'provided'
   const sharedPlatformLabel = drafts
     .map(
       ({ platform }) =>
@@ -178,6 +179,7 @@ export default function GenerationResult({
     result.policyReview ||
     (result.policyBlock ? { ...result.policyBlock, disposition: 'block' } : null)
   const policyNeedsConfirmation = policyReview?.disposition === 'review'
+  const policyReviewUnavailable = policyReview?.failClosed === true
   const hasGuidelineNoncompliance = policyReview?.categories?.includes('guideline_noncompliance')
   const actionsLocked = Boolean(
     policyReview && (policyReview.disposition === 'block' || !policyReviewConfirmed)
@@ -220,19 +222,25 @@ export default function GenerationResult({
           <p className="font-semibold">
             {policyReview.disposition === 'block'
               ? 'Borrador bloqueado — revisa esto'
-              : hasGuidelineNoncompliance
-                ? 'Borrador para corregir'
-                : 'Política: revisar'}
+              : policyReviewUnavailable
+                ? 'Revisión de política no disponible'
+                : hasGuidelineNoncompliance
+                  ? 'Borrador para corregir'
+                  : 'Política: revisar'}
           </p>
           <p className="mt-1 text-sm opacity-90">
             {policyReview.disposition === 'review'
-              ? hasGuidelineNoncompliance
-                ? 'El borrador no cumple por completo una regla de Guías. Se conserva para que puedas corregirlo o volver a generar.'
-                : policyReview.stage === 'caption'
-                  ? 'El reviewer detectó una duda factual. La imagen no se generó; confirma o corrige el caption.'
-                  : 'El reviewer detectó una duda factual. Confirma los datos antes de usar el caption o la imagen.'
+              ? policyReviewUnavailable
+                ? policyReview.stage === 'caption'
+                  ? 'No se pudo completar la revisión automática. La imagen no se generó; revisa el texto de la publicación o vuelve a generar.'
+                  : 'No se pudo completar la revisión automática. No se confirmó una infracción; revisa el contenido o vuelve a generar.'
+                : hasGuidelineNoncompliance
+                  ? 'El borrador no cumple por completo una regla de Guías. Se conserva para que puedas corregirlo o volver a generar.'
+                  : policyReview.stage === 'caption'
+                    ? 'El reviewer detectó una duda factual. La imagen no se generó; confirma o corrige el texto de la publicación.'
+                    : 'El reviewer detectó una duda factual. Confirma los datos antes de usar el texto de la publicación o la imagen.'
               : policyReview.stage === 'caption'
-                ? 'El caption viola una política de bloqueo duro. La imagen no se generó.'
+                ? 'El texto de la publicación viola una política de bloqueo duro. La imagen no se generó.'
                 : 'El resultado viola una política de bloqueo duro. La imagen fue descartada.'}
           </p>
           <details className="mt-3">
@@ -243,17 +251,25 @@ export default function GenerationResult({
               <p>
                 <span className="font-semibold">Motivo:</span> {policyReview.reason}
               </p>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-semibold">Categorías:</span>
-                {policyReview.categories.map((category) => (
-                  <span
-                    key={category}
-                    className="rounded-full border border-current/30 bg-white/60 px-2 py-0.5 text-xs dark:bg-gray-950/30"
-                  >
-                    {POLICY_CATEGORY_LABELS[category] || category} ({category})
-                  </span>
-                ))}
-              </div>
+              {policyReviewUnavailable ? (
+                policyReview.errorCode && (
+                  <p>
+                    <span className="font-semibold">Código técnico:</span> {policyReview.errorCode}
+                  </p>
+                )
+              ) : (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold">Categorías:</span>
+                  {policyReview.categories.map((category) => (
+                    <span
+                      key={category}
+                      className="rounded-full border border-current/30 bg-white/60 px-2 py-0.5 text-xs dark:bg-gray-950/30"
+                    >
+                      {POLICY_CATEGORY_LABELS[category] || category} ({category})
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </details>
           {policyNeedsConfirmation && (
@@ -265,9 +281,11 @@ export default function GenerationResult({
                 className="mt-0.5 rounded border-amber-400 text-amber-700 focus:ring-amber-600"
               />
               <span>
-                {hasGuidelineNoncompliance
-                  ? 'Revisé el incumplimiento indicado y quiero habilitar copiar y descargar este borrador.'
-                  : 'Confirmo que comparé el borrador con la información oficial. Habilitar copiar y descargar.'}
+                {policyReviewUnavailable
+                  ? 'Entiendo que la revisión automática no se completó y revisaré el contenido antes de usarlo.'
+                  : hasGuidelineNoncompliance
+                    ? 'Revisé el incumplimiento indicado y quiero habilitar copiar y descargar este borrador.'
+                    : 'Confirmo que comparé el borrador con la información oficial. Habilitar copiar y descargar.'}
               </span>
             </label>
           )}
@@ -277,9 +295,17 @@ export default function GenerationResult({
         {policyReview
           ? 'Contenido para corregir'
           : hasSharedCaption
-            ? 'Caption compartido'
-            : `Borradores generados (${generatedDraftCount})`}
+            ? 'Texto compartido'
+            : `Textos de la publicación (${generatedDraftCount})`}
       </h2>
+      {isProvidedPublicationText && (
+        <p
+          className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-900 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-100"
+          data-testid="generation-publication-text-source"
+        >
+          Texto proporcionado — no modificado por IA
+        </p>
+      )}
       <p className="sr-only" role="status" aria-live="polite">
         {actionFeedback?.message || ''}
       </p>
@@ -396,6 +422,8 @@ export default function GenerationResult({
         const originalCaption = draft.draftText || ''
         const editedCaption = editedCaptions[idx] ?? originalCaption
         const captionChanged = editedCaption !== originalCaption
+        const exceedsCharacterLimit =
+          Boolean(captionCharacterLimit) && editedCaption.length > captionCharacterLimit
 
         return (
           <div
@@ -419,12 +447,14 @@ export default function GenerationResult({
                     htmlFor={`generated-caption-${idx}`}
                     className="text-sm font-medium text-gray-700 dark:text-gray-300"
                   >
-                    Editar caption
+                    Editar texto
                   </label>
                   <textarea
                     id={`generated-caption-${idx}`}
                     value={editedCaption}
-                    maxLength={captionCharacterLimit || undefined}
+                    maxLength={
+                      isProvidedPublicationText ? undefined : captionCharacterLimit || undefined
+                    }
                     rows={5}
                     onChange={(event) => {
                       const nextCaption = event.target.value
@@ -448,16 +478,31 @@ export default function GenerationResult({
                         : `${editedCaption.length} caracteres`}
                     </span>
                   </div>
+                  {isProvidedPublicationText && exceedsCharacterLimit && (
+                    <p
+                      className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-100"
+                      data-testid="generation-publication-text-limit-warning"
+                      role="alert"
+                    >
+                      El texto tiene {editedCaption.length} caracteres y supera el límite
+                      configurado de {captionCharacterLimit}. No se recortó automáticamente.
+                    </p>
+                  )}
+                  {isProvidedPublicationText && (
+                    <p
+                      className="text-xs text-gray-600 dark:text-gray-400"
+                      data-testid="generation-publication-text-image-notice"
+                    >
+                      Editar este texto no vuelve a generar, realinear ni revisar la imagen
+                      automáticamente.
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                   <button
                     type="button"
                     onClick={() =>
-                      handleCopy(
-                        editedCaption,
-                        `copy-caption-${idx}`,
-                        hasSharedCaption ? 'Caption copiado' : 'Borrador copiado'
-                      )
+                      handleCopy(editedCaption, `copy-caption-${idx}`, 'Texto copiado')
                     }
                     disabled={actionsLocked}
                     className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-800 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto dark:bg-blue-600 dark:hover:bg-blue-500 dark:focus-visible:ring-blue-400 dark:focus-visible:ring-offset-gray-900"
@@ -469,9 +514,7 @@ export default function GenerationResult({
                     )}
                     {actionFeedback?.id === `copy-caption-${idx}`
                       ? actionFeedback.message
-                      : hasSharedCaption
-                        ? 'Copiar caption'
-                        : 'Copiar borrador'}
+                      : 'Copiar texto'}
                   </button>
                   {captionChanged && (
                     <button
@@ -493,8 +536,8 @@ export default function GenerationResult({
             ) : (
               <p className="text-sm text-amber-700 dark:text-amber-400">
                 {hasSharedCaption
-                  ? 'No se generó el caption compartido.'
-                  : 'No se generó borrador para esta plataforma.'}
+                  ? 'No se generó el texto de la publicación.'
+                  : 'No se generó texto para esta plataforma.'}
               </p>
             )}
 

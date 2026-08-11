@@ -30,6 +30,7 @@ describe('getImageGenerationConfig', () => {
     delete process.env.OPENROUTER_MODEL
     expect(getImageGenerationConfig()).toEqual({
       model: 'google/gemini-3.1-flash-lite-image',
+      aspectRatio: '3:4',
     })
   })
 })

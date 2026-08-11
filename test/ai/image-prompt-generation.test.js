@@ -96,6 +96,9 @@ describe('applyImagePromptGuardrailsToDraft', () => {
     )
 
     expect(draft.imagePrompt).toMatch(/no identifiable faces/i)
+    expect(draft.imagePrompt).toMatch(/vertical 3:4 canvas/i)
+    expect(draft.imagePrompt).toMatch(/fully inside the frame/i)
+    expect(draft.imagePrompt).toMatch(/side-by-side product lineup/i)
     expect(draft.imagePrompt).toMatch(/no unrequested text overlay/i)
   })
 

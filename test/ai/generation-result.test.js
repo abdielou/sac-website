@@ -131,6 +131,32 @@ describe('GenerationResult image preview', () => {
     expect(download.disabled).toBe(false)
   })
 
+  test('presents a fail-closed review as unavailable instead of an invalid request', () => {
+    act(() =>
+      root.render(
+        <GenerationResult
+          result={{
+            ...RESULT,
+            policyReview: {
+              stage: 'result',
+              disposition: 'review',
+              categories: ['invalid_request'],
+              reason: 'No fue posible confirmar el cumplimiento de la política base.',
+              failClosed: true,
+              errorCode: 'response_error',
+            },
+          }}
+        />
+      )
+    )
+
+    expect(container.textContent).toContain('Revisión de política no disponible')
+    expect(container.textContent).toContain('No se confirmó una infracción')
+    expect(container.textContent).toContain('Código técnico: response_error')
+    expect(container.textContent).not.toContain('invalid_request')
+    expect(container.textContent).not.toContain('duda factual')
+  })
+
   test('keeps a guideline-mismatch image as a correctable draft', () => {
     act(() =>
       root.render(
@@ -164,7 +190,7 @@ describe('GenerationResult image preview', () => {
   })
 })
 
-describe('GenerationResult captions', () => {
+describe('GenerationResult publication text', () => {
   let container
   let root
 
@@ -179,8 +205,8 @@ describe('GenerationResult captions', () => {
     container.remove()
   })
 
-  test('renders replicated drafts as one shared caption', () => {
-    const shared = 'El mismo caption para las tres redes.'
+  test('renders replicated drafts as one shared publication text', () => {
+    const shared = 'El mismo texto para las tres redes.'
     const result = {
       drafts: ['x', 'instagram', 'facebook'].map((platform) => ({
         platform,
@@ -194,14 +220,14 @@ describe('GenerationResult captions', () => {
     act(() => root.render(<GenerationResult result={result} />))
 
     expect(container.querySelectorAll('[data-testid="generation-shared-caption"]')).toHaveLength(1)
-    expect(container.textContent).toContain('Caption compartido')
+    expect(container.textContent).toContain('Texto compartido')
     expect(container.querySelector('textarea').value).toBe(shared)
     expect(container.textContent).toContain('X · Instagram · Facebook')
     expect(container.querySelector('textarea').hasAttribute('maxlength')).toBe(false)
     expect(container.textContent).toContain(`${shared.length} caracteres`)
   })
 
-  test('shows the reason and categories while preserving a blocked caption for correction', () => {
+  test('shows the reason and categories while preserving blocked text for correction', () => {
     const result = {
       drafts: [
         {
@@ -210,7 +236,7 @@ describe('GenerationResult captions', () => {
           draftText: 'Acompáñanos mañana a las 8:00 p. m.',
         },
       ],
-      recommendedNextStep: 'Corrige el caption y vuelve a generar.',
+      recommendedNextStep: 'Corrige el texto y vuelve a generar.',
       humanReviewRequired: true,
       policyReview: {
         stage: 'caption',
@@ -232,7 +258,7 @@ describe('GenerationResult captions', () => {
     expect(container.querySelector('textarea').value).toContain('Acompáñanos mañana')
     expect(container.querySelector('[data-testid="generation-shared-image"]')).toBeNull()
     const copyButton = Array.from(container.querySelectorAll('button')).find((button) =>
-      button.textContent.includes('Copiar borrador')
+      button.textContent.includes('Copiar texto')
     )
     expect(copyButton.disabled).toBe(true)
 
@@ -240,8 +266,8 @@ describe('GenerationResult captions', () => {
     expect(copyButton.disabled).toBe(false)
   })
 
-  test('uses the effective Guidelines limit in the shared caption editor', () => {
-    const shared = 'Caption compartido.'
+  test('uses the effective Guidelines limit in the shared text editor', () => {
+    const shared = 'Texto compartido.'
     const result = {
       captionCharacterLimit: 500,
       drafts: ['instagram', 'facebook'].map((platform) => ({
@@ -254,6 +280,7 @@ describe('GenerationResult captions', () => {
     act(() => root.render(<GenerationResult result={result} />))
 
     expect(container.querySelector('textarea').getAttribute('maxlength')).toBe('500')
+    expect(container.querySelector('[data-testid="generation-publication-text-source"]')).toBeNull()
     expect(container.textContent).toContain(`${shared.length}/500`)
     expect(container.textContent).toContain('Instagram · Facebook')
     expect(container.textContent).not.toContain('X · Instagram · Facebook')
@@ -267,7 +294,7 @@ describe('GenerationResult captions', () => {
         {
           platform: 'threads',
           contentType: 'regular_post',
-          draftText: 'Caption para la red configurada.',
+          draftText: 'Texto para la red configurada.',
         },
       ],
     }
@@ -282,7 +309,7 @@ describe('GenerationResult captions', () => {
     expect(container.textContent).toContain('Imagen compartida para Threads de SAC')
   })
 
-  test('edits and copies the shared caption, then restores the original', async () => {
+  test('edits and copies the shared text, then restores the original', async () => {
     const writeText = jest.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -310,15 +337,15 @@ describe('GenerationResult captions', () => {
     })
 
     const copyButton = Array.from(container.querySelectorAll('button')).find((button) =>
-      button.textContent.includes('Copiar caption')
+      button.textContent.includes('Copiar texto')
     )
 
     await act(async () => copyButton.click())
 
     expect(writeText).toHaveBeenCalledWith(edited)
-    expect(copyButton.textContent).toContain('Caption copiado')
+    expect(copyButton.textContent).toContain('Texto copiado')
     expect(copyButton.querySelector('svg')).not.toBeNull()
-    expect(container.querySelector('[role="status"]').textContent).toBe('Caption copiado')
+    expect(container.querySelector('[role="status"]').textContent).toBe('Texto copiado')
 
     const restoreButton = Array.from(container.querySelectorAll('button')).find((button) =>
       button.textContent.includes('Restaurar original')
@@ -328,22 +355,55 @@ describe('GenerationResult captions', () => {
     expect(container.textContent).not.toContain('Restaurar original')
   })
 
-  test('keeps distinct historical captions as separate cards', () => {
+  test('keeps distinct historical publication texts as separate cards', () => {
     const result = {
       drafts: [
-        { platform: 'instagram', contentType: 'regular_post', draftText: 'Caption anterior de IG' },
-        { platform: 'facebook', contentType: 'regular_post', draftText: 'Caption anterior de FB' },
+        { platform: 'instagram', contentType: 'regular_post', draftText: 'Texto anterior de IG' },
+        { platform: 'facebook', contentType: 'regular_post', draftText: 'Texto anterior de FB' },
       ],
     }
 
     act(() => root.render(<GenerationResult result={result} />))
 
     expect(container.querySelector('[data-testid="generation-shared-caption"]')).toBeNull()
-    expect(container.textContent).toContain('Borradores generados (2)')
+    expect(container.textContent).toContain('Textos de la publicación (2)')
     expect(Array.from(container.querySelectorAll('textarea')).map((field) => field.value)).toEqual([
-      'Caption anterior de IG',
-      'Caption anterior de FB',
+      'Texto anterior de IG',
+      'Texto anterior de FB',
     ])
+  })
+
+  test('preserves provided publication text and warns without enforcing a destructive limit', () => {
+    const providedText =
+      'Este texto fue proporcionado por la persona y debe conservarse completo para revisión.'
+    const result = {
+      publicationTextSource: 'provided',
+      captionCharacterLimit: 30,
+      generatedImage: RESULT.generatedImage,
+      imagePlatforms: ['facebook'],
+      drafts: [
+        {
+          platform: 'facebook',
+          contentType: 'regular_post',
+          draftText: providedText,
+        },
+      ],
+    }
+
+    act(() => root.render(<GenerationResult result={result} />))
+
+    const textarea = container.querySelector('textarea')
+    expect(textarea.value).toBe(providedText)
+    expect(textarea.hasAttribute('maxlength')).toBe(false)
+    expect(container.textContent).toContain('Texto proporcionado — no modificado por IA')
+    expect(container.textContent).toContain('Editar texto')
+    expect(container.textContent).toContain('Copiar texto')
+    expect(container.textContent).toContain('supera el límite configurado de 30')
+    expect(container.textContent).toContain('No se recortó automáticamente')
+    expect(container.textContent).toContain(
+      'Editar este texto no vuelve a generar, realinear ni revisar la imagen automáticamente.'
+    )
+    expect(container.textContent).not.toMatch(/\bcaption\b/i)
   })
 
   test('hides image prompts for template results', () => {

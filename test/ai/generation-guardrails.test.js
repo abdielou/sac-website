@@ -5,7 +5,11 @@ import {
   resolveSharedCaptionCharacterLimit,
   shouldIncludeHashtags,
 } from '../../workflows/ai-social-media-designer/generation/generateAiWorkflow'
-import { getActiveGuidelines, resolveGenerationGuidelinesForRequest } from '../../lib/ai-guidelines'
+import {
+  getActiveGuidelines,
+  resolveGenerationGuidelinesForRequest,
+  resolveGenerationGuidelinesFromDocument,
+} from '../../lib/ai-guidelines'
 
 describe('resolveGenerationGuidelinesForRequest', () => {
   const originalBucket = process.env.S3_ARTICLES_BUCKET_NAME
@@ -51,7 +55,15 @@ describe('resolveGenerationGuidelinesForRequest', () => {
   })
 
   test('keeps hashtag limits out of the global voice field', async () => {
-    const resolved = await resolveGenerationGuidelinesForRequest({
+    const active = await getActiveGuidelines()
+    const document = {
+      ...active,
+      platforms: {
+        ...active.platforms,
+        instagram: 'No añadir hashtags por defecto.',
+      },
+    }
+    const resolved = resolveGenerationGuidelinesFromDocument(document, {
       platform: 'instagram',
       contentType: 'regular_post',
     })

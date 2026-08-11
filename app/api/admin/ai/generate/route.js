@@ -22,7 +22,10 @@ import {
 import { checkWorkflowStartRateLimit } from '../../../../../lib/ai-rate-limit'
 import { listBackgroundOptions } from '../../../../../lib/social-template/backgroundCatalog'
 import { validateSponsorLogo } from '../../../../../lib/social-template/eventFormHelpers'
-import { resolveTemplateLayoutId } from '../../../../../lib/social-template/templateLayouts'
+import {
+  DEFAULT_EVENT_TEMPLATE_PRESENTATION,
+  resolveTemplateLayoutId,
+} from '../../../../../lib/social-template/templateLayouts'
 import { start } from 'workflow/api'
 import {
   GenerateInputSchema,
@@ -184,6 +187,7 @@ export const POST = auth(async function POST(req) {
   }
 
   const contentType = normalizeOptionalString(body.contentType)
+  const generationMode = normalizeOptionalString(body.generationMode) || 'text_and_image'
   const eventDetails = normalizeEventDetails(body.eventDetails)
   const cta = normalizeOptionalString(body.cta)
   const requestedSponsorLogo = normalizeSponsorLogo(body.sponsorLogo)
@@ -285,6 +289,15 @@ export const POST = auth(async function POST(req) {
     { platforms },
     contentTypeDefinition
   )
+  if (generationMode === 'image_only' && !supportsImageForPlatforms) {
+    return NextResponse.json(
+      {
+        error: 'Imagen no permitida',
+        details: 'Guidelines no permiten generar una imagen para este tipo de contenido.',
+      },
+      { status: 400 }
+    )
+  }
   const requestedBackgroundMode = normalizeOptionalString(body.backgroundMode)
   const allowedBackgroundSources = contentTypeDefinition.visual?.backgroundSources || []
   const backgroundMode =
@@ -300,6 +313,11 @@ export const POST = auth(async function POST(req) {
     backgroundMode === 'stock'
       ? normalizeOptionalString(body.backgroundId) || listBackgroundOptions()[0]?.id
       : normalizeOptionalString(body.backgroundId)
+  const requestedTemplatePresentation = normalizeOptionalString(body.templatePresentation)
+  const templatePresentation =
+    templateLayout === 'event' && supportsImageForPlatforms
+      ? requestedTemplatePresentation || DEFAULT_EVENT_TEMPLATE_PRESENTATION
+      : requestedTemplatePresentation
 
   if (sponsorLogo) {
     const sponsorCheck = validateSponsorLogo(sponsorLogo)
@@ -327,6 +345,11 @@ export const POST = auth(async function POST(req) {
     },
     guidelineVersion: activeGuidelines.version,
     policyVersion: AI_BASE_POLICY_VERSION,
+    generationMode,
+    ...(generationMode === 'image_only' &&
+    Object.prototype.hasOwnProperty.call(body, 'publicationText')
+      ? { publicationText: body.publicationText }
+      : null),
     tone: normalizedLegacyInput.tone,
     audience: normalizedLegacyInput.audience,
     cta: normalizedLegacyInput.cta,
@@ -338,6 +361,7 @@ export const POST = auth(async function POST(req) {
     imageConstraints: normalizedLegacyInput.imageConstraints,
     backgroundMode,
     backgroundId,
+    ...(templatePresentation ? { templatePresentation } : null),
     sponsorLogo,
   }
 
