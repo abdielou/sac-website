@@ -122,6 +122,7 @@ describe('buildValidationHistoryRecord', () => {
     expect(record.mode).toBe('validate')
     expect(record.runId).toBe('wrun_abc')
     expect(record.userKey).toBe(buildUserKey('session-user-1'))
+    expect(record).not.toHaveProperty('userId')
     expect(record.guidelineVersion).toBe('v2')
     expect(record.policyVersion).toBe('sac-social-policy-v1')
     expect(record.contentTypeIdentity).toEqual({
@@ -249,6 +250,7 @@ describe('buildGenerationHistoryRecord', () => {
     expect(record.mode).toBe('generate')
     expect(record.runId).toBe('wrun_gen_abc')
     expect(record.userKey).toBe(buildUserKey('session-user-1'))
+    expect(record).not.toHaveProperty('userId')
     expect(record.guidelineVersion).toBe('v2')
     expect(record.policyVersion).toBe('sac-social-policy-v1')
     expect(record.contentTypeIdentity).toEqual({

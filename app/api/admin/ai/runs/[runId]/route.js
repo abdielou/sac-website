@@ -51,17 +51,6 @@ async function inspectRun(runId) {
   }
 }
 
-function safeWorkflowErrorMessage(error) {
-  // Avoid leaking internals; PRD says safe failures.
-  const causeMessage = error?.cause?.message ? String(error.cause.message) : ''
-  const outerMessage = error?.message ? String(error.message) : ''
-  const message = (causeMessage || outerMessage)
-    .replace(/^Workflow run\s+(?:"[^"]+"|'[^']+'|\S+)\s+failed:\s*/i, '')
-    .trim()
-  if (!message) return 'La generación falló'
-  return message.length > 1200 ? `${message.slice(0, 1200)}...` : message
-}
-
 /**
  * Return only final image bytes that the workflow marked as prepared before its
  * post-result policy review. Legacy template/provider assets are intentionally
@@ -221,13 +210,6 @@ export const GET = auth(async function GET(req, { params }) {
   }
 
   if (status === 'failed') {
-    let legacyError = 'La generación falló'
-    try {
-      await run.returnValue
-    } catch (error) {
-      legacyError = safeWorkflowErrorMessage(error)
-    }
-
     const storedFailure = await readAiRunFailure(runId).catch((error) => {
       console.error(
         'GET /api/admin/ai/runs/[runId]: failure sidecar read failed',
@@ -235,7 +217,9 @@ export const GET = auth(async function GET(req, { params }) {
       )
       return null
     })
-    const failure = storedFailure || buildLegacyAiRunFailure(legacyError)
+    // A legacy Workflow error may contain provider bodies, paths, or other
+    // diagnostics. Without our sanitized sidecar, expose only a safe fallback.
+    const failure = storedFailure || buildLegacyAiRunFailure()
 
     return NextResponse.json(
       { runId, status, error: failure.message, failure, ...leaseMetadata },

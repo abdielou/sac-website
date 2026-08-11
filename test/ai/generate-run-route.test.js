@@ -305,7 +305,7 @@ describe('GET /api/admin/ai/runs/[runId] lease synchronization', () => {
     expect(readAiRunFailure).toHaveBeenCalledWith('wrun_wrong_modality')
   })
 
-  test('builds a safe structured fallback for failed legacy runs', async () => {
+  test('builds a generic safe fallback without reflecting legacy workflow details', async () => {
     const run = {
       exists: Promise.resolve(true),
       status: Promise.resolve('failed'),
@@ -322,13 +322,14 @@ describe('GET /api/admin/ai/runs/[runId] lease synchronization', () => {
       params: Promise.resolve({ runId: 'wrun_legacy_failure' }),
     })
 
-    expect(response.body.error).toBe('Fallo histórico sin sidecar')
+    expect(response.body.error).toBe('La ejecución de IA falló.')
     expect(response.body.failure).toEqual({
       schemaVersion: 1,
       code: 'workflow_failed',
       stage: 'workflow',
       retryable: false,
-      message: 'Fallo histórico sin sidecar',
+      message: 'La ejecución de IA falló.',
     })
+    expect(response.body.error).not.toContain('Fallo histórico sin sidecar')
   })
 })
