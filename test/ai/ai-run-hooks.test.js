@@ -7,6 +7,10 @@ import {
 } from '../../lib/hooks/AiRunProvider'
 import { useAiGenerationRun } from '../../lib/hooks/useAiGenerationRun'
 import { useAiValidationRun } from '../../lib/hooks/useAiValidationRun'
+import {
+  GenerationDraftProvider,
+  useGenerationDraft,
+} from '../../lib/hooks/GenerationDraftProvider'
 import { DEFAULT_GENERATION_FORM } from '../../lib/social-template/buildGenerationPayload'
 
 let mockSearch = ''
@@ -40,7 +44,8 @@ describe('recoverable AI run hooks', () => {
   }
 
   function GenerationProbe() {
-    const value = useAiGenerationRun({ canGenerate: true })
+    const { draftSession } = useGenerationDraft()
+    const value = useAiGenerationRun({ canGenerate: true, draftSession })
     return <Capture value={value} />
   }
 
@@ -49,10 +54,16 @@ describe('recoverable AI run hooks', () => {
     return <Capture value={value} />
   }
 
-  function render(mode) {
+  function render(mode, draftKey = 'generation-draft') {
     root.render(
       <AiRunProvider userKey={userKey}>
-        {mode === 'generate' ? <GenerationProbe /> : <ValidationProbe />}
+        {mode === 'generate' ? (
+          <GenerationDraftProvider key={draftKey}>
+            <GenerationProbe />
+          </GenerationDraftProvider>
+        ) : (
+          <ValidationProbe />
+        )}
       </AiRunProvider>
     )
   }
@@ -141,7 +152,7 @@ describe('recoverable AI run hooks', () => {
     expect(current.isBlockedByOtherRun).toBe(true)
   })
 
-  test('retries a same-session retryable failure as a new POST with the current draft', async () => {
+  test('retries a same-session failure as a new POST with its validated request snapshot', async () => {
     fetch
       .mockResolvedValueOnce(
         response(202, {
@@ -203,9 +214,20 @@ describe('recoverable AI run hooks', () => {
     const firstPost = fetch.mock.calls.find(([url]) => url === '/api/admin/ai/generate')
     const firstToken = firstPost[1].headers.get('X-AI-Run-Token')
 
-    const editedDraft = { ...originalDraft, topic: 'tema editado antes del reintento' }
     await act(async () => {
-      await current.retryGeneration(editedDraft, undefined, ['facebook'])
+      const storedPointer = JSON.parse(window.localStorage.getItem(storageKey))
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: storageKey,
+          newValue: JSON.stringify({ ...storedPointer, requestToken: null }),
+        })
+      )
+      await Promise.resolve()
+    })
+    expect(current.canRetry).toBe(true)
+
+    await act(async () => {
+      await current.retryGeneration()
       await Promise.resolve()
     })
     await act(async () => Promise.resolve())
@@ -213,12 +235,69 @@ describe('recoverable AI run hooks', () => {
     const posts = fetch.mock.calls.filter(([url]) => url === '/api/admin/ai/generate')
     expect(posts).toHaveLength(2)
     expect(JSON.parse(posts[1][1].body)).toMatchObject({
-      topic: 'tema editado antes del reintento',
+      topic: 'tema original',
       platforms: ['facebook'],
     })
     expect(posts[1][1].headers.get('X-AI-Run-Token')).not.toBe(firstToken)
     expect(current.runId).toBe('wrun_second_attempt')
     expect(current.phase).toBe('polling')
+  })
+
+  test('disables one-click retry when the generation draft provider is recreated', async () => {
+    fetch
+      .mockResolvedValueOnce(
+        response(202, {
+          runId: 'wrun_lost_draft',
+          mode: 'generate',
+          status: 'pending',
+        })
+      )
+      .mockResolvedValueOnce(
+        response(200, {
+          runId: 'wrun_lost_draft',
+          status: 'failed',
+          failure: {
+            schemaVersion: 1,
+            code: 'provider_generation_failed',
+            stage: 'generation',
+            retryable: true,
+            message: 'No se pudieron generar los borradores. Intenta nuevamente.',
+          },
+        })
+      )
+
+    await act(async () => {
+      render('generate', 'original-draft')
+      await Promise.resolve()
+    })
+    await act(async () => {
+      await current.submitGeneration(
+        {
+          ...DEFAULT_GENERATION_FORM,
+          contentType: 'regular_post',
+          intent: 'educar',
+          topic: 'tema válido',
+        },
+        undefined,
+        ['facebook']
+      )
+      await Promise.resolve()
+    })
+    await act(async () => Promise.resolve())
+    expect(current.canRetry).toBe(true)
+
+    await act(async () => {
+      render('generate', 'replacement-draft')
+      await Promise.resolve()
+    })
+
+    expect(current.phase).toBe('failed')
+    expect(current.canRetry).toBe(false)
+    await expect(current.retryGeneration()).resolves.toEqual({
+      started: false,
+      reason: 'retry-unavailable',
+    })
+    expect(fetch.mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(1)
   })
 
   test('does not offer one-click retry for a retryable run restored from storage', async () => {
@@ -259,11 +338,7 @@ describe('recoverable AI run hooks', () => {
     expect(current.failure.retryable).toBe(true)
     expect(current.canRetry).toBe(false)
 
-    const outcome = await current.retryGeneration(
-      { ...DEFAULT_GENERATION_FORM, contentType: 'regular_post' },
-      undefined,
-      ['facebook']
-    )
+    const outcome = await current.retryGeneration()
     expect(outcome).toEqual({ started: false, reason: 'retry-unavailable' })
     expect(fetch.mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(0)
   })

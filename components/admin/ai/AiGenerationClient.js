@@ -27,7 +27,7 @@ export default function AiGenerationClient() {
     [platformOptions]
   )
 
-  const { formState, setFormState } = useGenerationDraft()
+  const { formState, setFormState, draftSession } = useGenerationDraft()
   const selectedContentType = contentTypes.find(({ id }) => id === formState.contentType)
   const formReady = guidelinesHydrated && Boolean(selectedContentType)
   const resultRef = useRef(null)
@@ -56,14 +56,14 @@ export default function AiGenerationClient() {
     submitGeneration,
     retryGeneration,
     resetRun,
-  } = useAiGenerationRun({ canGenerate })
+  } = useAiGenerationRun({ canGenerate, draftSession })
 
   const handleSubmit = () => {
     submitGeneration(formState, selectedContentType?.definition, platforms)
   }
 
   const handleRetry = () => {
-    retryGeneration(formState, selectedContentType?.definition, platforms)
+    retryGeneration()
   }
 
   useEffect(() => {

@@ -138,6 +138,7 @@ describe('AiRunProvider', () => {
   })
 
   test('retains a safe structured failure without persisting it or exposing the run id', async () => {
+    const draftSession = {}
     fetch
       .mockResolvedValueOnce(
         response(202, {
@@ -170,6 +171,7 @@ describe('AiRunProvider', () => {
         url: '/api/admin/ai/generate',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic: 'contenido privado del formulario' }),
+        draftSession,
       })
       await Promise.resolve()
     })
@@ -177,6 +179,10 @@ describe('AiRunProvider', () => {
 
     expect(current.slot.status).toBe('failed')
     expect(current.slot.sessionStarted).toBe(true)
+    expect(current.slot.draftSession).toBe(draftSession)
+    expect(JSON.parse(current.slot.retryRequest.body)).toEqual({
+      topic: 'contenido privado del formulario',
+    })
     expect(current.slot.error).toBe(
       'La revisión de política no pudo completarse. No se confirmó una infracción del contenido; intenta nuevamente.'
     )
@@ -195,10 +201,27 @@ describe('AiRunProvider', () => {
     expect(stored).not.toContain('policy_classification')
     expect(stored).not.toContain('"stage":"request"')
     expect(stored).not.toContain('"failure"')
+    expect(stored).not.toContain('"retryRequest"')
     expect(JSON.parse(stored)).toMatchObject({
       runId: 'wrun_private_failure',
       status: 'failed',
     })
+
+    await act(async () => {
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: storageKey,
+          newValue: JSON.stringify({ ...JSON.parse(stored), requestToken: null }),
+        })
+      )
+    })
+    expect(current.slot.sessionStarted).toBe(true)
+    expect(current.slot.requestToken).not.toBeNull()
+    expect(current.slot.draftSession).toBe(draftSession)
+    expect(JSON.parse(current.slot.retryRequest.body)).toEqual({
+      topic: 'contenido privado del formulario',
+    })
+    expect(current.slot.failure.retryable).toBe(true)
   })
 
   test('normalizes a legacy workflow wrapper to a friendly error string', () => {
