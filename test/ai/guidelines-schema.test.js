@@ -28,8 +28,12 @@ describe('Guidelines schema v3 seed', () => {
 
     expect(migrated.schemaVersion).toBe(GUIDELINES_SCHEMA_VERSION)
     expect(migrated.contentTypeCatalog).toBeInstanceOf(Array)
-    expect(migrated.contentTypes.observation_night).toContain('fecha, hora y lugar')
-    expect(migrated.generation.contentTypes.observation_night).toContain('invitación')
+    expect(migrated.contentTypes.observation_night).toBe(
+      migrated.contentTypeCatalog[0].validation.rules
+    )
+    expect(migrated.generation.contentTypes.observation_night).toBe(
+      migrated.contentTypeCatalog[0].generation.rules
+    )
     expect(migrated.generation.platforms).toBeUndefined()
     expect(migrated.generation.global).toBe(migrated.global)
     expect(migrated.version).toBe('default-v1')
@@ -270,7 +274,7 @@ describe('Guidelines schema v3 activation validation', () => {
     {
       name: 'optional title source',
       mutate(document) {
-        const type = document.contentTypeCatalog.find(({ id }) => id === 'caption')
+        const type = document.contentTypeCatalog.find(({ id }) => id === 'regular_post')
         type.fields.find(({ key }) => key === 'topic').required = false
       },
       error: /titleSource.*campo requerido/i,
@@ -278,7 +282,7 @@ describe('Guidelines schema v3 activation validation', () => {
     {
       name: 'sponsor on an unsupported template',
       mutate(document) {
-        const type = document.contentTypeCatalog.find(({ id }) => id === 'image_post')
+        const type = document.contentTypeCatalog.find(({ id }) => id === 'regular_post')
         type.fields.push({
           key: 'sponsor',
           label: 'Auspiciador',
@@ -314,7 +318,7 @@ describe('Guidelines schema v3 activation validation', () => {
     {
       name: 'visual type without a required purpose field',
       mutate(document) {
-        const type = document.contentTypeCatalog.find(({ id }) => id === 'caption')
+        const type = document.contentTypeCatalog.find(({ id }) => id === 'regular_post')
         type.titleSource = 'type_label'
         type.fields = [
           {
@@ -388,13 +392,13 @@ describe('Guidelines schema v3 activation validation', () => {
   test('allows a published type to be removed from the new version', () => {
     const published = validGuidelines()
     const removed = clone(published)
-    removed.contentTypeCatalog = removed.contentTypeCatalog.filter(({ id }) => id !== 'caption')
+    removed.contentTypeCatalog = removed.contentTypeCatalog.filter(({ id }) => id !== 'holiday')
 
     const validation = validateGuidelineForActivation(removed)
 
     expect(validation.ok).toBe(true)
-    expect(validation.document.contentTypeCatalog.some(({ id }) => id === 'caption')).toBe(false)
-    expect(published.contentTypeCatalog.some(({ id }) => id === 'caption')).toBe(true)
+    expect(validation.document.contentTypeCatalog.some(({ id }) => id === 'holiday')).toBe(false)
+    expect(published.contentTypeCatalog.some(({ id }) => id === 'holiday')).toBe(true)
   })
 
   test('allows the team to adapt observation night while preserving its internal ID', () => {
@@ -500,32 +504,34 @@ describe('Guidelines schema v3 catalog operations', () => {
       id: 'community_story',
       label: 'Historia de la comunidad',
     })
-    draft = setContentTypeStatus(draft, 'caption', 'archived')
-    draft = moveContentType(draft, 'regular_post', 'up')
+    draft = setContentTypeStatus(draft, 'post_educativo', 'archived')
+    draft = moveContentType(draft, 'holiday', 'up')
 
     const diff = diffGuidelineDocuments(active, draft)
 
-    expect(draft.contentTypeCatalog[0].id).toBe('regular_post')
-    expect(resolveContentTypeDefinition(draft, 'caption')).toBeNull()
-    expect(resolveContentTypeDefinition(draft, 'caption', { includeArchived: true })?.status).toBe(
-      'archived'
-    )
+    expect(draft.contentTypeCatalog[0].id).toBe('holiday')
+    expect(resolveContentTypeDefinition(draft, 'post_educativo')).toBeNull()
+    expect(
+      resolveContentTypeDefinition(draft, 'post_educativo', { includeArchived: true })?.status
+    ).toBe('archived')
     expect(diff.created).toEqual(
       expect.arrayContaining([expect.objectContaining({ id: 'community_story' })])
     )
     expect(diff.archived).toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: 'caption' })])
+      expect.arrayContaining([expect.objectContaining({ id: 'post_educativo' })])
     )
     expect(diff.changed).toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: 'caption' })])
+      expect.arrayContaining([expect.objectContaining({ id: 'post_educativo' })])
     )
     expect(diff.reordered).toBe(true)
 
-    const restored = setContentTypeStatus(draft, 'caption', 'active')
+    const restored = setContentTypeStatus(draft, 'post_educativo', 'active')
     expect(diffGuidelineDocuments(draft, restored).restored).toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: 'caption' })])
+      expect.arrayContaining([expect.objectContaining({ id: 'post_educativo' })])
     )
-    expect(() => setContentTypeStatus(draft, 'caption', 'deleted')).toThrow(/estado inválido/i)
+    expect(() => setContentTypeStatus(draft, 'post_educativo', 'deleted')).toThrow(
+      /estado inválido/i
+    )
   })
 
   test('summarizes every review area with human labels and linkable paths', () => {
@@ -648,18 +654,18 @@ describe('Guidelines schema v3 catalog operations', () => {
   })
 
   test('lists and resolves active types separately from archived types', () => {
-    const document = setContentTypeStatus(validGuidelines(), 'caption', 'archived')
+    const document = setContentTypeStatus(validGuidelines(), 'holiday', 'archived')
     const activeIds = listContentTypeDefinitions(document).map(({ id }) => id)
     const allIds = listContentTypeDefinitions(document, { includeArchived: true }).map(
       ({ id }) => id
     )
 
-    expect(activeIds).not.toContain('caption')
-    expect(allIds).toContain('caption')
+    expect(activeIds).not.toContain('holiday')
+    expect(allIds).toContain('holiday')
     expect(resolveContentTypeDefinition(document, 'regular_post')?.status).toBe('active')
-    expect(resolveContentTypeDefinition(document, 'caption')).toBeNull()
+    expect(resolveContentTypeDefinition(document, 'holiday')).toBeNull()
     expect(
-      resolveContentTypeDefinition(document, 'caption', { includeArchived: true })?.status
+      resolveContentTypeDefinition(document, 'holiday', { includeArchived: true })?.status
     ).toBe('archived')
   })
 })

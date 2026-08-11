@@ -187,7 +187,7 @@ describe('ai-guidelines-draft', () => {
       mode: 'validation',
     })
     expect(validation.mode).toBe('validation')
-    expect(validation.platform).toMatch(/Instagram/i)
+    expect(validation.platform).toBe(seed.platforms.instagram)
 
     const generation = previewGuidelinesAgainstDocument(seed, {
       platform: 'instagram',

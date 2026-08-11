@@ -73,11 +73,11 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value))
 }
 
-
 describe('guidelines-store helpers', () => {
   test('nextPublishedVersion increments from published vN entries', () => {
     expect(nextPublishedVersion([])).toBe('v2')
     expect(nextPublishedVersion([{ version: 'default-v1' }])).toBe('v2')
+    expect(nextPublishedVersion([{ version: 'default-v2' }])).toBe('v3')
     expect(nextPublishedVersion([{ version: 'v2' }, { version: 'v5' }])).toBe('v6')
   })
 
@@ -164,6 +164,20 @@ describe('guidelines-store S3 lifecycle', () => {
     expect(active.contentTypeCatalog[0].id).toBe('observation_night')
     expect(objects.has('guidelines/state.json')).toBe(true)
     expect(objects.has('guidelines/versions/default-v1.json')).toBe(true)
+    expect(objects.get('guidelines/state.json').versions[0]).toMatchObject({
+      version: 'default-v1',
+      versionName: null,
+      activatedBy: 'Sistema',
+    })
+
+    const storedSeed = objects.get('guidelines/versions/default-v1.json')
+    expect(storedSeed).toMatchObject({
+      version: 'default-v1',
+      updatedBy: 'Sistema',
+    })
+    expect(Date.parse(storedSeed.updatedAt)).not.toBeNaN()
+    expect(storedSeed).not.toHaveProperty('sourceDraftId')
+    expect(storedSeed).not.toHaveProperty('sourceDraftRevision')
 
     const seedPut = mockPutObject.mock.calls.find(
       ([request]) => request.Key === 'guidelines/versions/default-v1.json'
@@ -219,9 +233,7 @@ describe('guidelines-store S3 lifecycle', () => {
     expect(
       objects
         .get('guidelines/audit.json')
-        .events.filter(
-          ({ action, version }) => action === 'activated' && version === 'default-v1'
-        )
+        .events.filter(({ action, version }) => action === 'activated' && version === 'default-v1')
     ).toHaveLength(1)
 
     errorSpy.mockRestore()
@@ -294,9 +306,7 @@ describe('guidelines-store S3 lifecycle', () => {
       versionName: 'Nueva voz de marca',
       status: 'active',
     })
-    expect(versions.some((v) => v.version === 'default-v1' && v.status === 'historical')).toBe(
-      true
-    )
+    expect(versions.some((v) => v.version === 'default-v1' && v.status === 'historical')).toBe(true)
 
     // Published version object is immutable on disk.
     expect(objects.get('guidelines/versions/v2.json').global).toContain('actualizada')
@@ -583,9 +593,7 @@ describe('guidelines-store S3 lifecycle', () => {
     expect(
       objects
         .get('guidelines/audit.json')
-        .events.filter(
-          ({ action, version }) => action === 'rollback' && version === 'default-v1'
-        )
+        .events.filter(({ action, version }) => action === 'rollback' && version === 'default-v1')
     ).toHaveLength(1)
 
     errorSpy.mockRestore()
@@ -750,7 +758,7 @@ describe('guidelines-store S3 lifecycle', () => {
   test('removed content types remain only in historical versions', async () => {
     await getActiveGuidelines()
     const created = await createGuidelineDraft({ createdBy: 'Elena' })
-    const withHistoricalType = duplicateContentType(created.draft.document, 'caption', {
+    const withHistoricalType = duplicateContentType(created.draft.document, 'carousel', {
       id: 'historical_campaign',
       label: 'Campaña histórica',
     })
@@ -778,6 +786,8 @@ describe('guidelines-store S3 lifecycle', () => {
       expectedRevision: savedRemoval.draft.revision,
     })
 
+    expect(firstPublished.active.version).toBe('v2')
+    expect(activated.active.version).toBe('v3')
     expect(activated.active.contentTypeCatalog.some(({ id }) => id === 'historical_campaign')).toBe(
       false
     )
@@ -797,9 +807,9 @@ describe('guidelines-store S3 lifecycle', () => {
   test('audits content type creation and archival during activation', async () => {
     await getActiveGuidelines()
     const created = await createGuidelineDraft({ createdBy: 'Elena' })
-    const edited = duplicateContentType(created.draft.document, 'caption', {
-      id: 'community_caption',
-      label: 'Caption comunitario',
+    const edited = duplicateContentType(created.draft.document, 'carousel', {
+      id: 'community_carousel',
+      label: 'Carrusel comunitario',
       archiveOriginal: true,
     })
     const saved = await saveGuidelineDraft(created.draft.id, edited, {
@@ -812,10 +822,10 @@ describe('guidelines-store S3 lifecycle', () => {
     })
 
     expect(activated.diff.created).toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: 'community_caption' })])
+      expect.arrayContaining([expect.objectContaining({ id: 'community_carousel' })])
     )
     expect(activated.diff.archived).toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: 'caption' })])
+      expect.arrayContaining([expect.objectContaining({ id: 'carousel' })])
     )
     expect(activated.auditLog).toEqual(
       expect.arrayContaining([
@@ -897,7 +907,4 @@ describe('guidelines-store S3 lifecycle', () => {
       draft: { id: currentDraft.draft.id, revision: 2 },
     })
   })
-
-
-
 })

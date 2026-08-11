@@ -308,11 +308,28 @@ describe('Guidelines workspace UI', () => {
   })
 
   test('keeps image options hidden when a type does not carry an image', () => {
+    const document = createContentType(getDefaultGuidelines(), {
+      id: 'reel_caption',
+      label: 'Texto del reel',
+    })
+    const textOnlyType = document.contentTypeCatalog.find(({ id }) => id === 'reel_caption')
+    textOnlyType.platforms = ['x', 'facebook']
+    textOnlyType.visual = {
+      mode: 'none',
+      template: null,
+      backgroundSources: [],
+      sponsorAllowed: false,
+      imagePolicyByPlatform: {
+        x: 'prohibited',
+        instagram: 'prohibited',
+        facebook: 'prohibited',
+      },
+    }
     const onChange = jest.fn()
     act(() =>
       root.render(
         <GuidelinesContentTypeCatalog
-          document={getDefaultGuidelines()}
+          document={document}
           editable
           selectedId="reel_caption"
           onChange={onChange}
@@ -379,6 +396,8 @@ describe('Guidelines workspace UI', () => {
     })
     expect(preview.querySelectorAll('img')[0].getAttribute('src')).toContain('moon-diagrams')
   })
+
+  )
 
   test('prevents duplicate names when creating a content type', () => {
     const document = getDefaultGuidelines()
@@ -844,7 +863,7 @@ describe('Guidelines workspace UI', () => {
     expect(onSelectedIdChange).toHaveBeenCalledWith('threads')
   })
 
-  test('lets nontechnical editors configure or clear a platform caption limit', () => {
+  test('lets nontechnical editors configure or clear a publication-text limit', () => {
     const onUpdateCaptionLimit = jest.fn()
     act(() =>
       root.render(
@@ -862,6 +881,10 @@ describe('Guidelines workspace UI', () => {
     )
 
     expect(container.textContent).toContain('Déjalo vacío')
+    expect(container.textContent).toContain(
+      'Máximo de caracteres del texto de la publicación'
+    )
+    expect(container.textContent).not.toContain('Máximo de caracteres del caption')
     const input = container.querySelector('#platform-x-caption-limit')
     expect(input.value).toBe('280')
 

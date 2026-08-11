@@ -23,7 +23,7 @@ describe('ai-guidelines', () => {
     }
   })
 
-  test('getDefaultGuidelines clones the frozen default-v1 snapshot', () => {
+  test('getDefaultGuidelines clones the frozen production default snapshot', () => {
     const guidelines = getDefaultGuidelines()
     expect(guidelines.version).toBe('default-v1')
     expect(guidelines.schemaVersion).toBe(3)
@@ -77,7 +77,7 @@ describe('ai-guidelines', () => {
     })
     expect(resolved.version).toBe('default-v1')
     expect(resolved.global).toMatch(/español/i)
-    expect(resolved.platform).toContain('Instagram')
+    expect(resolved.platform).toBe(getDefaultGuidelines().platforms.instagram)
     expect(resolved.contentType).toContain('evento')
     expect(resolved.prohibited).toBeTruthy()
     expect(resolved.imageValidation).toBeTruthy()
