@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 
+import { mergeTags } from '@/lib/utils/tagInput'
+
 /**
  * ArticleMetadataForm - Metadata fields above the article editor
  *
@@ -38,16 +40,13 @@ export default function ArticleMetadataForm({ metadata, onUpdate, authors = [], 
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Filter tag suggestions as user types
-  const handleTagInputChange = useCallback(
-    (e) => {
-      const value = e.target.value
-      setTagInput(value)
-
+  // Show suggestions that match the text still being typed
+  const refreshSuggestions = useCallback(
+    (value, selectedTags) => {
       if (value.trim()) {
         const lower = value.toLowerCase()
         const filtered = allTags.filter(
-          (t) => t.toLowerCase().includes(lower) && !metadata.tags.includes(t)
+          (t) => t.toLowerCase().includes(lower) && !selectedTags.includes(t)
         )
         setTagSuggestions(filtered)
         setShowSuggestions(true)
@@ -56,15 +55,38 @@ export default function ArticleMetadataForm({ metadata, onUpdate, authors = [], 
         setShowSuggestions(false)
       }
     },
-    [allTags, metadata.tags]
+    [allTags]
   )
 
-  // Add a tag
+  // Commit each completed tag as the user types a comma, keep the rest pending
+  const handleTagInputChange = useCallback(
+    (e) => {
+      const value = e.target.value
+      const lastSeparator = value.lastIndexOf(',')
+
+      if (lastSeparator === -1) {
+        setTagInput(value)
+        refreshSuggestions(value, metadata.tags)
+        return
+      }
+
+      const merged = mergeTags(metadata.tags, value.slice(0, lastSeparator))
+      const pending = value.slice(lastSeparator + 1)
+      if (merged !== metadata.tags) {
+        onUpdate('tags', merged)
+      }
+      setTagInput(pending)
+      refreshSuggestions(pending, merged)
+    },
+    [metadata.tags, onUpdate, refreshSuggestions]
+  )
+
+  // Add one or more tags from a raw input string
   const addTag = useCallback(
     (tag) => {
-      const trimmed = tag.trim()
-      if (trimmed && !metadata.tags.includes(trimmed)) {
-        onUpdate('tags', [...metadata.tags, trimmed])
+      const merged = mergeTags(metadata.tags, tag)
+      if (merged !== metadata.tags) {
+        onUpdate('tags', merged)
       }
       setTagInput('')
       setTagSuggestions([])
@@ -222,7 +244,7 @@ export default function ArticleMetadataForm({ metadata, onUpdate, authors = [], 
                 setShowSuggestions(true)
               }
             }}
-            placeholder="Escribe para buscar o crear etiquetas..."
+            placeholder="Escribe etiquetas separadas por comas..."
             className={inputClass}
           />
           {/* Autocomplete dropdown */}
