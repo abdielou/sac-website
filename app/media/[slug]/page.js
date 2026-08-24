@@ -17,15 +17,31 @@ export async function generateMetadata({ params }) {
     })
   }
 
+  // Kept out of the index by decision. There is no /media index page and nothing
+  // public links to a video, so every one of these is an orphan URL. The
+  // OpenGraph block is retained so a shared link still previews correctly.
+  //
+  // Deliberately NOT disallowed in robots.txt: Google has to crawl the page to
+  // see the directive. Blocking it there would strand any already-indexed URL.
   const images = absoluteImages(entry.thumbnail)
-  return pageMetadata({
+  const description =
+    entry.description || `Video de la Sociedad de Astronomía del Caribe: ${entry.title}.`
+
+  // Built from pageMetadata so the share card keeps its thumbnail, site name and
+  // locale, then overridden with the noindex robots block. A shared link should
+  // still preview properly even though the URL stays out of the index.
+  const base = pageMetadata({
     title: entry.title,
-    description:
-      entry.description || `Video de la Sociedad de Astronomía del Caribe: ${entry.title}.`,
+    description,
     path: `/media/${entry.slug}`,
     openGraph: { type: 'video.other', images },
     twitter: { images },
   })
+
+  return {
+    ...base,
+    robots: noindexMetadata({ path: `/media/${entry.slug}` }).robots,
+  }
 }
 
 export default async function MediaPage({ params }) {

@@ -287,7 +287,14 @@ export default function Gallery() {
           </div>
         </div>
       )}
+      {/*
+        Kept out of the index by decision: the page is unlinked from the nav and
+        has no internal links, so submitting it was promoting an orphan.
+        Deliberately NOT disallowed in robots.txt — Google must be able to crawl
+        the page to see this directive.
+      */}
       <PageSEO
+        noindex
         title="Galería de Fotos Astronómicas"
         description="Fotografías astronómicas de la Sociedad de Astronomía del Caribe: eclipses, planetas, cometas y objetos de cielo profundo captados desde Puerto Rico."
       />

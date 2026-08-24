@@ -15,7 +15,7 @@ import { absUrl, baseTwitter } from '@/lib/seo'
  * Every URL goes through `absUrl` so the trailing-slash double-slash bug the
  * 2026-08 audit found cannot come back through this path.
  */
-export const PageSEO = ({ title, description }) => {
+export const PageSEO = ({ title, description, noindex = false }) => {
   const router = useRouter()
   // Drop the query and the hash: the canonical must be one stable URL.
   const path = String(router?.asPath ?? '/')
@@ -35,13 +35,22 @@ export const PageSEO = ({ title, description }) => {
       {/*
         The Pages Router inherits nothing from app/layout.js, so this must repeat
         the same directives the App Router pages get. Without the max-* values
-        /gallery would be the one page on the site declaring a weaker policy.
+        this would be the one page on the site declaring a weaker policy.
+
+        `noindex` must stay crawlable (noindex, follow, and NOT disallowed in
+        robots.txt): Google has to fetch the page to see the directive at all.
+        Blocking it in robots.txt instead would leave an already-indexed URL
+        indexed forever.
       */}
       <meta
         name="robots"
-        content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+        content={
+          noindex
+            ? 'noindex, follow'
+            : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
+        }
       />
-      <link rel="canonical" href={url} />
+      {!noindex && <link rel="canonical" href={url} />}
       <meta property="og:type" content="website" />
       <meta property="og:site_name" content={siteMetadata.title} />
       <meta property="og:locale" content="es_PR" />

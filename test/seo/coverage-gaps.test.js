@@ -227,3 +227,43 @@ describe('Image priority on the raw <img> fallback', () => {
     expect(src).toMatch(/loading \|\| 'lazy'/)
   })
 })
+
+describe('/gallery and /media are noindex by decision', () => {
+  // Both are orphan URLs: /gallery is unlinked from the nav, and video pages
+  // have no index page and no public link. They must stay CRAWLABLE though —
+  // a robots.txt disallow would stop Google seeing the noindex at all.
+  it('gallery asks PageSEO for noindex', () => {
+    expect(read('pages/gallery.js')).toMatch(/<PageSEO\s+noindex/)
+  })
+
+  it('PageSEO emits noindex, follow and drops the canonical', () => {
+    const src = read('components/SEO.js')
+    expect(src).toMatch(/'noindex, follow'/)
+    expect(src).toMatch(/\{!noindex && <link rel="canonical"/)
+  })
+
+  it('media pages return a noindex robots block even when the entry exists', () => {
+    const src = read('app/media/[slug]/page.js')
+    // The found-entry branch keeps a full share card but overrides robots.
+    expect(src).toMatch(/robots: noindexMetadata\(/)
+  })
+
+  it('media pages keep their thumbnail on the share card', () => {
+    // The URL stays out of the index, but a shared link should still preview.
+    const src = read('app/media/[slug]/page.js')
+    expect(src).toMatch(/openGraph: \{ type: 'video\.other', images \}/)
+    expect(src).toMatch(/twitter: \{ images \}/)
+  })
+
+  it('neither is submitted in the sitemap', () => {
+    const src = read('app/sitemap.js')
+    expect(src).not.toMatch(/path: '\/gallery'/)
+    expect(src).not.toMatch(/path: '\/media'/)
+  })
+
+  it('neither is blocked in robots.txt, so the noindex stays visible', () => {
+    const src = read('app/robots.js')
+    expect(src).not.toMatch(/'\/gallery/)
+    expect(src).not.toMatch(/'\/media/)
+  })
+})

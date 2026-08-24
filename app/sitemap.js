@@ -13,8 +13,11 @@ export const revalidate = 3600
  * Deliberately absent:
  *  - /admin, /member, /auth, /verify, /api  private or non-indexable
  *  - /card-test-longname                    a development fixture
- *  - /media                                 only app/media/[slug] exists, there
- *                                           is no /media index page to link to
+ *  - /media/<slug>                          noindex by decision: orphan URLs with
+ *                                           no index page and no internal links
+ *  - /gallery                               noindex by decision: unlinked from
+ *                                           the nav, so submitting it promoted
+ *                                           an orphan
  */
 const STATIC_ROUTES = [
   { path: '/', changeFrequency: 'weekly', priority: 1 },
@@ -29,9 +32,6 @@ const STATIC_ROUTES = [
   { path: '/tags', changeFrequency: 'weekly', priority: 0.5 },
   { path: '/links', changeFrequency: 'yearly', priority: 0.4 },
   { path: '/brand', changeFrequency: 'yearly', priority: 0.3 },
-  // Legacy Pages Router route. Still live and self-declares index,follow via
-  // PageSEO, so it belongs here even though it is not in the nav.
-  { path: '/gallery', changeFrequency: 'weekly', priority: 0.6 },
 ]
 
 function staticEntries(lastModified) {
