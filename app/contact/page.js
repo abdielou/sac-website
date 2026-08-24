@@ -1,13 +1,12 @@
 import LayoutWrapper from '@/components/LayoutWrapper'
+import { pageMetadata } from '@/lib/seo'
 
-export const metadata = {
-  title: 'Contacto',
-  description: 'Informacion de Contacto',
-  openGraph: {
-    title: 'Contacto | SAC',
-    description: 'Informacion de Contacto',
-  },
-}
+export const metadata = pageMetadata({
+  title: 'Contáctenos',
+  description:
+    'Escríbenos a info@sociedadastronomia.com o llámanos al 1 (787) 380-3444 o al 1 (787) 247-2244 para consultas sobre actividades, membresía y charlas de astronomía en Puerto Rico.',
+  path: '/contact',
+})
 
 const EmailIcon = () => (
   <svg

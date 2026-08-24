@@ -1,0 +1,1121 @@
+<title>SAC Search Audit</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  :root {
+    --ground: #edf0f4;
+    --surface: #ffffff;
+    --surface-2: #f5f7fa;
+    --ink: #101923;
+    --ink-2: #35455a;
+    --muted: #5c6b7c;
+    --line: #d3dbe4;
+    --line-soft: #e3e9ef;
+    --accent: #1b4f8c;
+    --accent-soft: #dce7f3;
+    --sev-block: #a8322c;
+    --sev-high: #a45c17;
+    --sev-med: #6f6017;
+    --sev-low: #5c6b7c;
+    --good: #2c6349;
+    --good-soft: #dcece4;
+
+    --f-display: "Spectral", "Iowan Old Style", Georgia, serif;
+    --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+    --measure: 74ch;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0c131b;
+      --surface: #131d28;
+      --surface-2: #18242f;
+      --ink: #dfe7ef;
+      --ink-2: #b3c1d0;
+      --muted: #8b9bab;
+      --line: #2a3946;
+      --line-soft: #1f2c38;
+      --accent: #7fb0de;
+      --accent-soft: #1a2b3d;
+      --sev-block: #e2726a;
+      --sev-high: #d8974a;
+      --sev-med: #c0aa4e;
+      --sev-low: #8b9bab;
+      --good: #6fbf99;
+      --good-soft: #16302592;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #0c131b;
+    --surface: #131d28;
+    --surface-2: #18242f;
+    --ink: #dfe7ef;
+    --ink-2: #b3c1d0;
+    --muted: #8b9bab;
+    --line: #2a3946;
+    --line-soft: #1f2c38;
+    --accent: #7fb0de;
+    --accent-soft: #1a2b3d;
+    --sev-block: #e2726a;
+    --sev-high: #d8974a;
+    --sev-med: #c0aa4e;
+    --sev-low: #8b9bab;
+    --good: #6fbf99;
+    --good-soft: #16302592;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 28px 96px;
+  }
+
+  /* ---------- masthead ---------- */
+
+  .masthead {
+    padding: 72px 0 36px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+  }
+
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(2.3rem, 5.4vw, 3.5rem);
+    line-height: 1.05;
+    letter-spacing: -0.018em;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .standfirst {
+    font-family: var(--f-display);
+    font-size: clamp(1.08rem, 2.1vw, 1.32rem);
+    line-height: 1.55;
+    color: var(--ink-2);
+    max-width: 62ch;
+    margin: 0;
+  }
+
+  .standfirst strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- metric strip ---------- */
+
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    margin: 40px 0 8px;
+  }
+
+  .metric {
+    background: var(--surface);
+    padding: 18px 18px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .metric .n {
+    font-family: var(--f-display);
+    font-size: 2.15rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .metric .n.bad { color: var(--sev-block); }
+  .metric .n.ok { color: var(--good); }
+
+  .metric .lbl {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .metrics-note {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0 0 8px;
+  }
+
+  /* ---------- sections ---------- */
+
+  section { margin-top: 60px; }
+
+  h2 {
+    font-family: var(--f-display);
+    font-size: clamp(1.5rem, 3vw, 1.95rem);
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.012em;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+
+  h3 {
+    font-family: var(--f-body);
+    font-size: 1.02rem;
+    font-weight: 600;
+    letter-spacing: 0.002em;
+    margin: 34px 0 10px;
+  }
+
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 10px;
+    margin-bottom: 22px;
+  }
+
+  .sec-head h2 { margin: 0; }
+
+  .sec-meta {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-left: auto;
+  }
+
+  p { max-width: var(--measure); }
+  p.lead { color: var(--ink-2); }
+
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+  code, .mono {
+    font-family: var(--f-mono);
+    font-size: 0.855em;
+    background: var(--surface-2);
+    border: 1px solid var(--line-soft);
+    padding: 0.08em 0.34em;
+    border-radius: 2px;
+    word-break: break-word;
+  }
+
+  /* ---------- findings ---------- */
+
+  .findings { display: flex; flex-direction: column; gap: 14px; }
+
+  .finding {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--sev-low);
+    padding: 18px 20px 18px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .finding.block { border-left-color: var(--sev-block); }
+  .finding.high { border-left-color: var(--sev-high); }
+  .finding.med { border-left-color: var(--sev-med); }
+
+  .f-top {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .f-num {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .f-title {
+    font-family: var(--f-body);
+    font-weight: 600;
+    font-size: 1.03rem;
+    line-height: 1.35;
+    flex: 1 1 320px;
+    margin: 0;
+  }
+
+  .pills { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .pill {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border: 1px solid currentColor;
+    border-radius: 2px;
+    white-space: nowrap;
+    line-height: 1.3;
+  }
+
+  .pill.block { color: var(--sev-block); }
+  .pill.high { color: var(--sev-high); }
+  .pill.med { color: var(--sev-med); }
+  .pill.low { color: var(--sev-low); }
+  .pill.eff { color: var(--muted); border-style: dashed; }
+  .pill.art { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
+
+  .f-body { margin: 0; font-size: 15px; color: var(--ink-2); max-width: var(--measure); }
+  .f-body strong { color: var(--ink); font-weight: 600; }
+
+  .f-fix {
+    font-size: 14.5px;
+    margin: 0;
+    padding-top: 9px;
+    border-top: 1px dashed var(--line);
+    color: var(--ink-2);
+    max-width: var(--measure);
+  }
+
+  .f-fix b {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+    margin-right: 7px;
+  }
+
+  /* ---------- tables ---------- */
+
+  .tscroll { overflow-x: auto; margin: 18px 0; border: 1px solid var(--line); }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 560px;
+    background: var(--surface);
+    font-size: 14.5px;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: top;
+  }
+
+  th {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.step { font-family: var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  /* ---------- callout ---------- */
+
+  .callout {
+    background: var(--surface);
+    border: 1px solid var(--sev-block);
+    border-top: 3px solid var(--sev-block);
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .callout h3 { margin: 0; font-size: 1.06rem; }
+  .callout p { margin: 0; font-size: 15px; color: var(--ink-2); }
+
+  .callout .tag {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--sev-block);
+  }
+
+  /* ---------- good list ---------- */
+
+  .good-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+
+  .good-item {
+    background: var(--surface);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .good-item .g-k {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--good);
+  }
+
+  .good-item .g-v { font-size: 14px; color: var(--ink-2); }
+
+  /* ---------- rejected ---------- */
+
+  .rejected { display: flex; flex-direction: column; gap: 10px; }
+
+  .rej {
+    display: flex;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line-soft);
+    font-size: 14.5px;
+  }
+
+  .rej:last-child { border-bottom: none; }
+  .rej .r-claim { flex: 1 1 44%; color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+  .rej .r-why { flex: 1 1 56%; color: var(--ink-2); }
+
+  /* ---------- strategy ---------- */
+
+  .strat {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .strat h3 { margin: 0; font-size: 1.05rem; font-family: var(--f-display); font-weight: 600; }
+  .strat p { margin: 0; font-size: 14.8px; color: var(--ink-2); max-width: var(--measure); }
+  .strat .quote { font-family: var(--f-display); font-style: italic; color: var(--muted); font-size: 14.5px; }
+
+  .stack { display: flex; flex-direction: column; gap: 14px; }
+
+  footer {
+    margin-top: 72px;
+    padding-top: 22px;
+    border-top: 1px solid var(--line);
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  @media (max-width: 640px) {
+    .wrap { padding: 0 18px 64px; }
+    .masthead { padding-top: 48px; }
+    .rej { flex-direction: column; gap: 4px; }
+    .sec-meta { margin-left: 0; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">
+      <span>Sociedad de Astronomía del Caribe</span>
+      <span>·</span>
+      <span>SEO assessment</span>
+      <span>·</span>
+      <span>23 Aug 2026</span>
+    </div>
+    <h1>Your articles are written. Google was never told they exist.</h1>
+    <p class="standfirst">
+      The article template is sound: server-rendered, indexable, one <code>h1</code>, valid Article schema,
+      and all 77 legacy URLs survived the S3 migration intact. What is broken is <strong>discovery and identity</strong>.
+      The production sitemap contains one URL, on the wrong hostname. No page emits a canonical.
+      And every URL the site publishes about itself names a preview host that serves a full, indexable copy of the entire site.
+    </p>
+  </header>
+
+  <div class="metrics">
+    <div class="metric"><span class="n">77</span><span class="lbl">Published articles</span></div>
+    <div class="metric"><span class="n bad">1</span><span class="lbl">URLs in the live sitemap</span></div>
+    <div class="metric"><span class="n bad">0</span><span class="lbl">Canonical tags site-wide</span></div>
+    <div class="metric"><span class="n bad">2</span><span class="lbl">Internal links in 77 bodies</span></div>
+    <div class="metric"><span class="n bad">16</span><span class="lbl">Clicks to the oldest article</span></div>
+    <div class="metric"><span class="n ok">61</span><span class="lbl">Verified findings</span></div>
+  </div>
+  <p class="metrics-note">
+    132 raw findings from six parallel audits; 42 were refuted on adversarial review as SEO folklore or unverifiable evidence,
+    and the rest were merged. Every headline number above was re-confirmed by hand against the live site.
+  </p>
+
+  <!-- ============ TIER 0 ============ -->
+  <section>
+    <div class="sec-head">
+      <h2>Check this before anything else</h2>
+      <span class="sec-meta">Tier 0 · 10 minutes</span>
+    </div>
+
+    <div class="callout">
+      <span class="tag">Unknown severity — could invalidate everything below</span>
+      <h3>Vercel's firewall returns HTTP 429 to every non-browser client, site-wide</h3>
+      <p>
+        Reproduced from this machine against all three hosts, including <code>/sitemap.xml</code> and <code>/feed.xml</code>:
+        every plain HTTP client gets <code>429</code> with <code>X-Vercel-Mitigated: challenge</code>. A real Chromium
+        browser passes without a challenge. Vercel documents a verified-bot bypass, so Googlebot is <em>probably</em>
+        exempt, but that cannot be proven from outside.
+      </p>
+      <p>
+        <strong>Do this first:</strong> Search Console → URL Inspection → Test Live URL on one article. Confirm the fetch
+        succeeds and the rendered HTML contains the article prose, then check Crawl Stats for a 429 spike. If Googlebot is
+        being challenged, nothing else in this report matters until Attack Challenge Mode is disabled or scoped to
+        <code>/api/</code>, <code>/admin</code> and <code>/member</code>. Either way, RSS readers and social scrapers are
+        being refused today.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ TIER 1 ============ -->
+  <section>
+    <div class="sec-head">
+      <h2>Blockers</h2>
+      <span class="sec-meta">Tier 1 · this week</span>
+    </div>
+    <p class="lead">
+      These six are the whole ballgame. Everything else in this report is worth a fraction of what these are worth,
+      and four of them are one-line edits.
+    </p>
+
+    <div class="findings">
+
+      <article class="finding block">
+        <div class="f-top">
+          <span class="f-num">01</span>
+          <h3 class="f-title">The site tells Google its own address is a Vercel preview URL — with a double slash</h3>
+          <div class="pills"><span class="pill block">Blocker</span><span class="pill eff">Trivial</span><span class="pill art">Articles</span></div>
+        </div>
+        <p class="f-body">
+          <code>siteUrl</code> is <code>'https://sac-website.vercel.app/'</code>. One constant with one stray trailing slash
+          poisons <code>og:url</code>, the JSON-LD <code>url</code>, all 77 RSS <code>&lt;guid&gt;</code> and
+          <code>&lt;link&gt;</code> values, the sitemap <code>&lt;loc&gt;</code> and <code>metadataBase</code>.
+          Confirmed live on a real article: <code>og:url</code> and JSON-LD <code>url</code> both read
+          <code>https://sac-website.vercel.app//blog/2026/08/23/...</code>. The real site is
+          <code>www.sociedadastronomia.com</code>.
+        </p>
+        <p class="f-fix"><b>Fix</b><code>data/siteMetadata.js:12</code> → <code>'https://www.sociedadastronomia.com'</code>, no trailing slash. Add a Jest assertion that it never ends in <code>/</code>, and route every concatenation through one <code>absUrl()</code> helper so it cannot regress.</p>
+      </article>
+
+      <article class="finding block">
+        <div class="f-top">
+          <span class="f-num">02</span>
+          <h3 class="f-title">A second, fully indexable copy of the entire site is live at sac-website.vercel.app</h3>
+          <div class="pills"><span class="pill block">Blocker</span><span class="pill eff">Small</span><span class="pill art">Articles</span></div>
+        </div>
+        <p class="f-body">
+          Both hosts serve byte-identical pages at <code>200</code> with <code>robots: index, follow</code> and no canonical.
+          The only URL hints on the page point at the twin. Link equity splits across two hosts and Google picks the winner,
+          which may not be the one you want.
+        </p>
+        <p class="f-fix"><b>Fix</b>308 the preview host in <code>next.config.js</code> using <code>redirects()</code> with <code>has: [{ type: 'host', value: 'sac-website.vercel.app' }]</code>, or set the production domain in the Vercel dashboard. A redirect beats <code>noindex</code> because it also transfers the existing links.</p>
+      </article>
+
+      <article class="finding block">
+        <div class="f-top">
+          <span class="f-num">03</span>
+          <h3 class="f-title">No <code>rel=canonical</code> exists on any route</h3>
+          <div class="pills"><span class="pill block">Blocker</span><span class="pill eff">Small</span><span class="pill art">Articles</span></div>
+        </div>
+        <p class="f-body">
+          Verified absent on seven URL types including every article. The only canonical in the repo sits in
+          <code>components/SEO.js:140</code>, dead Pages-Router code reachable only through
+          <code>layouts/PostLayout.js</code>, which nothing imports. Two competing SEO systems coexist and the
+          dead one is the more complete.
+        </p>
+        <p class="f-fix"><b>Fix</b>Add <code>alternates: { canonical }</code> to the root layout and to <code>app/blog/[...slug]/page.js</code>, <code>app/blog/page.js</code>, <code>app/blog/page/[page]/page.js</code>, <code>app/tags/[tag]/page.js</code>, <code>app/media/[slug]/page.js</code>. Relative values resolve against <code>metadataBase</code>.</p>
+      </article>
+
+      <article class="finding block">
+        <div class="f-top">
+          <span class="f-num">04</span>
+          <h3 class="f-title">The production sitemap is 182 bytes and contains zero articles</h3>
+          <div class="pills"><span class="pill block">Blocker</span><span class="pill eff">Medium</span><span class="pill art">Articles</span></div>
+        </div>
+        <p class="f-body">
+          Fetched live, in full:
+          <code>&lt;loc&gt;https://sac-website.vercel.app//gallery&lt;/loc&gt;</code>. That is the entire file.
+          <code>scripts/generate-sitemap.js:9</code> globs <code>data/blog/**/*.mdx</code> against a directory that
+          has been empty since the S3 migration, and <code>pages/*.js</code> in an app that moved to the App Router.
+          Zero of 77 articles, zero of 61 tag pages, zero of 16 listing pages, zero marketing pages.
+          The one URL it does submit is <code>/gallery</code> — a page deliberately commented out of the nav
+          that renders no <code>&lt;title&gt;</code> at all.
+        </p>
+        <p class="f-fix"><b>Fix</b>Delete <code>scripts/generate-sitemap.js</code> and the <code>&amp;&amp; node ./scripts/generate-sitemap</code> tail in <code>package.json:8</code>. Create <code>app/sitemap.js</code> that reads <code>listArticles()</code> and emits all 77 articles with <code>lastModified</code>, plus tags, listings and static routes. Target: 155+ URLs.</p>
+      </article>
+
+      <article class="finding block">
+        <div class="f-top">
+          <span class="f-num">05</span>
+          <h3 class="f-title"><code>/robots.txt</code> returns 404</h3>
+          <div class="pills"><span class="pill high">High</span><span class="pill eff">Trivial</span><span class="pill art">Articles</span></div>
+        </div>
+        <p class="f-body">
+          Confirmed live on both hosts. No <code>Sitemap:</code> directive, and no disallow rules for
+          <code>/admin</code>, <code>/member</code>, <code>/api/</code>, <code>/auth/</code> or <code>/verify/</code>.
+        </p>
+        <p class="f-fix"><b>Fix</b>Create <code>app/robots.js</code>. Do not disallow <code>/_next/</code>, and do not use the obsolete <code>host:</code> directive.</p>
+      </article>
+
+      <article class="finding block">
+        <div class="f-top">
+          <span class="f-num">06</span>
+          <h3 class="f-title">The 13 newest articles have no tags, so they are cut off from every hub page</h3>
+          <div class="pills"><span class="pill high">High</span><span class="pill eff">Small</span><span class="pill art">Articles</span></div>
+        </div>
+        <p class="f-body">
+          All 13 are from 2026 and several sit on the site's highest-value recurring topics: four 220P/McNaught comet
+          posts, two bolide posts, Perseidas, an eclipse. <code>/tags/cometa</code> lists 16 articles and none of the
+          2026 comet posts. Separately, <code>BlogPost.js:103</code> uses <code>{tags && (</code>, so an empty array is
+          truthy and these pages render a "Tags" heading above nothing.
+        </p>
+        <p class="f-fix"><b>Fix</b>Backfill from the existing vocabulary via <code>updateArticle</code>, block publish on an empty tag array in the admin editor, and change the guard to <code>{tags?.length > 0 && (</code>.</p>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ============ ARTICLES ============ -->
+  <section>
+    <div class="sec-head">
+      <h2>The articles specifically</h2>
+      <span class="sec-meta">Your stated priority</span>
+    </div>
+    <p class="lead">
+      All 77 are indexable, server-rendered, uniquely titled, uniquely summarized, image-complete and schema-marked.
+      Nothing in the template blocks ranking. Every problem is an addressing problem, a discovery problem, or an
+      editorial one — ranked here by what it actually costs you.
+    </p>
+
+    <div class="tscroll">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Problem</th><th>Effect on the 77 articles</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="num">1</td><td>Zero articles in the sitemap</td><td>No submitted list at all. Discovery depends on a 16-hop prev/next chain and an RSS feed whose 77 URLs are all malformed.</td></tr>
+          <tr><td class="num">2</td><td>No canonical + indexable twin host</td><td>Both hosts serve identical articles at 200 with <code>index, follow</code>. Link equity splits; the wrong host can win.</td></tr>
+          <tr><td class="num">3</td><td>Every published URL names the preview host</td><td>Social shares attribute to <code>vercel.app</code>. RSS <code>&lt;guid&gt;</code> values are wrong, so fixing them will re-notify subscribers of all 77 posts.</td></tr>
+          <tr><td class="num">4</td><td>13 newest articles untagged</td><td>The freshest, most link-worthy content is disconnected from the only working internal hubs.</td></tr>
+          <tr><td class="num">5</td><td>2 internal links across 77 bodies</td><td>71 of 77 have zero links. Prev/next is chronological, so a comet article links to an unrelated rocket launch. Google sees 77 isolated news items, not topical depth.</td></tr>
+          <tr><td class="num">6</td><td>44 of 77 rendered titles over 60 chars</td><td>The payload word gets cut on titles whose answer is at the end. 54 of 77 contain no Puerto Rico / Caribe / Isla token at all.</td></tr>
+          <tr><td class="num">7</td><td>40 descriptions over 155 chars, 8 under 70</td><td>Longest is 296. Half the corpus has its snippet cut mid-sentence; the stubs invite Google to write its own.</td></tr>
+          <tr><td class="num">8</td><td>Articles drop <code>og:site_name</code>, <code>og:locale</code>, <code>twitter:site</code></td><td>Confirmed absent live. <code>generateMetadata</code> replaces the root objects wholesale rather than merging, on exactly the 77 pages people share.</td></tr>
+          <tr><td class="num">9</td><td>CLS 0.1233, LCP image at <code>w=3840</code> and lazy</td><td>The header logo is hidden behind a <code>mounted</code> flag, so it injects on hydration and shifts every article down. No image sets <code>sizes</code> or <code>priority</code>.</td></tr>
+          <tr><td class="num">10</td><td>58 of 77 have no subheadings</td><td>Includes the three longest articles. The TOC is computed and always renders empty. No snippet extraction surface on a corpus whose natural questions are exactly snippet-shaped.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Nearly all of it lands in three files</h3>
+    <div class="tscroll">
+      <table>
+        <thead><tr><th>File</th><th>Edits</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>data/siteMetadata.js:12</code></td>
+            <td>Correct host, no trailing slash. Fixes <code>og:url</code>, JSON-LD <code>url</code>, all 77 RSS URLs and the sitemap host in one line.</td>
+          </tr>
+          <tr>
+            <td><code>app/blog/[...slug]/page.js</code></td>
+            <td>Add <code>alternates.canonical</code>. Spread a shared OG base so <code>siteName</code>, <code>locale</code> and <code>twitter:site</code> survive; add <code>article:tag</code>, <code>article:author</code>, og:image dimensions. Replace chronological prev/next with tag-scored related articles. Absolutize the JSON-LD <code>image</code>, and clamp <code>dateModified</code> so it can never precede <code>datePublished</code> (it does on 60 of 77, because migrated rows store a bare date against a <code>T08:00:00Z</code> publish time).</td>
+          </tr>
+          <tr>
+            <td><code>app/blog/[...slug]/BlogPost.js</code></td>
+            <td>Fix the empty-array truthiness bug at <code>:103</code>. Destructure the already-computed <code>lastmod</code> and <code>readingTime</code>, which are currently discarded. Move the author block below the body so the first image a crawler meets is content, not a 38px <code>alt="avatar"</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ TIER 2 ============ -->
+  <section>
+    <div class="sec-head">
+      <h2>High value, moderate effort</h2>
+      <span class="sec-meta">Tier 2 · this month</span>
+    </div>
+
+    <div class="findings">
+
+      <article class="finding high">
+        <div class="f-top">
+          <span class="f-num">07</span>
+          <h3 class="f-title">Two internal links exist across all 77 article bodies</h3>
+          <div class="pills"><span class="pill high">High</span><span class="pill eff">Medium</span><span class="pill art">Articles</span></div>
+        </div>
+        <p class="f-body">
+          Real topical clusters exist and are entirely unlinked: cometa 16, meteoro 10, asteroide 9, avistamiento 7,
+          eclipse 6. The only programmatic relatedness is date order.
+        </p>
+        <p class="f-fix"><b>Fix</b>Score every other article by shared tag count plus year proximity, take the top 3–4, render as real anchors under "Artículos relacionados". Keep chronological prev/next as the fallback for untagged posts.</p>
+      </article>
+
+      <article class="finding high">
+        <div class="f-top">
+          <span class="f-num">08</span>
+          <h3 class="f-title">Pagination is prev/next only, five posts per page, sixteen pages deep</h3>
+          <div class="pills"><span class="pill high">High</span><span class="pill eff">Small</span><span class="pill art">Articles</span></div>
+        </div>
+        <p class="f-body">
+          No numbered links and no "last page". The oldest article needs 15 sequential clicks. Only the five rendered
+          posts are crawlable anchors; the other 72 sit in client-side search state. With an empty sitemap this is the
+          sole discovery path for the back catalogue.
+        </p>
+        <p class="f-fix"><b>Fix</b>Numbered pagination (first, current ±2, last) in <code>components/Pagination.js</code>, and raise <code>POSTS_PER_PAGE</code> from 5 to 15 — that alone cuts the chain from 16 pages to 6.</p>
+      </article>
+
+      <article class="finding high">
+        <div class="f-top">
+          <span class="f-num">09</span>
+          <h3 class="f-title">Unbounded soft-200 crawl spaces on three routes</h3>
+          <div class="pills"><span class="pill high">High</span><span class="pill eff">Small</span><span class="pill low">Crawl budget</span></div>
+        </div>
+        <p class="f-body">
+          <code>/blog/page/999</code> returns 200 and, because <code>initialDisplayPosts</code> is empty,
+          <code>ListLayout</code> falls through and renders <strong>all 77 articles</strong> as a near-duplicate —
+          then emits a crawlable link to page 998, chaining downward forever. <code>/tags/&lt;anything&gt;</code>
+          returns 200 with an <code>h1</code> echoing the arbitrary string. <code>/media/&lt;anything&gt;</code>
+          returns 200 with "Video no encontrado". Only the article route calls <code>notFound()</code>.
+        </p>
+        <p class="f-fix"><b>Fix</b>Call <code>notFound()</code> on a non-integer or out-of-range page, an empty tag result, and a missing media entry. Harden <code>ListLayout</code> so an empty list never falls back to the whole corpus.</p>
+      </article>
+
+      <article class="finding high">
+        <div class="f-top">
+          <span class="f-num">10</span>
+          <h3 class="f-title">Measured CLS 0.1233 on every article, caused by the header logo alone</h3>
+          <div class="pills"><span class="pill high">High</span><span class="pill eff">Small</span><span class="pill art">Articles</span></div>
+        </div>
+        <p class="f-body">
+          <code>components/LayoutWrapper.js:14-19</code> hides the logo behind a <code>mounted</code> flag, so it is
+          absent from all 78 prerendered pages and the header grows 32px on hydration. The control page
+          <code>/links</code>, which forces the light header, measures CLS <strong>0</strong>.
+          <code>app/providers.js</code> already sets <code>defaultTheme="dark"</code> with
+          <code>enableSystem={false}</code>, so the gate is not doing anything.
+        </p>
+        <p class="f-fix"><b>Fix</b>Remove the <code>mounted</code> gate, render both logos with CSS theme switching, add <code>priority</code>.</p>
+      </article>
+
+      <article class="finding high">
+        <div class="f-top">
+          <span class="f-num">11</span>
+          <h3 class="f-title">Every image ships a single-candidate 3840px srcset, lazily</h3>
+          <div class="pills"><span class="pill high">High</span><span class="pill eff">Small</span><span class="pill art">Articles</span></div>
+        </div>
+        <p class="f-body">
+          <code>components/Image.js</code> forwards neither <code>sizes</code> nor <code>priority</code>. Build output
+          shows <code>srcSet="...&amp;w=3840&amp;q=75 1x"</code> with one candidate, so even a DPR-1 phone downloads the
+          3840px variant into a 768px column. 34 of 77 article pages plus 11 of 13 listing pages do this, and the
+          listing thumbnail is the LCP element of the hub pages Google crawls to reach the articles. Zero
+          <code>fetchpriority</code> anywhere in the blog tree. Source images reach 10.7 MB.
+        </p>
+        <p class="f-fix"><b>Fix</b>Default <code>sizes</code> on the shared wrapper, thread an <code>isFirst</code> index so the first thumbnail and first body image get <code>priority</code>, add <code>formats: ['image/avif','image/webp']</code> to <code>next.config.js</code>, and clamp upload widths to ~1600px.</p>
+      </article>
+
+      <article class="finding med">
+        <div class="f-top">
+          <span class="f-num">12</span>
+          <h3 class="f-title">24 article pages ship eager YouTube and Facebook iframes</h3>
+          <div class="pills"><span class="pill med">Medium</span><span class="pill eff">Small</span><span class="pill art">Articles</span></div>
+        </div>
+        <p class="f-body">
+          20 YouTube, 5 Facebook, 1 both. Each pulls roughly 700 KB–1.2 MB of player bundle and runs it on the main
+          thread during the parent load. The aspect box correctly prevents layout shift, so this is purely weight and INP.
+        </p>
+        <p class="f-fix"><b>Fix</b><code>loading="lazy"</code> on both iframes in <code>components/ResponsiveReactPlayer.js</code>; ideally a click-to-load poster facade and <code>youtube-nocookie.com</code>.</p>
+      </article>
+
+      <article class="finding med">
+        <div class="f-top">
+          <span class="f-num">13</span>
+          <h3 class="f-title">Twelve routes have broken or missing OpenGraph, and the brand appears twice in six titles</h3>
+          <div class="pills"><span class="pill med">Medium</span><span class="pill eff">Small</span></div>
+        </div>
+        <p class="f-body">
+          Six pages define a partial <code>openGraph</code> and therefore emit no og:image at all (<code>/about</code>,
+          <code>/brand</code>, <code>/contact</code>, <code>/events</code>, <code>/guides</code>, <code>/weather</code>).
+          Six more define none and inherit the homepage's og:title and og:url. <code>/donate</code> and
+          <code>/membership</code> — the two conversion pages — export no metadata whatsoever. Separately, six routes
+          hand-write the brand and the title template appends it again: <em>Artículos | SAC | SAC</em>,
+          <em>cometa - SAC | SAC</em>.
+        </p>
+        <p class="f-fix"><b>Fix</b>Export a <code>baseOpenGraph</code> / <code>baseTwitter</code> from a new <code>lib/seo.js</code> and spread it at every <code>generateMetadata</code> site. Strip the hand-written suffixes. <code>/donate</code> and <code>/membership</code> are <code>'use client'</code>, so they need the server-wrapper pattern already used by <code>app/page.js</code>.</p>
+      </article>
+
+      <article class="finding med">
+        <div class="f-top">
+          <span class="f-num">14</span>
+          <h3 class="f-title">Meta descriptions and titles have no guardrails in the editor</h3>
+          <div class="pills"><span class="pill med">Medium</span><span class="pill eff">Medium</span><span class="pill art">Articles</span></div>
+        </div>
+        <p class="f-body">
+          <code>article.summary</code> is piped raw into description, og:description, twitter:description and JSON-LD
+          with no handling. Median 158 chars, max 296, 40 over 155, 8 under 70 — including two stubs at 29 and 30
+          characters. Three titles carry a stray <code>&nbsp;;&nbsp;&nbsp;</code> that renders literally in the SERP;
+          one is live right now on the newest bolide article.
+        </p>
+        <p class="f-fix"><b>Fix</b>Character counters in <code>components/admin/ArticleMetadataForm.js</code> — title warning above 54, summary green band 120–155 — plus a live SERP preview and whitespace normalization on save.</p>
+      </article>
+
+      <article class="finding med">
+        <div class="f-top">
+          <span class="f-num">15</span>
+          <h3 class="f-title">Alt text exists everywhere but half of it is filenames</h3>
+          <div class="pills"><span class="pill med">Medium</span><span class="pill eff">Medium</span><span class="pill art">Articles</span></div>
+        </div>
+        <p class="f-body">
+          All 200 body images have non-empty alt, which is genuinely good. But the median is 25 characters and the worst
+          are raw filenames: <code>pano1</code>…<code>pano7</code>, <code>63718</code>, <code>LRO</code>. Root cause:
+          <code>components/admin/ImageUploadButton.js:89</code> seeds alt from <code>file.name</code> and couples it to
+          the caption string, so editors fix the caption and the alt stays frozen. 143 of 147 captioned images already
+          have good Spanish caption text sitting right there.
+        </p>
+        <p class="f-fix"><b>Fix</b>Decouple alt from the caption seed, flag alt values under 15 chars or matching the filename, and script a one-time backfill from the existing captions.</p>
+      </article>
+
+      <article class="finding med">
+        <div class="f-top">
+          <span class="f-num">16</span>
+          <h3 class="f-title">Ten weather-satellite preload tags leak into every article's head</h3>
+          <div class="pills"><span class="pill med">Medium</span><span class="pill eff">Small</span><span class="pill art">Articles</span></div>
+        </div>
+        <p class="f-body">
+          <code>tropic.ssec.wisc.edu</code>, <code>cdn.star.nesdis.noaa.gov</code>, <code>sirocco.accuweather.com</code>,
+          <code>nhc.noaa.gov</code>. Two are plain <code>http://</code> on an https page, which is mixed content.
+          These belong to <code>/weather</code> and have no business on a blog post.
+        </p>
+        <p class="f-fix"><b>Fix</b>Trace the preload source in the <code>/weather</code> component chain and scope it to that route.</p>
+      </article>
+
+      <article class="finding med">
+        <div class="f-top">
+          <span class="f-num">17</span>
+          <h3 class="f-title">Three guide editions with ~66 deep-sky objects share one URL and never reach the HTML</h3>
+          <div class="pills"><span class="pill med">Medium</span><span class="pill eff">Medium</span></div>
+        </div>
+        <p class="f-body">
+          <code>app/guides/GuideSection.js:174-184</code> switches editions with a <code>&lt;select&gt;</code>, not links,
+          and fetches entries client-side, so the prerendered <code>/guides</code> HTML contains zero object data.
+          Older editions are unreachable to any crawler, and <code>/guides</code> is absent from the sitemap.
+          This is the only original first-party data on the site.
+        </p>
+        <p class="f-fix"><b>Fix</b><code>app/guides/[slug]/page.js</code> with <code>generateStaticParams</code>, per-edition metadata, and the object table server-rendered. Replace the <code>&lt;select&gt;</code> with links. Rename the editions first — "Febrero 2026" is not a title.</p>
+      </article>
+
+      <article class="finding med">
+        <div class="f-top">
+          <span class="f-num">18</span>
+          <h3 class="f-title">A Puerto Rico astronomy non-profit with no location signal anywhere</h3>
+          <div class="pills"><span class="pill med">Medium</span><span class="pill eff">Small</span><span class="pill art">Articles</span></div>
+        </div>
+        <p class="f-body">
+          No Organization or NGO schema, no address, no <code>areaServed</code>, and exactly one occurrence of the
+          string "Puerto Rico" across all of <code>app/**/*.js</code>. The four social profile URLs already sitting in
+          <code>data/siteMetadata.js:23-26</code> are never emitted as <code>sameAs</code>. The Article
+          <code>publisher</code> is a bare <code>name: 'SAC'</code> string.
+        </p>
+        <p class="f-fix"><b>Fix</b>Add an NGO block to the root layout: name, <code>alternateName: 'SAC'</code>, absolute logo, <code>areaServed: { '@type': 'Place', name: 'Puerto Rico' }</code>, <code>addressRegion: 'PR'</code>, <code>contactPoint</code> from the two real numbers on the contact page, and all four <code>sameAs</code> profiles.</p>
+      </article>
+
+      <article class="finding med">
+        <div class="f-top">
+          <span class="f-num">19</span>
+          <h3 class="f-title">The most commercial page on the site is dated 1 January 2000</h3>
+          <div class="pills"><span class="pill med">Medium</span><span class="pill eff">Trivial</span><span class="pill art">Articles</span></div>
+        </div>
+        <p class="f-body">
+          <code>/blog/telescopios</code>, "Guía de Recomendaciones de Telescopios", is the one page with recurring
+          purchase intent and it is already in the sitewide nav. It declares itself 26 years old in
+          <code>datePublished</code> and sorts dead last on page 16 of 16.
+        </p>
+        <p class="f-fix"><b>Fix</b>Data fix in S3 via <code>updateArticle</code>, passing an explicit <code>slug: 'telescopios'</code> so the URL is preserved.</p>
+      </article>
+
+      <article class="finding med">
+        <div class="f-top">
+          <span class="f-num">20</span>
+          <h3 class="f-title">The tag taxonomy is fragmented into 39 single-article pages</h3>
+          <div class="pills"><span class="pill med">Medium</span><span class="pill eff">Medium</span></div>
+        </div>
+        <p class="f-body">
+          61 distinct tag slugs, 39 of which list exactly one article. Case duplicates reach the admin autocomplete
+          (<code>eclipse</code>/<code>Eclipse</code>, <code>saturno</code>/<code>Saturno</code>). Singular/plural splits
+          fracture real clusters: <code>meteoro</code> 10 / <code>meteoros</code> 1 / <code>meteorito</code> 2;
+          <code>luna</code> 4 / <code>lunas</code> 3; <code>jwst</code> 2 / <code>james-webb</code> 2. Two tags keep
+          their accents and become <code>/tags/astronom%C3%ADa</code>.
+        </p>
+        <p class="f-fix"><b>Fix</b>Normalize and de-accent on write in <code>lib/articles.js</code>, merge the duplicates, fold the six single-use comet designations into <code>cometa</code>, and skip tags with fewer than two articles.</p>
+      </article>
+
+      <article class="finding med">
+        <div class="f-top">
+          <span class="f-num">21</span>
+          <h3 class="f-title">The homepage has no <code>h1</code> describing the organisation</h3>
+          <div class="pills"><span class="pill med">Medium</span><span class="pill eff">Small</span></div>
+        </div>
+        <p class="f-body">
+          It emits three <code>h1</code> elements, all widget labels: "Manchas Solares", "Prominencias Solares",
+          "Fase Lunar". Nothing states what the organisation is or that it serves Puerto Rico.
+        </p>
+        <p class="f-fix"><b>Fix</b>One real <code>h1</code> in <code>app/HomeContent.js</code> naming the organisation and the island; demote the widget headings to <code>h2</code>.</p>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ============ TIER 3 ============ -->
+  <section>
+    <div class="sec-head">
+      <h2>Cleanup</h2>
+      <span class="sec-meta">Tier 3 · low severity, mostly trivial</span>
+    </div>
+
+    <div class="tscroll">
+      <table>
+        <thead><tr><th>Item</th><th>Action</th></tr></thead>
+        <tbody>
+          <tr><td>Every tag page advertises an RSS feed that 404s</td><td>No <code>app/tags/[tag]/feed.xml</code> route exists; the 62 files in <code>public/tags/</code> are gitignored and never deployed. Delete the alternate, <code>lib/generate-rss.js</code> (zero importers) and the stale tree.</td></tr>
+          <tr><td>Tag metadata is English starter-template text</td><td><code>app/tags/page.js:10</code> is literally <code>description: 'Things I blog about'</code>. Tag pages emit <code>"cometa tags - SAC"</code>. "No posts found.", "Previous" and "Next" are also untranslated on a Spanish site.</td></tr>
+          <tr><td><code>/blog/page/1</code> duplicates <code>/blog</code> byte for byte</td><td>Pre-generated, no canonical, orphaned. Redirect it.</td></tr>
+          <tr><td>Auth, verify and test pages are <code>index, follow</code></td><td><code>/auth/signin</code> has a real crawl path via the sitewide portal link. <code>/verify/[token]</code> renders member names and status. <code>app/card-test-longname/</code> is a fixture whose own comment says to delete it.</td></tr>
+          <tr><td><code>/gallery</code> renders no <code>&lt;title&gt;</code></td><td>Legacy Pages-Router page, orphaned from the nav, and currently the only URL in the sitemap. Port it or retire it.</td></tr>
+          <tr><td>Nine starter-template drafts pollute the S3 index</td><td><code>examples/deriving-ols-estimator</code>, <code>examples/the-time-machine</code> and friends. They 404 correctly but bloat the index payload and the admin autocompletes.</td></tr>
+          <tr><td>One article has zero words of prose</td><td>The Artemis II live-coverage post is a 76-character body containing only a video embed. Six more are under 150 words. Set <code>archived: true</code>.</td></tr>
+          <tr><td>All 77 index entries ship in every listing page's RSC payload</td><td>~12 KB gzip on each of 16 pages, to power a client filter that reads three fields. Grows linearly with the corpus.</td></tr>
+          <tr><td>Dead SEO subsystem still in the tree</td><td><code>layouts/PostLayout.js</code>, <code>PostSimple.js</code> and <code>AuthorLayout.js</code> are imported by nothing. Delete them once the canonical work lands.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ ALREADY RIGHT ============ -->
+  <section>
+    <div class="sec-head">
+      <h2>What is already right</h2>
+      <span class="sec-meta">Do not touch</span>
+    </div>
+    <p class="lead">
+      Worth stating plainly, because the list of problems above is long and the foundation underneath it is not the problem.
+    </p>
+
+    <div class="good-grid">
+      <div class="good-item"><span class="g-k">Rendering</span><span class="g-v">Articles are true SSR. Full prose is in the raw response before any JS runs.</span></div>
+      <div class="good-item"><span class="g-k">Indexability</span><span class="g-v"><code>index, follow</code> plus the full googlebot directive. No stray <code>X-Robots-Tag</code>. Nothing accidentally noindexed.</span></div>
+      <div class="good-item"><span class="g-k">The S3 migration</span><span class="g-v">All 77 deleted <code>.mdx</code> paths map 1:1 onto current slugs. Zero indexed URLs were broken. No redirects needed.</span></div>
+      <div class="good-item"><span class="g-k">Draft hygiene</span><span class="g-v">All 12 public call sites pass <code>includeDrafts: false</code>. Draft URLs return a genuine 404. Zero leakage.</span></div>
+      <div class="good-item"><span class="g-k">Article structure</span><span class="g-v">Exactly one <code>h1</code> per article. <code>rehype-slug</code> and <code>rehype-autolink-headings</code> both wired, with stable ids.</span></div>
+      <div class="good-item"><span class="g-k">Alt coverage</span><span class="g-v">200 of 200 body images have non-empty alt. Zero bare <code>![](…)</code> images. The gap is quality, not presence.</span></div>
+      <div class="good-item"><span class="g-k">Metadata completeness</span><span class="g-v">Zero missing summaries, zero duplicate slugs, titles or summaries. <code>images</code>, <code>imgWidth</code>, <code>imgHeight</code> on 100%.</span></div>
+      <div class="good-item"><span class="g-k">Private areas</span><span class="g-v"><code>proxy.js</code> genuinely gates <code>/admin</code> and <code>/member</code> with 3xx and 401. No crawl leak.</span></div>
+      <div class="good-item"><span class="g-k">Bundle isolation</span><span class="g-v">react-pdf, leaflet, CodeMirror and aws-sdk all stay out of the article bundle. GA uses <code>lazyOnload</code>. CSS is 16.7 KB gzip.</span></div>
+      <div class="good-item"><span class="g-k">Localization</span><span class="g-v"><code>&lt;html lang="es"&gt;</code> correct, dates rendered in Spanish with a proper <code>&lt;time datetime&gt;</code>.</span></div>
+      <div class="good-item"><span class="g-k">RSS</span><span class="g-v">All 77 articles, correct content type, <code>&lt;category&gt;</code> per tag, linked from <code>&lt;head&gt;</code>. Only the URLs inside are wrong.</span></div>
+      <div class="good-item"><span class="g-k">Tag routing</span><span class="g-v">github-slugger correctly handles <code>3i/atlas</code> and <code>c/2025-r2-swan</code>, so the single-segment route does not break.</span></div>
+    </div>
+  </section>
+
+  <!-- ============ REJECTED ============ -->
+  <section>
+    <div class="sec-head">
+      <h2>Claims that did not survive review</h2>
+      <span class="sec-meta">42 of 132 refuted</span>
+    </div>
+    <p class="lead">
+      Each finding was handed to an independent agent instructed to refute it. These are the notable ones that failed,
+      listed so nobody spends a sprint on them later.
+    </p>
+
+    <div class="rejected">
+      <div class="rej"><div class="r-claim">Relative <code>publisher.logo.url</code> invalidates the Article rich result</div><div class="r-why">Retired AMP-era requirement. Google dropped the publisher logo from Article guidance; it no longer gates the rich result.</div></div>
+      <div class="rej"><div class="r-claim">Missing <code>mainEntityOfPage</code> weakens the Article schema</div><div class="r-why">Not a required property and not used as a ranking or eligibility signal.</div></div>
+      <div class="rej"><div class="r-claim">One headline exceeds Google's 110-character limit</div><div class="r-why">Also an AMP-era rule, since removed from the spec.</div></div>
+      <div class="rej"><div class="r-claim">Articles should use <code>NewsArticle</code>, not <code>Article</code></div><div class="r-why"><code>Article</code> is valid for news. The subtype confers no advantage without Google News enrolment.</div></div>
+      <div class="rej"><div class="r-claim">Hero images under 1200px fail the schema image requirement</div><div class="r-why">Threshold misattributed; it applies to a rich-result format this site is not eligible for anyway.</div></div>
+      <div class="rej"><div class="r-claim">Skipping <code>h2</code> and jumping <code>h1</code> → <code>h3</code> hurts rankings</div><div class="r-why">Heading-weight folklore. Strict hierarchy is an accessibility concern, not a ranking factor. (Adding subheadings is still recommended above — for snippets and readers, not for hierarchy.)</div></div>
+      <div class="rej"><div class="r-claim">Two <code>h1</code> elements on one article page</div><div class="r-why">Real, but multiple <code>h1</code> has not been a ranking issue since HTML5 sectioning.</div></div>
+      <div class="rej"><div class="r-claim">Missing <code>WebSite</code> schema with <code>SearchAction</code></div><div class="r-why">Google removed the sitelinks search box feature and its documentation.</div></div>
+      <div class="rej"><div class="r-claim"><code>site.webmanifest</code> has empty names and 404 icon paths</div><div class="r-why">Accurate, but Google Search does not parse the web app manifest. Worth fixing; not SEO.</div></div>
+      <div class="rej"><div class="r-claim">The Pages-Router 404 declares <code>lang="en"</code></div><div class="r-why">Half fabricated — the App Router 404 does not. The surviving half targets a non-indexable surface.</div></div>
+      <div class="rej"><div class="r-claim">16 articles render raw unoptimized <code>&lt;img&gt;</code> tags</div><div class="r-why">The two code quotes were accurate but the causal chain joining them was wrong. The real image problem is #11 above.</div></div>
+      <div class="rej"><div class="r-claim">The events page lacks Event schema</div><div class="r-why">The page is deliberately disabled and contains no events. Nothing to mark up. Revisit if events return — see the strategy note below.</div></div>
+    </div>
+  </section>
+
+  <!-- ============ STRATEGY ============ -->
+  <section>
+    <div class="sec-head">
+      <h2>Where the real upside is</h2>
+      <span class="sec-meta">Content strategy</span>
+    </div>
+    <p class="lead">
+      Grounded in the actual corpus. The organisation's one defensible advantage is being the local astronomical
+      authority for Puerto Rico. 24 of 77 titles already carry that signal and they correlate with the strongest pages.
+      The other 54 compete head-on with NASA and global wire copy, and lose.
+    </p>
+
+    <div class="stack">
+
+      <div class="strat">
+        <h3>1. Replace disposable event news with evergreen hubs</h3>
+        <p>
+          The corpus covers the same events every cycle — eclipses, Perseidas, visible launches, comets — and each post
+          ranks for two weeks then dies. Build four hubs that get <em>updated</em> rather than replaced:
+          <em>Eclipses visibles desde Puerto Rico</em>, <em>Lluvias de meteoros: calendario para Puerto Rico</em>,
+          <em>Lanzamientos visibles desde la Isla</em>, <em>Cometas visibles ahora</em>. Every news post links up to its
+          hub; the hub links down to the current event. That turns 40+ isolated items into four pages that accumulate
+          authority year over year — and it solves the internal-linking problem at the same time.
+        </p>
+      </div>
+
+      <div class="strat">
+        <h3>2. Own "¿qué fue esa luz en el cielo?"</h3>
+        <p>
+          SAC is already the de facto bolide reporting body for the island, and these events produce enormous
+          instantaneous local search spikes in colloquial Spanish. Your own copy shows it:
+        </p>
+        <p class="quote">
+          "Se vio enorme, mostrando una cola y un color verdoso", coincidieron varios observadores al reportar el
+          avistamiento a la Sociedad de Astronomía del Caribe.
+        </p>
+        <p>
+          Build a permanent <em>Reporta un bólido o avistamiento</em> page with a report form, plus an annual roundup.
+          Then title future posts the way people type: "¿Qué fue la luz verde en el cielo de Puerto Rico anoche?"
+          rather than "Brillante meteoro avistado".
+        </p>
+      </div>
+
+      <div class="strat">
+        <h3>3. Rebuild the telescope guide as the commercial anchor</h3>
+        <p>
+          It is the one page with recurring purchase intent, it is already in the sitewide nav, and it is currently
+          dated 2000 and buried on page 16. Fix the date, expand it, retitle toward the query
+          ("Qué telescopio comprar: guía para principiantes en Puerto Rico"), and spin off satellites —
+          telescopio para niños, binoculares para astronomía, dónde comprar en PR. Link every "cómo verlo" news post
+          to it. Highest-yield single page on the site, currently the hardest to reach.
+        </p>
+      </div>
+
+      <div class="strat">
+        <h3>4. Standardize a local answer block on every viewing article</h3>
+        <p>
+          The articles that already win have a place name in the title: "Desde Isabela, PR: Espectacular foto del
+          Cometa 220P / McNaught". Add three fixed subheadings to every observable-event post:
+          <em>¿A qué hora se verá desde Puerto Rico?</em> (with AST times), <em>¿Hacia dónde mirar?</em>,
+          <em>¿Necesito telescopio?</em> This fixes the missing-subheadings finding, creates featured-snippet targets,
+          and reinforces the geographic signal in one move.
+        </p>
+      </div>
+
+      <div class="strat">
+        <h3>5. Ship the observation guides as real pages</h3>
+        <p>
+          The three editions in S3 hold roughly 66 deep-sky objects with magnitudes, difficulty ratings, equipment notes
+          and optimal observing times. That is first-party, structured, evergreen, locally-scoped data no wire service
+          can duplicate — and today none of it reaches the server HTML. Per-edition URLs with per-object anchors turn it
+          into the site's most durable ranking asset.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ MEASUREMENT ============ -->
+  <section>
+    <div class="sec-head">
+      <h2>Measurement</h2>
+      <span class="sec-meta">Set up before, not after</span>
+    </div>
+
+    <div class="tscroll">
+      <table>
+        <thead><tr><th>Item</th><th>Configuration</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Search Console, primary</td><td><strong>Domain property</strong> for <code>sociedadastronomia.com</code>, DNS TXT verification</td><td>Covers apex, www and every subdomain in one property. A www-only URL-prefix property would miss the apex redirect data.</td></tr>
+          <tr><td>Search Console, secondary</td><td><strong>URL-prefix property</strong> for <code>https://sac-website.vercel.app/</code></td><td>Temporary. Proves the duplicate host is being crawled today, and proves the 308 killed it afterward. Delete when impressions reach zero.</td></tr>
+          <tr><td>First check of all</td><td>URL Inspection → Test Live URL on one article</td><td>The single fact that decides whether the 429 firewall is a catastrophe or a nuisance.</td></tr>
+          <tr><td>Sitemap submission</td><td>Submit <em>after</em> <code>app/sitemap.js</code> ships</td><td>Submitting the current one-URL file would be worse than nothing.</td></tr>
+          <tr><td>Rich Results Test</td><td>Three articles, after the JSON-LD date and URL fix</td><td>Confirms the date order and that schema <code>url</code> matches the crawled URL.</td></tr>
+          <tr><td>PageSpeed Insights</td><td>One image-led article and <code>/blog</code>, before and after</td><td>The 0.1233 CLS and the <code>w=3840</code> LCP are both directly measurable.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Numbers to beat</h3>
+    <div class="tscroll">
+      <table>
+        <thead><tr><th>Metric</th><th>Today</th><th>Target</th></tr></thead>
+        <tbody>
+          <tr><td>URLs in sitemap</td><td class="num">1</td><td class="num">155+</td></tr>
+          <tr><td>Articles indexed</td><td class="num">unknown, likely well under 77</td><td class="num">77</td></tr>
+          <tr><td>"Duplicate, Google chose a different canonical"</td><td class="num">expect a spike once vercel.app is found</td><td class="num">0</td></tr>
+          <tr><td>Impressions on the vercel.app property</td><td class="num">non-zero</td><td class="num">0 within 60 days of the 308</td></tr>
+          <tr><td>Crawl depth to a new article</td><td class="num">up to 16 hops</td><td class="num">1, via the sitemap</td></tr>
+          <tr><td>Articles with zero impressions in 28 days</td><td class="num">expect roughly the back half</td><td class="num">under 10</td></tr>
+          <tr><td>CLS on article pages</td><td class="num">0.1233</td><td class="num">0</td></tr>
+          <tr><td>Soft-404 report</td><td class="num">expect <code>/tags/*</code>, <code>/blog/page/*</code>, <code>/media/*</code></td><td class="num">0</td></tr>
+          <tr><td><code>/tags/cometa</code> article count</td><td class="num">16, missing all 2026 posts</td><td class="num">20+</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p style="margin-top:22px">
+      <strong>Sequencing:</strong> do not judge any content change until the canonical, the sitemap and the host redirect
+      are live and Google has recrawled. Until then impression data is split across two hosts with no canonical, so
+      per-page numbers are not comparable. Expect four to eight weeks between the Tier 1 fixes and a readable signal.
+    </p>
+  </section>
+
+  <footer>
+    Audit method: six parallel dimension audits (metadata, crawlability, structured data, article on-page, performance,
+    information architecture) over the repository and the live site, followed by an independent adversarial refutation
+    pass on each of the 132 raw findings. 61 survived. Live-site claims re-verified by hand on 23 Aug 2026 against
+    www.sociedadastronomia.com.
+  </footer>
+
+</div>

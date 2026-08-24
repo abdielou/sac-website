@@ -6,7 +6,11 @@ const siteMetadata = {
   description:
     'Una organización sin fines de lucro compuesta por profesionales, estudiantes y personas de la comunidad que comparten el interés y la pasión por la Astronomía.',
   language: 'es-pr',
-  siteUrl: 'https://sac-website.vercel.app/',
+  // Canonical production origin. No trailing slash: it is concatenated in many
+  // places, and a trailing slash produces `https://host//path`. lib/seo.js has a
+  // guard, and test/seo/site-url.test.js asserts the shape.
+  siteUrl: 'https://www.sociedadastronomia.com',
+  previewHost: 'sac-website.vercel.app',
   siteRepo: 'https://github.com/abdielou/sac-website',
   siteLogoLight: '/static/images/sac-main-logo.png',
   siteLogoShortLight: '/static/images/sac-main-short-logo.png',

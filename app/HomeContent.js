@@ -19,6 +19,9 @@ export default function HomeContent({ posts }) {
       <div className="divide-y divide-gray-200 dark:divide-gray-700">
         {/* Site Description */}
         <div className="pt-6 pb-8 space-y-2 md:space-y-5">
+          <h1 className="text-3xl font-extrabold leading-9 tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl sm:leading-10 md:text-5xl md:leading-14">
+            Sociedad de Astronomía del Caribe en Puerto Rico
+          </h1>
           <p className="text-lg leading-7 text-gray-500 dark:text-gray-400">
             {siteMetadata.description}
           </p>
@@ -27,10 +30,11 @@ export default function HomeContent({ posts }) {
         <div className="flex flex-wrap">
           {/* Blog list */}
           <ul className="w-full md:w-2/3 xl:w-3/4 divide-y divide-gray-200 dark:divide-gray-700">
-            {!posts.length && 'No posts found.'}
-            {posts.slice(0, MAX_DISPLAY).map((frontMatter) => (
+            {!posts.length && 'No se encontraron artículos.'}
+            {posts.slice(0, MAX_DISPLAY).map((frontMatter, idx) => (
               <li key={frontMatter.slug} className="py-12">
-                <ArticleItem {...frontMatter} />
+                {/* The first thumbnail is the LCP element of the home page. */}
+                <ArticleItem {...frontMatter} isFirst={idx === 0} />
               </li>
             ))}
           </ul>

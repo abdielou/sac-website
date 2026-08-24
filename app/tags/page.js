@@ -3,12 +3,14 @@ import LayoutWrapper from '@/components/LayoutWrapper'
 import Link from '@/components/Link'
 import Tag from '@/components/Tag'
 import kebabCase from '@/lib/utils/kebabCase'
-import siteMetadata from '@/data/siteMetadata'
+import { pageMetadata } from '@/lib/seo'
 
-export const metadata = {
-  title: `Tags - ${siteMetadata.author}`,
-  description: 'Things I blog about',
-}
+export const metadata = pageMetadata({
+  title: 'Temas',
+  description:
+    'Explora los temas del blog de la Sociedad de Astronomía del Caribe: eclipses, observación del cielo, astrofotografía y eventos astronómicos.',
+  path: '/tags',
+})
 
 export const revalidate = 3600
 
@@ -36,11 +38,11 @@ export default async function TagsPage() {
       <div className="flex flex-col items-start justify-start divide-y divide-gray-200 dark:divide-gray-700 md:justify-center md:items-center md:divide-y-0 md:flex-row md:space-x-6 md:mt-24">
         <div className="pt-6 pb-8 space-x-2 md:space-y-5">
           <h1 className="text-3xl font-extrabold leading-9 tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl sm:leading-10 md:text-6xl md:leading-14 md:border-r-2 md:px-6">
-            Tags
+            Temas
           </h1>
         </div>
         <div className="flex flex-wrap max-w-lg">
-          {Object.keys(tagCounts).length === 0 && 'No tags found.'}
+          {Object.keys(tagCounts).length === 0 && 'No hay temas disponibles.'}
           {sortedTags.map((t) => {
             return (
               <div key={t} className="mt-2 mb-2 mr-5">

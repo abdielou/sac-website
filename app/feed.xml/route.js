@@ -1,20 +1,24 @@
 import { listArticles } from '@/lib/articles'
 import siteMetadata from '@/data/siteMetadata'
+import { absUrl, articleUrl, safeModified, toIso } from '@/lib/seo'
 import { escape } from '@/lib/utils/htmlEscaper'
 
 export const revalidate = 3600
 
-const generateRssItem = (post) => `
+const generateRssItem = (post) => {
+  const url = articleUrl(post.slug)
+  return `
   <item>
-    <guid>${siteMetadata.siteUrl}/blog/${post.slug}</guid>
+    <guid>${url}</guid>
     <title>${escape(post.title)}</title>
-    <link>${siteMetadata.siteUrl}/blog/${post.slug}</link>
+    <link>${url}</link>
     ${post.summary ? `<description>${escape(post.summary)}</description>` : ''}
-    <pubDate>${new Date(post.date).toUTCString()}</pubDate>
+    <pubDate>${new Date(toIso(post.date)).toUTCString()}</pubDate>
     <author>${siteMetadata.email} (${siteMetadata.author})</author>
     ${post.tags && Array.isArray(post.tags) ? post.tags.map((t) => `<category>${escape(t)}</category>`).join('') : ''}
   </item>
 `
+}
 
 export async function GET() {
   try {
@@ -22,22 +26,27 @@ export async function GET() {
     const result = await listArticles({ includeDrafts: false, pageSize: 9999 })
     const articles = result.articles || []
 
-    // Determine lastBuildDate
-    const lastBuildDate =
-      articles.length > 0 ? new Date(articles[0].date).toUTCString() : new Date().toUTCString()
+    // lastBuildDate is the latest content date in the channel. Taking the max
+    // over every item, rather than trusting articles[0], keeps it from ever
+    // preceding a pubDate even if the index is not sorted newest-first.
+    const latest = articles.reduce(
+      (max, post) => Math.max(max, new Date(safeModified(post.date, post.lastmod)).getTime()),
+      0
+    )
+    const lastBuildDate = new Date(latest || Date.now()).toUTCString()
 
     // Generate RSS XML
     const rssXml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>${escape(siteMetadata.title)}</title>
-    <link>${siteMetadata.siteUrl}/blog</link>
+    <link>${absUrl('/blog')}</link>
     <description>${escape(siteMetadata.description)}</description>
     <language>${siteMetadata.language}</language>
     <managingEditor>${siteMetadata.email} (${siteMetadata.author})</managingEditor>
     <webMaster>${siteMetadata.email} (${siteMetadata.author})</webMaster>
     <lastBuildDate>${lastBuildDate}</lastBuildDate>
-    <atom:link href="${siteMetadata.siteUrl}/feed.xml" rel="self" type="application/rss+xml"/>
+    <atom:link href="${absUrl('/feed.xml')}" rel="self" type="application/rss+xml"/>
     ${articles.map(generateRssItem).join('')}
   </channel>
 </rss>`

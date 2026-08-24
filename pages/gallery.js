@@ -287,7 +287,10 @@ export default function Gallery() {
           </div>
         </div>
       )}
-      <PageSEO title="Galería" description="Galería de imágenes" />
+      <PageSEO
+        title="Galería de Fotos Astronómicas"
+        description="Fotografías astronómicas de la Sociedad de Astronomía del Caribe: eclipses, planetas, cometas y objetos de cielo profundo captados desde Puerto Rico."
+      />
       <div className="divide-y divide-gray-200 dark:divide-gray-700">
         <div className="pt-6 pb-8 space-y-2 md:space-y-5 text-center">
           <h1 className="text-3xl font-extrabold leading-9 tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl sm:leading-10 md:text-6xl md:leading-14">
