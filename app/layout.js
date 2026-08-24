@@ -13,13 +13,21 @@ export const metadata = {
     template: `%s | ${siteMetadata.headerTitleAbbrev}`,
   },
   description: siteMetadata.description,
-  // Search Console ownership. Set NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION to the
-  // token from the "HTML tag" verification method. This is the route to take
-  // when you cannot add the DNS TXT record a domain property needs: it verifies
-  // a URL-prefix property instead, and the tag is served on every page.
-  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
-    ? { verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION } }
-    : {}),
+  // Search Console ownership for the URL-prefix property
+  // https://www.sociedadastronomia.com/. We do not control DNS, so the Domain
+  // property type (the only one needing a TXT record) is not available.
+  //
+  // The token is not a secret: it is public in the served HTML by design. It is
+  // defaulted here so verification survives a deploy with no env config, and can
+  // still be overridden per environment.
+  //
+  // Google Analytics verification does NOT work on this site: gtag is injected
+  // client-side by next/script, and Google's verifier only reads raw HTML.
+  verification: {
+    google:
+      process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ||
+      'AgO6pmVTwcmEmrfB_ujZFq3oOQvU2iMXHwalfmlS1EU',
+  },
   // No `alternates.canonical` here on purpose. Root metadata is inherited by
   // every descendant segment that does not declare its own, so a canonical set
   // here would make every such route claim the home page as its canonical.
