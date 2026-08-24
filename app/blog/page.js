@@ -2,7 +2,7 @@ import { listArticles } from '@/lib/articles'
 import LayoutWrapper from '@/components/LayoutWrapper'
 import ListLayout from '@/layouts/ListLayout'
 import { pageMetadata } from '@/lib/seo'
-import { POSTS_PER_PAGE } from '@/lib/blog-pagination'
+import { POSTS_PER_PAGE, listingTitle, toSearchIndex } from '@/lib/blog-pagination'
 
 // Re-exported for existing importers. The value lives in lib/blog-pagination.js.
 export { POSTS_PER_PAGE }
@@ -40,11 +40,11 @@ export default async function BlogPage() {
   return (
     <LayoutWrapper>
       <ListLayout
-        posts={allResult.articles}
+        posts={toSearchIndex(allResult.articles)}
         initialDisplayPosts={paginatedResult.articles}
         pagination={pagination}
         paginated
-        title="Artículos"
+        title={listingTitle(1)}
       />
     </LayoutWrapper>
   )

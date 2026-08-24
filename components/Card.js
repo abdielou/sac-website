@@ -2,8 +2,15 @@ import Image from './Image'
 import Link from './Link'
 
 const OptimizedImage = ({ alt, imageOptimize, ...rest }) =>
-  /* eslint-disable-next-line @next/next/no-img-element */
-  imageOptimize ? <Image alt={alt} {...rest} /> : <img alt={alt} {...rest} />
+  imageOptimize ? (
+    <Image alt={alt} {...rest} />
+  ) : (
+    // Raw <img> for remote hosts that cannot be optimised. Without loading="lazy"
+    // Next preloads every one of these, which put ten <link rel=preload> tags for
+    // weather-satellite images into the head of /weather.
+    /* eslint-disable-next-line @next/next/no-img-element */
+    <img alt={alt} loading="lazy" decoding="async" {...rest} />
+  )
 
 const Card = ({ title, imgSrc, href, width = 1088, height = 612, imageOptimize = true }) => {
   const displayTitle = title

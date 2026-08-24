@@ -113,6 +113,19 @@ export const POST = auth(async function POST(req) {
       return NextResponse.json({ error: 'El titulo es requerido' }, { status: 400 })
     }
 
+    // A published article must carry at least one tag. The editor enforces this
+    // too, but that gate is client-side and a direct API call bypasses it.
+    // 13 untagged articles were published this way, orphaning them from every
+    // tag hub. Drafts may stay untagged.
+    const isPublished = body.draft === false
+    const hasTags = Array.isArray(body.tags) && body.tags.some((t) => String(t).trim())
+    if (isPublished && !hasTags) {
+      return NextResponse.json(
+        { error: 'Un articulo publicado requiere al menos una etiqueta' },
+        { status: 400 }
+      )
+    }
+
     // Default date to now if not provided
     const data = {
       title: body.title.trim(),

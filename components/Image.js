@@ -34,9 +34,12 @@ export function resolveSizes({ sizes, width, fill } = {}) {
 
 const Image = ({ width, height, fill, sizes, priority = false, loading, ...rest }) => {
   if (!fill && (!width || !height)) {
-    // MDX content often uses <Image> without dimensions — fall back to native img
+    // MDX content often uses <Image> without dimensions — fall back to native img.
+    // `priority` must still win here: many article bodies declare no dimensions,
+    // so this branch renders the LCP image, and hardcoding lazy would defer it.
+    const fallbackLoading = priority ? 'eager' : loading || 'lazy'
     // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
-    return <img loading={loading || 'lazy'} decoding="async" {...rest} />
+    return <img loading={fallbackLoading} decoding="async" {...rest} />
   }
   // next/image warns when `priority` and `loading` are both set, so only one wins.
   const loadingProps = priority || !loading ? {} : { loading }

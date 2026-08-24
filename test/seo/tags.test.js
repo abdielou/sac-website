@@ -169,8 +169,37 @@ describe('TagPage soft 404', () => {
   it('passes the Spanish page title down to ListLayout', async () => {
     listArticles.mockResolvedValue({ articles: [article('a', ['Eclipse'])] })
     const element = await TagPage({ params: Promise.resolve({ tag: 'eclipse' }) })
-    const list = element.props.children
+    const list = findByProp(element, 'posts')
+    expect(list).not.toBeNull()
     expect(list.props.title).toBe('Artículos sobre Eclipse')
     expect(list.props.posts).toHaveLength(1)
   })
+
+  it('renders a breadcrumb trail back to the tag index', async () => {
+    listArticles.mockResolvedValue({ articles: [article('a', ['Eclipse'])] })
+    const element = await TagPage({ params: Promise.resolve({ tag: 'eclipse' }) })
+    const nav = findByProp(element, 'aria-label')
+    expect(nav).not.toBeNull()
+    expect(nav.props['aria-label']).toBe('Ruta de navegación')
+  })
 })
+
+/**
+ * Find the first element in a React tree carrying a given prop.
+ *
+ * Asserting on a fixed child path broke the moment a breadcrumb and a JSON-LD
+ * script were added around ListLayout, which told us nothing useful about the
+ * behaviour under test.
+ */
+function findByProp(node, prop) {
+  if (!node || typeof node !== 'object') return null
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const hit = findByProp(child, prop)
+      if (hit) return hit
+    }
+    return null
+  }
+  if (node.props && Object.prototype.hasOwnProperty.call(node.props, prop)) return node
+  return node.props ? findByProp(node.props.children, prop) : null
+}

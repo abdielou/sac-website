@@ -5,7 +5,7 @@ import LayoutWrapper from '@/components/LayoutWrapper'
 import ListLayout from '@/layouts/ListLayout'
 import { parsePageParam } from '@/components/Pagination'
 import { pageMetadata, noindexMetadata } from '@/lib/seo'
-import { POSTS_PER_PAGE } from '@/lib/blog-pagination'
+import { POSTS_PER_PAGE, listingTitle, toSearchIndex } from '@/lib/blog-pagination'
 
 const BLOG_DESCRIPTION =
   'Artículos, noticias y guías de astronomía de la Sociedad de Astronomía del Caribe, Puerto Rico.'
@@ -99,11 +99,11 @@ export default async function BlogPageN({ params }) {
   return (
     <LayoutWrapper>
       <ListLayout
-        posts={allResult.articles}
+        posts={toSearchIndex(allResult.articles)}
         initialDisplayPosts={articles}
         pagination={pagination}
         paginated
-        title="Artículos"
+        title={listingTitle(pageNumber)}
       />
     </LayoutWrapper>
   )

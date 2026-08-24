@@ -26,16 +26,16 @@ const projectsData = [
   },
   {
     title: 'Radar Doppler',
-    imgSrc: 'http://sirocco.accuweather.com/nxssa_r1_640x480d/r1/inxr1TJUAa.gif',
-    href: 'http://sirocco.accuweather.com/nxssa_r1_640x480d/r1/inxr1TJUAa.gif',
+    imgSrc: 'https://sirocco.accuweather.com/nxssa_r1_640x480d/r1/inxr1TJUAa.gif',
+    href: 'https://sirocco.accuweather.com/nxssa_r1_640x480d/r1/inxr1TJUAa.gif',
     width: '640',
     height: '480',
     imageOptimize: false,
   },
   {
     title: 'Nubosidad y lluvia',
-    imgSrc: 'http://sirocco.accuweather.com/sat_mosaic_640x480_public/rs/isarpr_.gif',
-    href: 'http://sirocco.accuweather.com/sat_mosaic_640x480_public/rs/isarpr_.gif',
+    imgSrc: 'https://sirocco.accuweather.com/sat_mosaic_640x480_public/rs/isarpr_.gif',
+    href: 'https://sirocco.accuweather.com/sat_mosaic_640x480_public/rs/isarpr_.gif',
     width: '640',
     height: '480',
     imageOptimize: false,
@@ -75,8 +75,8 @@ const projectsData = [
   },
   {
     title: 'Polvo del Sahara / Aerosoles / Bruma',
-    imgSrc: 'http://tropic.ssec.wisc.edu/real-time/sal/splitE.jpg',
-    href: 'http://tropic.ssec.wisc.edu/real-time/sal/splitE.jpg',
+    imgSrc: 'https://tropic.ssec.wisc.edu/real-time/sal/splitE.jpg',
+    href: 'https://tropic.ssec.wisc.edu/real-time/sal/splitE.jpg',
     width: '1062',
     height: '407',
     imageOptimize: false,
@@ -85,8 +85,7 @@ const projectsData = [
     title: 'GOES East',
     imgSrc:
       'https://cdn.star.nesdis.noaa.gov//GOES16/ABI/SECTOR/TAW/GEOCOLOR/GOES16-TAW-GEOCOLOR-900x540.gif',
-    href:
-      'https://cdn.star.nesdis.noaa.gov//GOES16/ABI/SECTOR/TAW/GEOCOLOR/GOES16-TAW-GEOCOLOR-900x540.gif',
+    href: 'https://cdn.star.nesdis.noaa.gov//GOES16/ABI/SECTOR/TAW/GEOCOLOR/GOES16-TAW-GEOCOLOR-900x540.gif',
     width: '900',
     height: '540',
     imageOptimize: false,
@@ -94,23 +93,21 @@ const projectsData = [
   {
     title: 'Red Sísmica de Puerto Rico',
     imgSrc: '/static/images/rspr.png',
-    href: 'http://redsismica.uprm.edu/Spanish/',
+    href: 'https://redsismica.uprm.edu/Spanish/',
     width: '900',
     height: '540',
   },
   {
     title: 'Servicio Geológico de E.U.',
     imgSrc: '/static/images/usgspr.png',
-    href:
-      'https://earthquake.usgs.gov/earthquakes/map/?extent=15.89794,-69.4281&extent=20.40127,-64.15466&listOnlyShown=true',
+    href: 'https://earthquake.usgs.gov/earthquakes/map/?extent=15.89794,-69.4281&extent=20.40127,-64.15466&listOnlyShown=true',
     width: '900',
     height: '540',
   },
   {
     title: 'Enlace 2  Servicio Geológico',
     imgSrc: '/static/images/usgsusa.png',
-    href:
-      'https://earthquake.usgs.gov/earthquakes/map/?extent=3.68886,-137.19727&extent=61.98027,-52.82227',
+    href: 'https://earthquake.usgs.gov/earthquakes/map/?extent=3.68886,-137.19727&extent=61.98027,-52.82227',
     width: '900',
     height: '540',
   },

@@ -15,8 +15,11 @@ export const metadata = pageMetadata({
 
 export default async function AboutPage() {
   const about = await getFileBySlug('authors', ['default'])
-  const authors = await Promise.all(BOARD.map((slug) => getFileBySlug('authors', [slug])))
-  const authors_2021 = await Promise.all(BOARD_2021.map((slug) => getFileBySlug('authors', [slug])))
+  // The slug is carried alongside the file so each profile card can link to its
+  // /authors/<slug> page. getFileBySlug does not return it.
+  const withSlug = async (slug) => ({ ...(await getFileBySlug('authors', [slug])), slug })
+  const authors = await Promise.all(BOARD.map(withSlug))
+  const authors_2021 = await Promise.all(BOARD_2021.map(withSlug))
 
   return (
     <LayoutWrapper>

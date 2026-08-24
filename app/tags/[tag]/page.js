@@ -2,9 +2,10 @@ import { cache } from 'react'
 import { notFound } from 'next/navigation'
 import { listArticles } from '@/lib/articles'
 import LayoutWrapper from '@/components/LayoutWrapper'
+import Link from '@/components/Link'
 import ListLayout from '@/layouts/ListLayout'
 import kebabCase from '@/lib/utils/kebabCase'
-import { pageMetadata, noindexMetadata } from '@/lib/seo'
+import { pageMetadata, noindexMetadata, breadcrumbSchema, jsonLdScript } from '@/lib/seo'
 
 export const dynamicParams = true
 export const revalidate = 3600
@@ -100,9 +101,41 @@ export default async function TagPage({ params }) {
   // An arbitrary slug used to render an empty list with HTTP 200: a soft 404.
   if (filteredPosts.length === 0) notFound()
 
+  // Tag hubs sit two levels deep and previously had no upward link at all: /tags
+  // is not in the nav, so a crawler landing here had no route back to the index.
+  const crumbs = [
+    { name: 'Inicio', path: '/' },
+    { name: 'Temas', path: '/tags' },
+    { name: tagDisplayTitle(tag), path: `/tags/${tag}` },
+  ]
+
   return (
-    <LayoutWrapper>
-      <ListLayout posts={filteredPosts} title={tagPageTitle(tag)} />
-    </LayoutWrapper>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbSchema(crumbs)) }}
+      />
+      <LayoutWrapper>
+        <nav aria-label="Ruta de navegación" className="pt-6 text-sm text-gray-500">
+          <ol className="flex flex-wrap gap-2">
+            {crumbs.map((crumb, i) => (
+              <li key={crumb.path} className="flex gap-2">
+                {i < crumbs.length - 1 ? (
+                  <>
+                    <Link href={crumb.path} className="hover:underline">
+                      {crumb.name}
+                    </Link>
+                    <span aria-hidden="true">/</span>
+                  </>
+                ) : (
+                  <span aria-current="page">{crumb.name}</span>
+                )}
+              </li>
+            ))}
+          </ol>
+        </nav>
+        <ListLayout posts={filteredPosts} title={tagPageTitle(tag)} />
+      </LayoutWrapper>
+    </>
   )
 }

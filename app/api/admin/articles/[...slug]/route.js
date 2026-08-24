@@ -84,6 +84,10 @@ export const PUT = auth(async function PUT(req, { params }) {
     if (error.message?.includes('not found')) {
       return NextResponse.json({ error: 'Articulo no encontrado' }, { status: 404 })
     }
+    // Validation failure from assertPublishable: the editor's fault, not ours.
+    if (error.message?.includes('al menos una etiqueta')) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
     console.error('Error updating article:', error)
     return NextResponse.json(
       { error: 'Error interno del servidor', details: error.message },

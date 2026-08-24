@@ -8,6 +8,7 @@ import readingTime from 'reading-time'
 import kebabCase from '@/lib/utils/kebabCase'
 import {
   ORGANIZATION_ID,
+  absUrl,
   absoluteImages,
   articleUrl,
   breadcrumbSchema,
@@ -17,6 +18,7 @@ import {
   safeModified,
   toIso,
 } from '@/lib/seo'
+import { markFirstImagePriority } from '@/lib/blog-pagination'
 
 export const RELATED_ARTICLE_LIMIT = 4
 
@@ -214,6 +216,12 @@ export default async function PostPage({ params }) {
     url: articleUrl(slugStr),
     author: authorDetails.map((author) => {
       const node = { '@type': 'Person', name: author.name }
+      // Point at the author's profile page so the byline resolves to a real
+      // entity. 'default' is the organization itself, which has no person page.
+      if (author.slug && author.slug !== 'default') {
+        node.url = absUrl(`/authors/${author.slug}`)
+        node['@id'] = `${absUrl(`/authors/${author.slug}`)}#person`
+      }
       if (author.twitter) node.sameAs = [author.twitter]
       return node
     }),
@@ -242,7 +250,7 @@ export default async function PostPage({ params }) {
       />
       <LayoutWrapper>
         <BlogPost
-          source={article.content}
+          source={markFirstImagePriority(article.content)}
           toc={toc}
           frontMatter={frontMatter}
           authorDetails={authorDetails}
