@@ -10,14 +10,17 @@
  *   node scripts/seo/fix-article-data.mjs --tags --apply     # actually write
  *   node scripts/seo/fix-article-data.mjs --all --apply      # everything
  *
- * Fixes, each independently selectable:
+ * Fixes, each independently selectable. --all runs the first four plus
+ * --drop-examples; the two marked OPT-IN are excluded from it by decision.
  *   --tags            backfill tags on published articles that have none
  *   --tag-case        collapse tag case variants (Eclipse -> eclipse, Saturno -> saturno)
  *   --titles          strip stray ' ; ' and doubled spaces from titles
  *   --lastmod         expand bare-date lastmod to ISO and clamp it to >= date
- *   --dates           correct the telescope guide's placeholder 2000-01-01 date
- *   --archive-stubs   archive published articles with no prose at all
  *   --drop-examples   delete the starter-template example drafts
+ *   --dates           OPT-IN. The telescope guide's 2000-01-01 date. Declined:
+ *                     the PO considers it fine as it stands.
+ *   --archive-stubs   OPT-IN. Archive published articles with no prose. Declined:
+ *                     the Artemis II live-coverage post stays published.
  *
  * Writes go straight to S3 rather than through lib/articles.js updateArticle(),
  * because that helper unconditionally stamps lastmod = now. For a metadata
@@ -56,7 +59,17 @@ const s3 = new AWS.S3({
 const argv = process.argv.slice(2)
 const APPLY = argv.includes('--apply')
 const ALL = argv.includes('--all')
-const want = (flag) => ALL || argv.includes(flag)
+
+/**
+ * Reviewed and declined by the PO on 2026-08-24, so --all must not sweep them up.
+ * Both still run if named explicitly, should that decision ever change.
+ *
+ *   --dates          the telescope guide's 2000-01-01 date is fine as it stands
+ *   --archive-stubs  the Artemis II live-coverage post stays published
+ */
+const EXCLUDED_FROM_ALL = new Set(['--dates', '--archive-stubs'])
+
+const want = (flag) => (ALL && !EXCLUDED_FROM_ALL.has(flag)) || argv.includes(flag)
 
 const KEY = (slug) => `articles/${slug}.json`
 const INDEX_KEY = 'articles/index.json'
