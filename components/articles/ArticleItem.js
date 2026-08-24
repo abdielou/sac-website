@@ -3,7 +3,29 @@ import Link from '@/components/Link'
 import Tag from '@/components/Tag'
 import formatDate from '@/lib/utils/formatDate'
 
-const ArticleItem = ({ date, slug, title, tags, summary, images, imgWidth, imgHeight }) => (
+/**
+ * The thumbnail sits in one of three grid columns inside SectionContainer:
+ * full width below the `sm` breakpoint, about a third of 768px up to `xl`, and
+ * about a third of 1024px from `xl`.
+ */
+export const THUMBNAIL_SIZES = '(max-width: 640px) 100vw, (min-width: 1280px) 341px, 256px'
+
+/**
+ * @param {boolean} isFirst The first item on /blog and /blog/page/N is the LCP
+ *   element of the hub pages Google crawls to reach the articles, so it must be
+ *   fetched eagerly instead of lazily. Every other item stays lazy.
+ */
+const ArticleItem = ({
+  date,
+  slug,
+  title,
+  tags,
+  summary,
+  images,
+  imgWidth,
+  imgHeight,
+  isFirst = false,
+}) => (
   <article>
     <div className="grid sm:grid-cols-3">
       <div className="">
@@ -15,6 +37,9 @@ const ArticleItem = ({ date, slug, title, tags, summary, images, imgWidth, imgHe
               alt={title}
               width={imgWidth}
               height={imgHeight}
+              sizes={THUMBNAIL_SIZES}
+              priority={isFirst}
+              fetchPriority={isFirst ? 'high' : undefined}
             />
           </Link>
         )}

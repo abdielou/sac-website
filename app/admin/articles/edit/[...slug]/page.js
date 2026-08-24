@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useArticleEditor } from '@/lib/hooks/useArticleEditor'
-import ArticleMetadataForm from '@/components/admin/ArticleMetadataForm'
+import ArticleMetadataForm, { validateForPublish } from '@/components/admin/ArticleMetadataForm'
 import ArticleEditor from '@/components/admin/ArticleEditor'
 import ArticlePreview from '@/components/admin/ArticlePreview'
 import ImageUploadButton from '@/components/admin/ImageUploadButton'
@@ -213,6 +213,8 @@ function EditArticleContent({
     deleteArticle,
   } = useArticleEditor(article)
 
+  const [publishError, setPublishError] = useState(null)
+
   // Unsaved changes warning
   useEffect(() => {
     function handleBeforeUnload(e) {
@@ -234,12 +236,20 @@ function EditArticleContent({
   }, [saveDraft])
 
   const handlePublish = useCallback(async () => {
+    // Drafts may stay untagged, published articles may not.
+    const validationError = validateForPublish(metadata)
+    if (validationError) {
+      setPublishError(validationError)
+      return
+    }
+
+    setPublishError(null)
     try {
       await publish()
     } catch {
       // Error is in saveError state
     }
-  }, [publish])
+  }, [metadata, publish])
 
   const handleDelete = useCallback(async () => {
     try {
@@ -347,6 +357,16 @@ function EditArticleContent({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Publish validation banner */}
+      {publishError && (
+        <div
+          role="alert"
+          className="mb-4 rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-300"
+        >
+          {publishError}
         </div>
       )}
 

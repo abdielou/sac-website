@@ -1,6 +1,11 @@
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 })
+const siteMetadata = require('./data/siteMetadata')
+
+// This file is CommonJS and lib/seo.js is ESM, so the origin is normalized here
+// too. Keep the rule identical: no trailing slash, ever.
+const ORIGIN = String(siteMetadata.siteUrl).replace(/\/+$/, '')
 
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -16,7 +21,10 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob: https:",
-      "frame-src https://giscus.app https://www.youtube.com https://platform.twitter.com https://www.facebook.com",
+      // youtube-nocookie is the host the click-to-load facade in
+      // components/ResponsiveReactPlayer.js mounts; without it the iframe is
+      // refused and the reader gets a blank box.
+      'frame-src https://giscus.app https://www.youtube.com https://www.youtube-nocookie.com https://platform.twitter.com https://www.facebook.com',
       "connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com",
     ].join('; '),
   },
@@ -51,8 +59,29 @@ module.exports = withBundleAnalyzer({
   async headers() {
     return [{ source: '/(.*)', headers: securityHeaders }]
   },
+  async redirects() {
+    return [
+      // The Vercel preview host serves a full copy of the site. Without this the
+      // two hosts compete for the same content in the index. 308 keeps the
+      // method and tells crawlers the move is permanent.
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: siteMetadata.previewHost }],
+        destination: `${ORIGIN}/:path*`,
+        permanent: true,
+      },
+      // /blog/page/1 renders byte-identical output to /blog.
+      {
+        source: '/blog/page/1',
+        destination: '/blog',
+        permanent: true,
+      },
+    ]
+  },
   images: {
     minimumCacheTTL: 2678400,
+    // Without this Next negotiates WebP only and never serves AVIF.
+    formats: ['image/avif', 'image/webp'],
     remotePatterns: [
       { protocol: 'https', hostname: 'tropic.ssec.wisc.edu' },
       { protocol: 'https', hostname: 'cdn.star.nesdis.noaa.gov' },

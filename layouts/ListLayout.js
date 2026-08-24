@@ -4,16 +4,47 @@ import { useState } from 'react'
 import Pagination from '@/components/Pagination'
 import ArticleItem from '@/components/articles/ArticleItem'
 
-export default function ListLayout({ posts, title, initialDisplayPosts = [], pagination }) {
+/**
+ * Pick the posts a listing renders.
+ *
+ * A paginated view must never fall back to the whole corpus. /blog/page/999
+ * used to return HTTP 200 with an empty `initialDisplayPosts`, fall through to
+ * `filteredBlogPosts`, and render all 77 articles as a near duplicate of /blog.
+ * When `paginated` is set, an empty page renders an empty state instead.
+ *
+ * Unpaginated views, such as /tags/[tag], keep the old fallback: they pass no
+ * `initialDisplayPosts` at all and expect the full filtered list.
+ */
+export function selectDisplayPosts({
+  initialDisplayPosts = [],
+  filteredBlogPosts = [],
+  searchValue = '',
+  paginated = false,
+} = {}) {
+  if (searchValue) return filteredBlogPosts
+  if (paginated || initialDisplayPosts.length > 0) return initialDisplayPosts
+  return filteredBlogPosts
+}
+
+export default function ListLayout({
+  posts,
+  title,
+  initialDisplayPosts = [],
+  pagination,
+  paginated = Boolean(pagination),
+}) {
   const [searchValue, setSearchValue] = useState('')
   const filteredBlogPosts = posts.filter((frontMatter) => {
     const searchContent = frontMatter.title + frontMatter.summary + frontMatter.tags.join(' ')
     return searchContent.toLowerCase().includes(searchValue.toLowerCase())
   })
 
-  // If initialDisplayPosts exist, display it if no searchValue is specified
-  const displayPosts =
-    initialDisplayPosts.length > 0 && !searchValue ? initialDisplayPosts : filteredBlogPosts
+  const displayPosts = selectDisplayPosts({
+    initialDisplayPosts,
+    filteredBlogPosts,
+    searchValue,
+    paginated,
+  })
 
   return (
     <>
@@ -47,10 +78,11 @@ export default function ListLayout({ posts, title, initialDisplayPosts = [], pag
           </div>
         </div>
         <ul className="divide-y">
-          {!filteredBlogPosts.length && 'No posts found.'}
+          {!displayPosts.length && 'No se encontraron artículos.'}
           {displayPosts.map((frontMatter, idx) => (
             <div key={idx} className="py-8">
-              <ArticleItem {...frontMatter} />
+              {/* The first thumbnail is the LCP element of every listing page. */}
+              <ArticleItem {...frontMatter} isFirst={idx === 0} />
             </div>
           ))}
         </ul>

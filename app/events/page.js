@@ -1,15 +1,14 @@
 import LayoutWrapper from '@/components/LayoutWrapper'
 import SocialIcon from '@/components/social-icons'
 import siteMetadata from '@/data/siteMetadata'
+import { pageMetadata } from '@/lib/seo'
 
-export const metadata = {
+export const metadata = pageMetadata({
   title: 'Actividades',
-  description: 'Noches de Observacion Astronomica',
-  openGraph: {
-    title: 'Actividades | SAC',
-    description: 'Noches de Observacion Astronomica',
-  },
-}
+  description:
+    'Noches de observación astronómica bajo cielos oscuros en Puerto Rico. Observa galaxias, cúmulos estelares y nebulosas con la Sociedad de Astronomía del Caribe.',
+  path: '/events',
+})
 
 export default function EventsPage() {
   return (

@@ -140,7 +140,8 @@ const main = async () => {
     let localChanges = 0
 
     // Match an Image immediately followed by its ImageCaption.
-    const pairRe = /(<Image\b[^>]*?\balt=")([^"]*)("[^>]*?\/>)(\s*<ImageCaption>)([\s\S]*?)(<\/ImageCaption>)/g
+    const pairRe =
+      /(<Image\b[^>]*?\balt=")([^"]*)("[^>]*?\/>)(\s*<ImageCaption>)([\s\S]*?)(<\/ImageCaption>)/g
 
     next = next.replace(pairRe, (full, pre, alt, post, capOpen, capBody, capClose) => {
       if (!isWeak(alt)) return full

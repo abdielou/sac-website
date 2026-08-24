@@ -61,9 +61,17 @@ const want = (flag) => ALL || argv.includes(flag)
 const KEY = (slug) => `articles/${slug}.json`
 const INDEX_KEY = 'articles/index.json'
 
-const getJSON = async (Key) => JSON.parse((await s3.getObject({ Bucket: BUCKET, Key }).promise()).Body.toString())
+const getJSON = async (Key) =>
+  JSON.parse((await s3.getObject({ Bucket: BUCKET, Key }).promise()).Body.toString())
 const putJSON = (Key, data) =>
-  s3.putObject({ Bucket: BUCKET, Key, Body: JSON.stringify(data, null, 2), ContentType: 'application/json' }).promise()
+  s3
+    .putObject({
+      Bucket: BUCKET,
+      Key,
+      Body: JSON.stringify(data, null, 2),
+      ContentType: 'application/json',
+    })
+    .promise()
 
 /**
  * Tag backfill for published articles that currently have none.
@@ -123,8 +131,7 @@ const cleanTitle = (t) =>
 const normaliseTag = (t) => String(t).trim().replace(/\s+/g, ' ').toLowerCase()
 
 const plan = []
-const record = (kind, slug, before, after, note) =>
-  plan.push({ kind, slug, before, after, note })
+const record = (kind, slug, before, after, note) => plan.push({ kind, slug, before, after, note })
 
 const main = async () => {
   const index = await getJSON(INDEX_KEY)

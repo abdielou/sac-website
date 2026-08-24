@@ -2,11 +2,14 @@ import { listArticles } from '@/lib/articles'
 import LayoutWrapper from '@/components/LayoutWrapper'
 import HomeContent from './HomeContent'
 import siteMetadata from '@/data/siteMetadata'
+import { pageMetadata } from '@/lib/seo'
 
-export const metadata = {
-  title: siteMetadata.title,
+// The root layout appends ' | SAC', so the title must not repeat the site name.
+export const metadata = pageMetadata({
+  title: 'Astronomía en Puerto Rico',
   description: siteMetadata.description,
-}
+  path: '/',
+})
 
 // Revalidate every hour as safety net (on-demand revalidation is primary)
 export const revalidate = 3600

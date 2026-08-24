@@ -3,29 +3,30 @@ import '@/css/prism.css'
 
 import { Providers } from './providers'
 import siteMetadata from '@/data/siteMetadata'
+import { ORIGIN, baseOpenGraph, baseTwitter, jsonLdScript, organizationSchema } from '@/lib/seo'
 
 export const metadata = {
+  // siteUrl has no trailing slash, so relative canonicals resolve without a double slash.
   metadataBase: new URL(siteMetadata.siteUrl),
   title: {
     default: siteMetadata.title,
     template: `%s | ${siteMetadata.headerTitleAbbrev}`,
   },
   description: siteMetadata.description,
+  // No `alternates.canonical` here on purpose. Root metadata is inherited by
+  // every descendant segment that does not declare its own, so a canonical set
+  // here would make every such route claim the home page as its canonical.
+  // app/page.js emits the home canonical itself via pageMetadata({ path: '/' }).
   openGraph: {
+    ...baseOpenGraph,
     title: siteMetadata.title,
     description: siteMetadata.description,
-    url: siteMetadata.siteUrl,
-    siteName: siteMetadata.title,
-    images: [siteMetadata.socialBanner],
-    locale: 'es_PR',
-    type: 'website',
+    url: ORIGIN,
   },
   twitter: {
-    card: 'summary_large_image',
-    site: '@soc_astrocaribe',
+    ...baseTwitter,
     title: siteMetadata.title,
     description: siteMetadata.description,
-    images: [siteMetadata.socialBanner],
   },
   robots: {
     index: true,
@@ -51,14 +52,18 @@ export default function RootLayout({ children }) {
         <meta name="msapplication-TileColor" content="#000000" />
         <meta name="theme-color" content="#000000" />
         <link rel="alternate" type="application/rss+xml" href="/feed.xml" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Open+Sans:wght@300;700&display=swap"
           rel="stylesheet"
         />
-        <meta content="width=device-width, initial-scale=1" name="viewport" />
       </head>
       <body className="antialiased text-black bg-white dark:bg-gray-900 dark:text-white">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(organizationSchema()) }}
+        />
         <Providers>{children}</Providers>
       </body>
     </html>

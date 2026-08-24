@@ -1,5 +1,13 @@
 import { redirect } from 'next/navigation'
 import { signIn, auth, devBypassEnabled } from '../../../auth'
+import { noindexMetadata } from '@/lib/seo'
+
+// The sitewide "Portal de Miembros" nav link gives this page a real crawl path.
+export const metadata = noindexMetadata({
+  title: 'Iniciar sesión',
+  description: 'Acceso para miembros y administradores de la Sociedad de Astronomía del Caribe.',
+  path: '/auth/signin',
+})
 
 /**
  * Google "G" logo SVG component
