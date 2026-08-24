@@ -82,3 +82,6 @@ docs/*
 
 # Group sync audit reports downloaded from the admin dashboard
 sync-grupos-*.csv
+
+# SEO data-fix backups (local safety copies, not source)
+.planning/seo/backups/
