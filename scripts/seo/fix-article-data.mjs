@@ -5,6 +5,13 @@
  * DRY RUN BY DEFAULT. Nothing is written unless you pass --apply.
  * Every write is preceded by a full backup of the affected objects.
  *
+ * Credentials: --profile <name> from ~/.aws/credentials, else the AWS_* values
+ * in .env. Always passed explicitly, because a stale ~/.aws/credentials
+ * otherwise wins the SDK's default chain and every call fails InvalidAccessKeyId.
+ *
+ *   node scripts/seo/fix-article-data.mjs --profile abdiel-root
+ *   node scripts/seo/fix-article-data.mjs --all --profile abdiel-root --apply
+ *
  *   node scripts/seo/fix-article-data.mjs                    # show everything it would do
  *   node scripts/seo/fix-article-data.mjs --tags             # dry run, just the tag backfill
  *   node scripts/seo/fix-article-data.mjs --tags --apply     # actually write
@@ -29,33 +36,9 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
-import AWS from 'aws-sdk'
+import { createS3, whoAmI, assertWritable } from './s3-client.mjs'
 
-const envPath = path.resolve(process.cwd(), '.env')
-const env = {}
-if (fs.existsSync(envPath)) {
-  for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
-    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/)
-    if (m) env[m[1]] = m[2].replace(/^["']|["']$/g, '')
-  }
-}
-
-const BUCKET = env.S3_ARTICLES_BUCKET_NAME
-if (!BUCKET) {
-  console.error('S3_ARTICLES_BUCKET_NAME is not set. Check .env.')
-  process.exit(1)
-}
-
-// Explicit credentials: a stale ~/.aws/credentials otherwise wins the default
-// provider chain and every request fails with InvalidAccessKeyId.
-const s3 = new AWS.S3({
-  endpoint: env.AWS_S3_ENDPOINT || undefined,
-  s3ForcePathStyle: true,
-  region: env.AWS_REGION,
-  accessKeyId: env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
-})
-
+const { s3, bucket: BUCKET, region, source, credentials } = createS3()
 const argv = process.argv.slice(2)
 const APPLY = argv.includes('--apply')
 const ALL = argv.includes('--all')
@@ -147,6 +130,20 @@ const plan = []
 const record = (kind, slug, before, after, note) => plan.push({ kind, slug, before, after, note })
 
 const main = async () => {
+  console.log(`\nCredentials: ${source}  (${await whoAmI({ credentials, region })})`)
+
+  // Read access does not imply write. Finding that out halfway through a batch
+  // would leave the corpus half-migrated, so check before reading 91 articles.
+  if (APPLY) {
+    const { writable, reason } = await assertWritable(s3, BUCKET)
+    if (!writable) {
+      console.error(`\nCannot write to ${BUCKET}: ${reason}`)
+      console.error('Use --profile <name> with credentials that have s3:PutObject.\n')
+      process.exit(1)
+    }
+    if (reason) console.warn(`Warning: ${reason}`)
+  }
+
   const index = await getJSON(INDEX_KEY)
   const entries = index.articles || []
 

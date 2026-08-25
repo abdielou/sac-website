@@ -10,35 +10,9 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
-import AWS from 'aws-sdk'
+import { createS3 } from './s3-client.mjs'
 
-// Minimal .env reader: this script runs outside Next, which normally injects these.
-// Credentials are passed to the SDK EXPLICITLY rather than through process.env,
-// because a stale ~/.aws/credentials otherwise wins the default provider chain
-// and the request fails with InvalidAccessKeyId.
-const envPath = path.resolve(process.cwd(), '.env')
-const env = {}
-if (fs.existsSync(envPath)) {
-  for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
-    const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/)
-    if (m) env[m[1]] = m[2].replace(/^["']|["']$/g, '')
-  }
-}
-
-const BUCKET = env.S3_ARTICLES_BUCKET_NAME || process.env.S3_ARTICLES_BUCKET_NAME
-if (!BUCKET) {
-  console.error('S3_ARTICLES_BUCKET_NAME is not set. Check .env.')
-  process.exit(1)
-}
-
-const s3 = new AWS.S3({
-  endpoint: env.AWS_S3_ENDPOINT || undefined,
-  s3ForcePathStyle: true,
-  region: env.AWS_REGION,
-  accessKeyId: env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
-})
-
+const { s3, bucket: BUCKET } = createS3()
 const getJSON = async (Key) => {
   const r = await s3.getObject({ Bucket: BUCKET, Key }).promise()
   return JSON.parse(r.Body.toString())
