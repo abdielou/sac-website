@@ -131,9 +131,17 @@ describe('app/sitemap.js', () => {
 
   it('emits tag pages with the same kebab-case slug the tag route uses', async () => {
     const urls = (await sitemap()).map((e) => e.url)
-    // github-slugger keeps the accent, so the live tag route does too.
-    expect(urls).toContain(`${ORIGIN}/tags/astronomía-observacional`)
+    // Slugs are de-accented: every accented tag URL 404'd in production, and the
+    // sitemap was submitting those broken URLs.
+    expect(urls).toContain(`${ORIGIN}/tags/astronomia-observacional`)
     expect(urls).toContain(`${ORIGIN}/tags/eclipses`)
+  })
+
+  it('never submits a tag URL with a non-ASCII character', async () => {
+    const urls = (await sitemap()).map((e) => e.url)
+    for (const url of urls.filter((u) => u.includes('/tags/'))) {
+      expect(url).toMatch(/^https:\/\/[a-z0-9.]+\/tags\/[a-z0-9/-]+$/)
+    }
   })
 
   it('deduplicates tag slugs shared across articles', async () => {
