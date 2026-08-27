@@ -5,7 +5,13 @@ import MediaPlayer from '@/components/MediaPlayer'
 
 const ASPECT_BOX = 'relative pb-[56.25%] h-0'
 /** Shorts are 9:16, so a 16:9 box shows large black bars. */
-const PORTRAIT_BOX = 'relative pb-[177.78%] h-0 max-w-[400px] mx-auto'
+const PORTRAIT_BOX = 'relative pb-[177.78%] h-0'
+/**
+ * The width cap lives on a wrapper, not on the box. A percentage padding-bottom
+ * resolves against the parent width, so a max-width on the box itself is ignored
+ * by the padding and the box grows to the full column height.
+ */
+const PORTRAIT_WRAP = 'max-w-[360px] mx-auto'
 const FRAME = 'absolute top-0 left-0 w-full h-full'
 
 export function getYouTubeId(url) {
@@ -50,9 +56,10 @@ export function youTubeEmbedUrl(videoId) {
 const YouTubeEmbed = ({ videoId, portrait = false }) => {
   const [playing, setPlaying] = useState(false)
   const box = portrait ? PORTRAIT_BOX : ASPECT_BOX
+  const wrap = (content) => (portrait ? <div className={PORTRAIT_WRAP}>{content}</div> : content)
 
   if (playing) {
-    return (
+    return wrap(
       <div className={box}>
         <iframe
           className={FRAME}
@@ -66,7 +73,7 @@ const YouTubeEmbed = ({ videoId, portrait = false }) => {
     )
   }
 
-  return (
+  return wrap(
     <div className={`${box} not-prose`}>
       <button
         type="button"

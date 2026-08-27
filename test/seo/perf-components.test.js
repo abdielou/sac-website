@@ -294,6 +294,17 @@ describe('ResponsiveReactPlayer embeds', () => {
     expect(html).not.toContain('<a')
   })
 
+  // A percentage padding-bottom resolves against the parent width. The width cap
+  // must therefore sit on a wrapper, or the box takes the full column height.
+  it('keeps the Shorts width cap off the padding box', () => {
+    const html = renderToStaticMarkup(
+      React.createElement(ResponsiveReactPlayer, {
+        url: 'https://www.youtube.com/shorts/GamSEEuckiU',
+      })
+    )
+    expect(html).toMatch(/max-w-\[\d+px\] mx-auto"><div class="relative pb-\[177\.78%\]/)
+  })
+
   it('recognizes a /live/ URL', () => {
     expect(getYouTubeId('https://www.youtube.com/live/dQw4w9WgXcQ')).toBe('dQw4w9WgXcQ')
   })
