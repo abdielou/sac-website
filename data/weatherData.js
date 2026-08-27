@@ -59,7 +59,7 @@ const projectsData = [
   {
     title: 'Trayectoria sistema ciclónico',
     imgSrc:
-      'https://www.nhc.noaa.gov/storm_graphics/AT14/refresh/AL142024_5day_cone_no_line_and_wind+png/092140.png',
+      'https://www.nhc.noaa.gov/storm_graphics/AT04/refresh/AL042026_5day_cone+png/271447_5day_cone.png',
     href: 'https://www.nhc.noaa.gov/refresh/graphics_at4+shtml/152937.shtml?cone#contents',
     width: '897',
     height: '736',
