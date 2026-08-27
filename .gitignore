@@ -85,3 +85,4 @@ sync-grupos-*.csv
 
 # SEO data-fix backups (local safety copies, not source)
 .planning/seo/backups/
+.sawyer/*
