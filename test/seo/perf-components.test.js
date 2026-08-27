@@ -70,7 +70,11 @@ const { resolveSizes, COLUMN_SIZES } = require('@/components/Image')
 const ArticleItem = require('@/components/articles/ArticleItem').default
 const { THUMBNAIL_SIZES } = require('@/components/articles/ArticleItem')
 const ResponsiveReactPlayer = require('@/components/ResponsiveReactPlayer').default
-const { youTubeEmbedUrl, youTubePosterUrl } = require('@/components/ResponsiveReactPlayer')
+const {
+  youTubeEmbedUrl,
+  youTubePosterUrl,
+  getYouTubeId,
+} = require('@/components/ResponsiveReactPlayer')
 const siteMetadataModule = require('@/data/siteMetadata')
 const siteMetadata = siteMetadataModule.default || siteMetadataModule
 
@@ -277,6 +281,21 @@ describe('ResponsiveReactPlayer embeds', () => {
 
     act(() => root.unmount())
     container.remove()
+  })
+
+  it('renders a Shorts URL as a portrait facade', () => {
+    const html = renderToStaticMarkup(
+      React.createElement(ResponsiveReactPlayer, {
+        url: 'https://www.youtube.com/shorts/GamSEEuckiU',
+      })
+    )
+    expect(html).toContain(youTubePosterUrl('GamSEEuckiU'))
+    expect(html).toContain('pb-[177.78%]')
+    expect(html).not.toContain('<a')
+  })
+
+  it('recognizes a /live/ URL', () => {
+    expect(getYouTubeId('https://www.youtube.com/live/dQw4w9WgXcQ')).toBe('dQw4w9WgXcQ')
   })
 
   it('lazy-loads the Facebook iframe', () => {

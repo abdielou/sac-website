@@ -4,13 +4,20 @@ import { useState } from 'react'
 import MediaPlayer from '@/components/MediaPlayer'
 
 const ASPECT_BOX = 'relative pb-[56.25%] h-0'
+/** Shorts are 9:16, so a 16:9 box shows large black bars. */
+const PORTRAIT_BOX = 'relative pb-[177.78%] h-0 max-w-[400px] mx-auto'
 const FRAME = 'absolute top-0 left-0 w-full h-full'
 
 export function getYouTubeId(url) {
-  // youtu.be/ID, youtube.com/watch?v=ID, youtube.com/embed/ID
+  // youtu.be/ID, youtube.com/watch?v=ID, youtube.com/embed/ID,
+  // youtube.com/shorts/ID, youtube.com/live/ID
   // prettier-ignore
-  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([a-zA-Z0-9_-]{11})/)
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([a-zA-Z0-9_-]{11})/)
   return match ? match[1] : null
+}
+
+export function isYouTubeShort(url) {
+  return url.includes('youtube.com/shorts/')
 }
 
 export function getFacebookVideoUrl(url) {
@@ -40,12 +47,13 @@ export function youTubeEmbedUrl(videoId) {
  * first click, which also plays the video, so the reader still needs one click.
  * The aspect box is unchanged, so there is no layout shift either way.
  */
-const YouTubeEmbed = ({ videoId }) => {
+const YouTubeEmbed = ({ videoId, portrait = false }) => {
   const [playing, setPlaying] = useState(false)
+  const box = portrait ? PORTRAIT_BOX : ASPECT_BOX
 
   if (playing) {
     return (
-      <div className={ASPECT_BOX}>
+      <div className={box}>
         <iframe
           className={FRAME}
           src={youTubeEmbedUrl(videoId)}
@@ -59,7 +67,7 @@ const YouTubeEmbed = ({ videoId }) => {
   }
 
   return (
-    <div className={`${ASPECT_BOX} not-prose`}>
+    <div className={`${box} not-prose`}>
       <button
         type="button"
         onClick={() => setPlaying(true)}
@@ -96,7 +104,7 @@ const ResponsiveReactPlayer = ({ url }) => {
   const youtubeId = getYouTubeId(url)
 
   if (youtubeId) {
-    return <YouTubeEmbed videoId={youtubeId} />
+    return <YouTubeEmbed videoId={youtubeId} portrait={isYouTubeShort(url)} />
   }
 
   const fbSrc = getFacebookVideoUrl(url)
