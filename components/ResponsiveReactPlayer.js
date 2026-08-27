@@ -3,15 +3,20 @@
 import { useState } from 'react'
 import MediaPlayer from '@/components/MediaPlayer'
 
-const ASPECT_BOX = 'relative pb-[56.25%] h-0'
+/**
+ * Markdown wraps a lone component in a `<p>`, and a `<div>` is not valid there.
+ * Every container is therefore a `<span class="block">`, which lays out the same
+ * way but keeps the HTML valid and stops the hydration mismatch.
+ */
+const ASPECT_BOX = 'block relative pb-[56.25%] h-0'
 /** Shorts are 9:16, so a 16:9 box shows large black bars. */
-const PORTRAIT_BOX = 'relative pb-[177.78%] h-0'
+const PORTRAIT_BOX = 'block relative pb-[177.78%] h-0'
 /**
  * The width cap lives on a wrapper, not on the box. A percentage padding-bottom
  * resolves against the parent width, so a max-width on the box itself is ignored
  * by the padding and the box grows to the full column height.
  */
-const PORTRAIT_WRAP = 'max-w-[360px] mx-auto'
+const PORTRAIT_WRAP = 'block max-w-[360px] mx-auto'
 const FRAME = 'absolute top-0 left-0 w-full h-full'
 
 export function getYouTubeId(url) {
@@ -56,11 +61,11 @@ export function youTubeEmbedUrl(videoId) {
 const YouTubeEmbed = ({ videoId, portrait = false }) => {
   const [playing, setPlaying] = useState(false)
   const box = portrait ? PORTRAIT_BOX : ASPECT_BOX
-  const wrap = (content) => (portrait ? <div className={PORTRAIT_WRAP}>{content}</div> : content)
+  const wrap = (content) => (portrait ? <span className={PORTRAIT_WRAP}>{content}</span> : content)
 
   if (playing) {
     return wrap(
-      <div className={box}>
+      <span className={box}>
         <iframe
           className={FRAME}
           src={youTubeEmbedUrl(videoId)}
@@ -69,12 +74,12 @@ const YouTubeEmbed = ({ videoId, portrait = false }) => {
           allowFullScreen
           loading="lazy"
         />
-      </div>
+      </span>
     )
   }
 
   return wrap(
-    <div className={`${box} not-prose`}>
+    <span className={`${box} not-prose`}>
       <button
         type="button"
         onClick={() => setPlaying(true)}
@@ -103,7 +108,7 @@ const YouTubeEmbed = ({ videoId, portrait = false }) => {
           </svg>
         </span>
       </button>
-    </div>
+    </span>
   )
 }
 
@@ -117,7 +122,7 @@ const ResponsiveReactPlayer = ({ url }) => {
   const fbSrc = getFacebookVideoUrl(url)
   if (fbSrc) {
     return (
-      <div className={ASPECT_BOX}>
+      <span className={ASPECT_BOX}>
         <iframe
           className={FRAME}
           src={fbSrc}
@@ -126,7 +131,7 @@ const ResponsiveReactPlayer = ({ url }) => {
           allowFullScreen
           loading="lazy"
         />
-      </div>
+      </span>
     )
   }
 

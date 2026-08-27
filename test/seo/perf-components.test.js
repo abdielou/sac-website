@@ -302,7 +302,21 @@ describe('ResponsiveReactPlayer embeds', () => {
         url: 'https://www.youtube.com/shorts/GamSEEuckiU',
       })
     )
-    expect(html).toMatch(/max-w-\[\d+px\] mx-auto"><div class="relative pb-\[177\.78%\]/)
+    expect(html).toMatch(/max-w-\[\d+px\] mx-auto"><span class="block relative pb-\[177\.78%\]/)
+  })
+
+  // Markdown wraps a lone component in a <p>. A <div> there is invalid HTML and
+  // makes React log a hydration error, so every container must be a <span>.
+  it('emits no div, so it stays valid inside a markdown paragraph', () => {
+    const urls = [
+      'https://www.youtube.com/shorts/GamSEEuckiU',
+      'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      'https://www.facebook.com/sac/videos/123456789',
+    ]
+    urls.forEach((url) => {
+      const html = renderToStaticMarkup(React.createElement(ResponsiveReactPlayer, { url }))
+      expect(html).not.toContain('<div')
+    })
   })
 
   it('recognizes a /live/ URL', () => {
