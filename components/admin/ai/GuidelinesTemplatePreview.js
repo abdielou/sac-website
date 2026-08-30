@@ -3,8 +3,8 @@
 import React, { useMemo, useState } from 'react'
 import Image from 'next/image'
 import { listBackgroundOptions } from '@/lib/social-template/backgroundCatalog'
-import { buildTemplateSvg } from '@/lib/social-template/buildTemplateSvg'
 import { getSocialCanvas } from '@/lib/social-template/platformCanvas'
+import SocialTemplateSvg from '@/lib/social-template/SocialTemplateSvg'
 import { getTemplateLayout } from '@/lib/social-template/templateLayouts'
 
 const EXAMPLE_TEXT = {
@@ -56,13 +56,12 @@ export default function GuidelinesTemplatePreview({ layoutId = 'event' }) {
     const canvas = getSocialCanvas()
     const layout = getTemplateLayout(layoutId, canvas) || getTemplateLayout('event', canvas)
     const logo = logoPreview(layout, canvas)
-    const svg = buildTemplateSvg({
-      layout,
+    return {
       canvas,
+      layout,
+      logo,
       textFields: EXAMPLE_TEXT[layout.id] || EXAMPLE_TEXT.simple,
-      logoPlacement: logo.placement,
-    }).replace(/^<\?xml[^>]*>\s*/, '')
-    return { layout, logo, svg }
+    }
   }, [layoutId])
 
   if (!selectedBackground) return null
@@ -80,11 +79,14 @@ export default function GuidelinesTemplatePreview({ layoutId = 'event' }) {
           sizes="280px"
           className="object-cover"
         />
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 [&>svg]:h-full [&>svg]:w-full"
-          dangerouslySetInnerHTML={{ __html: preview.svg }}
-        />
+        <div aria-hidden="true" className="absolute inset-0 [&>svg]:h-full [&>svg]:w-full">
+          <SocialTemplateSvg
+            layout={preview.layout}
+            canvas={preview.canvas}
+            textFields={preview.textFields}
+            logoPlacement={preview.logo.placement}
+          />
+        </div>
         <span className="absolute" style={preview.logo.style}>
           <Image src={preview.logo.src} alt="" fill sizes="60px" className="object-contain" />
         </span>

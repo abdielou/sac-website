@@ -39,13 +39,42 @@ import {
   resolveTemplateLayoutId,
 } from '../../lib/social-template/templateLayouts'
 import { fitAndWrapText, wrapText } from '../../lib/social-template/textWrap'
-import { GenerateInputSchema } from '../../workflows/ai-social-media-designer/generation/generateAiWorkflow'
+import { GenerateInputSchema } from '../../lib/ai-generation-schemas'
 
 const completeEventDetails = {
   name: 'Noche de Observación',
   date: '2026-07-11',
   time: '19:15',
   location: 'Pitahaya, Cabo Rojo',
+}
+
+const defaultGuidelines = getDefaultGuidelines()
+const observationDefinition = resolveContentTypeDefinition(defaultGuidelines, 'observation_night')
+const eventPromotionDefinition = resolveContentTypeDefinition(defaultGuidelines, 'event_promotion')
+const educationalDefinition = resolveContentTypeDefinition(
+  defaultGuidelines,
+  'educational_astronomy'
+)
+const regularDefinition = resolveContentTypeDefinition(defaultGuidelines, 'regular_post')
+
+function inputWithDefinition(input, definition) {
+  return {
+    ...input,
+    contentTypeDefinition: definition,
+    contentData: legacyInputToContentData(input, definition),
+  }
+}
+
+function buildObservationPayload(overrides = {}) {
+  return buildGenerationPayload(
+    {
+      ...DEFAULT_GENERATION_FORM,
+      contentType: observationDefinition.id,
+      ...overrides,
+    },
+    observationDefinition,
+    Object.keys(defaultGuidelines.platforms)
+  )
 }
 
 function parseTemplateSvg(svg) {
@@ -106,13 +135,16 @@ describe('event form helpers', () => {
   })
 
   test('derives topic and intent from event logistics', () => {
-    const derived = deriveEventTopicAndIntent({
-      contentType: 'observation_night',
-      eventName: 'No debe reemplazar la identidad',
-      eventDate: '2026-07-11',
-      eventTime: '19:15',
-      eventLocation: 'Pitahaya, Cabo Rojo',
-    })
+    const derived = deriveEventTopicAndIntent(
+      {
+        contentType: 'observation_night',
+        eventName: 'No debe reemplazar la identidad',
+        eventDate: '2026-07-11',
+        eventTime: '19:15',
+        eventLocation: 'Pitahaya, Cabo Rojo',
+      },
+      observationDefinition
+    )
     expect(derived.topic).toContain('Noche de Observación')
     expect(derived.topic).toContain('Pitahaya, Cabo Rojo')
     expect(derived.intent).toContain('Pitahaya, Cabo Rojo')
@@ -120,13 +152,16 @@ describe('event form helpers', () => {
 
   test('buildEventDetails preserves the observation-night identity', () => {
     expect(
-      buildEventDetails({
-        contentType: 'observation_night',
-        eventName: 'Otro evento',
-        eventDate: '2026-07-11',
-        eventTime: '19:15',
-        eventLocation: 'Pitahaya, Cabo Rojo',
-      })
+      buildEventDetails(
+        {
+          contentType: 'observation_night',
+          eventName: 'Otro evento',
+          eventDate: '2026-07-11',
+          eventTime: '19:15',
+          eventLocation: 'Pitahaya, Cabo Rojo',
+        },
+        observationDefinition
+      )
     ).toEqual(completeEventDetails)
   })
 
@@ -159,9 +194,9 @@ describe('event form helpers', () => {
 })
 
 describe('buildGenerationPayload', () => {
-  test('defaults are event-first with a stock template', () => {
+  test('defaults wait for the first active Guidelines content type', () => {
     expect(DEFAULT_GENERATION_FORM.platforms).toBeUndefined()
-    expect(DEFAULT_GENERATION_FORM.contentType).toBe('observation_night')
+    expect(DEFAULT_GENERATION_FORM.contentType).toBe('')
     expect(DEFAULT_GENERATION_FORM.generationMode).toBe('text_and_image')
     expect(DEFAULT_GENERATION_FORM.publicationText).toBe('')
     expect(DEFAULT_GENERATION_FORM.eventName).toBe('')
@@ -171,8 +206,7 @@ describe('buildGenerationPayload', () => {
   })
 
   test('derives topic/intent and includes sponsor for events', () => {
-    const payload = buildGenerationPayload({
-      ...DEFAULT_GENERATION_FORM,
+    const payload = buildObservationPayload({
       eventName: 'Intento de reemplazo',
       eventDate: '2026-07-11',
       eventTime: '19:15',
@@ -199,16 +233,14 @@ describe('buildGenerationPayload', () => {
 
   test('preserves raw publication text only for image-only generation', () => {
     const publicationText = '  **Mira el cielo** 🔭\n\n- Esta noche  '
-    const imageOnlyPayload = buildGenerationPayload({
-      ...DEFAULT_GENERATION_FORM,
+    const imageOnlyPayload = buildObservationPayload({
       generationMode: 'image_only',
       publicationText,
       eventDate: '2026-07-11',
       eventTime: '19:15',
       eventLocation: 'Pitahaya, Cabo Rojo',
     })
-    const fullPayload = buildGenerationPayload({
-      ...DEFAULT_GENERATION_FORM,
+    const fullPayload = buildObservationPayload({
       publicationText,
       eventDate: '2026-07-11',
       eventTime: '19:15',
@@ -248,8 +280,7 @@ describe('buildGenerationPayload', () => {
   })
 
   test('includes the selected pills presentation for event templates', () => {
-    const payload = buildGenerationPayload({
-      ...DEFAULT_GENERATION_FORM,
+    const payload = buildObservationPayload({
       templatePresentation: 'pills',
       eventDate: '2026-07-11',
       eventTime: '19:15',
@@ -259,30 +290,32 @@ describe('buildGenerationPayload', () => {
     expect(payload.templatePresentation).toBe('pills')
   })
 
-  test('events always use template mode (stock default, ai_generated preserved)', () => {
-    const emptyMode = buildGenerationPayload({
-      ...DEFAULT_GENERATION_FORM,
+  test('template background selection must be allowed by Guidelines', () => {
+    const emptyMode = buildObservationPayload({
       backgroundMode: '',
       backgroundId: 'telescope-nebula',
     })
-    expect(emptyMode.backgroundMode).toBe('stock')
+    expect(emptyMode.backgroundMode).toBeUndefined()
 
-    const aiMode = buildGenerationPayload({
-      ...DEFAULT_GENERATION_FORM,
+    const aiMode = buildObservationPayload({
       backgroundMode: 'ai_generated',
     })
     expect(aiMode.backgroundMode).toBe('ai_generated')
   })
 
   test('non-event template types preserve an explicit no-template choice', () => {
-    const payload = buildGenerationPayload({
-      ...DEFAULT_GENERATION_FORM,
-      contentType: 'regular_post',
-      intent: 'Educar',
-      topic: 'El cielo del mes',
-      backgroundMode: '',
-      backgroundId: '',
-    })
+    const payload = buildGenerationPayload(
+      {
+        ...DEFAULT_GENERATION_FORM,
+        contentType: regularDefinition.id,
+        intent: 'Educar',
+        topic: 'El cielo del mes',
+        backgroundMode: '',
+        backgroundId: '',
+      },
+      regularDefinition,
+      Object.keys(defaultGuidelines.platforms)
+    )
     expect(payload.backgroundMode).toBeUndefined()
     expect(payload.backgroundId).toBeUndefined()
   })
@@ -337,6 +370,7 @@ describe('buildGenerationPayload', () => {
     const payload = buildGenerationPayload(
       {
         ...DEFAULT_GENERATION_FORM,
+        contentType: definition.id,
         eventDate: '2026-08-15',
         eventTime: '19:30',
         eventLocation: 'Cabo Rojo',
@@ -346,7 +380,8 @@ describe('buildGenerationPayload', () => {
           fileName: 'sponsor.png',
         },
       },
-      definition
+      definition,
+      Object.keys(defaultGuidelines.platforms)
     )
 
     expect(payload.backgroundMode).toBeUndefined()
@@ -358,16 +393,19 @@ describe('buildGenerationPayload', () => {
 describe('buildTemplateTextFields', () => {
   test('observation_night preserves its approved label during one execution', () => {
     const fields = buildTemplateTextFields({
-      input: {
-        contentType: 'observation_night',
-        topic: 'Otro nombre',
-        eventDetails: {
-          name: 'Nombre enviado por una instancia',
-          date: '2026-08-12',
-          time: '20:00',
-          location: 'Guánica',
+      input: inputWithDefinition(
+        {
+          contentType: 'observation_night',
+          topic: 'Otro nombre',
+          eventDetails: {
+            name: 'Nombre enviado por una instancia',
+            date: '2026-08-12',
+            time: '20:00',
+            location: 'Guánica',
+          },
         },
-      },
+        observationDefinition
+      ),
     })
 
     expect(fields).toMatchObject({
@@ -375,22 +413,25 @@ describe('buildTemplateTextFields', () => {
       headline: 'Noche de Observación',
       locationLabel: 'Guánica',
     })
-    expect(resolveTemplateLayoutId('observation_night')).toBe('event')
+    expect(resolveTemplateLayoutId('observation_night', observationDefinition)).toBe('event')
   })
 
   test('event_promotion uses public poster copy, formatted pills, and weather disclaimer', () => {
     const fields = buildTemplateTextFields({
-      input: {
-        contentType: 'event_promotion',
-        topic: 'Fallback topic',
-        intent: 'Invitar al público',
-        eventDetails: {
-          name: 'Noche de Perseidas',
-          date: '2026-08-12',
-          time: '20:00',
-          location: 'Guánica',
+      input: inputWithDefinition(
+        {
+          contentType: 'event_promotion',
+          topic: 'Fallback topic',
+          intent: 'Invitar al público',
+          eventDetails: {
+            name: 'Noche de Perseidas',
+            date: '2026-08-12',
+            time: '20:00',
+            location: 'Guánica',
+          },
         },
-      },
+        eventPromotionDefinition
+      ),
     })
     expect(fields).toMatchObject({
       layout: 'event',
@@ -406,12 +447,15 @@ describe('buildTemplateTextFields', () => {
 
   test('posterText overrides subtitle and adds body', () => {
     const fields = buildTemplateTextFields({
-      input: {
-        contentType: 'event_promotion',
-        topic: 'T',
-        intent: 'Fallback intent',
-        eventDetails: { name: 'Noche', date: '2026-07-11', time: '19:00', location: 'PR' },
-      },
+      input: inputWithDefinition(
+        {
+          contentType: 'event_promotion',
+          topic: 'T',
+          intent: 'Fallback intent',
+          eventDetails: { name: 'Noche', date: '2026-07-11', time: '19:00', location: 'PR' },
+        },
+        eventPromotionDefinition
+      ),
       posterText: {
         subtitle: 'Acompáñanos bajo las estrellas.',
         body: 'Una noche para mirar al cielo.',
@@ -423,15 +467,18 @@ describe('buildTemplateTextFields', () => {
 
   test('replaces repeated logistics or invented date/time details with safe copy', () => {
     const fields = buildTemplateTextFields({
-      input: {
-        contentType: 'observation_night',
-        eventDetails: {
-          name: 'Noche de Observación',
-          date: '2026-07-11',
-          time: '19:15',
-          location: 'Pitahaya, Cabo Rojo',
+      input: inputWithDefinition(
+        {
+          contentType: 'observation_night',
+          eventDetails: {
+            name: 'Noche de Observación',
+            date: '2026-07-11',
+            time: '19:15',
+            location: 'Pitahaya, Cabo Rojo',
+          },
         },
-      },
+        observationDefinition
+      ),
       posterText: {
         subtitle: 'Ven a la Noche de Observación el 15 de agosto.',
         body: 'Nos vemos a las 8:30 PM en Pitahaya, Cabo Rojo.',
@@ -444,10 +491,13 @@ describe('buildTemplateTextFields', () => {
 
   test('enforces poster copy length limits', () => {
     const fields = buildTemplateTextFields({
-      input: {
-        contentType: 'observation_night',
-        eventDetails: { name: 'Noche de Observación' },
-      },
+      input: inputWithDefinition(
+        {
+          contentType: 'observation_night',
+          eventDetails: { name: 'Noche de Observación' },
+        },
+        observationDefinition
+      ),
       posterText: {
         subtitle:
           'Ven a descubrir el universo con nosotros y comparte una experiencia inolvidable bajo un cielo lleno de estrellas.',
@@ -460,13 +510,26 @@ describe('buildTemplateTextFields', () => {
   })
 
   test('falls back to topic when event name missing', () => {
+    const topicEventDefinition = {
+      id: 'configured_event',
+      label: 'Evento configurado',
+      fields: [
+        { key: 'topic', label: 'Tema', required: true },
+        { key: 'date', label: 'Fecha', required: false },
+      ],
+      titleSource: 'topic',
+      visual: { mode: 'template', template: 'event' },
+    }
     const fields = buildTemplateTextFields({
-      input: {
-        contentType: 'event_promotion',
-        topic: 'Observación lunar',
-        intent: 'Promover',
-        eventDetails: { date: 'mañana' },
-      },
+      input: inputWithDefinition(
+        {
+          contentType: topicEventDefinition.id,
+          topic: 'Observación lunar',
+          intent: 'Promover',
+          eventDetails: { date: 'mañana' },
+        },
+        topicEventDefinition
+      ),
     })
     expect(fields.headline).toBe('Observación lunar')
     expect(fields.dateLabel).toBe('mañana')
@@ -476,11 +539,14 @@ describe('buildTemplateTextFields', () => {
 
   test('simple layout for educational posts', () => {
     const fields = buildTemplateTextFields({
-      input: {
-        contentType: 'educational_astronomy',
-        topic: 'Qué es una supernova',
-        intent: 'Educar',
-      },
+      input: inputWithDefinition(
+        {
+          contentType: 'educational_astronomy',
+          topic: 'Qué es una supernova',
+          intent: 'Educar',
+        },
+        educationalDefinition
+      ),
     })
     expect(fields).toEqual({
       layout: 'simple',
@@ -488,10 +554,12 @@ describe('buildTemplateTextFields', () => {
     })
   })
 
-  test('uses the required holiday greeting as the headline composed by a template', () => {
+  test('uses exact titleSource contentData as the headline without rewriting it', () => {
     const definition = {
       id: 'holiday_greeting',
       label: 'Día festivo',
+      fields: [{ key: 'event_name', label: 'Felicitación', required: true }],
+      titleSource: 'event_name',
       visual: { mode: 'template', template: 'simple' },
       generation: {
         rules:
@@ -503,21 +571,28 @@ describe('buildTemplateTextFields', () => {
         contentType: 'holiday_greeting',
         contentTypeDefinition: definition,
         topic: 'Día del Padre',
+        contentData: { event_name: 'Día del Padre' },
         backgroundMode: 'stock',
       },
       contentTypeDefinition: definition,
     })
 
-    expect(fields).toEqual({ layout: 'simple', headline: 'Feliz Día del Padre' })
+    expect(fields).toEqual({ layout: 'simple', headline: 'Día del Padre' })
+    expect(fields.headline).not.toBe('Feliz Día del Padre')
   })
 
-  test('returns null for caption / reel_caption', () => {
+  test('returns null without a Guidelines template definition regardless of id', () => {
     expect(
       buildTemplateTextFields({
         input: { contentType: 'caption', topic: 'Hola' },
       })
     ).toBeNull()
     expect(resolveTemplateLayoutId('reel_caption')).toBeNull()
+    expect(
+      resolveTemplateLayoutId('anything', {
+        visual: { mode: 'none', template: null },
+      })
+    ).toBeNull()
   })
 })
 
@@ -528,12 +603,15 @@ describe('attachTemplateRequestsToResult', () => {
       recommendedNextStep: 'Validar',
       humanReviewRequired: true,
     }
-    const input = {
-      contentType: 'observation_night',
-      topic: 'Noche de Observación',
-      backgroundMode: 'stock',
-      eventDetails: completeEventDetails,
-    }
+    const input = inputWithDefinition(
+      {
+        contentType: 'observation_night',
+        topic: 'Noche de Observación',
+        backgroundMode: 'stock',
+        eventDetails: completeEventDetails,
+      },
+      observationDefinition
+    )
     const posterText = {
       subtitle: 'Ven a mirar el cielo con nosotros.',
       body: 'Descubre una experiencia que despierta la curiosidad bajo las estrellas.',
@@ -570,18 +648,21 @@ describe('attachTemplateRequestsToResult', () => {
         recommendedNextStep: 'Validar',
         humanReviewRequired: true,
       },
-      {
-        contentType: 'event_promotion',
-        topic: 'Meteoros',
-        intent: 'Invitar',
-        backgroundMode: 'stock',
-        backgroundId: 'telescope-nebula',
-        eventDetails: { name: 'Perseidas', date: '2026-08-12', time: '8 PM', location: 'PR' },
-        sponsorLogo: {
-          dataUrl: 'data:image/png;base64,aaaa',
-          mimeType: 'image/png',
+      inputWithDefinition(
+        {
+          contentType: 'event_promotion',
+          topic: 'Meteoros',
+          intent: 'Invitar',
+          backgroundMode: 'stock',
+          backgroundId: 'telescope-nebula',
+          eventDetails: { name: 'Perseidas', date: '2026-08-12', time: '8 PM', location: 'PR' },
+          sponsorLogo: {
+            dataUrl: 'data:image/png;base64,aaaa',
+            mimeType: 'image/png',
+          },
         },
-      },
+        eventPromotionDefinition
+      ),
       { posterText: { subtitle: 'Ven a vernos.', body: 'Noche especial.' } }
     )
     expect(result.templateRequest).toMatchObject({
@@ -597,7 +678,7 @@ describe('attachTemplateRequestsToResult', () => {
     })
     expect(result.templateAssets).toMatchObject({
       backgroundSource: { mode: 'stock', backgroundId: 'telescope-nebula' },
-      downloadFileName: 'SAC-evento-2026-08-12-pr.jpg',
+      downloadFileName: 'SAC-promocion-de-evento-2026-08-12-pr.jpg',
       sponsorLogo: { mimeType: 'image/png' },
     })
     expect(result.drafts[0]).not.toHaveProperty('templateRequest')
@@ -611,15 +692,18 @@ describe('attachTemplateRequestsToResult', () => {
         recommendedNextStep: 'Validar',
         humanReviewRequired: true,
       },
-      {
-        contentType: 'event_promotion',
-        topic: 'Meteoros',
-        intent: 'Invitar',
-        backgroundMode: 'stock',
-        backgroundId: 'telescope-nebula',
-        templatePresentation: 'pills',
-        eventDetails: { name: 'Perseidas', date: '2026-08-12', time: '8 PM', location: 'PR' },
-      }
+      inputWithDefinition(
+        {
+          contentType: 'event_promotion',
+          topic: 'Meteoros',
+          intent: 'Invitar',
+          backgroundMode: 'stock',
+          backgroundId: 'telescope-nebula',
+          templatePresentation: 'pills',
+          eventDetails: { name: 'Perseidas', date: '2026-08-12', time: '8 PM', location: 'PR' },
+        },
+        eventPromotionDefinition
+      )
     )
 
     expect(result.templateRequest.templatePresentation).toBe('pills')
@@ -694,22 +778,79 @@ describe('buildTemplateSvg', () => {
       hasSponsor: true,
       sponsorPlacement: { left: 820, top: 1210, width: 160, height: 60 },
     })
-    expect(svg).toContain('<svg')
-    expect(svg).toContain('>Noche de<')
-    expect(svg).toContain('>estrellas<')
-    expect(svg).toContain('Observación pública')
-    expect(svg).toContain('Una noche para mirar al cielo.')
-    expect(svg).toContain('>15 AGO<')
-    expect(svg).toContain('>8 PM<')
-    expect(svg).toContain('Arecibo')
-    expect(svg).toContain('FECHA')
-    expect(svg).toContain('HORA')
-    expect(svg).toContain('LUGAR')
-    expect(svg).toContain('data-role="info-rail"')
-    expect(svg).toContain(EVENT_WEATHER_DISCLAIMER)
-    expect(svg).toContain('Auspicia')
-    expect(svg).toContain('data-logo-left="820.00"')
-    expect(svg).toContain('data-logo-top="1210.00"')
+    const root = parseTemplateSvg(svg)
+    const textValues = getSvgTextValues(root)
+    const sponsorLabel = root.querySelector('[data-role="sponsor-label"]')
+
+    expect(root.localName).toBe('svg')
+    expect(textValues).toEqual(
+      expect.arrayContaining([
+        'Noche de',
+        'estrellas',
+        'Observación pública',
+        'Una noche para mirar al cielo.',
+        '15 AGO',
+        '8 PM',
+        'Arecibo',
+        'FECHA',
+        'HORA',
+        'LUGAR',
+        EVENT_WEATHER_DISCLAIMER,
+        'Auspicia',
+      ])
+    )
+    expect(root.querySelector('[data-role="info-rail"]')).not.toBeNull()
+    expect(sponsorLabel).not.toBeNull()
+    expect(sponsorLabel.getAttribute('data-logo-left')).toBe('820.00')
+    expect(sponsorLabel.getAttribute('data-logo-top')).toBe('1210.00')
+  })
+
+  test('renders the historical separated pills with the violet time pill', () => {
+    const canvas = getSocialCanvas()
+    const svg = buildTemplateSvg({
+      layout: getTemplateLayout('event', canvas, 'pills'),
+      canvas,
+      textFields: {
+        headline: 'Noche de Observación',
+        subtitle: 'Acompáñanos bajo las estrellas.',
+        body: 'Una noche para mirar al cielo.',
+        dateLabel: 'SÁB 11 JUL',
+        timeLabel: '7:15 PM',
+        locationLabel: 'Pitahaya, Cabo Rojo',
+        weatherDisclaimer: EVENT_WEATHER_DISCLAIMER,
+      },
+    })
+
+    const root = parseTemplateSvg(svg)
+    const cards = [...root.querySelectorAll('[data-role="info-card"]')]
+    const cardFills = cards.map((card) => card.querySelector('rect')?.getAttribute('fill'))
+    const locationCard = root.querySelector('[data-role="info-card"][data-kind="location"]')
+    const locationLines = [
+      ...locationCard.querySelectorAll('[data-role="info-card-value"] > tspan'),
+    ].map((line) => line.textContent)
+    const cardWidths = Object.fromEntries(
+      cards.map((card) => [
+        card.getAttribute('data-kind'),
+        getNumericAttribute(card, 'data-card-width'),
+      ])
+    )
+
+    expect(root.querySelector('[data-role="info-rail"]')).toBeNull()
+    expect(getSvgTextValues(root)).not.toContain('FECHA')
+    expect(cardFills).toEqual(['#FFFFFF', '#560647', 'rgba(0,0,0,0.72)'])
+    expect(cards).toHaveLength(3)
+    expect(locationLines).toEqual(['PITAHAYA', 'CABO', 'ROJO'])
+    expect(locationLines).not.toContain('PITA')
+    expect(locationLines).not.toContain('HAYA')
+    expect(locationCard.textContent).not.toContain('…')
+    expect(locationCard.textContent).not.toContain(',')
+    expect(getNumericAttribute(locationCard, 'data-line-count')).toBe(3)
+    expect(getNumericAttribute(locationCard, 'data-font-size')).toBeGreaterThanOrEqual(35)
+    expect(cardWidths.location).toBeGreaterThan(cardWidths.date)
+    expect(cardWidths.location).toBeGreaterThan(cardWidths.time)
+    expect(
+      locationCard.querySelector('[data-role="info-card-value"]').getAttribute('font-weight')
+    ).toBe('800')
   })
 
   test('keeps long production copy and info-card text inside their regions', () => {
@@ -729,22 +870,23 @@ describe('buildTemplateSvg', () => {
       },
     })
 
-    expect(svg).toContain('data-layout-orientation="portrait"')
-    const contentBottom = Number(svg.match(/data-content-bottom="([\d.]+)"/)?.[1])
-    const pillsTop = Number(svg.match(/data-pills-top="([\d.]+)"/)?.[1])
+    const root = parseTemplateSvg(svg)
+    expect(root.getAttribute('data-layout-orientation')).toBe('portrait')
+    const contentBottom = getNumericAttribute(root, 'data-content-bottom')
+    const pillsTop = getNumericAttribute(root, 'data-pills-top')
     expect(contentBottom).toBeLessThan(pillsTop)
 
-    const cardMetrics = [
-      ...svg.matchAll(
-        /data-role="info-card"[^>]*data-card-top="([\d.]+)" data-card-bottom="([\d.]+)" data-text-top="([\d.]+)" data-text-bottom="([\d.]+)"/g
-      ),
-    ]
-    expect(cardMetrics).toHaveLength(3)
-    for (const [, cardTop, cardBottom, textTop, textBottom] of cardMetrics) {
-      expect(Number(cardTop)).toBeGreaterThanOrEqual(0)
-      expect(Number(cardBottom)).toBeLessThanOrEqual(canvas.height)
-      expect(Number(textTop)).toBeGreaterThanOrEqual(Number(cardTop))
-      expect(Number(textBottom)).toBeLessThanOrEqual(Number(cardBottom))
+    const cards = [...root.querySelectorAll('[data-role="info-card"]')]
+    expect(cards).toHaveLength(3)
+    for (const card of cards) {
+      const cardTop = getNumericAttribute(card, 'data-card-top')
+      const cardBottom = getNumericAttribute(card, 'data-card-bottom')
+      const textTop = getNumericAttribute(card, 'data-text-top')
+      const textBottom = getNumericAttribute(card, 'data-text-bottom')
+      expect(cardTop).toBeGreaterThanOrEqual(0)
+      expect(cardBottom).toBeLessThanOrEqual(canvas.height)
+      expect(textTop).toBeGreaterThanOrEqual(cardTop)
+      expect(textBottom).toBeLessThanOrEqual(cardBottom)
     }
   })
 
@@ -763,31 +905,40 @@ describe('buildTemplateSvg', () => {
       },
     })
 
-    const headlineMetrics = svg.match(
-      /<text x="540" y="([\d.]+)"[^>]*font-size="([\d.]+)" font-weight="800"[^>]*><tspan[^>]*>Noche de</
+    const root = parseTemplateSvg(svg)
+    const textElements = [...root.querySelectorAll('text')]
+    const headline = textElements.find(
+      (element) =>
+        element.getAttribute('font-weight') === '800' && element.textContent.includes('Noche de')
     )
-    const subtitleMetrics = svg.match(
-      /<text x="540" y="([\d.]+)"[^>]*font-size="([\d.]+)" font-weight="700"[^>]*><tspan[^>]*>Acompáñanos/
+    const subtitle = textElements.find(
+      (element) =>
+        element.getAttribute('font-weight') === '700' && element.textContent.includes('Acompáñanos')
     )
-    const bodyMetrics = svg.match(
-      /<text x="540" y="([\d.]+)"[^>]*font-size="([\d.]+)" font-weight="400"[^>]*><tspan[^>]*>Una noche/
+    const body = textElements.find(
+      (element) =>
+        element.getAttribute('font-weight') === '400' && element.textContent.includes('Una noche')
     )
     const cardWidths = Object.fromEntries(
-      [...svg.matchAll(/data-kind="(date|time|location)"[^>]*data-card-width="([\d.]+)"/g)].map(
-        ([, kind, cardWidth]) => [kind, Number(cardWidth)]
-      )
+      [...root.querySelectorAll('[data-role="info-card"]')].map((card) => [
+        card.getAttribute('data-kind'),
+        getNumericAttribute(card, 'data-card-width'),
+      ])
     )
 
-    expect(Number(headlineMetrics[2])).toBeLessThan(120)
-    expect(Number(subtitleMetrics[2])).toBeLessThan(50)
-    expect(Number(bodyMetrics[2])).toBeLessThan(36)
-    expect(Number(headlineMetrics[1])).toBeLessThan(Number(subtitleMetrics[1]))
-    expect(Number(subtitleMetrics[1])).toBeLessThan(Number(bodyMetrics[1]))
+    expect(headline).toBeDefined()
+    expect(subtitle).toBeDefined()
+    expect(body).toBeDefined()
+    expect(getNumericAttribute(headline, 'font-size')).toBeLessThan(120)
+    expect(getNumericAttribute(subtitle, 'font-size')).toBeLessThan(50)
+    expect(getNumericAttribute(body, 'font-size')).toBeLessThan(36)
+    expect(getNumericAttribute(headline, 'y')).toBeLessThan(getNumericAttribute(subtitle, 'y'))
+    expect(getNumericAttribute(subtitle, 'y')).toBeLessThan(getNumericAttribute(body, 'y'))
     expect(cardWidths.location).toBeGreaterThan(cardWidths.date * 2)
     expect(cardWidths.location).toBeGreaterThan(cardWidths.time * 2)
-    expect(svg).toContain('>Pitahaya, Cabo Rojo<')
-    expect(svg).not.toContain('>PITA<')
-    expect(svg).not.toContain('>HAYA<')
+    expect(getSvgTextValues(root)).toContain('Pitahaya, Cabo Rojo')
+    expect(getSvgTextValues(root)).not.toContain('PITA')
+    expect(getSvgTextValues(root)).not.toContain('HAYA')
   })
 
   test('preserves location word boundaries when punctuation has no following space', () => {
@@ -805,10 +956,12 @@ describe('buildTemplateSvg', () => {
       },
     })
 
-    expect(svg).not.toContain('PITAHAYACABO')
-    expect(svg).toContain('>Pitahaya, Cabo Rojo<')
-    expect(svg).not.toContain('>PITA<')
-    expect(svg).not.toContain('>HAYA<')
+    const root = parseTemplateSvg(svg)
+    const textValues = getSvgTextValues(root)
+    expect(root.textContent).not.toContain('PITAHAYACABO')
+    expect(textValues).toContain('Pitahaya, Cabo Rojo')
+    expect(textValues).not.toContain('PITA')
+    expect(textValues).not.toContain('HAYA')
   })
 
   test('fits a real long venue without truncating or breaking place names', () => {
@@ -826,26 +979,40 @@ describe('buildTemplateSvg', () => {
       },
     })
 
-    const locationMetrics = svg.match(
-      /data-kind="location"[^>]*data-line-count="([\d.]+)" data-font-size="([\d.]+)"[^>]*data-card-width="([\d.]+)"/
-    )
-    expect(locationMetrics).not.toBeNull()
-    expect(Number(locationMetrics[1])).toBeLessThanOrEqual(2)
-    expect(Number(locationMetrics[2])).toBeGreaterThanOrEqual(22)
-    expect(Number(locationMetrics[3])).toBeGreaterThan(470)
-    expect(svg).toContain('Castillo San Felipe')
-    expect(svg).toContain('>Morro, San Juan<')
-    expect(svg).not.toContain('…')
+    const root = parseTemplateSvg(svg)
+    const locationCard = root.querySelector('[data-role="info-card"][data-kind="location"]')
+    expect(locationCard).not.toBeNull()
+    const textValues = getSvgTextValues(locationCard)
+    expect(getNumericAttribute(locationCard, 'data-line-count')).toBeLessThanOrEqual(2)
+    expect(getNumericAttribute(locationCard, 'data-font-size')).toBeGreaterThanOrEqual(22)
+    expect(getNumericAttribute(locationCard, 'data-card-width')).toBeGreaterThan(470)
+    expect(locationCard.textContent).toContain('Castillo San Felipe')
+    expect(textValues).toContain('Morro, San Juan')
+    expect(locationCard.textContent).not.toContain('…')
   })
 
-  test('escapes XML special characters', () => {
+  test('preserves XML special characters as text content', () => {
     const svg = buildTemplateSvg({
       layout: 'simple',
       canvas: { width: 400, height: 500 },
       textFields: { headline: 'A < B & C > "D"' },
     })
-    expect(svg).toContain('A &lt; B &amp; C &gt; &quot;D&quot;')
-    expect(svg).not.toContain('A < B')
+    const root = parseTemplateSvg(svg)
+    expect(getSvgTextValues(root)).toContain('A < B & C > "D"')
+  })
+
+  test('renders script-like user input only as inert SVG text', () => {
+    const userText = '<script>alert("xss")</script>'
+    const root = parseTemplateSvg(
+      buildTemplateSvg({
+        layout: 'simple',
+        canvas: getSocialCanvas(),
+        textFields: { headline: userText },
+      })
+    )
+
+    expect(root.querySelector('script')).toBeNull()
+    expect(getSvgTextValues(root)).toContain(userText)
   })
 })
 

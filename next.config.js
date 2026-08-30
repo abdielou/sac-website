@@ -33,7 +33,14 @@ const baseConfig = withBundleAnalyzer({
     '@vercel/cli-config',
     'xdg-app-paths',
   ],
-  turbopack: {},
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
+      },
+    },
+  },
   reactStrictMode: true,
   pageExtensions: ['js', 'jsx', 'md', 'mdx'],
   webpack: (config, { dev, isServer }) => {
