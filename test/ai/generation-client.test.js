@@ -125,6 +125,7 @@ describe('AiGenerationClient Guidelines defaults', () => {
       failure: null,
       isBusy: false,
       isBlockedByOtherRun: false,
+      hasCurrentDraft: true,
       canRetry: false,
       submitGeneration: jest.fn(),
       retryGeneration: jest.fn(),
@@ -260,6 +261,162 @@ describe('AiGenerationClient Guidelines defaults', () => {
 
     act(() => backButton.click())
     expect(mockGenerationRun.resetRun).toHaveBeenCalledTimes(1)
+  })
+
+  test.each([
+    {
+      name: 'configuration failure',
+      code: 'image_provider_not_configured',
+      stage: 'image_prompt',
+      retryable: false,
+      message:
+        'El proveedor de imágenes no está configurado. Un administrador debe completar la configuración.',
+      title: 'Falta configurar la generación de imágenes',
+      summary: 'Un administrador debe añadir la credencial de OpenRouter.',
+      recovery: 'primero debe corregirse la configuración',
+      offersRetry: false,
+    },
+    {
+      name: 'exhausted transient failure',
+      code: 'image_provider_retry_exhausted',
+      stage: 'image_provider',
+      retryable: true,
+      message: 'El servicio no devolvió una imagen utilizable después de los intentos automáticos.',
+      title: 'El servicio de imágenes no respondió',
+      summary: 'No recibimos una imagen utilizable después de los intentos automáticos.',
+      recovery: 'Ya reintentamos la generación automáticamente',
+      offersRetry: true,
+    },
+    {
+      name: 'post-processing failure',
+      code: 'image_post_processing_failed',
+      stage: 'image_preparation',
+      retryable: true,
+      message:
+        'El proveedor generó un archivo, pero no pudo convertirse en una imagen segura para mostrar.',
+      title: 'La imagen se generó, pero no quedó lista',
+      summary: 'no pudimos convertirlo en una imagen segura para mostrar y descargar',
+      recovery: 'Regeneramos y preparamos la imagen automáticamente',
+      offersRetry: true,
+    },
+    {
+      name: 'non-retryable local asset failure',
+      code: 'image_asset_processing_failed',
+      stage: 'image_generation',
+      retryable: false,
+      message: 'Ocurrió un fallo interno al preparar el asset.',
+      title: 'La respuesta no pudo prepararse como imagen',
+      summary: 'ocurrió un fallo interno al preparar el asset',
+      recovery: 'no se corrige consumiendo otra generación',
+      offersRetry: false,
+    },
+  ])(
+    'explains a $name, the automatic recovery, and the preserved form',
+    ({ code, stage, retryable, message, title, summary, recovery, offersRetry }) => {
+      mockActiveGuidelines = guidelinesWithFirstContentType('regular_post')
+      mockGuidelinesHydrated = true
+      mockGenerationRun = {
+        ...mockGenerationRun,
+        phase: 'failed',
+        error: 'La generación falló',
+        failure: {
+          schemaVersion: 1,
+          code,
+          stage,
+          retryable,
+          message,
+        },
+        // Deliberately true for the configuration case: the presentation must
+        // still honor the terminal failure's non-retryable classification.
+        canRetry: true,
+      }
+      renderPanel()
+
+      const assistedFailure = container.querySelector('[data-testid="generation-assisted-failure"]')
+      expect(assistedFailure).not.toBeNull()
+      expect(assistedFailure.textContent).toContain(title)
+      expect(assistedFailure.textContent).toContain(summary)
+      expect(assistedFailure.textContent).toContain('Recuperación automática')
+      expect(assistedFailure.textContent).toContain(recovery)
+      expect(assistedFailure.textContent).toContain('Tu trabajo')
+      expect(assistedFailure.textContent).toContain('Tu formulario sigue aquí')
+      expect(assistedFailure.textContent).toContain('no necesitas empezar de nuevo')
+      expect(assistedFailure.textContent).not.toContain(code)
+      expect(assistedFailure.textContent).not.toContain(stage)
+
+      const retryButton = Array.from(container.querySelectorAll('button')).find(
+        (button) => button.textContent === 'Intentar de nuevo'
+      )
+      const backButton = Array.from(container.querySelectorAll('button')).find(
+        (button) => button.textContent === 'Volver al formulario'
+      )
+      expect(Boolean(retryButton)).toBe(offersRetry)
+      expect(backButton).toBeDefined()
+
+      if (retryButton) {
+        act(() => retryButton.click())
+        expect(mockGenerationRun.retryGeneration).toHaveBeenCalledTimes(1)
+      } else {
+        expect(mockGenerationRun.retryGeneration).not.toHaveBeenCalled()
+      }
+    }
+  )
+
+  test('keeps the assisted recovery presentation for a legacy required-image failure', () => {
+    mockActiveGuidelines = guidelinesWithFirstContentType('regular_post')
+    mockGuidelinesHydrated = true
+    mockGenerationRun = {
+      ...mockGenerationRun,
+      phase: 'failed',
+      error: 'La generación falló',
+      failure: {
+        schemaVersion: 1,
+        code: 'required_image_unavailable',
+        stage: 'image_generation',
+        retryable: true,
+        message: 'No se pudo preparar la imagen solicitada. Intenta nuevamente.',
+      },
+      canRetry: true,
+    }
+    renderPanel()
+
+    const assistedFailure = container.querySelector('[data-testid="generation-assisted-failure"]')
+    expect(assistedFailure.textContent).toContain('No pudimos completar la imagen')
+    expect(assistedFailure.textContent).toContain(
+      'No se pudo preparar la imagen solicitada. Intenta nuevamente.'
+    )
+    expect(assistedFailure.textContent).toContain('Tu formulario sigue aquí')
+    expect(
+      Array.from(container.querySelectorAll('button')).some(
+        (button) => button.textContent === 'Intentar de nuevo'
+      )
+    ).toBe(true)
+  })
+
+  test('does not claim that form data survived when a failed run was adopted after leaving', () => {
+    mockActiveGuidelines = guidelinesWithFirstContentType('regular_post')
+    mockGuidelinesHydrated = true
+    mockGenerationRun = {
+      ...mockGenerationRun,
+      phase: 'failed',
+      error: 'La generación falló',
+      failure: {
+        schemaVersion: 1,
+        code: 'image_provider_retry_exhausted',
+        stage: 'image_provider',
+        retryable: true,
+        message: 'El servicio de imágenes no respondió.',
+      },
+      hasCurrentDraft: false,
+      canRetry: false,
+    }
+    renderPanel()
+
+    const assistedFailure = container.querySelector('[data-testid="generation-assisted-failure"]')
+    expect(assistedFailure.textContent).toContain('esta ejecución se recuperó después de salir')
+    expect(assistedFailure.textContent).toContain('revisa el formulario actual')
+    expect(assistedFailure.textContent).not.toContain('Tu formulario sigue aquí')
+    expect(assistedFailure.textContent).not.toContain('no necesitas empezar de nuevo')
   })
 
   test('offers only the reset action when a failed run has no same-session retry', () => {

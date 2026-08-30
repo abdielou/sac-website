@@ -2,6 +2,7 @@ import React, { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   AI_RUN_MODES,
+  AI_RUN_POLL_TIMEOUT_MS,
   AI_RUN_STORAGE_VERSION,
   AiRunProvider,
   buildAiRunStorageKey,
@@ -224,6 +225,46 @@ describe('AiRunProvider', () => {
     expect(current.slot.failure.retryable).toBe(true)
   })
 
+  test('stops indefinite polling with a recoverable client timeout', async () => {
+    fetch
+      .mockResolvedValueOnce(
+        response(202, {
+          runId: 'wrun_slow_generation',
+          mode: 'generate',
+          status: 'pending',
+        })
+      )
+      .mockResolvedValue(
+        response(200, {
+          runId: 'wrun_slow_generation',
+          status: 'pending',
+        })
+      )
+
+    await act(async () => render())
+    await act(async () => {
+      await current.startRun({
+        mode: AI_RUN_MODES.GENERATE,
+        url: '/api/admin/ai/generate',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      })
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(AI_RUN_POLL_TIMEOUT_MS)
+    })
+
+    expect(current.slot.status).toBe('timeout')
+    expect(current.slot.failure).toMatchObject({
+      code: 'run_poll_timeout',
+      stage: 'status',
+      retryable: true,
+    })
+    expect(current.slot.error).toContain('tiempo máximo de espera')
+  })
+
   test('normalizes a legacy workflow wrapper to a friendly error string', () => {
     expect(
       normalizeAiRunFailure(
@@ -232,6 +273,42 @@ describe('AiRunProvider', () => {
     ).toEqual({
       message: 'No se pudo completar la generación.',
       retryable: false,
+    })
+  })
+
+  test('preserves a specific sanitized explanation instead of replacing it by code', () => {
+    expect(
+      normalizeAiRunFailure({
+        schemaVersion: 1,
+        code: 'required_image_unavailable',
+        stage: 'image_preparation',
+        retryable: false,
+        message:
+          'El proveedor generó un archivo, pero no pudo convertirse en una imagen segura para mostrar.',
+      })
+    ).toMatchObject({
+      code: 'required_image_unavailable',
+      stage: 'image_preparation',
+      retryable: false,
+      message:
+        'El proveedor generó un archivo, pero no pudo convertirse en una imagen segura para mostrar.',
+    })
+  })
+
+  test('does not expose prose from an unversioned structured provider error', () => {
+    expect(
+      normalizeAiRunFailure(
+        {
+          code: 'provider_error',
+          message: 'Upstream account secret and internal routing detail',
+          retryable: true,
+        },
+        'El servicio no respondió.'
+      )
+    ).toMatchObject({
+      code: 'provider_error',
+      retryable: true,
+      message: 'El servicio no respondió.',
     })
   })
 

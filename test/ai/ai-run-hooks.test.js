@@ -207,6 +207,7 @@ describe('recoverable AI run hooks', () => {
 
     expect(current.phase).toBe('failed')
     expect(current.canRetry).toBe(true)
+    expect(current.hasCurrentDraft).toBe(true)
     expect(current.failure).toMatchObject({
       code: 'provider_generation_failed',
       retryable: true,
@@ -293,6 +294,7 @@ describe('recoverable AI run hooks', () => {
 
     expect(current.phase).toBe('failed')
     expect(current.canRetry).toBe(false)
+    expect(current.hasCurrentDraft).toBe(false)
     await expect(current.retryGeneration()).resolves.toEqual({
       started: false,
       reason: 'retry-unavailable',
@@ -337,6 +339,7 @@ describe('recoverable AI run hooks', () => {
     expect(current.phase).toBe('failed')
     expect(current.failure.retryable).toBe(true)
     expect(current.canRetry).toBe(false)
+    expect(current.hasCurrentDraft).toBe(false)
 
     const outcome = await current.retryGeneration()
     expect(outcome).toEqual({ started: false, reason: 'retry-unavailable' })

@@ -812,24 +812,63 @@ export default function GenerationForm({
               }
             >
               <legend className="sr-only">Origen de la imagen</legend>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {allowsStockBackground && (
-                  <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
-                    <input
-                      type="radio"
-                      name="backgroundMode"
-                      checked={formState.backgroundMode === 'stock'}
-                      onChange={() => setBackgroundMode('stock')}
-                      className="mt-0.5 border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span>Usar fondo de plantilla</span>
-                  </label>
+                  <div className="space-y-3">
+                    <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                      <input
+                        type="radio"
+                        name="backgroundMode"
+                        value="stock"
+                        checked={formState.backgroundMode === 'stock'}
+                        onChange={() => setBackgroundMode('stock')}
+                        className="mt-0.5 border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span>Usar fondo de plantilla</span>
+                    </label>
+
+                    {formState.backgroundMode === 'stock' && (
+                      <div className="grid grid-cols-2 gap-3 pl-6 sm:grid-cols-3">
+                        {BACKGROUND_OPTIONS.map((bg) => {
+                          const selected = formState.backgroundId === bg.id
+                          return (
+                            <button
+                              key={bg.id}
+                              type="button"
+                              disabled={formDisabled}
+                              aria-pressed={selected}
+                              onClick={() => {
+                                markTouched('background')
+                                onFormChange({ ...formState, backgroundId: bg.id })
+                              }}
+                              className={`text-left rounded-lg border overflow-hidden transition-colors disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                                selected
+                                  ? 'border-blue-500 ring-2 ring-blue-500 dark:border-blue-500 dark:ring-blue-500'
+                                  : 'border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500'
+                              }`}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={bg.thumbnailUrl}
+                                alt=""
+                                className="w-full aspect-[3/4] object-cover bg-gray-100 dark:bg-gray-800"
+                              />
+                              <span className="block px-2 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
+                                {bg.label}
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
                 )}
                 {allowsAiBackground && (
                   <label className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
                     <input
                       type="radio"
                       name="backgroundMode"
+                      value="ai_generated"
                       checked={formState.backgroundMode === 'ai_generated'}
                       onChange={() => setBackgroundMode('ai_generated')}
                       className="mt-0.5 border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
@@ -839,41 +878,6 @@ export default function GenerationForm({
                 )}
               </div>
             </fieldset>
-          )}
-
-          {supportsTemplate && formState.backgroundMode === 'stock' && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {BACKGROUND_OPTIONS.map((bg) => {
-                const selected = formState.backgroundId === bg.id
-                return (
-                  <button
-                    key={bg.id}
-                    type="button"
-                    disabled={formDisabled}
-                    aria-pressed={selected}
-                    onClick={() => {
-                      markTouched('background')
-                      onFormChange({ ...formState, backgroundId: bg.id })
-                    }}
-                    className={`text-left rounded-lg border overflow-hidden transition-colors disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                      selected
-                        ? 'border-blue-500 ring-2 ring-blue-500 dark:border-blue-500 dark:ring-blue-500'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500'
-                    }`}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={bg.thumbnailUrl}
-                      alt=""
-                      className="w-full aspect-[3/4] object-cover bg-gray-100 dark:bg-gray-800"
-                    />
-                    <span className="block px-2 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300">
-                      {bg.label}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
           )}
 
           {touched.background && backgroundError && (

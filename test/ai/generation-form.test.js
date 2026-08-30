@@ -26,7 +26,7 @@ describe('GenerationForm shared platforms', () => {
       root.render(
         <GenerationForm
           canGenerate
-          formState={DEFAULT_GENERATION_FORM}
+          formState={{ ...DEFAULT_GENERATION_FORM, contentType: 'observation_night' }}
           onFormChange={() => {}}
           onSubmit={() => {}}
           contentTypes={[
@@ -92,7 +92,7 @@ describe('GenerationForm shared platforms', () => {
       root.render(
         <GenerationForm
           canGenerate
-          formState={DEFAULT_GENERATION_FORM}
+          formState={{ ...DEFAULT_GENERATION_FORM, contentType: 'observation_night' }}
           onFormChange={onFormChange}
           onSubmit={() => {}}
           contentTypes={[
@@ -129,6 +129,73 @@ describe('GenerationForm shared platforms', () => {
     expect(onFormChange).toHaveBeenCalledWith(
       expect.objectContaining({ templatePresentation: 'pills' })
     )
+  })
+
+  test('keeps stock templates with their option and hides them for an AI background', () => {
+    const onFormChange = jest.fn()
+    const definition = {
+      id: 'observation_night',
+      fields: [],
+      platforms: ['instagram', 'facebook'],
+      visual: {
+        mode: 'template',
+        template: 'event',
+        backgroundSources: ['stock', 'ai_generated'],
+        imagePolicyByPlatform: {
+          instagram: 'required',
+          facebook: 'required',
+        },
+      },
+    }
+
+    act(() =>
+      root.render(
+        <GenerationForm
+          canGenerate
+          formState={{ ...DEFAULT_GENERATION_FORM, contentType: definition.id }}
+          onFormChange={onFormChange}
+          onSubmit={() => {}}
+          contentTypes={[{ id: definition.id, label: 'Noche de Observación', definition }]}
+        />
+      )
+    )
+
+    const stockOption = container.querySelector('input[name="backgroundMode"][value="stock"]')
+    const templates = [...container.querySelectorAll('button[aria-pressed]')]
+    const aiOption = container.querySelector('input[name="backgroundMode"][value="ai_generated"]')
+
+    expect(stockOption).not.toBeNull()
+    expect(templates.length).toBeGreaterThan(0)
+    expect(aiOption).not.toBeNull()
+    expect(
+      stockOption.compareDocumentPosition(templates[0]) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+    expect(
+      templates.at(-1).compareDocumentPosition(aiOption) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+
+    act(() => aiOption.click())
+    expect(onFormChange).toHaveBeenCalledWith(
+      expect.objectContaining({ backgroundMode: 'ai_generated', backgroundId: '' })
+    )
+
+    act(() =>
+      root.render(
+        <GenerationForm
+          canGenerate
+          formState={{
+            ...DEFAULT_GENERATION_FORM,
+            contentType: definition.id,
+            backgroundMode: 'ai_generated',
+            backgroundId: '',
+          }}
+          onFormChange={onFormChange}
+          onSubmit={() => {}}
+          contentTypes={[{ id: definition.id, label: 'Noche de Observación', definition }]}
+        />
+      )
+    )
+    expect(container.querySelectorAll('button[aria-pressed]')).toHaveLength(0)
   })
 
   test('offers image-only mode, requires existing publication text, and preserves its raw value', () => {
@@ -237,6 +304,54 @@ describe('GenerationForm shared platforms', () => {
     expect(container.querySelector('#gen-publication-text-error').textContent).toContain(
       'admite hasta 20000 caracteres'
     )
+  })
+
+  test('shows image style as a full-width multiline field', () => {
+    const definition = {
+      id: 'post_educativo',
+      label: 'Post educativo',
+      fields: [
+        {
+          key: 'image_style',
+          label: 'Estilo de imagen',
+          help: '',
+          placeholder: '',
+          required: false,
+        },
+        {
+          key: 'image_constraints',
+          label: 'Restricciones visuales',
+          help: '',
+          placeholder: '',
+          required: false,
+        },
+      ],
+      platforms: ['facebook'],
+      visual: {
+        mode: 'ai_image',
+        imagePolicyByPlatform: { facebook: 'optional' },
+      },
+    }
+
+    act(() =>
+      root.render(
+        <GenerationForm
+          canGenerate
+          formState={{ ...DEFAULT_GENERATION_FORM, contentType: definition.id }}
+          onFormChange={() => {}}
+          onSubmit={() => {}}
+          contentTypes={[{ id: definition.id, label: definition.label, definition }]}
+          platforms={['facebook']}
+          platformOptions={[{ id: 'facebook', label: 'Facebook' }]}
+        />
+      )
+    )
+
+    const imageStyle = container.querySelector('#gen-content-image_style')
+    expect(imageStyle).toBeInstanceOf(HTMLTextAreaElement)
+    expect(imageStyle.rows).toBe(4)
+    expect(imageStyle.maxLength).toBe(500)
+    expect(imageStyle.parentElement.className).toContain('sm:col-span-2')
   })
 
   test('coerces image-only mode when switching to a type without images without erasing text', () => {
