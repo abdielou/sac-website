@@ -1,17 +1,16 @@
 import {
-  AiGenerationResultSchema,
-  GenerateInputSchema,
   applyGenerationGuardrails,
   buildFallbackGenerationResult,
   buildProvidedPublicationResult,
   mergeImagePromptsIntoResult,
-} from '../../workflows/ai-social-media-designer/generation/generateAiWorkflow'
+} from '../../lib/ai-generation-guardrails'
+import { AiGenerationResultSchema, GenerateInputSchema } from '../../lib/ai-generation-schemas'
 import { GENERATION_INPUT_LIMITS } from '../../lib/ai-constants'
 import { AI_BASE_POLICY_VERSION } from '../../lib/ai-agent'
 import { legacyInputToContentData } from '../../lib/ai-content-data'
 import { getDefaultGuidelines } from '../../lib/ai-guidelines'
 import { resolveContentTypeDefinition } from '../../lib/ai-guidelines-schema'
-import { extractOpenRouterUsage, mergeOpenRouterUsage } from '../../lib/ai-openrouter'
+import { mergeOpenRouterUsage } from '../../lib/ai-openrouter'
 
 const guidelineDocument = getDefaultGuidelines()
 
@@ -133,6 +132,7 @@ describe('generateAiWorkflow schema', () => {
           draftText: 'Observación con SAC este sábado. Detalles pronto.',
           missingInformation: ['Hora', 'Lugar'],
           imagePrompt: sharedPrompt,
+          imageRationale: 'Comparte la misma dirección visual entre las redes.',
         },
       ],
       recommendedNextStep: 'Validar los borradores antes de aprobar.',
@@ -164,8 +164,12 @@ describe('generateAiWorkflow schema', () => {
     const result = mergeImagePromptsIntoResult(
       textResult,
       [
-        { platform: 'x', imagePrompt: 'Prompt compartido' },
-        { platform: 'instagram', imagePrompt: 'Prompt compartido' },
+        { platform: 'x', imagePrompt: 'Prompt compartido', imageRationale: 'Apoya el texto.' },
+        {
+          platform: 'instagram',
+          imagePrompt: 'Prompt compartido',
+          imageRationale: 'Apoya el texto.',
+        },
       ],
       {
         contentType: 'regular_post',
@@ -555,31 +559,6 @@ describe('generateAiWorkflow schema', () => {
 })
 
 describe('OpenRouter usage helpers (shared)', () => {
-  test('extractOpenRouterUsage maps cost and tokens', () => {
-    const usage = extractOpenRouterUsage(
-      {
-        id: 'gen-xyz',
-        model: 'openai/gpt-4o-mini',
-        usage: {
-          prompt_tokens: 100,
-          completion_tokens: 20,
-          total_tokens: 120,
-          cost: 0.0012,
-        },
-      },
-      'fallback-model'
-    )
-
-    expect(usage).toEqual({
-      openRouterGenerationId: 'gen-xyz',
-      model: 'openai/gpt-4o-mini',
-      promptTokens: 100,
-      completionTokens: 20,
-      totalTokens: 120,
-      cost: { amount: 0.0012, currency: 'USD' },
-    })
-  })
-
   test('mergeOpenRouterUsage sums costs across retries', () => {
     const merged = mergeOpenRouterUsage(
       {

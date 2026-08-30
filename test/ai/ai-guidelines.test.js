@@ -2,8 +2,7 @@ import {
   getActiveGuidelines,
   getDefaultGuidelines,
   resolveGenerationGuidelinesFromDocument,
-  resolveGenerationGuidelinesForRequest,
-  resolveGuidelinesForRequest,
+  resolveGuidelinesFromDocument,
 } from '../../lib/ai-guidelines'
 import defaultGuidelinesDocument from '../../data/guidelines/default-v1.json'
 
@@ -70,8 +69,8 @@ describe('ai-guidelines', () => {
     expect(guidelines.generation.global).toBe(guidelines.global)
   })
 
-  test('resolveGuidelinesForRequest merges platform and content type', async () => {
-    const resolved = await resolveGuidelinesForRequest({
+  test('resolveGuidelinesFromDocument merges platform and content type', async () => {
+    const resolved = resolveGuidelinesFromDocument(await getActiveGuidelines(), {
       platform: 'instagram',
       contentType: 'event_promotion',
     })
@@ -83,8 +82,8 @@ describe('ai-guidelines', () => {
     expect(resolved.imageValidation).toBeTruthy()
   })
 
-  test('resolveGuidelinesForRequest handles unknown platform', async () => {
-    const resolved = await resolveGuidelinesForRequest({
+  test('resolveGuidelinesFromDocument handles unknown platform', async () => {
+    const resolved = resolveGuidelinesFromDocument(await getActiveGuidelines(), {
       platform: 'unknown',
       contentType: 'regular_post',
     })
@@ -93,10 +92,9 @@ describe('ai-guidelines', () => {
 
   test('generation and validation use the exact same platform expectation', async () => {
     const request = { platform: 'facebook', contentType: 'event_promotion' }
-    const [validation, generation] = await Promise.all([
-      resolveGuidelinesForRequest(request),
-      resolveGenerationGuidelinesForRequest(request),
-    ])
+    const active = await getActiveGuidelines()
+    const validation = resolveGuidelinesFromDocument(active, request)
+    const generation = resolveGenerationGuidelinesFromDocument(active, request)
 
     expect(generation.platform).toBe(validation.platform)
     expect(generation.captionMaxCharacters).toBe(validation.captionMaxCharacters)
@@ -106,7 +104,7 @@ describe('ai-guidelines', () => {
     const document = getDefaultGuidelines()
     document.generation.global = 'LEGACY_GENERATION_RULE_SHOULD_NOT_APPEAR'
 
-    const resolved = await resolveGenerationGuidelinesForRequest({
+    const resolved = resolveGenerationGuidelinesFromDocument(await getActiveGuidelines(), {
       platform: 'facebook',
       contentType: 'regular_post',
     })

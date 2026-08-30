@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import { AI_AGENT_IDENTITY_PROMPT, AI_AGENT_IDENTITY_VERSION } from '../../lib/ai-agent'
 import {
   AI_POLICY_REVIEW_CATEGORIES,
@@ -11,16 +15,26 @@ const SAFE_REQUEST = {
 }
 
 function openRouterResponse(decision, overrides = {}) {
-  return {
-    ok: true,
-    json: async () => ({
+  return new Response(
+    JSON.stringify({
       id: 'generation-policy-1',
       model: overrides.responseModel || 'test/multimodal',
+      provider: 'test',
       choices: [
         {
+          index: 0,
+          finish_reason: 'stop',
           message: {
+            role: 'assistant',
             content: overrides.content === undefined ? JSON.stringify(decision) : overrides.content,
-            ...(overrides.images ? { images: overrides.images } : null),
+            ...(overrides.images
+              ? {
+                  images: overrides.images.map((image) => ({
+                    type: 'image_url',
+                    ...image,
+                  })),
+                }
+              : null),
           },
         },
       ],
@@ -30,7 +44,23 @@ function openRouterResponse(decision, overrides = {}) {
         total_tokens: 15,
       },
     }),
-  }
+    { status: 200, headers: { 'content-type': 'application/json' } }
+  )
+}
+
+function errorResponse(status, message) {
+  return new Response(JSON.stringify({ error: { message } }), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  })
+}
+
+function messageText(message) {
+  if (typeof message?.content === 'string') return message.content
+  return (message?.content || [])
+    .filter((part) => part?.type === 'text')
+    .map((part) => part.text)
+    .join('\n')
 }
 
 function allowDecision(reason = 'Cumple la política base.') {
@@ -67,15 +97,52 @@ describe('classifyAiPolicyRequest', () => {
     const [url, options] = fetchImpl.mock.calls[0]
     const body = JSON.parse(options.body)
     expect(url).toBe('https://openrouter.ai/api/v1/chat/completions')
-    expect(options.headers.Authorization).toBe('Bearer test-key')
+    expect(new Headers(options.headers).get('authorization')).toBe('Bearer test-key')
     expect(body.model).toBe('test/multimodal')
     expect(body.modalities).toEqual(['text'])
     expect(body.image_config).toBeUndefined()
     expect(body.messages[0].role).toBe('system')
-    expect(body.messages[0].content.startsWith(AI_AGENT_IDENTITY_PROMPT)).toBe(true)
-    expect(body.messages[0].content).not.toContain('Usar un tono educativo.')
-    expect(body.messages[1].content[0].text).toContain('<GUIDELINES_NO_CONFIABLES>')
-    expect(body.messages[1].content[0].text).toContain('<SOLICITUD_NO_CONFIABLE>')
+    expect(messageText(body.messages[0]).startsWith(AI_AGENT_IDENTITY_PROMPT)).toBe(true)
+    expect(messageText(body.messages[0])).not.toContain('Usar un tono educativo.')
+    expect(messageText(body.messages[1])).toContain('<GUIDELINES_NO_CONFIABLES>')
+    expect(messageText(body.messages[1])).toContain('<SOLICITUD_NO_CONFIABLE>')
+  })
+
+  test('routes request policy review through the image model text companion', async () => {
+    const originalModel = process.env.OPENROUTER_MODEL
+    process.env.OPENROUTER_MODEL = 'google/gemini-3.1-flash-lite-image'
+    const fetchImpl = jest.fn(async (_url, options) => {
+      const body = JSON.parse(options.body)
+      if (body.model.endsWith('-image')) {
+        return openRouterResponse(null, {
+          content: null,
+          images: [{ image_url: { url: 'data:image/png;base64,AAAA' } }],
+        })
+      }
+      return openRouterResponse(allowDecision(), { responseModel: body.model })
+    })
+
+    try {
+      const result = await classifyAiPolicyRequest(
+        { request: SAFE_REQUEST, guidelines: {} },
+        { fetchImpl, apiKey: 'test-key' }
+      )
+
+      expect(result).toMatchObject({
+        decision: 'allow',
+        failClosed: false,
+        model: 'google/gemini-3.1-flash-lite',
+      })
+      expect(fetchImpl).toHaveBeenCalledTimes(1)
+      const body = JSON.parse(fetchImpl.mock.calls[0][1].body)
+      expect(body.model).toBe('google/gemini-3.1-flash-lite')
+      expect(body.modalities).toEqual(['text'])
+      expect(body.response_format).toEqual({ type: 'json_object' })
+      expect(body.image_config).toBeUndefined()
+    } finally {
+      if (originalModel === undefined) delete process.env.OPENROUTER_MODEL
+      else process.env.OPENROUTER_MODEL = originalModel
+    }
   })
 
   test('defers thematic image relevance until a real holiday image exists', async () => {
@@ -112,10 +179,12 @@ describe('classifyAiPolicyRequest', () => {
     expect(result.reason).toMatch(/resultado real/i)
 
     const body = JSON.parse(fetchImpl.mock.calls[0][1].body)
-    expect(body.messages[0].content).toContain('Motivos culturales, estacionales')
-    expect(body.messages[0].content).toContain('no exijas que cada objeto sea astronómico')
-    expect(body.messages[0].content).toContain('Guidelines puede imponer restricciones visuales')
-    expect(body.messages[0].content).toContain('dirección creativa parcial')
+    expect(messageText(body.messages[0])).toContain('Motivos culturales, estacionales')
+    expect(messageText(body.messages[0])).toContain('no exijas que cada objeto sea astronómico')
+    expect(messageText(body.messages[0])).toContain(
+      'Guidelines puede imponer restricciones visuales'
+    )
+    expect(messageText(body.messages[0])).toContain('dirección creativa parcial')
   })
 
   test('keeps Guidelines findings inside the validator in validation mode', async () => {
@@ -132,8 +201,8 @@ describe('classifyAiPolicyRequest', () => {
     )
 
     const body = JSON.parse(fetchImpl.mock.calls[0][1].body)
-    expect(body.messages[0].content).toContain('pide VALIDAR un borrador')
-    expect(body.messages[0].content).toContain('No uses guideline_noncompliance')
+    expect(messageText(body.messages[0])).toContain('pide VALIDAR un borrador')
+    expect(messageText(body.messages[0])).toContain('No uses guideline_noncompliance')
   })
 
   test('scopes image-only reviews to the visual result without rewriting provided text', async () => {
@@ -172,11 +241,11 @@ describe('classifyAiPolicyRequest', () => {
     )
 
     expect(bodies).toHaveLength(2)
-    expect(bodies[0].messages[0].content).toContain('GENERAR SOLO UNA IMAGEN')
-    expect(bodies[0].messages[0].content).toContain('No bloquees por ortografía')
-    expect(bodies[1].messages[0].content).toContain('RESULTADO DE SOLO IMAGEN')
-    expect(bodies[1].messages[0].content).toContain('No los corrijas, reescribas')
-    expect(bodies[1].messages[1].content[0].text).toContain(
+    expect(messageText(bodies[0].messages[0])).toContain('GENERAR SOLO UNA IMAGEN')
+    expect(messageText(bodies[0].messages[0])).toContain('No bloquees por ortografía')
+    expect(messageText(bodies[1].messages[0])).toContain('RESULTADO DE SOLO IMAGEN')
+    expect(messageText(bodies[1].messages[0])).toContain('No los corrijas, reescribas')
+    expect(messageText(bodies[1].messages[1])).toContain(
       `\"publicationText\":${JSON.stringify(request.publicationText)}`
     )
   })
@@ -204,12 +273,15 @@ describe('classifyAiPolicyRequest', () => {
   })
 
   test.each([
-    ['network error', async () => Promise.reject(new Error('offline')), 'network_error'],
     [
-      'provider error',
-      async () => ({ ok: false, status: 503, text: async () => 'unavailable' }),
-      'provider_error',
+      'network error',
+      async () =>
+        Promise.reject(
+          Object.assign(new Error('offline'), { name: 'AI_APICallError', isRetryable: true })
+        ),
+      'network_error',
     ],
+    ['provider error', async () => errorResponse(503, 'unavailable'), 'provider_error'],
     [
       'JSON parse error',
       async () => openRouterResponse(null, { content: '```json\n{"decision":\n```' }),
@@ -240,15 +312,15 @@ describe('classifyAiPolicyRequest', () => {
     })
   })
 
-  test('retries when the provider response body times out before it can be parsed', async () => {
+  test('retries when the provider response body cannot be parsed', async () => {
     const fetchImpl = jest
       .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => {
-          throw new Error('body stream aborted')
-        },
-      })
+      .mockResolvedValueOnce(
+        new Response('not-json', {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        })
+      )
       .mockResolvedValueOnce(openRouterResponse(allowDecision()))
 
     const result = await classifyAiPolicyRequest(
@@ -266,7 +338,7 @@ describe('classifyAiPolicyRequest', () => {
   })
 
   test('does not retry a non-transient provider rejection', async () => {
-    const fetchImpl = jest.fn(async () => ({ ok: false, status: 400 }))
+    const fetchImpl = jest.fn(async () => errorResponse(400, 'bad request'))
 
     const result = await classifyAiPolicyRequest(
       { request: SAFE_REQUEST, guidelines: {} },
@@ -443,13 +515,17 @@ describe('reviewAiPolicyResult', () => {
     const content = body.messages[1].content
     expect(body.modalities).toEqual(['text'])
     expect(body.image_config).toBeUndefined()
-    expect(body.messages[0].content).toContain(
+    expect(messageText(body.messages[0])).toContain(
       'El subtítulo y el cuerpo creativo de un afiche no son hechos inventados'
     )
-    expect(body.messages[0].content).toContain('Una invitación genérica como “Acompáñanos”')
-    expect(body.messages[0].content).toContain('Omitir el año o reformatear una fecha provista')
-    expect(body.messages[0].content).toContain('Una imagen relacionada que omite una felicitación')
-    expect(body.messages[0].content).toContain('guideline_noncompliance')
+    expect(messageText(body.messages[0])).toContain('Una invitación genérica como “Acompáñanos”')
+    expect(messageText(body.messages[0])).toContain(
+      'Omitir el año o reformatear una fecha provista'
+    )
+    expect(messageText(body.messages[0])).toContain(
+      'Una imagen relacionada que omite una felicitación'
+    )
+    expect(messageText(body.messages[0])).toContain('guideline_noncompliance')
     expect(content[0].text).toContain('<RESULTADO_NO_CONFIABLE>')
     expect(content[0].text).toContain('Acompáñanos a observar Saturno.')
     expect(content.slice(1)).toEqual([
@@ -513,8 +589,8 @@ describe('reviewAiPolicyResult', () => {
     expect(result.reason).toMatch(/no había una imagen adjunta/i)
 
     const body = JSON.parse(fetchImpl.mock.calls[0][1].body)
-    expect(body.messages[0].content).toContain('No se adjuntó ninguna imagen')
-    expect(body.messages[0].content).toContain('nunca uses unrelated_image')
+    expect(messageText(body.messages[0])).toContain('No se adjuntó ninguna imagen')
+    expect(messageText(body.messages[0])).toContain('nunca uses unrelated_image')
     expect(body.messages[1].content).not.toContain('image_url')
   })
 
@@ -565,15 +641,15 @@ describe('reviewAiPolicyResult', () => {
     )
 
     const body = JSON.parse(fetchImpl.mock.calls[0][1].body)
-    expect(body.messages[0].content).toContain('INFORME DE VALIDACIÓN')
-    expect(body.messages[0].content).toContain('El borrador original puede incumplir')
-    expect(body.messages[0].content).toContain('únicamente suggestedRevision')
-    expect(body.messages[0].content).toContain('no infieras ni evalúes imágenes hipotéticas')
-    expect(body.messages[1].content[0].text).toContain('Texto corregido.')
-    expect(body.messages[1].content[0].text).not.toContain(
+    expect(messageText(body.messages[0])).toContain('INFORME DE VALIDACIÓN')
+    expect(messageText(body.messages[0])).toContain('El borrador original puede incumplir')
+    expect(messageText(body.messages[0])).toContain('únicamente suggestedRevision')
+    expect(messageText(body.messages[0])).toContain('no infieras ni evalúes imágenes hipotéticas')
+    expect(messageText(body.messages[1])).toContain('Texto corregido.')
+    expect(messageText(body.messages[1])).not.toContain(
       'Texto con errores que las Guidelines deben detectar.'
     )
-    expect(body.messages[1].content[0].text).not.toContain('El borrador incumple las Guidelines.')
+    expect(messageText(body.messages[1])).not.toContain('El borrador incumple las Guidelines.')
   })
 
   test('uses one injected model for request classification and result review', async () => {
@@ -606,7 +682,46 @@ describe('reviewAiPolicyResult', () => {
     for (const body of bodies) {
       expect(body.image_model).toBeUndefined()
       expect(body.text_model).toBeUndefined()
-      expect(body.messages[0].content.startsWith(AI_AGENT_IDENTITY_PROMPT)).toBe(true)
+      expect(messageText(body.messages[0]).startsWith(AI_AGENT_IDENTITY_PROMPT)).toBe(true)
+    }
+  })
+
+  test('uses the text companion while retaining an attached image input', async () => {
+    const originalModel = process.env.OPENROUTER_MODEL
+    process.env.OPENROUTER_MODEL = 'google/gemini-3.1-flash-lite-image'
+    const fetchImpl = jest.fn(async () =>
+      openRouterResponse(allowDecision('Texto e imagen cumplen.'))
+    )
+
+    try {
+      const result = await reviewAiPolicyResult(
+        {
+          request: SAFE_REQUEST,
+          result: { draftText: 'Observa Saturno.' },
+          guidelines: {},
+          images: ['data:image/png;base64,AAAA'],
+        },
+        { fetchImpl, apiKey: 'test-key' }
+      )
+
+      expect(result).toMatchObject({
+        decision: 'allow',
+        failClosed: false,
+        model: 'google/gemini-3.1-flash-lite',
+      })
+      const body = JSON.parse(fetchImpl.mock.calls[0][1].body)
+      expect(body.model).toBe('google/gemini-3.1-flash-lite')
+      expect(body.modalities).toEqual(['text'])
+      expect(body.image_config).toBeUndefined()
+      expect(body.response_format).toEqual({ type: 'json_object' })
+      expect(body.provider).toEqual({ data_collection: 'deny' })
+      expect(body.messages[1].content).toContainEqual({
+        type: 'image_url',
+        image_url: { url: 'data:image/png;base64,AAAA' },
+      })
+    } finally {
+      if (originalModel === undefined) delete process.env.OPENROUTER_MODEL
+      else process.env.OPENROUTER_MODEL = originalModel
     }
   })
 })

@@ -1,14 +1,9 @@
 import {
   applyImageAssetFallbackToDraft,
   buildGeneratedImageAsset,
-  extractOpenRouterImageUsage,
   getImageGenerationConfig,
-  parseOpenRouterImageResponse,
 } from '../../lib/ai-image-generation'
-import {
-  AiGeneratedImageSchema,
-  AiGenerationResultSchema,
-} from '../../workflows/ai-social-media-designer/generation/generateAiWorkflow'
+import { AiGeneratedImageSchema, AiGenerationResultSchema } from '../../lib/ai-generation-schemas'
 
 describe('getImageGenerationConfig', () => {
   const originalEnv = process.env
@@ -35,47 +30,6 @@ describe('getImageGenerationConfig', () => {
   })
 })
 
-describe('parseOpenRouterImageResponse', () => {
-  test('parses /images API b64_json payload', () => {
-    const parsed = parseOpenRouterImageResponse({
-      data: [{ b64_json: 'abc123' }],
-    })
-    expect(parsed).toEqual({
-      dataUrl: 'data:image/png;base64,abc123',
-      mimeType: 'image/png',
-    })
-  })
-
-  test('parses chat completions images array', () => {
-    const parsed = parseOpenRouterImageResponse({
-      choices: [
-        {
-          message: {
-            images: [{ image_url: { url: 'data:image/jpeg;base64,xyz' } }],
-          },
-        },
-      ],
-    })
-    expect(parsed?.mimeType).toBe('image/jpeg')
-    expect(parsed?.dataUrl).toContain('data:image/jpeg')
-  })
-})
-
-describe('extractOpenRouterImageUsage', () => {
-  test('maps cost from image generation usage', () => {
-    const usage = extractOpenRouterImageUsage(
-      {
-        model: 'google/gemini-3.1-flash-lite-image',
-        usage: { total_tokens: 100, cost: 0.02 },
-      },
-      'fallback'
-    )
-    expect(usage?.cost).toEqual({ amount: 0.02, currency: 'USD' })
-    expect(usage?.totalTokens).toBe(100)
-    expect(usage?.model).toBe('google/gemini-3.1-flash-lite-image')
-  })
-})
-
 describe('buildGeneratedImageAsset and fallback', () => {
   test('buildGeneratedImageAsset produces downloadable draft metadata (platform-specific)', () => {
     const asset = buildGeneratedImageAsset({
@@ -84,6 +38,11 @@ describe('buildGeneratedImageAsset and fallback', () => {
       mimeType: 'image/png',
       rationale: 'Apoya el evento.',
       contentType: 'regular_post',
+      contentTypeDefinition: {
+        label: 'Publicación',
+        fields: [{ key: 'topic', required: true }],
+        visual: { template: null },
+      },
       topic: 'Eclipse lunar',
       generatedAt: '2026-08-01T18:30:00Z',
     })
@@ -136,12 +95,14 @@ describe('buildGeneratedImageAsset and fallback', () => {
           contentType: 'image_post',
           draftText: 'Texto IG',
           imagePrompt: 'Prompt',
+          imageRationale: 'Apoya el texto compartido.',
         },
         {
           platform: 'x',
           contentType: 'image_post',
           draftText: 'Texto X',
           imagePrompt: 'Prompt',
+          imageRationale: 'Apoya el texto compartido.',
         },
       ],
       generatedImage: sharedAsset,

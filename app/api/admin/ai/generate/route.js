@@ -26,11 +26,9 @@ import {
   DEFAULT_EVENT_TEMPLATE_PRESENTATION,
   resolveTemplateLayoutId,
 } from '../../../../../lib/social-template/templateLayouts'
+import { GenerateInputSchema } from '../../../../../lib/ai-generation-schemas'
 import { start } from 'workflow/api'
-import {
-  GenerateInputSchema,
-  generateAiWorkflow,
-} from '../../../../../workflows/ai-social-media-designer/generation/generateAiWorkflow'
+import { generateAiWorkflow } from '../../../../../workflows/ai-social-media-designer/generation/generateAiWorkflow'
 
 const GENERATE_WORKFLOW_ID =
   'workflow//./workflows/ai-social-media-designer/generation/generateAiWorkflow//generateAiWorkflow'

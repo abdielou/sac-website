@@ -14,6 +14,9 @@ module.exports = {
       { presets: ['@babel/preset-env', '@babel/preset-react'] },
     ],
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(ai|@ai-sdk|@openrouter/ai-sdk-provider|@workflow/serde)/)',
+  ],
   testPathIgnorePatterns: ['/node_modules/', '/.next/'],
   collectCoverageFrom: [
     '**/*.{js,jsx,ts,tsx}',

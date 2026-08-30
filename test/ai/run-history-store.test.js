@@ -306,6 +306,49 @@ describe('buildGenerationHistoryRecord', () => {
     })
   })
 
+  test('records a completed policy block without persisting blocked content', () => {
+    const record = buildGenerationHistoryRecord({
+      input: {
+        userId: 'u1',
+        platforms: ['instagram'],
+        contentType: 'configurable_visual',
+        intent: 'Crear una pieza',
+        topic: 'Astronomía',
+      },
+      runId: 'wrun_policy_block',
+      status: 'completed',
+      result: {
+        drafts: [
+          {
+            platform: 'instagram',
+            contentType: 'configurable_visual',
+            draftText: 'Texto seguro conservado para explicar el resultado.',
+            missingInformation: [],
+          },
+        ],
+        policyReview: {
+          stage: 'result',
+          disposition: 'block',
+          categories: ['unrelated_image'],
+          reason: 'Detalle deliberadamente no persistido.',
+          failClosed: false,
+        },
+      },
+    })
+
+    expect(record.status).toBe('completed')
+    expect(record.outcomeSummary).toEqual({
+      draftCount: 1,
+      platforms: ['instagram'],
+      hasMissingInformation: false,
+      policyStage: 'result',
+      policyDisposition: 'block',
+      policyFailClosed: false,
+    })
+    expect(JSON.stringify(record)).not.toContain('Detalle deliberadamente no persistido')
+    expect(JSON.stringify(record)).not.toContain('Texto seguro conservado')
+  })
+
   test('single-platform sets platform field; failed includes safe error', () => {
     const record = buildGenerationHistoryRecord({
       input: {

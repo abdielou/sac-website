@@ -1,41 +1,62 @@
 import { shouldGenerateImagePrompt } from '../../lib/ai-constants'
-import { resolveGenerationGuidelinesForRequest } from '../../lib/ai-guidelines'
-import { resolveImageTextPolicy, stripNoTextInstructions } from '../../lib/ai-image-text-policy'
+import {
+  getActiveGuidelines,
+  resolveGenerationGuidelinesFromDocument,
+} from '../../lib/ai-guidelines'
+import {
+  applyImagePromptGuardrailsToDraft,
+  mergeImagePromptsIntoResult,
+} from '../../lib/ai-generation-guardrails'
 import {
   AiGenerationResultSchema,
   AiImagePromptsResultSchema,
-  applyImagePromptGuardrailsToDraft,
-  mergeImagePromptsIntoResult,
-} from '../../workflows/ai-social-media-designer/generation/generateAiWorkflow'
+} from '../../lib/ai-generation-schemas'
 
 describe('shouldGenerateImagePrompt', () => {
-  test('returns true by default for all content types', () => {
-    expect(shouldGenerateImagePrompt('image_post')).toBe(true)
-    expect(shouldGenerateImagePrompt('carousel')).toBe(true)
-    expect(shouldGenerateImagePrompt('event_promotion')).toBe(true)
-    expect(shouldGenerateImagePrompt('educational_astronomy')).toBe(true)
-    expect(shouldGenerateImagePrompt('regular_post')).toBe(true)
-    expect(shouldGenerateImagePrompt('caption')).toBe(true)
-    expect(shouldGenerateImagePrompt('member_update')).toBe(true)
+  const visualDefinition = {
+    id: 'arbitrary_type',
+    visual: {
+      mode: 'ai_image',
+      imagePolicyByPlatform: { x: 'optional', instagram: 'required', facebook: 'prohibited' },
+    },
+  }
+
+  test('uses only the Guidelines visual definition, never the content type id', () => {
+    for (const id of ['image_post', 'reel_caption', 'anything_else']) {
+      expect(
+        shouldGenerateImagePrompt(
+          id,
+          { platforms: ['instagram'], contentTypeDefinition: visualDefinition },
+          visualDefinition
+        )
+      ).toBe(true)
+    }
+    expect(shouldGenerateImagePrompt('image_post')).toBe(false)
   })
 
-  test('returns false for reel captions (text only)', () => {
-    expect(shouldGenerateImagePrompt('reel_caption')).toBe(false)
+  test('returns false when Guidelines prohibit images for every destination', () => {
+    expect(
+      shouldGenerateImagePrompt(
+        'arbitrary_type',
+        { platforms: ['facebook'], contentTypeDefinition: visualDefinition },
+        visualDefinition
+      )
+    ).toBe(false)
   })
 
-  test('returns false when an existing template background supplies the visual', () => {
-    expect(shouldGenerateImagePrompt('event_promotion', { backgroundMode: 'stock' })).toBe(false)
-  })
-
-  test('still returns true when image style or constraints are provided', () => {
-    expect(shouldGenerateImagePrompt('regular_post', { imageStyle: 'ilustración' })).toBe(true)
-    expect(shouldGenerateImagePrompt('member_update', { imageConstraints: 'sin rostros' })).toBe(
-      true
-    )
+  test('returns false when Guidelines define a text-only type', () => {
+    const textOnlyDefinition = {
+      ...visualDefinition,
+      visual: {
+        mode: 'none',
+        imagePolicyByPlatform: { x: 'prohibited', instagram: 'prohibited' },
+      },
+    }
+    expect(shouldGenerateImagePrompt('anything', {}, textOnlyDefinition)).toBe(false)
   })
 })
 
-describe('resolveGenerationGuidelinesForRequest image prompts', () => {
+describe('resolveGenerationGuidelinesFromDocument image prompts', () => {
   const originalBucket = process.env.S3_ARTICLES_BUCKET_NAME
 
   beforeAll(() => {
@@ -51,7 +72,7 @@ describe('resolveGenerationGuidelinesForRequest image prompts', () => {
   })
 
   test('includes imagePrompt generation rules', async () => {
-    const resolved = await resolveGenerationGuidelinesForRequest({
+    const resolved = resolveGenerationGuidelinesFromDocument(await getActiveGuidelines(), {
       platform: 'instagram',
       contentType: 'image_post',
     })
@@ -75,6 +96,14 @@ describe('AiImagePromptsResultSchema', () => {
     }
     expect(AiImagePromptsResultSchema.safeParse(valid).success).toBe(true)
   })
+
+  test('rejects an image prompt without its rationale', () => {
+    expect(
+      AiImagePromptsResultSchema.safeParse({
+        imagePrompts: [{ platform: 'instagram', imagePrompt: 'Cielo nocturno seguro.' }],
+      }).success
+    ).toBe(false)
+  })
 })
 
 describe('applyImagePromptGuardrailsToDraft', () => {
@@ -84,7 +113,7 @@ describe('applyImagePromptGuardrailsToDraft', () => {
     eventDetails: { name: 'Noche estelar', date: '15 de agosto' },
   }
 
-  test('appends standard safety suffix when missing', () => {
+  test('appends safety and composition suffixes without adding a text directive', () => {
     const draft = applyImagePromptGuardrailsToDraft(
       {
         platform: 'instagram',
@@ -99,38 +128,68 @@ describe('applyImagePromptGuardrailsToDraft', () => {
     expect(draft.imagePrompt).toMatch(/vertical 3:4 canvas/i)
     expect(draft.imagePrompt).toMatch(/fully inside the frame/i)
     expect(draft.imagePrompt).toMatch(/side-by-side product lineup/i)
-    expect(draft.imagePrompt).toMatch(/no unrequested text overlay/i)
+    expect(draft.imagePrompt).not.toMatch(/no unrequested text overlay/i)
+    expect(draft.imagePrompt).not.toMatch(/required on-image text/i)
+    expect(draft.imagePrompt).not.toMatch(/include the greeting or message required/i)
   })
 
-  test('allows required greeting typography and removes a conflicting no-text clause', () => {
-    const requiredTextInput = {
-      ...baseInput,
-      topic: 'Día del Padre',
-      contentType: 'holiday_greeting',
-      contentTypeDefinition: {
-        id: 'holiday_greeting',
-        generation: {
-          rules:
-            'Debe generar una felicitación de acuerdo al día festivo. La imagen generada debe incluir la felicitación.',
+  test.each([
+    [
+      'visible text',
+      'Starry Caribbean sky; no identifiable faces; render the exact headline "Celebremos a papá" in readable type.',
+      'render the exact headline "Celebremos a papá" in readable type',
+    ],
+    ['no text', 'Starry Caribbean sky; no identifiable faces; no text overlay.', 'no text overlay'],
+  ])(
+    'preserves an arbitrary %s instruction without adding a text policy',
+    (_label, prompt, copy) => {
+      const draft = applyImagePromptGuardrailsToDraft(
+        {
+          platform: 'instagram',
+          contentType: 'regular_post',
+          draftText: 'Texto',
+          imagePrompt: prompt,
         },
-      },
+        baseInput
+      )
+
+      expect(draft.imagePrompt).toContain(copy)
+      expect(draft.imagePrompt).not.toMatch(/no unrequested text overlay/i)
+      expect(draft.imagePrompt).not.toMatch(/required on-image text/i)
+      expect(draft.imagePrompt).not.toMatch(/include the greeting or message required/i)
     }
+  )
+
+  test('fills every missing safety clause instead of treating one clause as the whole policy', () => {
     const draft = applyImagePromptGuardrailsToDraft(
       {
         platform: 'instagram',
-        contentType: 'holiday_greeting',
-        draftText: 'Feliz Día del Padre.',
-        imagePrompt:
-          'Father and child observing the stars; no identifiable faces; no text overlay.',
+        contentType: 'regular_post',
+        draftText: 'Texto',
+        imagePrompt: 'Starry sky; no identifiable faces.',
       },
-      requiredTextInput
+      baseInput
     )
 
-    expect(draft.imagePrompt).not.toMatch(/no text overlay/i)
-    expect(draft.imagePrompt).toContain('Required on-image text: "Feliz Día del Padre"')
-    expect(draft.imagePrompt).toMatch(/clearly legible/i)
-    expect(draft.imagePrompt).toContain('aligned with the publication topic, occasion, and caption')
-    expect(draft.imagePrompt).not.toMatch(/astronomy anchor/i)
+    expect(draft.imagePrompt).toMatch(/No private information/i)
+    expect(draft.imagePrompt).toMatch(/No official logos/i)
+    expect(draft.imagePrompt).toMatch(/No copyrighted art styles/i)
+    expect(draft.imagePrompt).toMatch(/physically plausible/i)
+  })
+
+  test('is idempotent when a prompt already contains every deterministic guardrail', () => {
+    const once = applyImagePromptGuardrailsToDraft(
+      {
+        platform: 'instagram',
+        contentType: 'regular_post',
+        draftText: 'Texto',
+        imagePrompt: 'A complete telescope beneath a quiet night sky.',
+      },
+      baseInput
+    )
+    const twice = applyImagePromptGuardrailsToDraft(once, baseInput)
+
+    expect(twice.imagePrompt).toBe(once.imagePrompt)
   })
 
   test('flags approval claims in image prompts', () => {
@@ -198,35 +257,18 @@ describe('applyImagePromptGuardrailsToDraft', () => {
   })
 })
 
-describe('image text policy', () => {
-  test('derives a supplied holiday greeting from natural-language type rules', () => {
-    const policy = resolveImageTextPolicy({
-      topic: 'Día del Padre',
-      contentTypeDefinition: {
-        generation: {
-          rules:
-            'Debe generar una felicitación de acuerdo al día festivo. La imagen generada debe incluir la felicitación.',
-        },
-      },
-    })
-
-    expect(policy).toMatchObject({ required: true, suggestedText: 'Feliz Día del Padre' })
-  })
-
-  test('removes persisted English and Spanish no-text instructions', () => {
-    expect(
-      stripNoTextInstructions(
-        'Astronomy greeting; no text overlay; sin tipografía; no identifiable faces.'
-      )
-    ).toBe('Astronomy greeting; no identifiable faces')
-  })
-})
-
 describe('mergeImagePromptsIntoResult', () => {
   const input = {
     platforms: ['instagram', 'x'],
     contentType: 'image_post',
     imageConstraints: 'sin rostros identificables',
+    contentTypeDefinition: {
+      id: 'image_post',
+      visual: {
+        mode: 'ai_image',
+        imagePolicyByPlatform: { instagram: 'required', x: 'prohibited' },
+      },
+    },
   }
 
   test('merges prompts by platform and validates schema', () => {

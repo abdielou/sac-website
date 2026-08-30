@@ -40,7 +40,7 @@ describe('Guidelines schema v3 seed', () => {
     expect(migratedAgain).toEqual(migrated)
   })
 
-  test('keeps observation_night as its own first-class, first catalog entry', () => {
+  test('preserves the ordered content types supplied by the seed document', () => {
     const migrated = validGuidelines()
     const observationNight = migrated.contentTypeCatalog[0]
 
@@ -201,6 +201,42 @@ describe('Guidelines schema v3 activation validation', () => {
       const visual = entry.visual
       if (!visual?.imagePolicyByPlatform) continue
       visual.imagePolicyByPlatform.threads = visual.mode === 'none' ? 'prohibited' : 'optional'
+    }
+
+    expect(validateGuidelineForActivation(document)).toMatchObject({
+      ok: true,
+      errors: [],
+      issues: [],
+    })
+  })
+
+  test('allows Instagram to be optional when Guidelines define it as optional', () => {
+    const document = validGuidelines()
+    const type = document.contentTypeCatalog.find(({ id }) => id === 'regular_post')
+    type.visual.imagePolicyByPlatform.instagram = 'optional'
+
+    const validation = validateGuidelineForActivation(document)
+
+    expect(validation.ok).toBe(true)
+    expect(
+      validation.document.contentTypeCatalog.find(({ id }) => id === type.id).visual
+    ).toMatchObject({ imagePolicyByPlatform: { instagram: 'optional' } })
+  })
+
+  test('allows a text-only type to target Instagram when Guidelines prohibit its images', () => {
+    const document = validGuidelines()
+    const type = document.contentTypeCatalog.find(({ id }) => id === 'regular_post')
+    type.platforms = ['instagram']
+    type.visual = {
+      mode: 'none',
+      template: null,
+      backgroundSources: [],
+      sponsorAllowed: false,
+      imagePolicyByPlatform: {
+        x: 'prohibited',
+        instagram: 'prohibited',
+        facebook: 'prohibited',
+      },
     }
 
     expect(validateGuidelineForActivation(document)).toMatchObject({
@@ -459,6 +495,20 @@ describe('Guidelines schema v3 catalog operations', () => {
       label: 'Otra historia',
       status: 'active',
     })
+  })
+
+  test('creates the same generic starter shape regardless of content type id', () => {
+    const reel = resolveContentTypeDefinition(
+      createContentType(validGuidelines(), { id: 'reel_caption', label: 'A' }),
+      'reel_caption'
+    )
+    const custom = resolveContentTypeDefinition(
+      createContentType(validGuidelines(), { id: 'plain_type', label: 'B' }),
+      'plain_type'
+    )
+    const withoutIdentity = ({ id: _id, label: _label, ...entry }) => entry
+
+    expect(withoutIdentity(reel)).toEqual(withoutIdentity(custom))
   })
 
   test('derives valid bounded IDs from nontechnical names', () => {

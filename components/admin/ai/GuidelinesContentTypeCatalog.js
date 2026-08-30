@@ -218,7 +218,6 @@ export default function GuidelinesContentTypeCatalog({
         ? 'required'
         : 'optional'
   const followsSacDesign = selected?.visual?.mode === 'template' ? 'yes' : 'no'
-  const instagramSelected = selectedPlatformIds.includes('instagram')
   const normalizedNewTypeName = newTypeName.trim().toLocaleLowerCase('es-PR')
   const duplicateNewTypeName = Boolean(
     normalizedNewTypeName &&
@@ -547,7 +546,6 @@ export default function GuidelinesContentTypeCatalog({
 
   const changeImageRequirement = (requirement) => {
     const platformIds = selectedPlatformIds
-    if (instagramSelected && requirement !== 'required') return
     if (requirement === 'prohibited') {
       changeVisualMode('none')
       return
@@ -582,24 +580,39 @@ export default function GuidelinesContentTypeCatalog({
     })
   }
 
-  const toggleTypePlatform = (platform, checked) => {
+  const changePlatformImagePolicy = (platform, requirement) => {
     updateSelected((entry) => {
-      const current = Array.isArray(entry.platforms)
-        ? entry.platforms
-        : previewPlatforms.map(({ id }) => id)
-      if (!checked && current.length <= 1) return entry
-      const platforms = checked
-        ? current.includes(platform)
-          ? current
-          : [...current, platform]
-        : current.filter((id) => id !== platform)
-      if (!checked || platform !== 'instagram') return { ...entry, platforms }
-
       const visual = entry.visual || {}
+      const imagePolicyByPlatform = {
+        ...visual.imagePolicyByPlatform,
+        [platform]: requirement,
+      }
+      const scopedPlatforms = Array.isArray(entry.platforms) ? entry.platforms : []
+      const allScopedPlatformsProhibitImages =
+        scopedPlatforms.length > 0 &&
+        scopedPlatforms.every((id) => imagePolicyByPlatform[id] === 'prohibited')
+
+      if (allScopedPlatformsProhibitImages) {
+        return {
+          ...entry,
+          fields: (entry.fields || []).filter(({ key }) => !VISUAL_INPUT_KEYS.has(key)),
+          visual: {
+            ...visual,
+            mode: 'none',
+            template: null,
+            backgroundSources: [],
+            sponsorAllowed: false,
+            imagePolicyByPlatform: policies(
+              'prohibited',
+              previewPlatforms.map(({ id }) => id)
+            ),
+          },
+        }
+      }
+
       const mode = visual.mode === 'none' ? 'template' : visual.mode
       return {
         ...entry,
-        platforms,
         visual: {
           ...visual,
           mode,
@@ -616,12 +629,24 @@ export default function GuidelinesContentTypeCatalog({
                 : ['stock']
               : [],
           sponsorAllowed: mode === 'template' && visual.sponsorAllowed === true,
-          imagePolicyByPlatform: {
-            ...visual.imagePolicyByPlatform,
-            ...policies('required', platforms),
-          },
+          imagePolicyByPlatform,
         },
       }
+    })
+  }
+
+  const toggleTypePlatform = (platform, checked) => {
+    updateSelected((entry) => {
+      const current = Array.isArray(entry.platforms)
+        ? entry.platforms
+        : previewPlatforms.map(({ id }) => id)
+      if (!checked && current.length <= 1) return entry
+      const platforms = checked
+        ? current.includes(platform)
+          ? current
+          : [...current, platform]
+        : current.filter((id) => id !== platform)
+      return { ...entry, platforms }
     })
   }
 
@@ -1072,18 +1097,48 @@ export default function GuidelinesContentTypeCatalog({
                           className={inputClass}
                         >
                           {IMAGE_POLICIES.map((policy) => (
-                            <option
-                              key={policy}
-                              value={policy}
-                              disabled={policy !== 'required' && instagramSelected}
-                            >
+                            <option key={policy} value={policy}>
                               {IMAGE_REQUIREMENT_LABELS[policy]}
                             </option>
                           ))}
                         </select>
-                        {instagramSelected && (
-                          <p className={hintClass}>Instagram requiere imagen.</p>
-                        )}
+                        <p className={hintClass}>
+                          Esta selección aplica la misma regla a todas las redes marcadas.
+                        </p>
+                      </div>
+
+                      <div className="mt-6">
+                        <p className={labelClass}>Regla de imagen por red</p>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          {previewPlatforms
+                            .filter(({ id }) => selectedPlatformIds.includes(id))
+                            .map(({ id, label }) => (
+                              <label
+                                key={id}
+                                htmlFor={`content-type-${domId(selected.id)}-image-policy-${domId(id)}`}
+                                className="rounded-lg border border-gray-200 px-3 py-3 text-sm font-medium text-gray-800 dark:border-gray-700 dark:text-gray-200"
+                              >
+                                <span className="mb-2 block">{label}</span>
+                                <select
+                                  id={`content-type-${domId(selected.id)}-image-policy-${domId(id)}`}
+                                  value={
+                                    selected.visual?.imagePolicyByPlatform?.[id] || 'prohibited'
+                                  }
+                                  onChange={(event) =>
+                                    changePlatformImagePolicy(id, event.target.value)
+                                  }
+                                  disabled={disabled}
+                                  className={inputClass}
+                                >
+                                  {IMAGE_POLICIES.map((policy) => (
+                                    <option key={policy} value={policy}>
+                                      {IMAGE_REQUIREMENT_LABELS[policy]}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                            ))}
+                        </div>
                       </div>
 
                       {selected.visual?.mode !== 'none' && (

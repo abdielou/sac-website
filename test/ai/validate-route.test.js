@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 jest.mock('../../auth', () => ({
   auth: (handler) => handler,
 }))

@@ -39,8 +39,8 @@ const {
   createContentType,
   resolveContentTypeDefinition,
 } = require('../../lib/ai-guidelines-schema')
+const { GenerateInputSchema } = require('../../lib/ai-generation-schemas')
 const {
-  GenerateInputSchema,
   generateAiWorkflow,
 } = require('../../workflows/ai-social-media-designer/generation/generateAiWorkflow')
 const {
@@ -64,14 +64,53 @@ function policyDecision(decision = 'allow', overrides = {}) {
 }
 
 function openRouterResponse(content, images) {
-  return {
-    ok: true,
-    json: async () => ({
+  return new Response(
+    JSON.stringify({
+      id: 'generation-workflow-1',
       model: 'test/multimodal',
-      choices: [{ message: { content, ...(images ? { images } : null) } }],
+      provider: 'test',
+      choices: [
+        {
+          index: 0,
+          finish_reason: 'stop',
+          message: {
+            role: 'assistant',
+            content,
+            ...(images
+              ? {
+                  images: images.map((image) => ({ type: 'image_url', ...image })),
+                }
+              : null),
+          },
+        },
+      ],
       usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
     }),
-  }
+    { status: 200, headers: { 'content-type': 'application/json' } }
+  )
+}
+
+function openRouterErrorResponse(status) {
+  return new Response(JSON.stringify({ error: { message: 'provider detail must stay private' } }), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  })
+}
+
+function messageContentText(message) {
+  if (typeof message?.content === 'string') return message.content
+  return (message?.content || [])
+    .filter((part) => part?.type === 'text')
+    .map((part) => part.text)
+    .join('\n')
+}
+
+function messagesText(body) {
+  return (body.messages || [])
+    .map((message) =>
+      typeof message.content === 'string' ? message.content : JSON.stringify(message.content)
+    )
+    .join('\n')
 }
 
 function runtimeFields(document, contentType, legacy) {
@@ -102,6 +141,17 @@ function withLegacyCaptionTypes(document) {
         ...entry,
         validation: { rules: 'Validar el caption contra la información provista.' },
         generation: { rules: 'Generar un caption fiel a la información provista.' },
+        visual: {
+          mode: 'ai_image',
+          template: null,
+          backgroundSources: [],
+          sponsorAllowed: false,
+          imagePolicyByPlatform: {
+            x: 'optional',
+            instagram: 'optional',
+            facebook: 'optional',
+          },
+        },
       }
     }
     if (entry.id === 'reel_caption') {
@@ -109,11 +159,73 @@ function withLegacyCaptionTypes(document) {
         ...entry,
         validation: { rules: 'Validar el caption del reel contra la información provista.' },
         generation: { rules: 'Caption de reel: generar texto breve para un reel existente.' },
+        visual: {
+          mode: 'none',
+          template: null,
+          backgroundSources: [],
+          sponsorAllowed: false,
+          imagePolicyByPlatform: {
+            x: 'prohibited',
+            instagram: 'prohibited',
+            facebook: 'prohibited',
+          },
+        },
       }
     }
     return entry
   })
   return fixture
+}
+
+function withAiImageType(document, { id, label, generationRules }) {
+  let fixture = createContentType(document, { id, label })
+  fixture.contentTypeCatalog = fixture.contentTypeCatalog.map((entry) =>
+    entry.id === id
+      ? {
+          ...entry,
+          validation: { rules: `Validar ${label} contra la información provista.` },
+          generation: { rules: generationRules },
+          visual: {
+            mode: 'ai_image',
+            template: null,
+            backgroundSources: [],
+            sponsorAllowed: false,
+            imagePolicyByPlatform: {
+              x: 'optional',
+              instagram: 'required',
+              facebook: 'optional',
+            },
+          },
+        }
+      : entry
+  )
+  return fixture
+}
+
+async function makePngDataUrl({ r = 9, g = 20, b = 55 } = {}) {
+  const png = await sharp({
+    create: {
+      width: 32,
+      height: 32,
+      channels: 3,
+      background: { r, g, b },
+    },
+  })
+    .png()
+    .toBuffer()
+  return `data:image/png;base64,${png.toString('base64')}`
+}
+
+async function readCenterRgb(dataUrl) {
+  const encoded = String(dataUrl).split(',')[1]
+  const { data, info } = await sharp(Buffer.from(encoded, 'base64'))
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+  const x = Math.floor(info.width / 2)
+  const y = Math.floor(info.height / 2)
+  const offset = (y * info.width + x) * info.channels
+  return { r: data[offset], g: data[offset + 1], b: data[offset + 2] }
 }
 
 describe('workflow policy pipeline', () => {
@@ -124,10 +236,10 @@ describe('workflow policy pipeline', () => {
   const originalModel = process.env.OPENROUTER_MODEL
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    jest.resetAllMocks()
     events = []
     process.env.OPENROUTER_API_KEY = 'test-key'
-    process.env.OPENROUTER_MODEL = 'test/multimodal'
+    process.env.OPENROUTER_MODEL = 'google/gemini-3.1-flash-lite-image'
     getWorkflowMetadata.mockReturnValue(null)
     confirmAiRunClaim.mockResolvedValue({ ok: true, coordination: 's3' })
     getGuidelineVersion.mockResolvedValue(document)
@@ -155,8 +267,10 @@ describe('workflow policy pipeline', () => {
       return { ok: true, coordination: 's3' }
     })
     let providerBody
+    let providerOptions
     workflowFetch.mockImplementation(async (_url, options) => {
       events.push('model')
+      providerOptions = options
       providerBody = JSON.parse(options.body)
       return openRouterResponse(
         JSON.stringify({
@@ -193,13 +307,23 @@ describe('workflow policy pipeline', () => {
       coordination: 's3',
     })
     expect(providerBody.modalities).toEqual(['text'])
+    expect(providerBody.model).toBe('google/gemini-3.1-flash-lite')
+    expect(providerBody.max_tokens).toBe(2000)
+    expect(providerOptions.signal).toBeDefined()
+    expect(providerOptions.signal.aborted).toBe(false)
     expect(providerBody.image_config).toBeUndefined()
     const providerMessages = providerBody.messages
-    expect(providerMessages[0].content.startsWith(AI_AGENT_IDENTITY_PROMPT)).toBe(true)
-    expect(providerMessages[0].content).not.toContain('<GUIDELINES_NO_CONFIABLES>')
-    expect(providerMessages[0].content).toContain('Si "issues" está vacío')
-    expect(providerMessages[0].content).toContain('No repitas el borrador original')
-    const providerUserText = providerMessages[1].content[0].text
+    expect(messageContentText(providerMessages[0]).startsWith(AI_AGENT_IDENTITY_PROMPT)).toBe(true)
+    expect(messageContentText(providerMessages[0])).not.toContain('<GUIDELINES_NO_CONFIABLES>')
+    expect(messageContentText(providerMessages[0])).toContain('Si "issues" está vacío')
+    expect(messageContentText(providerMessages[0])).toContain('No repitas el borrador original')
+    expect(messageContentText(providerMessages[0])).toContain('textCorrections')
+    expect(messageContentText(providerMessages[0])).toContain(
+      'Reporta una sola vez cada problema conceptual'
+    )
+    expect(messageContentText(providerMessages[0])).toContain('"suggestion"')
+    expect(messageContentText(providerMessages[0])).toContain('"imageNotesByImage"')
+    const providerUserText = messageContentText(providerMessages[1])
     expect(providerUserText.indexOf('<GUIDELINES_NO_CONFIABLES>')).toBeLessThan(
       providerUserText.indexOf('<SOLICITUD_NO_CONFIABLE>')
     )
@@ -244,6 +368,7 @@ describe('workflow policy pipeline', () => {
               severity: 'minor',
               category: 'guideline_compliance',
               message: 'Falta la tilde en “Acompáñanos”.',
+              textCorrections: [{ before: 'Acompananos', after: 'Acompáñanos' }],
             },
           ],
           suggestedRevision: 'Acompáñanos a observar Saturno.',
@@ -273,6 +398,110 @@ describe('workflow policy pipeline', () => {
           category: 'guideline_compliance',
         }),
       ])
+    )
+  })
+
+  test('repairs incomplete correction anchors and deduplicates equivalent findings', async () => {
+    const draftText = 'Sociedad Astronomica del Caribe\n\nTelescopias para explorar el cielo.'
+    const suggestedRevision =
+      'Sociedad de Astronomía del Caribe\n\nTelescopios para explorar el cielo.'
+    const incompleteResult = {
+      summary: 'Se encontraron tres errores.',
+      issues: [
+        {
+          severity: 'minor',
+          category: 'guideline_compliance',
+          message:
+            'El nombre de la institución aparece como Sociedad Astronomica del Caribe, omitiendo la tilde en Astronomía.',
+          suggestedFix: 'Cambiar a Sociedad de Astronomía del Caribe.',
+          affectedPlatform: 'facebook',
+          textCorrections: [{ before: 'Astronomica', after: 'Astronomía' }],
+        },
+        {
+          severity: 'minor',
+          category: 'guideline_compliance',
+          message: 'Error ortográfico en el subtítulo: Telescopias.',
+          suggestedFix: 'Cambiar a Telescopios.',
+          affectedPlatform: 'facebook',
+          textCorrections: [{ before: 'Telescopias', after: 'Telescopios' }],
+        },
+        {
+          severity: 'minor',
+          category: 'clarity',
+          message: 'La redacción en la frase inicial del subtítulo de telescopios es incorrecta.',
+          suggestedFix: 'Cambiar Telescopias por Telescopios.',
+          affectedPlatform: 'facebook',
+          textCorrections: [{ before: 'Telescopias', after: 'Telescopios' }],
+        },
+      ],
+      suggestedRevision,
+    }
+    const repairedResult = {
+      summary: 'El borrador necesita dos correcciones.',
+      issues: [
+        {
+          severity: 'minor',
+          category: 'guideline_compliance',
+          message:
+            'El nombre institucional no coincide con el oficial: Sociedad Astronomica del Caribe debe decir Sociedad de Astronomía del Caribe.',
+          affectedPlatform: 'facebook',
+          textCorrections: [
+            {
+              before: 'Sociedad Astronomica del Caribe',
+              after: 'Sociedad de Astronomía del Caribe',
+            },
+          ],
+        },
+        {
+          severity: 'minor',
+          category: 'guideline_compliance',
+          message: 'Telescopias es un error ortográfico; debe decir Telescopios.',
+          affectedPlatform: 'facebook',
+          textCorrections: [{ before: 'Telescopias', after: 'Telescopios' }],
+        },
+      ],
+      suggestedRevision,
+    }
+    workflowFetch
+      .mockResolvedValueOnce(openRouterResponse(JSON.stringify(incompleteResult)))
+      .mockResolvedValueOnce(openRouterResponse(JSON.stringify(repairedResult)))
+    const legacy = { intent: 'Validar ortografía', topic: 'Telescopios' }
+
+    const output = await validateAiWorkflow({
+      userId: 'user-1',
+      userEmail: 'test@example.com',
+      platform: 'facebook',
+      contentType: 'regular_post',
+      draftText,
+      ...runtimeFields(document, 'regular_post', legacy),
+    })
+
+    expect(workflowFetch).toHaveBeenCalledTimes(2)
+    const retryBody = JSON.parse(workflowFetch.mock.calls[1][1].body)
+    expect(messageContentText(retryBody.messages[0])).toContain('CORRECCIÓN DE CONTRATO')
+    expect(messagesText(retryBody)).toContain('Sociedad Astronomica del Caribe')
+    expect(messagesText(retryBody)).toContain(
+      'Las correcciones de los hallazgos no reconstruyen el texto corregido'
+    )
+
+    expect(output.result).toMatchObject({
+      overallOutcome: 'warning',
+      approvalRecommendation: 'needs_edits',
+      suggestedRevision,
+    })
+    expect(output.result.issues).toHaveLength(2)
+    expect(output.result.issues[0].message).toContain('Sociedad Astronomica del Caribe')
+    expect(output.result.issues[0].message).toContain('Sociedad de Astronomía del Caribe')
+    expect(
+      output.result.issues.filter((issue) =>
+        `${issue.message} ${issue.suggestedFix || ''}`.includes('Telescopias')
+      )
+    ).toHaveLength(1)
+    expect(reviewAiPolicyResult).toHaveBeenCalledWith(
+      expect.objectContaining({
+        result: expect.objectContaining({ issues: output.result.issues }),
+      }),
+      expect.any(Object)
     )
   })
 
@@ -311,39 +540,152 @@ describe('workflow policy pipeline', () => {
     )
   })
 
-  test('retries an unexplained material revision and reports an inconclusive validation', async () => {
-    const inconsistentResponse = openRouterResponse(
-      JSON.stringify({
-        summary: 'No se detectaron problemas.',
-        issues: [],
-        suggestedRevision: 'Un texto materialmente diferente.',
-      })
+  test('fails after retrying an unexplained material revision and persists terminal metadata', async () => {
+    getWorkflowMetadata.mockReturnValue({ workflowRunId: 'wrun-validation-invalid-response' })
+    workflowFetch.mockImplementation(async () =>
+      openRouterResponse(
+        JSON.stringify({
+          summary: 'No se detectaron problemas.',
+          issues: [],
+          suggestedRevision: 'Un texto materialmente diferente.',
+        })
+      )
     )
-    workflowFetch
-      .mockResolvedValueOnce(inconsistentResponse)
-      .mockResolvedValueOnce(inconsistentResponse)
     const legacy = { intent: 'Validar claridad', topic: 'Saturno' }
 
-    const output = await validateAiWorkflow({
-      userId: 'user-1',
-      userEmail: 'test@example.com',
-      platform: 'facebook',
-      contentType: 'regular_post',
-      draftText: 'Texto original.',
-      ...runtimeFields(document, 'regular_post', legacy),
-    })
+    await expect(
+      validateAiWorkflow({
+        userId: 'user-1',
+        userEmail: 'test@example.com',
+        platform: 'facebook',
+        contentType: 'regular_post',
+        draftText: 'Texto original.',
+        ...runtimeFields(document, 'regular_post', legacy),
+      })
+    ).rejects.toThrow(/respuesta inválida/i)
 
     expect(workflowFetch).toHaveBeenCalledTimes(2)
     const retryBody = JSON.parse(workflowFetch.mock.calls[1][1].body)
-    expect(retryBody.messages[0].content).toContain('CORRECCIÓN DE CONTRATO')
+    expect(messageContentText(retryBody.messages[0])).toContain('CORRECCIÓN DE CONTRATO')
     expect(reviewAiPolicyResult).not.toHaveBeenCalled()
-    expect(output.result).toMatchObject({
-      resultSource: 'system',
-      overallOutcome: 'fail',
-      approvalRecommendation: 'do_not_publish',
-    })
-    expect(output.result.summary).toMatch(/no fue posible validar/i)
-    expect(output.result.suggestedRevision).toBeUndefined()
+    expect(persistRunHistory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runId: 'wrun-validation-invalid-response',
+        status: 'failed',
+        error: expect.objectContaining({
+          code: 'validation_model_invalid_response',
+          stage: 'validation_model',
+          retryable: true,
+        }),
+      })
+    )
+    expect(persistAiRunFailure).toHaveBeenCalledWith(
+      'wrun-validation-invalid-response',
+      expect.objectContaining({
+        code: 'validation_model_invalid_response',
+        retryable: true,
+      })
+    )
+  })
+
+  test('does not retry a non-transient validation provider rejection', async () => {
+    getWorkflowMetadata.mockReturnValue({ workflowRunId: 'wrun-validation-provider-rejected' })
+    workflowFetch.mockImplementation(async () => openRouterErrorResponse(400))
+    const legacy = { intent: 'Validar claridad', topic: 'Saturno' }
+
+    await expect(
+      validateAiWorkflow({
+        userId: 'user-1',
+        userEmail: 'test@example.com',
+        platform: 'facebook',
+        contentType: 'regular_post',
+        draftText: 'Texto original.',
+        ...runtimeFields(document, 'regular_post', legacy),
+      })
+    ).rejects.toThrow(/problema de configuración/i)
+
+    expect(workflowFetch).toHaveBeenCalledTimes(1)
+    expect(reviewAiPolicyResult).not.toHaveBeenCalled()
+    expect(persistRunHistory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'failed',
+        error: expect.objectContaining({
+          code: 'validation_provider_rejected',
+          retryable: false,
+        }),
+      })
+    )
+    expect(persistAiRunFailure).toHaveBeenCalledWith(
+      'wrun-validation-provider-rejected',
+      expect.objectContaining({ code: 'validation_provider_rejected', retryable: false })
+    )
+  })
+
+  test('retries one transient validation provider failure before failing recoverably', async () => {
+    getWorkflowMetadata.mockReturnValue({ workflowRunId: 'wrun-validation-provider-unavailable' })
+    workflowFetch.mockImplementation(async () => openRouterErrorResponse(503))
+    const legacy = { intent: 'Validar claridad', topic: 'Saturno' }
+
+    await expect(
+      validateAiWorkflow({
+        userId: 'user-1',
+        userEmail: 'test@example.com',
+        platform: 'facebook',
+        contentType: 'regular_post',
+        draftText: 'Texto original.',
+        ...runtimeFields(document, 'regular_post', legacy),
+      })
+    ).rejects.toThrow(/intenta nuevamente/i)
+
+    expect(workflowFetch).toHaveBeenCalledTimes(2)
+    expect(persistRunHistory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'failed',
+        error: expect.objectContaining({
+          code: 'validation_provider_unavailable',
+          retryable: true,
+        }),
+      })
+    )
+    expect(persistAiRunFailure).toHaveBeenCalledWith(
+      'wrun-validation-provider-unavailable',
+      expect.objectContaining({ code: 'validation_provider_unavailable', retryable: true })
+    )
+  })
+
+  test('fails without a provider call when validation configuration is missing', async () => {
+    getWorkflowMetadata.mockReturnValue({ workflowRunId: 'wrun-validation-missing-config' })
+    delete process.env.OPENROUTER_API_KEY
+    const legacy = { intent: 'Validar claridad', topic: 'Saturno' }
+
+    await expect(
+      validateAiWorkflow({
+        userId: 'user-1',
+        userEmail: 'test@example.com',
+        platform: 'facebook',
+        contentType: 'regular_post',
+        draftText: 'Texto original.',
+        ...runtimeFields(document, 'regular_post', legacy),
+      })
+    ).rejects.toThrow(/problema de configuración/i)
+
+    expect(workflowFetch).not.toHaveBeenCalled()
+    expect(persistRunHistory).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'failed',
+        error: expect.objectContaining({
+          code: 'validation_provider_configuration_error',
+          retryable: false,
+        }),
+      })
+    )
+    expect(persistAiRunFailure).toHaveBeenCalledWith(
+      'wrun-validation-missing-config',
+      expect.objectContaining({
+        code: 'validation_provider_configuration_error',
+        retryable: false,
+      })
+    )
   })
 
   test('a guideline-only post-review block does not replace the validation diagnosis', async () => {
@@ -358,6 +700,12 @@ describe('workflow policy pipeline', () => {
               severity: 'minor',
               category: 'guideline_compliance',
               message: 'Corrige la ortografía y el nombre oficial de SAC.',
+              textCorrections: [
+                {
+                  before: 'Sociedad Astronomica del Caribe',
+                  after: 'Sociedad de Astronomía del Caribe',
+                },
+              ],
             },
           ],
           suggestedRevision: 'Sociedad de Astronomía del Caribe.',
@@ -411,6 +759,7 @@ describe('workflow policy pipeline', () => {
               severity: 'minor',
               category: 'guideline_compliance',
               message: 'Corrige la falta ortográfica.',
+              textCorrections: [{ before: 'Texto con error', after: 'Texto corregido' }],
             },
           ],
           suggestedRevision: 'Texto corregido.',
@@ -434,7 +783,7 @@ describe('workflow policy pipeline', () => {
       overallOutcome: 'warning',
       approvalRecommendation: 'needs_edits',
     })
-    expect(output.result.issues[0].message).toMatch(/falta ortográfica/i)
+    expect(output.result.issues[0].message).toMatch(/(?:falta|error) ortográfico/i)
   })
 
   test('a lost validation claim terminates before schema, Guidelines, policy, or provider work', async () => {
@@ -533,10 +882,11 @@ describe('workflow policy pipeline', () => {
     })
 
     expect(providerBody.modalities).toEqual(['text'])
+    expect(providerBody.model).toBe('google/gemini-3.1-flash-lite')
     expect(providerBody.image_config).toBeUndefined()
     const providerMessages = providerBody.messages
-    const systemPrompt = providerMessages[0].content
-    const providerUserText = providerMessages[1].content
+    const systemPrompt = messageContentText(providerMessages[0])
+    const providerUserText = messageContentText(providerMessages[1])
     expect(systemPrompt.startsWith(AI_AGENT_IDENTITY_PROMPT)).toBe(true)
     expect(systemPrompt).not.toContain(legacyCaptionDocument.global)
     expect(systemPrompt).not.toContain('Caption de reel')
@@ -700,8 +1050,9 @@ describe('workflow policy pipeline', () => {
     workflowFetch.mockImplementation(async (_url, options) => {
       events.push('model')
       const body = JSON.parse(options.body)
-      const system = body.messages?.[0]?.content || ''
+      const system = messageContentText(body.messages?.[0])
       if (system.includes('INSTRUCCIONES OPERATIVAS DE IMAGEN')) {
+        expect(body.model).toBe('google/gemini-3.1-flash-lite')
         expect(body.modalities).toEqual(['text'])
         expect(body.image_config).toBeUndefined()
         return openRouterResponse(
@@ -712,6 +1063,7 @@ describe('workflow policy pipeline', () => {
         )
       }
       if (body.modalities?.includes('image')) {
+        expect(body.model).toBe('google/gemini-3.1-flash-lite-image')
         expect(body.image_config).toEqual({ aspect_ratio: '3:4' })
         return openRouterResponse('', [{ image_url: { url: dataUrl } }])
       }
@@ -765,113 +1117,480 @@ describe('workflow policy pipeline', () => {
     expect(events.at(-1)).toBe('post-policy')
   })
 
-  test('generates required holiday typography and preserves a guideline mismatch for review', async () => {
-    const greetingDocument = JSON.parse(JSON.stringify(document))
-    const regularPost = greetingDocument.contentTypeCatalog.find(({ id }) => id === 'regular_post')
-    regularPost.generation.rules =
-      'Debe generar una felicitación de acuerdo al día festivo. La imagen generada debe incluir la felicitación. Para este ejemplo, la escena debe incluir un cielo estrellado y un telescopio.'
-    regularPost.visual = {
-      mode: 'ai_image',
-      template: null,
-      backgroundSources: [],
-      sponsorAllowed: false,
-      imagePolicyByPlatform: { x: 'prohibited', instagram: 'required', facebook: 'optional' },
-    }
+  test('passes the exact pinned image rules to both visual models without automatic text directives', async () => {
+    const exactRules =
+      '- Genera una imagen relacionada al tema de las felicitaciones\n- Que la imagen contenga con una tipografía legible las felicitaciones'
+    const contentType = 'occasion_rules_are_data'
+    const greetingDocument = withAiImageType(document, {
+      id: contentType,
+      label: 'Ocasión configurable',
+      generationRules: exactRules,
+    })
     getGuidelineVersion.mockResolvedValueOnce(greetingDocument)
 
-    const png = await sharp({
-      create: {
-        width: 32,
-        height: 32,
-        channels: 3,
-        background: { r: 9, g: 20, b: 55 },
-      },
-    })
-      .png()
-      .toBuffer()
-    const dataUrl = `data:image/png;base64,${png.toString('base64')}`
-    let imagePromptSystem = ''
-    let imagePromptRequest = ''
-    let imageAssetRequest = ''
+    const dataUrl = await makePngDataUrl()
+    let imagePromptMessages = ''
+    let imageAssetMessages = ''
 
     workflowFetch.mockImplementation(async (_url, options) => {
       const body = JSON.parse(options.body)
-      const system = body.messages?.[0]?.content || ''
+      const system = messageContentText(body.messages?.[0])
       if (system.includes('INSTRUCCIONES OPERATIVAS DE IMAGEN')) {
-        imagePromptSystem = system
-        imagePromptRequest = body.messages?.[1]?.content || ''
+        imagePromptMessages = messagesText(body)
         return openRouterResponse(
           JSON.stringify({
             sharedImagePrompt:
-              'Father and child seen from behind observing the stars; no identifiable faces; no text overlay.',
-            sharedImageRationale: 'Celebra el Día del Padre con astronomía.',
+              'Warm astronomy celebration poster with the readable headline "Felicitaciones a nuestra comunidad"; no identifiable faces.',
+            sharedImageRationale: 'Sigue las reglas de la ocasión provista.',
           })
         )
       }
       if (body.modalities?.includes('image')) {
-        imageAssetRequest = body.messages?.[1]?.content || ''
+        imageAssetMessages = messagesText(body)
         return openRouterResponse('', [{ image_url: { url: dataUrl } }])
       }
-      return openRouterResponse(
-        JSON.stringify({
-          caption: {
-            contentType: 'regular_post',
-            draftText: 'Feliz Día del Padre a quienes nos enseñan a mirar más allá.',
-            assumptions: [],
-            missingInformation: [],
-          },
-          recommendedNextStep: 'Validar antes de publicar.',
-          humanReviewRequired: true,
-        })
-      )
+      throw new Error('image_only no debe generar un caption')
     })
-    reviewAiPolicyResult
-      .mockImplementationOnce(async () => policyDecision('allow', { stage: 'result' }))
-      .mockImplementationOnce(async ({ result }) => {
-        expect(result.policyContext.imageTextRequirement).toMatchObject({
-          required: true,
-          suggestedText: 'Feliz Día del Padre',
-        })
-        return policyDecision('block', {
-          stage: 'result',
-          categories: ['guideline_noncompliance'],
-          reason: 'La escena corresponde al tema, pero el texto requerido necesita corrección.',
-        })
-      })
+    reviewAiPolicyResult.mockResolvedValueOnce(policyDecision('allow', { stage: 'result' }))
     const legacy = {
-      intent: 'Felicitar a los padres de la comunidad del SAC',
-      topic: 'Día del Padre',
+      intent: 'Felicitar a la comunidad',
+      topic: 'Una ocasión elegida por el editor',
     }
 
     const request = {
       userId: 'user-1',
       userEmail: 'test@example.com',
       platforms: ['instagram'],
-      contentType: 'regular_post',
+      contentType,
+      generationMode: 'image_only',
+      publicationText: 'Hoy celebramos junto a toda nuestra comunidad.',
       ...legacy,
-      ...runtimeFields(greetingDocument, 'regular_post', legacy),
+      ...runtimeFields(greetingDocument, contentType, legacy),
     }
     GenerateInputSchema.parse(request)
     const output = await generateAiWorkflow(request)
 
-    expect(imagePromptSystem).toContain('TEXTO EN IMAGEN: REQUERIDO')
-    expect(imagePromptSystem).toContain('Feliz Día del Padre')
-    expect(imagePromptSystem).toContain('motivos culturales, estacionales')
-    expect(imagePromptSystem).toContain('limitación visual adicional definida en Guidelines')
-    expect(imagePromptSystem).not.toContain('elemento astronómico protagonista')
-    expect(imagePromptRequest).toContain(
-      'Para este ejemplo, la escena debe incluir un cielo estrellado y un telescopio.'
+    const serializedExactRules = JSON.stringify(exactRules).slice(1, -1)
+    expect(imagePromptMessages).toContain(serializedExactRules)
+    expect(imageAssetMessages).toContain(serializedExactRules)
+    expect(`${imagePromptMessages}\n${imageAssetMessages}`).not.toMatch(
+      /TEXTO EN IMAGEN: (?:REQUERIDO|NO SOLICITADO)/
     )
-    expect(imageAssetRequest).toContain('Required on-image text: "Feliz Día del Padre"')
-    expect(imageAssetRequest).toContain('aligned with the publication topic, occasion, and caption')
-    expect(imageAssetRequest).not.toContain('at least one prominent astronomy anchor')
-    expect(imageAssetRequest).not.toContain('flowers alone is not acceptable')
-    expect(imageAssetRequest).not.toMatch(/no text overlay/i)
+    expect(`${imagePromptMessages}\n${imageAssetMessages}`).not.toContain(
+      'No unrequested text overlay.'
+    )
+    expect(imageAssetMessages).not.toContain('Required on-image text:')
+    expect(workflowFetch).toHaveBeenCalledTimes(2)
     expect(output.result.generatedImage?.preparedForDisplay).toBe(true)
+  })
+
+  test('preserves an arbitrary explicit no-text rule for both visual models', async () => {
+    const exactRules =
+      'REGLA ZETA-47: La imagen debe ser una ilustración abstracta y debe presentarse sin texto, letras, números ni logotipos.'
+    const contentType = 'zeta_47'
+    const noTextDocument = withAiImageType(document, {
+      id: contentType,
+      label: 'Zeta 47',
+      generationRules: exactRules,
+    })
+    getGuidelineVersion.mockResolvedValueOnce(noTextDocument)
+
+    const dataUrl = await makePngDataUrl({ r: 18, g: 35, b: 70 })
+    const visualModelMessages = []
+    workflowFetch.mockImplementation(async (_url, options) => {
+      const body = JSON.parse(options.body)
+      const system = messageContentText(body.messages?.[0])
+      if (system.includes('INSTRUCCIONES OPERATIVAS DE IMAGEN')) {
+        visualModelMessages.push(messagesText(body))
+        return openRouterResponse(
+          JSON.stringify({
+            sharedImagePrompt:
+              'Abstract deep-space forms, no text, letters, numbers, logos, or identifiable people.',
+            sharedImageRationale: 'Conserva literalmente la restricción visual provista.',
+          })
+        )
+      }
+      if (body.modalities?.includes('image')) {
+        visualModelMessages.push(messagesText(body))
+        return openRouterResponse('', [{ image_url: { url: dataUrl } }])
+      }
+      throw new Error('image_only no debe generar un caption')
+    })
+    const legacy = { intent: 'Compartir una pieza abstracta', topic: 'Materia interestelar' }
+
+    const output = await generateAiWorkflow({
+      userId: 'user-1',
+      userEmail: 'test@example.com',
+      platforms: ['instagram'],
+      contentType,
+      generationMode: 'image_only',
+      publicationText: 'Materia interestelar en movimiento.',
+      ...legacy,
+      ...runtimeFields(noTextDocument, contentType, legacy),
+    })
+
+    expect(visualModelMessages).toHaveLength(2)
+    const serializedExactRules = JSON.stringify(exactRules).slice(1, -1)
+    expect(visualModelMessages[0]).toContain(serializedExactRules)
+    expect(visualModelMessages[1]).toContain(serializedExactRules)
+    expect(visualModelMessages.join('\n')).not.toMatch(/TEXTO EN IMAGEN:/)
+    expect(output.result.generatedImage?.preparedForDisplay).toBe(true)
+  })
+
+  test('keeps the generic no-text exception for an AI-generated template backdrop', async () => {
+    const dataUrl = await makePngDataUrl({ r: 4, g: 12, b: 38 })
+    let backdropMessages = ''
+    workflowFetch.mockImplementation(async (_url, options) => {
+      const body = JSON.parse(options.body)
+      const system = messageContentText(body.messages?.[0])
+      if (system.includes('INSTRUCCIONES OPERATIVAS DE IMAGEN')) {
+        return openRouterResponse(
+          JSON.stringify({
+            sharedImagePrompt: 'A layered view of Saturn with ample central negative space.',
+            sharedImageRationale: 'Fondo para el titular que compondrá la plantilla.',
+          })
+        )
+      }
+      if (body.modalities?.includes('image')) {
+        backdropMessages = messagesText(body)
+        return openRouterResponse('', [{ image_url: { url: dataUrl } }])
+      }
+      throw new Error('image_only no debe generar un caption')
+    })
+    const legacy = { intent: 'Educar', topic: 'Saturno esta semana' }
+
+    const output = await generateAiWorkflow({
+      userId: 'user-1',
+      userEmail: 'test@example.com',
+      platforms: ['instagram'],
+      contentType: 'regular_post',
+      backgroundMode: 'ai_generated',
+      generationMode: 'image_only',
+      publicationText: 'Saturno esta semana.',
+      ...legacy,
+      ...runtimeFields(document, 'regular_post', legacy),
+    })
+
+    expect(backdropMessages).toMatch(/fondo limpio|clean background/i)
+    expect(backdropMessages).toMatch(/no text|sin texto/i)
+    expect(output.result.templateRequest.textFields.headline).toBe('Saturno esta semana')
+    expect(output.result.generatedImage?.preparedForDisplay).toBe(true)
+  })
+
+  test('regenerates an AI template backdrop when the first file cannot be rendered', async () => {
+    const validDataUrl = await makePngDataUrl({ r: 7, g: 18, b: 48 })
+    let backdropAttempts = 0
+    workflowFetch.mockImplementation(async (_url, options) => {
+      const body = JSON.parse(options.body)
+      const system = messageContentText(body.messages?.[0])
+      if (system.includes('INSTRUCCIONES OPERATIVAS DE IMAGEN')) {
+        return openRouterResponse(
+          JSON.stringify({
+            sharedImagePrompt: 'A clean layered background with ample central negative space.',
+            sharedImageRationale: 'Fondo neutro para el texto definido por la plantilla.',
+          })
+        )
+      }
+      if (body.modalities?.includes('image')) {
+        backdropAttempts += 1
+        const dataUrl = backdropAttempts === 1 ? 'data:image/png;base64,QUFBQQ==' : validDataUrl
+        return openRouterResponse('', [{ image_url: { url: dataUrl } }])
+      }
+      throw new Error('image_only no debe generar un caption')
+    })
+    const legacy = { intent: 'Educar', topic: 'Tema definido por Guidelines' }
+
+    const output = await generateAiWorkflow({
+      userId: 'user-1',
+      userEmail: 'test@example.com',
+      platforms: ['instagram'],
+      contentType: 'regular_post',
+      backgroundMode: 'ai_generated',
+      generationMode: 'image_only',
+      publicationText: 'Texto existente.',
+      ...legacy,
+      ...runtimeFields(document, 'regular_post', legacy),
+    })
+
+    expect(backdropAttempts).toBe(2)
+    expect(output.result.generatedImage?.preparedForDisplay).toBe(true)
+    expect(persistAiRunFailure).not.toHaveBeenCalled()
+  })
+
+  test('retries one ai_image after guideline-only noncompliance and returns the corrected image', async () => {
+    const contentType = 'generic_visual_retry'
+    const rules = 'Incluye una representación visual clara del concepto indicado por el editor.'
+    const retryDocument = withAiImageType(document, {
+      id: contentType,
+      label: 'Visual genérico',
+      generationRules: rules,
+    })
+    getGuidelineVersion.mockResolvedValueOnce(retryDocument)
+    const firstDataUrl = await makePngDataUrl({ r: 90, g: 10, b: 10 })
+    const secondDataUrl = await makePngDataUrl({ r: 10, g: 90, b: 10 })
+    const imageRequests = []
+
+    workflowFetch.mockImplementation(async (_url, options) => {
+      const body = JSON.parse(options.body)
+      const system = messageContentText(body.messages?.[0])
+      if (system.includes('INSTRUCCIONES OPERATIVAS DE IMAGEN')) {
+        return openRouterResponse(
+          JSON.stringify({
+            sharedImagePrompt: 'A physically plausible telescope under a clear night sky.',
+            sharedImageRationale: 'Representa el concepto provisto.',
+          })
+        )
+      }
+      if (body.modalities?.includes('image')) {
+        imageRequests.push(messagesText(body))
+        const image = imageRequests.length === 1 ? firstDataUrl : secondDataUrl
+        return openRouterResponse('', [{ image_url: { url: image } }])
+      }
+      throw new Error('image_only no debe generar un caption')
+    })
+    reviewAiPolicyResult
+      .mockResolvedValueOnce(
+        policyDecision('block', {
+          stage: 'result',
+          categories: ['guideline_noncompliance', 'guideline_noncompliance'],
+          reason: 'La primera imagen omitió el concepto visual solicitado.',
+        })
+      )
+      .mockResolvedValueOnce(policyDecision('allow', { stage: 'result' }))
+    const legacy = { intent: 'Explicar un concepto', topic: 'Montura ecuatorial' }
+
+    const output = await generateAiWorkflow({
+      userId: 'user-1',
+      userEmail: 'test@example.com',
+      platforms: ['instagram'],
+      contentType,
+      generationMode: 'image_only',
+      publicationText: 'Conoce cómo funciona una montura ecuatorial.',
+      ...legacy,
+      ...runtimeFields(retryDocument, contentType, legacy),
+    })
+
+    expect(imageRequests).toHaveLength(2)
+    expect(imageRequests[1]).toContain(rules)
+    expect(imageRequests[1]).toContain('A physically plausible telescope under a clear night sky.')
+    expect(imageRequests[1]).toContain('La primera imagen omitió el concepto visual solicitado.')
+    expect(reviewAiPolicyResult).toHaveBeenCalledTimes(2)
+    expect(output.result.generatedImage?.preparedForDisplay).toBe(true)
+    const correctedPixel = await readCenterRgb(output.result.generatedImage.dataUrl)
+    expect(correctedPixel.g).toBeGreaterThan(correctedPixel.r)
+    expect(correctedPixel.g).toBeGreaterThan(correctedPixel.b)
+    expect(output.result.policyReview).toBeUndefined()
+  })
+
+  test('returns the second ai_image with a warning after one failed guideline retry', async () => {
+    const contentType = 'generic_visual_retry_warning'
+    const retryDocument = withAiImageType(document, {
+      id: contentType,
+      label: 'Visual genérico con revisión',
+      generationRules: 'Representa el tema central de forma inequívoca.',
+    })
+    getGuidelineVersion.mockResolvedValueOnce(retryDocument)
+    const imageDataUrls = [
+      await makePngDataUrl({ r: 70, g: 10, b: 20 }),
+      await makePngDataUrl({ r: 20, g: 10, b: 70 }),
+    ]
+    let imageCalls = 0
+    workflowFetch.mockImplementation(async (_url, options) => {
+      const body = JSON.parse(options.body)
+      const system = messageContentText(body.messages?.[0])
+      if (system.includes('INSTRUCCIONES OPERATIVAS DE IMAGEN')) {
+        return openRouterResponse(
+          JSON.stringify({
+            sharedImagePrompt: 'A generic educational astronomy scene.',
+            sharedImageRationale: 'Apoya el tema.',
+          })
+        )
+      }
+      if (body.modalities?.includes('image')) {
+        const dataUrl = imageDataUrls[imageCalls]
+        imageCalls += 1
+        return openRouterResponse('', [{ image_url: { url: dataUrl } }])
+      }
+      throw new Error('image_only no debe generar un caption')
+    })
+    reviewAiPolicyResult
+      .mockResolvedValueOnce(
+        policyDecision('block', {
+          stage: 'result',
+          categories: ['guideline_noncompliance'],
+          reason: 'La primera imagen no representa el tema central.',
+        })
+      )
+      .mockResolvedValueOnce(
+        policyDecision('block', {
+          stage: 'result',
+          categories: ['guideline_noncompliance'],
+          reason: 'La segunda imagen todavía no representa el tema central.',
+        })
+      )
+    const legacy = { intent: 'Educar', topic: 'Espectroscopía' }
+
+    const output = await generateAiWorkflow({
+      userId: 'user-1',
+      userEmail: 'test@example.com',
+      platforms: ['instagram'],
+      contentType,
+      generationMode: 'image_only',
+      publicationText: 'Introducción a la espectroscopía.',
+      ...legacy,
+      ...runtimeFields(retryDocument, contentType, legacy),
+    })
+
+    expect(imageCalls).toBe(2)
+    expect(reviewAiPolicyResult).toHaveBeenCalledTimes(2)
+    expect(output.result.generatedImage?.preparedForDisplay).toBe(true)
+    const reviewedPixel = await readCenterRgb(output.result.generatedImage.dataUrl)
+    expect(reviewedPixel.b).toBeGreaterThan(reviewedPixel.r)
+    expect(reviewedPixel.b).toBeGreaterThan(reviewedPixel.g)
     expect(output.result.policyReview).toMatchObject({
       stage: 'result',
       disposition: 'review',
       categories: ['guideline_noncompliance'],
+      reason: 'La segunda imagen todavía no representa el tema central.',
+    })
+  })
+
+  test('keeps the first ai_image and warning when the guideline retry fails technically', async () => {
+    const contentType = 'generic_visual_retry_failure'
+    const retryDocument = withAiImageType(document, {
+      id: contentType,
+      label: 'Visual con fallback',
+      generationRules: 'La escena debe mostrar claramente el tema provisto.',
+    })
+    getGuidelineVersion.mockResolvedValueOnce(retryDocument)
+    const firstDataUrl = await makePngDataUrl({ r: 30, g: 40, b: 80 })
+    let imageCalls = 0
+    workflowFetch.mockImplementation(async (_url, options) => {
+      const body = JSON.parse(options.body)
+      const system = messageContentText(body.messages?.[0])
+      if (system.includes('INSTRUCCIONES OPERATIVAS DE IMAGEN')) {
+        return openRouterResponse(
+          JSON.stringify({
+            sharedImagePrompt: 'A safe astronomy scene.',
+            sharedImageRationale: 'Apoya el tema.',
+          })
+        )
+      }
+      if (body.modalities?.includes('image')) {
+        imageCalls += 1
+        return imageCalls === 1
+          ? openRouterResponse('', [{ image_url: { url: firstDataUrl } }])
+          : openRouterResponse('')
+      }
+      throw new Error('image_only no debe generar un caption')
+    })
+    reviewAiPolicyResult.mockResolvedValueOnce(
+      policyDecision('block', {
+        stage: 'result',
+        categories: ['guideline_noncompliance'],
+        reason: 'La primera imagen omitió un requisito visual.',
+      })
+    )
+    const legacy = { intent: 'Educar', topic: 'Óptica' }
+
+    const output = await generateAiWorkflow({
+      userId: 'user-1',
+      userEmail: 'test@example.com',
+      platforms: ['instagram'],
+      contentType,
+      generationMode: 'image_only',
+      publicationText: 'Conceptos básicos de óptica.',
+      ...legacy,
+      ...runtimeFields(retryDocument, contentType, legacy),
+    })
+
+    expect(imageCalls).toBe(3)
+    expect(reviewAiPolicyResult).toHaveBeenCalledTimes(1)
+    expect(output.result.generatedImage?.preparedForDisplay).toBe(true)
+    const fallbackPixel = await readCenterRgb(output.result.generatedImage.dataUrl)
+    expect(fallbackPixel.b).toBeGreaterThan(fallbackPixel.r)
+    expect(fallbackPixel.b).toBeGreaterThan(fallbackPixel.g)
+    expect(output.result.policyReview).toMatchObject({
+      disposition: 'review',
+      categories: ['guideline_noncompliance'],
+      reason: 'La primera imagen omitió un requisito visual.',
+    })
+    expect(output.usage.totalTokens).toBe(8)
+  })
+
+  test.each([
+    {
+      name: 'hard safety block',
+      decision: {
+        categories: ['sexual_content'],
+        reason: 'La imagen incumple la política de seguridad.',
+      },
+    },
+    {
+      name: 'mixed block',
+      decision: {
+        categories: ['guideline_noncompliance', 'unrelated_image'],
+        reason: 'La imagen tiene incumplimientos de categorías mixtas.',
+      },
+    },
+    {
+      name: 'inconclusive reviewer',
+      decision: {
+        categories: ['guideline_noncompliance'],
+        reason: 'No fue posible concluir la revisión.',
+        failClosed: true,
+        evaluatedDecision: 'uncertain',
+        errorCode: 'response_error',
+      },
+    },
+  ])('does not retry an ai_image after a $name', async ({ decision }) => {
+    const contentType = 'generic_visual_no_retry'
+    const noRetryDocument = withAiImageType(document, {
+      id: contentType,
+      label: 'Visual sin retry',
+      generationRules: 'Representa de forma segura el tema indicado.',
+    })
+    getGuidelineVersion.mockResolvedValueOnce(noRetryDocument)
+    const dataUrl = await makePngDataUrl({ r: 20, g: 30, b: 40 })
+    let imageCalls = 0
+    workflowFetch.mockImplementation(async (_url, options) => {
+      const body = JSON.parse(options.body)
+      const system = messageContentText(body.messages?.[0])
+      if (system.includes('INSTRUCCIONES OPERATIVAS DE IMAGEN')) {
+        return openRouterResponse(
+          JSON.stringify({
+            sharedImagePrompt: 'A safe astronomy image.',
+            sharedImageRationale: 'Apoya el tema.',
+          })
+        )
+      }
+      if (body.modalities?.includes('image')) {
+        imageCalls += 1
+        return openRouterResponse('', [{ image_url: { url: dataUrl } }])
+      }
+      throw new Error('image_only no debe generar un caption')
+    })
+    reviewAiPolicyResult.mockResolvedValueOnce(
+      policyDecision('block', { stage: 'result', ...decision })
+    )
+    const legacy = { intent: 'Educar', topic: 'Astronomía segura' }
+
+    const output = await generateAiWorkflow({
+      userId: 'user-1',
+      userEmail: 'test@example.com',
+      platforms: ['instagram'],
+      contentType,
+      generationMode: 'image_only',
+      publicationText: 'Una publicación educativa.',
+      ...legacy,
+      ...runtimeFields(noRetryDocument, contentType, legacy),
+    })
+
+    expect(imageCalls).toBe(1)
+    expect(reviewAiPolicyResult).toHaveBeenCalledTimes(1)
+    expect(output.result.policyReview).toMatchObject({
+      categories: decision.categories,
+      reason: decision.reason,
     })
   })
 
@@ -880,7 +1599,9 @@ describe('workflow policy pipeline', () => {
       events.push('model')
       const body = JSON.parse(options.body)
       expect(body.modalities || []).not.toContain('image')
-      expect(body.messages?.[0]?.content || '').not.toContain('INSTRUCCIONES OPERATIVAS DE IMAGEN')
+      expect(messageContentText(body.messages?.[0])).not.toContain(
+        'INSTRUCCIONES OPERATIVAS DE IMAGEN'
+      )
       return openRouterResponse(
         JSON.stringify({
           caption: {
@@ -970,7 +1691,7 @@ describe('workflow policy pipeline', () => {
     expect(output.result.recommendedNextStep).toContain('no se confirmó una infracción')
   })
 
-  test('required visual generation fails closed when no final image can be prepared', async () => {
+  test('required visual generation explains when automatic provider recovery is exhausted', async () => {
     const requiredImageDocument = JSON.parse(JSON.stringify(legacyCaptionDocument))
     const caption = requiredImageDocument.contentTypeCatalog.find(({ id }) => id === 'caption')
     caption.visual.imagePolicyByPlatform.instagram = 'required'
@@ -978,8 +1699,9 @@ describe('workflow policy pipeline', () => {
 
     workflowFetch.mockImplementation(async (_url, options) => {
       const body = JSON.parse(options.body)
-      const system = body.messages?.[0]?.content || ''
+      const system = messageContentText(body.messages?.[0])
       if (system.includes('INSTRUCCIONES OPERATIVAS DE IMAGEN')) {
+        expect(body.model).toBe('google/gemini-3.1-flash-lite')
         expect(body.modalities).toEqual(['text'])
         expect(body.image_config).toBeUndefined()
         return openRouterResponse(
@@ -990,6 +1712,7 @@ describe('workflow policy pipeline', () => {
         )
       }
       if (body.modalities?.includes('image')) {
+        expect(body.model).toBe('google/gemini-3.1-flash-lite-image')
         return openRouterResponse('')
       }
       return openRouterResponse(
@@ -1016,10 +1739,15 @@ describe('workflow policy pipeline', () => {
         ...legacy,
         ...runtimeFields(requiredImageDocument, 'caption', legacy),
       })
-    ).rejects.toThrow(/imagen requerida/i)
+    ).rejects.toThrow(/intentos automáticos/i)
 
     expect(events).toEqual(['pre-policy', 'post-policy'])
     expect(reviewAiPolicyResult).toHaveBeenCalledTimes(1)
+    expect(
+      workflowFetch.mock.calls.filter(([, options]) =>
+        JSON.parse(options.body).modalities?.includes('image')
+      )
+    ).toHaveLength(3)
   })
 
   test('image_only preserves publicationText exactly and skips caption generation and review', async () => {
@@ -1053,8 +1781,9 @@ describe('workflow policy pipeline', () => {
     })
     workflowFetch.mockImplementation(async (_url, options) => {
       const body = JSON.parse(options.body)
-      const system = body.messages?.[0]?.content || ''
+      const system = messageContentText(body.messages?.[0])
       if (system.includes('INSTRUCCIONES OPERATIVAS DE IMAGEN')) {
+        expect(body.model).toBe('google/gemini-3.1-flash-lite')
         expect(body.modalities).toEqual(['text'])
         expect(body.image_config).toBeUndefined()
         return openRouterResponse(
@@ -1065,6 +1794,7 @@ describe('workflow policy pipeline', () => {
         )
       }
       if (body.modalities?.includes('image')) {
+        expect(body.model).toBe('google/gemini-3.1-flash-lite-image')
         expect(body.modalities).toEqual(['image', 'text'])
         expect(body.image_config).toEqual({ aspect_ratio: '3:4' })
         return openRouterResponse('', [{ image_url: { url: dataUrl } }])
@@ -1094,7 +1824,7 @@ describe('workflow policy pipeline', () => {
 
   test('image_only event template uses the existing poster-copy fallbacks when its short step fails', async () => {
     const publicationText = 'Caption provisto para el evento.'
-    workflowFetch.mockResolvedValue(openRouterResponse('respuesta no JSON'))
+    workflowFetch.mockImplementation(async () => openRouterResponse('respuesta no JSON'))
     reviewAiPolicyResult.mockImplementationOnce(async (payload) => {
       expect(payload.reviewMode).toBe('image_only_generation')
       expect(payload.images).toHaveLength(1)
@@ -1127,6 +1857,10 @@ describe('workflow policy pipeline', () => {
     expect(workflowFetch).toHaveBeenCalledTimes(2)
     for (const [, options] of workflowFetch.mock.calls) {
       const body = JSON.parse(options.body)
+      expect(messageContentText(body.messages?.[0])).toContain(
+        'INSTRUCCIONES OPERATIVAS PARA TEXTO BREVE DE AFICHE'
+      )
+      expect(body.model).toBe('google/gemini-3.1-flash-lite')
       expect(body.modalities).toEqual(['text'])
       expect(body.image_config).toBeUndefined()
     }
@@ -1171,12 +1905,12 @@ describe('workflow policy pipeline', () => {
     expect(output.usage).toBeNull()
   })
 
-  test('image_only treats a missing optional image as a retryable terminal failure', async () => {
+  test('image_only reports the exhausted image-provider stage after automatic recovery', async () => {
     getWorkflowMetadata.mockReturnValue({ workflowRunId: 'wrun-image-only-no-image' })
     const publicationText = 'Caption existente.'
     workflowFetch.mockImplementation(async (_url, options) => {
       const body = JSON.parse(options.body)
-      const system = body.messages?.[0]?.content || ''
+      const system = messageContentText(body.messages?.[0])
       if (system.includes('INSTRUCCIONES OPERATIVAS DE IMAGEN')) {
         return openRouterResponse(
           JSON.stringify({
@@ -1200,28 +1934,180 @@ describe('workflow policy pipeline', () => {
         ...legacy,
         ...runtimeFields(document, 'post_educativo', legacy),
       })
-    ).rejects.toThrow('No se pudo preparar la imagen solicitada.')
+    ).rejects.toThrow(
+      /OpenRouter no devolvió una imagen utilizable después de los intentos automáticos/
+    )
 
     expect(reviewAiPolicyResult).not.toHaveBeenCalled()
     expect(persistRunHistory).toHaveBeenCalledWith(
       expect.objectContaining({
         status: 'failed',
         error: expect.objectContaining({
-          code: 'required_image_unavailable',
-          stage: 'image_generation',
+          code: 'image_provider_retry_exhausted',
+          stage: 'image_provider',
           retryable: true,
-          message: expect.stringMatching(/imagen solicitada/i),
+          message: expect.stringMatching(/intentos automáticos/i),
         }),
       })
     )
     expect(persistAiRunFailure).toHaveBeenCalledWith(
       'wrun-image-only-no-image',
       expect.objectContaining({
-        code: 'required_image_unavailable',
-        stage: 'image_generation',
+        code: 'image_provider_retry_exhausted',
+        stage: 'image_provider',
         retryable: true,
       })
     )
+  })
+
+  test('image_only explains missing provider configuration without offering a futile retry', async () => {
+    getWorkflowMetadata.mockReturnValue({ workflowRunId: 'wrun-image-provider-not-configured' })
+    delete process.env.OPENROUTER_API_KEY
+    const legacy = { topic: 'Binoculares', tone: 'Amigable' }
+
+    await expect(
+      generateAiWorkflow({
+        userId: 'user-1',
+        userEmail: 'test@example.com',
+        platforms: ['facebook'],
+        contentType: 'post_educativo',
+        generationMode: 'image_only',
+        publicationText: 'Caption existente.',
+        ...legacy,
+        ...runtimeFields(document, 'post_educativo', legacy),
+      })
+    ).rejects.toThrow(/proveedor de imágenes no está configurado/i)
+
+    expect(workflowFetch).not.toHaveBeenCalled()
+    expect(reviewAiPolicyResult).not.toHaveBeenCalled()
+    expect(persistAiRunFailure).toHaveBeenCalledWith(
+      'wrun-image-provider-not-configured',
+      expect.objectContaining({
+        code: 'image_provider_not_configured',
+        stage: 'image_prompt',
+        retryable: false,
+        message: expect.stringMatching(/administrador debe añadir la credencial/i),
+      })
+    )
+  })
+
+  test('image_only rebuilds a safe prompt locally after two invalid brief responses', async () => {
+    getWorkflowMetadata.mockReturnValue({ workflowRunId: 'wrun-image-only-prompt-recovered' })
+    const dataUrl = await makePngDataUrl({ r: 22, g: 33, b: 77 })
+    let promptAttempts = 0
+    workflowFetch.mockImplementation(async (_url, options) => {
+      const body = JSON.parse(options.body)
+      const system = messageContentText(body.messages?.[0])
+      if (system.includes('INSTRUCCIONES OPERATIVAS DE IMAGEN')) {
+        promptAttempts += 1
+        return openRouterResponse(
+          JSON.stringify({ visualBrief: { concept: `Incomplete ${promptAttempts}` } })
+        )
+      }
+      if (body.modalities?.includes('image')) {
+        expect(messagesText(body)).toContain('Primary subject: visually represent Binoculares')
+        expect(messagesText(body)).toContain('Guidelines generation requirements:')
+        return openRouterResponse('', [{ image_url: { url: dataUrl } }])
+      }
+      return openRouterResponse('')
+    })
+    const legacy = { topic: 'Binoculares', tone: 'Amigable' }
+
+    const output = await generateAiWorkflow({
+      userId: 'user-1',
+      userEmail: 'test@example.com',
+      platforms: ['facebook'],
+      contentType: 'post_educativo',
+      generationMode: 'image_only',
+      publicationText: 'Caption existente.',
+      ...legacy,
+      ...runtimeFields(document, 'post_educativo', legacy),
+    })
+
+    expect(promptAttempts).toBe(2)
+    expect(output.result.generatedImage?.preparedForDisplay).toBe(true)
+    expect(output.result.drafts[0].imageRationale).toMatch(/reconstruyó un brief visual seguro/i)
+    expect(persistAiRunFailure).not.toHaveBeenCalled()
+  })
+
+  test('regenerates once when the provider image cannot be prepared', async () => {
+    getWorkflowMetadata.mockReturnValue({ workflowRunId: 'wrun-image-postprocess-recovered' })
+    const validDataUrl = await makePngDataUrl({ r: 14, g: 44, b: 88 })
+    let imageAttempts = 0
+    workflowFetch.mockImplementation(async (_url, options) => {
+      const body = JSON.parse(options.body)
+      const system = messageContentText(body.messages?.[0])
+      if (system.includes('INSTRUCCIONES OPERATIVAS DE IMAGEN')) {
+        return openRouterResponse(
+          JSON.stringify({
+            sharedImagePrompt: 'Un cielo nocturno físicamente plausible y sin texto.',
+            sharedImageRationale: 'Representa el tema sin inventar hechos.',
+          })
+        )
+      }
+      if (body.modalities?.includes('image')) {
+        imageAttempts += 1
+        const dataUrl = imageAttempts === 1 ? 'data:image/png;base64,QUFBQQ==' : validDataUrl
+        return openRouterResponse('', [{ image_url: { url: dataUrl } }])
+      }
+      return openRouterResponse('')
+    })
+    const legacy = { topic: 'Binoculares', tone: 'Amigable' }
+
+    const output = await generateAiWorkflow({
+      userId: 'user-1',
+      userEmail: 'test@example.com',
+      platforms: ['facebook'],
+      contentType: 'post_educativo',
+      generationMode: 'image_only',
+      publicationText: 'Caption existente.',
+      ...legacy,
+      ...runtimeFields(document, 'post_educativo', legacy),
+    })
+
+    expect(imageAttempts).toBe(2)
+    expect(output.result.generatedImage?.preparedForDisplay).toBe(true)
+    expect(persistAiRunFailure).not.toHaveBeenCalled()
+  })
+
+  test('keeps provider and preparation recovery budgets independent', async () => {
+    const validDataUrl = await makePngDataUrl({ r: 18, g: 48, b: 96 })
+    let imageAttempts = 0
+    workflowFetch.mockImplementation(async (_url, options) => {
+      const body = JSON.parse(options.body)
+      const system = messageContentText(body.messages?.[0])
+      if (system.includes('INSTRUCCIONES OPERATIVAS DE IMAGEN')) {
+        return openRouterResponse(
+          JSON.stringify({
+            sharedImagePrompt: 'One coherent visual based only on the confirmed request details.',
+            sharedImageRationale: 'Respeta la definición seleccionada en Guidelines.',
+          })
+        )
+      }
+      if (body.modalities?.includes('image')) {
+        imageAttempts += 1
+        if (imageAttempts <= 2) return openRouterResponse('')
+        const dataUrl = imageAttempts === 3 ? 'data:image/png;base64,QUFBQQ==' : validDataUrl
+        return openRouterResponse('', [{ image_url: { url: dataUrl } }])
+      }
+      throw new Error('image_only no debe generar un caption')
+    })
+    const legacy = { topic: 'Binoculares', tone: 'Amigable' }
+
+    const output = await generateAiWorkflow({
+      userId: 'user-1',
+      userEmail: 'test@example.com',
+      platforms: ['facebook'],
+      contentType: 'post_educativo',
+      generationMode: 'image_only',
+      publicationText: 'Caption existente.',
+      ...legacy,
+      ...runtimeFields(document, 'post_educativo', legacy),
+    })
+
+    expect(imageAttempts).toBe(4)
+    expect(output.result.generatedImage?.preparedForDisplay).toBe(true)
+    expect(persistAiRunFailure).not.toHaveBeenCalled()
   })
 
   test('a pre-policy block prevents provider generation and post-review', async () => {

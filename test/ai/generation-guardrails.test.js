@@ -1,17 +1,18 @@
 import {
   applyGenerationGuardrails,
-  AiGenerationResultSchema,
-  AiSharedCaptionResultSchema,
   resolveSharedCaptionCharacterLimit,
   shouldIncludeHashtags,
-} from '../../workflows/ai-social-media-designer/generation/generateAiWorkflow'
+} from '../../lib/ai-generation-guardrails'
+import {
+  AiGenerationResultSchema,
+  AiSharedCaptionResultSchema,
+} from '../../lib/ai-generation-schemas'
 import {
   getActiveGuidelines,
-  resolveGenerationGuidelinesForRequest,
   resolveGenerationGuidelinesFromDocument,
 } from '../../lib/ai-guidelines'
 
-describe('resolveGenerationGuidelinesForRequest', () => {
+describe('resolveGenerationGuidelinesFromDocument', () => {
   const originalBucket = process.env.S3_ARTICLES_BUCKET_NAME
 
   beforeAll(() => {
@@ -27,12 +28,11 @@ describe('resolveGenerationGuidelinesForRequest', () => {
   })
 
   test('returns version and generation rules for known platform/content type', async () => {
-    const resolved = await resolveGenerationGuidelinesForRequest({
+    const active = await getActiveGuidelines()
+    const resolved = resolveGenerationGuidelinesFromDocument(active, {
       platform: 'x',
       contentType: 'event_promotion',
     })
-
-    const active = await getActiveGuidelines()
     expect(resolved.version).toBe(active.version)
     expect(resolved.global).toMatch(/español/i)
     expect(resolved.global).toBe(active.global)
@@ -44,7 +44,7 @@ describe('resolveGenerationGuidelinesForRequest', () => {
   })
 
   test('uses generation-specific rules, not validation rules', async () => {
-    const resolved = await resolveGenerationGuidelinesForRequest({
+    const resolved = resolveGenerationGuidelinesFromDocument(await getActiveGuidelines(), {
       platform: 'instagram',
       contentType: 'educational_astronomy',
     })
@@ -74,7 +74,7 @@ describe('resolveGenerationGuidelinesForRequest', () => {
   })
 
   test('falls back gracefully for unknown platform and content type', async () => {
-    const resolved = await resolveGenerationGuidelinesForRequest({
+    const resolved = resolveGenerationGuidelinesFromDocument(await getActiveGuidelines(), {
       platform: 'tiktok',
       contentType: 'unknown_type',
     })
@@ -119,6 +119,28 @@ describe('shouldIncludeHashtags', () => {
 })
 
 describe('applyGenerationGuardrails', () => {
+  const eventDefinition = {
+    id: 'event_promotion',
+    label: 'Promoción de evento',
+    fields: [
+      { key: 'event_name', required: true },
+      { key: 'date', required: true },
+      { key: 'time', required: true },
+      { key: 'location', required: true },
+      { key: 'cta', required: true },
+    ],
+    titleSource: 'event_name',
+    visual: { mode: 'template', template: 'event', imagePolicyByPlatform: {} },
+  }
+  const observationDefinition = {
+    ...eventDefinition,
+    id: 'observation_night',
+    label: 'Noche de Observación',
+    fields: eventDefinition.fields.map((field) =>
+      field.key === 'cta' ? { ...field, required: false } : field
+    ),
+    titleSource: 'type_label',
+  }
   const baseInput = {
     userId: 'user-1',
     userEmail: 'test@example.com',
@@ -247,6 +269,7 @@ describe('applyGenerationGuardrails', () => {
       ...baseInput,
       platforms: ['facebook'],
       contentType: 'event_promotion',
+      contentTypeDefinition: eventDefinition,
       eventDetails: { name: 'Noche de observación', date: '2026-08-01' },
     }
 
@@ -278,6 +301,7 @@ describe('applyGenerationGuardrails', () => {
       ...baseInput,
       platforms: ['facebook'],
       contentType: 'observation_night',
+      contentTypeDefinition: observationDefinition,
       eventDetails: {
         name: 'Noche de Observación',
         date: '2026-08-01',
@@ -305,6 +329,7 @@ describe('applyGenerationGuardrails', () => {
       ...baseInput,
       platforms: ['facebook'],
       contentType: 'event_promotion',
+      contentTypeDefinition: eventDefinition,
       eventDetails: {},
       cta: 'Regístrate en sociedadastronomia.com',
     }

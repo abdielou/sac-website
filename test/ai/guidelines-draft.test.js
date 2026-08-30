@@ -2,7 +2,6 @@ import {
   addPlatform,
   cloneGuidelines,
   createAuditEvent,
-  createGuidelineDocument,
   listContentTypeEntries,
   listPlatformEntries,
   normalizeGuidelineDocument,
@@ -19,7 +18,7 @@ describe('ai-guidelines-draft', () => {
   const seed = getDefaultGuidelines()
 
   test('cloneGuidelines deep-copies document', () => {
-    const doc = createGuidelineDocument({ seed })
+    const doc = normalizeGuidelineDocument(cloneGuidelines(seed))
     const copy = cloneGuidelines(doc)
     copy.global = 'changed'
     expect(doc.global).not.toBe('changed')
@@ -85,7 +84,7 @@ describe('ai-guidelines-draft', () => {
   })
 
   test('addPlatform adds one canonical expectation and default policies', () => {
-    const doc = createGuidelineDocument({ seed })
+    const doc = normalizeGuidelineDocument(cloneGuidelines(seed))
     const next = addPlatform(doc, 'Threads')
     expect(next.platforms.threads).toMatch(/Threads/)
     expect(next.platformLabels.threads).toBe('Threads')
@@ -93,23 +92,19 @@ describe('ai-guidelines-draft', () => {
     expect(Object.keys(next.platforms)).toHaveLength(4)
     for (const entry of next.contentTypeCatalog) {
       expect(entry.visual.imagePolicyByPlatform.threads).toBe(
-        entry.visual.mode === 'none'
-          ? 'prohibited'
-          : entry.platforms.includes('instagram')
-            ? 'required'
-            : 'optional'
+        entry.visual.mode === 'none' ? 'prohibited' : 'optional'
       )
       expect(entry.platforms).toContain('threads')
     }
   })
 
   test('addPlatform rejects empty label', () => {
-    const doc = createGuidelineDocument({ seed })
+    const doc = normalizeGuidelineDocument(cloneGuidelines(seed))
     expect(() => addPlatform(doc, '   ')).toThrow(/obligatorio/)
   })
 
   test('removePlatform deletes the expectation, label, and image policies', () => {
-    const doc = createGuidelineDocument({ seed })
+    const doc = normalizeGuidelineDocument(cloneGuidelines(seed))
     const next = removePlatform(doc, 'facebook')
     expect(next.platforms.facebook).toBeUndefined()
     expect(next.platformLabels.facebook).toBeUndefined()
@@ -122,7 +117,7 @@ describe('ai-guidelines-draft', () => {
   })
 
   test('removePlatform refuses to delete the last platform', () => {
-    let doc = createGuidelineDocument({ seed })
+    let doc = normalizeGuidelineDocument(cloneGuidelines(seed))
     doc = removePlatform(doc, 'facebook')
     doc = removePlatform(doc, 'instagram')
     expect(() => removePlatform(doc, 'x')).toThrow(/al menos una/)
@@ -144,7 +139,7 @@ describe('ai-guidelines-draft', () => {
   })
 
   test('resolvePlatformOptions includes custom platforms from the document', () => {
-    const doc = createGuidelineDocument({ seed })
+    const doc = normalizeGuidelineDocument(cloneGuidelines(seed))
     const next = addPlatform(doc, 'Threads')
     next.platforms.threads = 'Reglas Threads'
     const options = resolvePlatformOptions(next, { generationOnly: true })
@@ -152,7 +147,7 @@ describe('ai-guidelines-draft', () => {
   })
 
   test('resolvePlatformOptions does not invent platforms for an authoritative document without them', () => {
-    const doc = createGuidelineDocument({ seed })
+    const doc = normalizeGuidelineDocument(cloneGuidelines(seed))
     doc.platforms = {}
     doc.platformLabels = {}
 
@@ -169,8 +164,8 @@ describe('ai-guidelines-draft', () => {
     expect(options.some((o) => o.id === 'regular_post')).toBe(true)
   })
 
-  test('resolveContentTypeOptions restores observation_night for an older guideline document', () => {
-    const olderDocument = createGuidelineDocument({ seed })
+  test('resolveContentTypeOptions is driven by the catalog, not legacy flat maps', () => {
+    const olderDocument = normalizeGuidelineDocument(cloneGuidelines(seed))
     delete olderDocument.contentTypes.observation_night
     delete olderDocument.generation.contentTypes.observation_night
 

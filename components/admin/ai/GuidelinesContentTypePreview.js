@@ -23,9 +23,7 @@ export default function GuidelinesContentTypePreview({
   drawer = false,
 }) {
   const [mode, setMode] = useState('validation')
-  const preferredPlatform = platforms.some(({ id }) => id === 'instagram')
-    ? 'instagram'
-    : platforms[0]?.id || ''
+  const preferredPlatform = platforms[0]?.id || ''
   const [validationState, setValidationState] = useState(() =>
     validationStateFor(definition?.id || '', preferredPlatform)
   )

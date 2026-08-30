@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { DEFAULT_SEED_PLATFORM_LABELS, CONTENT_TYPE_LABELS } from '@/lib/ai-constants'
+import { DEFAULT_SEED_PLATFORM_LABELS } from '@/lib/ai-constants'
 import GeneratedImageLightbox from './GeneratedImageLightbox'
 
 const POLICY_CATEGORY_LABELS = {
@@ -416,7 +416,7 @@ export default function GenerationResult({
         const contentTypeLabel =
           contentTypeIdentity?.id === draft.contentType && contentTypeIdentity?.label
             ? contentTypeIdentity.label
-            : CONTENT_TYPE_LABELS[draft.contentType] || draft.contentType
+            : draft.contentType
         const missing = Array.isArray(draft.missingInformation) ? draft.missingInformation : []
         const assumptions = Array.isArray(draft.assumptions) ? draft.assumptions : []
         const originalCaption = draft.draftText || ''

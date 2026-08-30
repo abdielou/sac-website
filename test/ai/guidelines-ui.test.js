@@ -367,23 +367,71 @@ describe('Guidelines workspace UI', () => {
       .at(-1)[0]
       .contentTypeCatalog.find(({ id }) => id === 'reel_caption')
     expect(instagramType.platforms).toContain('instagram')
-    expect(instagramType.visual.mode).toBe('template')
-    expect(
-      instagramType.platforms.every(
-        (platform) => instagramType.visual.imagePolicyByPlatform[platform] === 'required'
-      )
-    ).toBe(true)
+    expect(instagramType.visual.mode).toBe('none')
+    expect(instagramType.visual.imagePolicyByPlatform.instagram).toBe('prohibited')
   })
 
-  test('previews the real SVG template over selectable stock backgrounds in the client', () => {
+  test('lets Guidelines define an optional Instagram image policy without changing other networks', () => {
+    const document = getDefaultGuidelines()
+    const onChange = jest.fn()
+    act(() =>
+      root.render(
+        <GuidelinesContentTypeCatalog
+          document={document}
+          editable
+          selectedId="regular_post"
+          onChange={onChange}
+        />
+      )
+    )
+
+    const instagramPolicy = container.querySelector(
+      '#content-type-regular_post-image-policy-instagram'
+    )
+    expect(instagramPolicy).not.toBeNull()
+    expect([...instagramPolicy.options].find(({ value }) => value === 'optional').disabled).toBe(
+      false
+    )
+
+    act(() => {
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLSelectElement.prototype,
+        'value'
+      ).set
+      setter.call(instagramPolicy, 'optional')
+      instagramPolicy.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+
+    const updated = onChange.mock.calls
+      .at(-1)[0]
+      .contentTypeCatalog.find(({ id }) => id === 'regular_post')
+    expect(updated.visual.imagePolicyByPlatform).toMatchObject({
+      x: 'required',
+      instagram: 'optional',
+      facebook: 'required',
+    })
+  })
+
+  test('renders the React SVG template over selectable stock backgrounds in the client', () => {
     act(() => root.render(<GuidelinesTemplatePreview layoutId="event" />))
 
     const preview = container.querySelector('[data-template-preview="event"]')
-    expect(preview.querySelector('svg')).not.toBeNull()
+    const svg = preview.querySelector('svg')
+    expect(svg).not.toBeNull()
+    expect(svg.getAttribute('viewBox')).toBe('0 0 1080 1440')
+    expect(svg.getAttribute('data-layout-orientation')).toBe('portrait')
+    expect(svg.closest('[aria-hidden="true"]')).not.toBeNull()
+    expect(svg.querySelector('[data-role="info-rail"]')).not.toBeNull()
+    expect(svg.querySelectorAll('[data-role="info-card"]')).toHaveLength(3)
+    expect(svg.querySelector('text').getAttribute('font-family')).toContain('Gilroy SAC')
+    expect(svg.querySelector('text').getAttribute('font-family')).toContain('system-ui')
     expect(preview.textContent).toContain('Noche de')
     expect(preview.textContent).toContain('Observación')
     expect(preview.textContent).toContain('Así se verá el cartel')
-    expect(preview.querySelectorAll('img')[0].getAttribute('src')).toContain('telescope-nebula')
+    const images = preview.querySelectorAll('img')
+    expect(images).toHaveLength(2)
+    expect(images[0].getAttribute('src')).toContain('telescope-nebula')
+    expect(images[1].getAttribute('src')).toContain('sac-white-short-logo-25')
 
     const background = preview.querySelector('#template-preview-background-event')
     act(() => {
@@ -397,7 +445,16 @@ describe('Guidelines workspace UI', () => {
     expect(preview.querySelectorAll('img')[0].getAttribute('src')).toContain('moon-diagrams')
   })
 
-  )
+  test('falls back to the event React SVG when the requested layout does not exist', () => {
+    act(() => root.render(<GuidelinesTemplatePreview layoutId="unknown-layout" />))
+
+    const preview = container.querySelector('[data-template-preview="event"]')
+    expect(preview).not.toBeNull()
+    expect(preview.querySelector('svg [data-role="info-rail"]')).not.toBeNull()
+    expect(preview.querySelector('#template-preview-background-event')).not.toBeNull()
+    expect(preview.textContent).toContain('Noche de')
+    expect(preview.textContent).toContain('Observación')
+  })
 
   test('prevents duplicate names when creating a content type', () => {
     const document = getDefaultGuidelines()
@@ -881,9 +938,7 @@ describe('Guidelines workspace UI', () => {
     )
 
     expect(container.textContent).toContain('Déjalo vacío')
-    expect(container.textContent).toContain(
-      'Máximo de caracteres del texto de la publicación'
-    )
+    expect(container.textContent).toContain('Máximo de caracteres del texto de la publicación')
     expect(container.textContent).not.toContain('Máximo de caracteres del caption')
     const input = container.querySelector('#platform-x-caption-limit')
     expect(input.value).toBe('280')

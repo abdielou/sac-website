@@ -28,11 +28,9 @@ import {
   VALIDATION_IMAGE_MIME_TYPES,
   normalizeSerializedValidationImages,
 } from '../../../../../lib/ai-validation-images'
+import { ValidateInputSchema } from '../../../../../lib/ai-validation-input'
 import { start } from 'workflow/api'
-import {
-  ValidateInputSchema,
-  validateAiWorkflow,
-} from '../../../../../workflows/ai-social-media-designer/validation/validateAiWorkflow'
+import { validateAiWorkflow } from '../../../../../workflows/ai-social-media-designer/validation/validateAiWorkflow'
 
 const VALIDATE_WORKFLOW_ID =
   'workflow//./workflows/ai-social-media-designer/validation/validateAiWorkflow//validateAiWorkflow'
