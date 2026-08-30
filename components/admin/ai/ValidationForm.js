@@ -8,7 +8,7 @@ import {
   isEventContentType,
   MAX_VALIDATION_IMAGES,
 } from '@/lib/ai-constants'
-import { DEFAULT_FORM } from '@/lib/ai-validation-draft'
+import { DEFAULT_FORM, VALIDATION_DRAFT_RETENTION_DAYS } from '@/lib/ai-validation-draft'
 import { mergeValidationImages } from '@/lib/ai-validation-images'
 import {
   SPONSOR_MAX_BYTES,
@@ -30,6 +30,24 @@ function formatPlatformList(labels) {
   return `${labels.slice(0, -1).join(', ')} y ${labels.at(-1)}`
 }
 
+function formatLocalDraftStatus(status, updatedAt) {
+  if (status === 'loading') return 'Restaurando borrador local…'
+  if (status === 'dirty') return 'Cambios pendientes de guardar…'
+  if (status === 'saving') return 'Guardando localmente…'
+  if (status === 'error') return 'No se pudo guardar el borrador local.'
+  if (status === 'unavailable') return 'El guardado local no está disponible.'
+  if (status === 'empty') return 'Sin borrador local guardado.'
+  if (status === 'saved') {
+    const date = updatedAt ? new Date(updatedAt) : null
+    const time =
+      date && !Number.isNaN(date.getTime())
+        ? date.toLocaleTimeString('es-PR', { hour: 'numeric', minute: '2-digit' })
+        : null
+    return time ? `Guardado localmente a las ${time}.` : 'Guardado localmente.'
+  }
+  return 'Guardado local activo.'
+}
+
 /**
  * @param {Object} props
  * @param {boolean} props.canValidate
@@ -39,6 +57,10 @@ function formatPlatformList(labels) {
  * @param {File[]} props.images
  * @param {Function} props.onImagesChange
  * @param {Function} props.onSubmit
+ * @param {Function} [props.onClearDraft]
+ * @param {'loading'|'dirty'|'saving'|'saved'|'empty'|'error'|'unavailable'} [props.draftSaveStatus]
+ * @param {string|null} [props.draftUpdatedAt]
+ * @param {string|null} [props.draftRestoreNotice]
  * @param {string} [props.fieldError]
  * @param {{ id: string, label: string }[]} [props.platforms] - from active guidelines
  * @param {{ id: string, label: string }[]} [props.contentTypes] - from active guidelines
@@ -51,6 +73,10 @@ export default function ValidationForm({
   images = [],
   onImagesChange,
   onSubmit,
+  onClearDraft,
+  draftSaveStatus = 'unavailable',
+  draftUpdatedAt = null,
+  draftRestoreNotice = null,
   fieldError,
   platforms = [],
   contentTypes = [],
@@ -257,6 +283,14 @@ export default function ValidationForm({
     onSubmit()
   }
 
+  const handleClearDraft = () => {
+    if (!onClearDraft || disabled) return
+    const confirmed = window.confirm(
+      '¿Borrar el texto y las imágenes guardadas localmente y empezar en blanco?'
+    )
+    if (confirmed) onClearDraft()
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5" data-testid="validation-form">
       {!canValidate && (
@@ -264,6 +298,46 @@ export default function ValidationForm({
           Tienes acceso de solo lectura. Se requiere permiso{' '}
           <code className="text-xs">write_ai</code> para iniciar validaciones.
         </p>
+      )}
+
+      {onClearDraft && (
+        <section className="rounded-lg border border-blue-200 bg-blue-50/60 px-4 py-3 dark:border-blue-900 dark:bg-blue-950/30">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                Borrador guardado solo en este navegador
+              </p>
+              <p className="mt-1 text-xs leading-5 text-gray-600 dark:text-gray-300">
+                El texto y las imágenes caducan {VALIDATION_DRAFT_RETENTION_DAYS} días después del
+                último cambio y no se envían hasta que inicies la validación.
+              </p>
+              <p
+                className={`mt-1 text-xs ${
+                  draftSaveStatus === 'error'
+                    ? 'text-red-600 dark:text-red-400'
+                    : 'text-gray-500 dark:text-gray-400'
+                }`}
+                role="status"
+                data-testid="validation-draft-status"
+              >
+                {formatLocalDraftStatus(draftSaveStatus, draftUpdatedAt)}
+              </p>
+              {draftRestoreNotice && (
+                <p className="mt-1 text-xs text-amber-700 dark:text-amber-300" role="alert">
+                  {draftRestoreNotice}
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleClearDraft}
+              disabled={disabled || draftSaveStatus === 'loading' || draftSaveStatus === 'saving'}
+              className="shrink-0 text-sm text-red-700 underline hover:text-red-900 disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-300 dark:hover:text-red-200"
+            >
+              Borrar y empezar en blanco
+            </button>
+          </div>
+        </section>
       )}
 
       <section className="rounded-xl border border-gray-200 bg-gray-50/70 p-4 dark:border-gray-700 dark:bg-gray-900/40">

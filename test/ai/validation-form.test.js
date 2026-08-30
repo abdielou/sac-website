@@ -69,4 +69,40 @@ describe('ValidationForm multired package', () => {
       'Se requiere al menos una imagen para este paquete y tipo de contenido.'
     )
   })
+
+  test('explains local retention and provides a confirmed start-blank action', () => {
+    const document = getDefaultGuidelines()
+    const definition = resolveContentTypeDefinition(document, 'regular_post')
+    const onClearDraft = jest.fn()
+    const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true)
+
+    act(() =>
+      root.render(
+        <ValidationForm
+          canValidate
+          formState={{ ...DEFAULT_FORM, contentType: 'regular_post', draftText: 'Conservarme' }}
+          onFormChange={() => {}}
+          images={[]}
+          onImagesChange={() => {}}
+          onSubmit={() => {}}
+          onClearDraft={onClearDraft}
+          draftSaveStatus="saved"
+          draftUpdatedAt="2026-08-29T12:00:00.000Z"
+          platforms={[{ id: 'x', label: 'X' }]}
+          contentTypes={[{ id: 'regular_post', label: 'Publicación regular', definition }]}
+        />
+      )
+    )
+
+    expect(container.textContent).toContain('Borrador guardado solo en este navegador')
+    expect(container.textContent).toContain('caducan 30 días después del último cambio')
+    expect(container.textContent).toContain('Guardado localmente')
+
+    const clearButton = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Borrar y empezar en blanco'
+    )
+    act(() => clearButton.click())
+    expect(confirm).toHaveBeenCalledTimes(1)
+    expect(onClearDraft).toHaveBeenCalledTimes(1)
+  })
 })

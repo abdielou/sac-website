@@ -15,7 +15,7 @@ const OUTCOME_STYLES = {
   fail: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
 }
 
-const SEVERITY_ORDER = { critical: 0, major: 1, minor: 2 }
+const SEVERITY_ORDER = { critical: 0, major: 1, minor: 2, suggestion: 3 }
 
 const RESULT_SOURCE_LABELS = {
   validator: 'Validador de Guidelines',
@@ -255,6 +255,26 @@ export default function ValidationResult({
           <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
             {normalizeAiDiagnosticText(result.imageNotes)}
           </p>
+        </div>
+      )}
+
+      {result.imageNotesByImage?.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-sm font-semibold text-gray-900 dark:text-white">
+            Revisión por imagen
+          </h3>
+          <div className="divide-y divide-gray-200 rounded-xl border border-gray-200 dark:divide-gray-700 dark:border-gray-700">
+            {result.imageNotesByImage.map((imageNote) => (
+              <div key={`${imageNote.imageIndex}-${imageNote.fileName || ''}`} className="p-3">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  {imageNote.fileName || `Imagen ${imageNote.imageIndex}`}
+                </p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">
+                  {normalizeAiDiagnosticText(imageNote.notes)}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

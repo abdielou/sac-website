@@ -70,6 +70,31 @@ describe('ValidationResult', () => {
     expect(container.textContent).not.toMatch(/\*engagement\*|\*\*buen contraste\*\*/)
   })
 
+  test('renders feedback for each identified image', () => {
+    act(() =>
+      root.render(
+        <ValidationResult
+          result={{
+            overallOutcome: 'warning',
+            approvalRecommendation: 'needs_edits',
+            summary: 'Revisa las imágenes.',
+            issues: [],
+            imageNotesByImage: [
+              { imageIndex: 1, fileName: 'luna.jpg', notes: 'Buen contraste.' },
+              { imageIndex: 2, notes: 'Añade texto alternativo.' },
+            ],
+            humanReviewRequired: true,
+          }}
+        />
+      )
+    )
+
+    expect(container.textContent).toContain('Revisión por imagen')
+    expect(container.textContent).toContain('luna.jpg')
+    expect(container.textContent).toContain('Imagen 2')
+    expect(container.textContent).toContain('Añade texto alternativo.')
+  })
+
   test('distinguishes a system failure from content noncompliance', () => {
     act(() =>
       root.render(

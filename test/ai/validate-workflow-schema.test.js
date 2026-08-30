@@ -1,16 +1,17 @@
+import { ValidateInputSchema } from '../../lib/ai-validation-input'
 import {
   AiValidationModelResultSchema,
   AiValidationResultSchema,
-  ValidateInputSchema,
   applyConfiguredCaptionLimit,
   applySuggestedRevisionConsistency,
   buildFallbackResult,
   buildPolicyValidationResult,
   normalizeModelValidationVerdict,
+  reconcileModelSuggestedRevision,
   shouldApplyPostValidationPolicyBlock,
-} from '../../workflows/ai-social-media-designer/validation/validateAiWorkflow'
+} from '../../lib/ai-validation-result'
 import { AI_BASE_POLICY_VERSION } from '../../lib/ai-agent'
-import { extractOpenRouterUsage, mergeOpenRouterUsage } from '../../lib/ai-openrouter'
+import { mergeOpenRouterUsage } from '../../lib/ai-openrouter'
 
 describe('validateAiWorkflow schema', () => {
   const baseInput = {
@@ -56,6 +57,26 @@ describe('validateAiWorkflow schema', () => {
       humanReviewRequired: false,
     }
     expect(AiValidationResultSchema.safeParse(invalid).success).toBe(false)
+  })
+
+  test('accepts suggestion findings and structured per-image notes', () => {
+    const result = AiValidationModelResultSchema.parse({
+      summary: 'La publicación puede mejorar sin un incumplimiento.',
+      issues: [
+        {
+          severity: 'suggestion',
+          category: 'clarity',
+          message: 'Considera simplificar la apertura.',
+        },
+      ],
+      imageNotesByImage: [
+        { imageIndex: 1, fileName: 'luna.jpg', notes: 'La imagen corresponde al caption.' },
+        { imageIndex: 2, notes: 'Aumenta el contraste del texto alternativo.' },
+      ],
+    })
+
+    expect(result.issues[0].severity).toBe('suggestion')
+    expect(result.imageNotesByImage).toHaveLength(2)
   })
 
   test('model output contains findings while the server owns the verdict', () => {
@@ -121,6 +142,18 @@ describe('validateAiWorkflow schema', () => {
     expect(result.imageNotes).toMatch(/se conserva como borrador/i)
   })
 
+  test('preserves the technical policy error code for an inconclusive review', () => {
+    const result = buildPolicyValidationResult(baseInput, {
+      decision: 'block',
+      categories: ['invalid_request'],
+      reason: 'El reviewer no respondió.',
+      failClosed: true,
+      errorCode: 'provider_error',
+    })
+
+    expect(result).toMatchObject({ resultSource: 'system', errorCode: 'provider_error' })
+  })
+
   test('ignores only definitive guideline-only blocks after validation', () => {
     expect(
       shouldApplyPostValidationPolicyBlock({
@@ -167,6 +200,12 @@ describe('validateAiWorkflow schema', () => {
   })
 
   test.each([
+    {
+      label: 'suggestion',
+      issues: [{ severity: 'suggestion', category: 'clarity', message: 'Mejora opcional.' }],
+      outcome: 'warning',
+      recommendation: 'needs_edits',
+    },
     {
       label: 'minor finding',
       issues: [{ severity: 'minor', category: 'clarity', message: 'Aclarar esta frase.' }],
@@ -279,6 +318,185 @@ describe('validateAiWorkflow schema', () => {
     expect(result.suggestedRevision).toBeUndefined()
   })
 
+  test('reconciles exact text corrections and merges duplicate findings', () => {
+    const input = {
+      ...baseInput,
+      platform: 'facebook',
+      draftText: 'Sociedad Astronomica del Caribe\n\nTelescopias para explorar el cielo.',
+    }
+    const suggestedRevision =
+      'Sociedad de Astronomía del Caribe\n\nTelescopios para explorar el cielo.'
+
+    const result = reconcileModelSuggestedRevision(
+      {
+        summary: 'Se encontraron errores.',
+        issues: [
+          {
+            severity: 'minor',
+            category: 'guideline_compliance',
+            message:
+              'El nombre de la institución aparece como Sociedad Astronomica del Caribe, omitiendo la tilde en Astronomía.',
+            suggestedFix: 'Cambiar a Sociedad de Astronomía del Caribe.',
+            affectedPlatform: 'facebook',
+            textCorrections: [
+              {
+                before: 'Sociedad Astronomica del Caribe',
+                after: 'Sociedad de Astronomía del Caribe',
+              },
+            ],
+          },
+          {
+            severity: 'minor',
+            category: 'guideline_compliance',
+            message: 'Error ortográfico en el subtítulo: Telescopias.',
+            suggestedFix: 'Cambiar a Telescopios.',
+            affectedPlatform: 'facebook',
+            textCorrections: [{ before: 'Telescopias', after: 'Telescopios' }],
+          },
+          {
+            severity: 'minor',
+            category: 'clarity',
+            message: 'La redacción en la frase inicial del subtítulo de telescopios es incorrecta.',
+            suggestedFix: 'Cambiar Telescopias por Telescopios.',
+            affectedPlatform: 'facebook',
+            textCorrections: [{ before: 'Telescopias', after: 'Telescopios' }],
+          },
+        ],
+        suggestedRevision,
+      },
+      input
+    )
+
+    expect(result.issues).toHaveLength(2)
+    expect(result.suggestedRevision).toBe(suggestedRevision)
+
+    const institution = result.issues.find(({ message }) =>
+      message.includes('Sociedad Astronomica del Caribe')
+    )
+    expect(institution).toMatchObject({ category: 'guideline_compliance', severity: 'minor' })
+    expect(institution.message).toContain('Sociedad de Astronomía del Caribe')
+    expect(institution.message).toMatch(/nombre de la institución.*no coincide.*nombre oficial/i)
+    expect(institution.message).not.toMatch(/omitiendo.*tilde/i)
+
+    const telescopeIssues = result.issues.filter((issue) =>
+      `${issue.message} ${issue.suggestedFix || ''}`.match(/Telescopias|Telescopios/)
+    )
+    expect(telescopeIssues).toHaveLength(1)
+    expect(telescopeIssues[0]).toMatchObject({
+      category: 'guideline_compliance',
+      suggestedFix: 'Cambiar “Telescopias” por “Telescopios”.',
+    })
+  })
+
+  test('rejects corrections that do not reconstruct the suggested revision', () => {
+    expect(() =>
+      reconcileModelSuggestedRevision(
+        {
+          summary: 'El nombre necesita una corrección.',
+          issues: [
+            {
+              severity: 'minor',
+              category: 'guideline_compliance',
+              message: 'Falta la tilde en Astronomía.',
+              textCorrections: [{ before: 'Astronomica', after: 'Astronomía' }],
+            },
+          ],
+          suggestedRevision: 'Sociedad de Astronomía del Caribe.',
+        },
+        { ...baseInput, draftText: 'Sociedad Astronomica del Caribe.' }
+      )
+    ).toThrow(expect.objectContaining({ code: 'SUGGESTED_REVISION_MISMATCH' }))
+  })
+
+  test('requires an occurrence when a correction anchor is ambiguous', () => {
+    expect(() =>
+      reconcileModelSuggestedRevision(
+        {
+          summary: 'Hay dos erratas.',
+          issues: [
+            {
+              severity: 'minor',
+              category: 'guideline_compliance',
+              message: 'Corregir Telescopias.',
+              textCorrections: [{ before: 'Telescopias', after: 'Telescopios' }],
+            },
+          ],
+        },
+        { ...baseInput, draftText: 'Telescopias y Telescopias.' }
+      )
+    ).toThrow(expect.objectContaining({ code: 'AMBIGUOUS_TEXT_CORRECTION' }))
+  })
+
+  test('builds the suggested revision from verified corrections when the model omits it', () => {
+    const result = reconcileModelSuggestedRevision(
+      {
+        summary: 'Hay una errata.',
+        issues: [
+          {
+            severity: 'minor',
+            category: 'guideline_compliance',
+            message: 'Corregir Telescopias.',
+            textCorrections: [{ before: 'Telescopias', after: 'Telescopios' }],
+          },
+        ],
+      },
+      { ...baseInput, draftText: 'Telescopias para explorar el cielo.' }
+    )
+
+    expect(result.suggestedRevision).toBe('Telescopios para explorar el cielo.')
+    expect(result.issues[0].message).toContain('“Telescopias” debe decir “Telescopios”')
+  })
+
+  test('applies an explicitly selected repeated occurrence', () => {
+    const result = reconcileModelSuggestedRevision(
+      {
+        summary: 'La segunda palabra necesita una corrección.',
+        issues: [
+          {
+            severity: 'minor',
+            category: 'guideline_compliance',
+            message: 'Corregir la segunda aparición.',
+            textCorrections: [{ before: 'Telescopias', after: 'Telescopios', occurrence: 2 }],
+          },
+        ],
+      },
+      { ...baseInput, draftText: 'Telescopias y Telescopias.' }
+    )
+
+    expect(result.suggestedRevision).toBe('Telescopias y Telescopios.')
+    expect(result.issues[0].textCorrections[0].occurrence).toBe(2)
+  })
+
+  test('rejects overlapping corrections from different findings', () => {
+    expect(() =>
+      reconcileModelSuggestedRevision(
+        {
+          summary: 'El nombre necesita correcciones.',
+          issues: [
+            {
+              severity: 'minor',
+              category: 'guideline_compliance',
+              message: 'Corregir el nombre completo.',
+              textCorrections: [
+                {
+                  before: 'Sociedad Astronomica del Caribe',
+                  after: 'Sociedad de Astronomía del Caribe',
+                },
+              ],
+            },
+            {
+              severity: 'minor',
+              category: 'clarity',
+              message: 'Corregir Astronomica.',
+              textCorrections: [{ before: 'Astronomica', after: 'Astronomía' }],
+            },
+          ],
+        },
+        { ...baseInput, draftText: 'Sociedad Astronomica del Caribe.' }
+      )
+    ).toThrow(expect.objectContaining({ code: 'OVERLAPPING_TEXT_CORRECTIONS' }))
+  })
+
   test.each([
     ['idéntica', 'Borrador de prueba', 'Borrador de prueba'],
     ['saltos CRLF', 'Borrador\r\nde prueba', 'Borrador\nde prueba'],
@@ -382,35 +600,6 @@ describe('validateAiWorkflow schema', () => {
 })
 
 describe('OpenRouter usage helpers', () => {
-  test('extractOpenRouterUsage maps cost and tokens', () => {
-    const usage = extractOpenRouterUsage(
-      {
-        id: 'gen-xyz',
-        model: 'openai/gpt-4o-mini',
-        usage: {
-          prompt_tokens: 100,
-          completion_tokens: 20,
-          total_tokens: 120,
-          cost: 0.0012,
-        },
-      },
-      'fallback-model'
-    )
-
-    expect(usage).toEqual({
-      openRouterGenerationId: 'gen-xyz',
-      model: 'openai/gpt-4o-mini',
-      promptTokens: 100,
-      completionTokens: 20,
-      totalTokens: 120,
-      cost: { amount: 0.0012, currency: 'USD' },
-    })
-  })
-
-  test('extractOpenRouterUsage returns null without usage object', () => {
-    expect(extractOpenRouterUsage({ id: 'gen-1' }, 'm')).toBeNull()
-  })
-
   test('mergeOpenRouterUsage sums costs across retries', () => {
     const merged = mergeOpenRouterUsage(
       {

@@ -11,9 +11,12 @@ import { resolveContentTypeOptions, resolvePlatformOptions } from '@/lib/ai-guid
 import { ErrorState } from '@/components/admin/ErrorState'
 
 export default function AiValidationClient() {
-  const { data: session } = useSession()
+  const { data: session, status: sessionStatus } = useSession()
   const accessibleActions = session?.user?.accessibleActions || []
   const canValidate = accessibleActions.includes('write_ai')
+  const draftPersistenceEnabled = sessionStatus
+    ? sessionStatus === 'authenticated'
+    : Boolean(session?.user)
 
   const { active, hydrated: guidelinesHydrated } = useActiveGuidelines()
   const platforms = useMemo(() => resolvePlatformOptions(active), [active])
@@ -28,7 +31,11 @@ export default function AiValidationClient() {
     images,
     setImages,
     hydrated: draftHydrated,
-  } = useValidationDraft()
+    clearDraft,
+    saveStatus: draftSaveStatus,
+    updatedAt: draftUpdatedAt,
+    restoreNotice: draftRestoreNotice,
+  } = useValidationDraft({ user: session?.user, enabled: draftPersistenceEnabled })
   const formReady = guidelinesHydrated && draftHydrated
   const selectedContentType = contentTypes.find(({ id }) => id === formState.contentType)
 
@@ -81,6 +88,10 @@ export default function AiValidationClient() {
         images={images}
         onImagesChange={setImages}
         onSubmit={handleSubmit}
+        onClearDraft={clearDraft}
+        draftSaveStatus={draftSaveStatus}
+        draftUpdatedAt={draftUpdatedAt}
+        draftRestoreNotice={draftRestoreNotice}
         platforms={platforms}
         contentTypes={contentTypes}
       />
