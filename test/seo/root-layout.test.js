@@ -193,12 +193,13 @@ describe('home page heading', () => {
     expect(firstHeading).not.toBeNull()
   })
 
-  it('names the organization and the island in that first h1', () => {
-    expect(firstHeading[1]).toContain('Sociedad de Astronom')
-    expect(firstHeading[1]).toContain('Puerto Rico')
+  it('names the organization in that first h1', () => {
+    expect(firstHeading[1]).toContain('Sociedad de Astronomía del Caribe')
   })
 
   it('places the h1 before any widget heading', () => {
-    expect(homeMarkup.indexOf('Puerto Rico')).toBeLessThan(homeMarkup.indexOf('Manchas Solares'))
+    expect(homeMarkup.indexOf('Sociedad de Astronom')).toBeLessThan(
+      homeMarkup.indexOf('Manchas Solares')
+    )
   })
 })

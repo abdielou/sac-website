@@ -30,10 +30,10 @@ describe('home page has exactly one h1', () => {
     expect(sources['components/widgets/ImageWidget.js']).not.toMatch(/<h1[\s>]/)
   })
 
-  it('names the organisation and Puerto Rico in the h1', () => {
+  it('names the organisation in the h1', () => {
     const h1 = sources['app/HomeContent.js'].match(/<h1[^>]*>([\s\S]*?)<\/h1>/)
     expect(h1).not.toBeNull()
-    expect(h1[1]).toMatch(/Puerto Rico|Caribe/i)
+    expect(h1[1]).toMatch(/Sociedad de Astronomía del Caribe/)
   })
 })
 
