@@ -1,6 +1,7 @@
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 })
+const { withWorkflow } = require('workflow/next')
 const siteMetadata = require('./data/siteMetadata')
 
 // This file is CommonJS and lib/seo.js is ESM, so the origin is normalized here
@@ -30,9 +31,24 @@ const securityHeaders = [
   },
 ]
 
-module.exports = withBundleAnalyzer({
-  serverExternalPackages: ['@react-pdf/renderer'],
-  turbopack: {},
+const baseConfig = withBundleAnalyzer({
+  serverExternalPackages: [
+    '@react-pdf/renderer',
+    // Workflow's Vercel world pulls in these Node-only packages. Bundling them
+    // with webpack breaks xdg-app-paths (require.main/process.argv are undefined
+    // in the bundle), so keep them external and let Node require them natively.
+    '@vercel/oidc',
+    '@vercel/cli-config',
+    'xdg-app-paths',
+  ],
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
+      },
+    },
+  },
   reactStrictMode: true,
   pageExtensions: ['js', 'jsx', 'md', 'mdx'],
   webpack: (config, { dev, isServer }) => {
@@ -97,3 +113,5 @@ module.exports = withBundleAnalyzer({
     ],
   },
 })
+
+module.exports = withWorkflow(baseConfig)
