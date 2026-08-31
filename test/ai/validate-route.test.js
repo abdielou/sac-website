@@ -108,7 +108,7 @@ describe('POST /api/admin/ai/validate contract', () => {
     const response = await POST(
       jsonRequest({
         platform: 'facebook',
-        contentType: 'regular_post',
+        contentType: 'post_educativo',
         draftText: 'Mira el cielo con nosotros esta noche.',
         images: [image],
       })
@@ -119,16 +119,15 @@ describe('POST /api/admin/ai/validate contract', () => {
     expect(input).toMatchObject({
       userId: 'session-user',
       userEmail: 'user@example.com',
-      platforms: ['x', 'instagram', 'facebook'],
-      contentType: 'regular_post',
+      platforms: ['facebook'],
+      contentType: 'post_educativo',
       guidelineVersion: 'default-v1',
       contentTypeIdentity: {
-        id: 'regular_post',
-        label: 'Publicación regular',
+        id: 'post_educativo',
+        label: 'Post educativo',
         guidelineVersion: 'default-v1',
       },
       contentData: {
-        intent: 'Validar borrador existente',
         topic: 'Mira el cielo con nosotros esta noche.',
       },
       runCoordination: {
@@ -142,7 +141,7 @@ describe('POST /api/admin/ai/validate contract', () => {
     const response = await POST(
       jsonRequest({
         platforms: ['facebook'],
-        contentType: 'regular_post',
+        contentType: 'post_educativo',
         draftText: 'Primera línea.\r\n\r\nSegunda línea.',
         images: [image],
       })
@@ -165,7 +164,7 @@ describe('POST /api/admin/ai/validate contract', () => {
     const response = await POST(
       jsonRequest({
         platform: 'facebook',
-        contentType: 'regular_post',
+        contentType: 'post_educativo',
         draftText: 'Borrador',
         images: [image],
       })
@@ -193,7 +192,7 @@ describe('POST /api/admin/ai/validate contract', () => {
     const response = await POST(
       jsonRequest({
         platform: 'facebook',
-        contentType: 'regular_post',
+        contentType: 'post_educativo',
         draftText: 'Borrador',
         images: [image],
       })
@@ -209,7 +208,7 @@ describe('POST /api/admin/ai/validate contract', () => {
     const response = await POST(
       jsonRequest({
         platforms: ['x', 'instagram', 'facebook'],
-        contentType: 'regular_post',
+        contentType: 'post_educativo',
         draftText: 'Un caption compartido.',
         images: [image],
       })
@@ -218,8 +217,8 @@ describe('POST /api/admin/ai/validate contract', () => {
     expect(response.status).toBe(202)
     expect(start).toHaveBeenCalledTimes(1)
     expect(start.mock.calls[0][1][0]).toMatchObject({
-      platform: 'x',
-      platforms: ['x', 'instagram', 'facebook'],
+      platform: 'facebook',
+      platforms: ['facebook'],
       draftText: 'Un caption compartido.',
     })
   })
@@ -232,7 +231,7 @@ describe('POST /api/admin/ai/validate contract', () => {
     const response = await POST(
       jsonRequest({
         platform: 'facebook',
-        contentType: 'regular_post',
+        contentType: 'post_educativo',
         draftText: 'Borrador',
         images: [image],
       })
@@ -252,7 +251,7 @@ describe('POST /api/admin/ai/validate contract', () => {
     getActiveGuidelinesStrict.mockRejectedValueOnce(new Error('S3 unavailable'))
 
     const response = await POST(
-      jsonRequest({ platform: 'facebook', contentType: 'regular_post', draftText: 'Borrador' })
+      jsonRequest({ platform: 'facebook', contentType: 'post_educativo', draftText: 'Borrador' })
     )
 
     expect(response.status).toBe(503)
@@ -264,11 +263,10 @@ describe('POST /api/admin/ai/validate contract', () => {
     const valid = await POST(
       jsonRequest({
         platform: 'facebook',
-        contentType: 'regular_post',
+        contentType: 'post_educativo',
         draftText: 'Borrador',
         images: [image],
         contentData: {
-          intent: 'Revisar claridad',
           topic: 'Astronomía para principiantes',
         },
       })
@@ -278,7 +276,7 @@ describe('POST /api/admin/ai/validate contract', () => {
     const invalid = await POST(
       jsonRequest({
         platform: 'facebook',
-        contentType: 'regular_post',
+        contentType: 'post_educativo',
         draftText: 'Borrador',
         contentData: {
           intent: 'Revisar claridad',
@@ -303,11 +301,11 @@ describe('POST /api/admin/ai/validate contract', () => {
 
     const archived = getDefaultGuidelines()
     archived.contentTypeCatalog = archived.contentTypeCatalog.map((entry) =>
-      entry.id === 'regular_post' ? { ...entry, status: 'archived' } : entry
+      entry.id === 'post_educativo' ? { ...entry, status: 'archived' } : entry
     )
     getActiveGuidelinesStrict.mockResolvedValue(archived)
     const archivedResponse = await POST(
-      jsonRequest({ platform: 'facebook', contentType: 'regular_post', draftText: 'Borrador' })
+      jsonRequest({ platform: 'facebook', contentType: 'post_educativo', draftText: 'Borrador' })
     )
 
     expect(archivedResponse.status).toBe(400)
@@ -322,7 +320,7 @@ describe('POST /api/admin/ai/validate contract', () => {
     getActiveGuidelinesStrict.mockResolvedValue(document)
 
     const response = await POST(
-      jsonRequest({ platform: 'facebook', contentType: 'regular_post', draftText: 'Borrador' })
+      jsonRequest({ platform: 'facebook', contentType: 'post_educativo', draftText: 'Borrador' })
     )
 
     expect(response.status).toBe(400)
@@ -332,7 +330,7 @@ describe('POST /api/admin/ai/validate contract', () => {
 
   test('enforces the active image policy for the selected platform', async () => {
     const document = getDefaultGuidelines()
-    const definition = document.contentTypeCatalog.find(({ id }) => id === 'regular_post')
+    const definition = document.contentTypeCatalog.find(({ id }) => id === 'post_educativo')
     definition.visual = {
       mode: 'none',
       template: null,
@@ -349,7 +347,7 @@ describe('POST /api/admin/ai/validate contract', () => {
     const response = await POST(
       jsonRequest({
         platform: 'facebook',
-        contentType: 'regular_post',
+        contentType: 'post_educativo',
         draftText: 'Borrador para reel.',
         images: [
           {
@@ -369,16 +367,7 @@ describe('POST /api/admin/ai/validate contract', () => {
 
   test('treats a sponsor logo as an image under the selected platform policy', async () => {
     const document = getDefaultGuidelines()
-    const definition = document.contentTypeCatalog.find(({ id }) => id === 'regular_post')
-    definition.fields.push({
-      key: 'sponsor',
-      label: 'Auspiciador',
-      help: '',
-      placeholder: '',
-      required: false,
-    })
-    definition.visual.template = 'event'
-    definition.visual.sponsorAllowed = true
+    const definition = document.contentTypeCatalog.find(({ id }) => id === 'observation_night')
     definition.platforms = ['x']
     definition.visual.imagePolicyByPlatform.x = 'prohibited'
     getActiveGuidelinesStrict.mockResolvedValue(document)
@@ -386,11 +375,12 @@ describe('POST /api/admin/ai/validate contract', () => {
     const response = await POST(
       jsonRequest({
         platform: 'x',
-        contentType: 'regular_post',
+        contentType: 'observation_night',
         draftText: 'Borrador.',
         contentData: {
-          intent: 'Validar',
-          topic: 'Saturno',
+          date: '2026-08-15',
+          time: '19:30',
+          location: 'Cabo Rojo',
           sponsor: {
             dataUrl: 'data:image/png;base64,aaaa',
             mimeType: 'image/png',
@@ -427,7 +417,7 @@ describe('POST /api/admin/ai/validate contract', () => {
     const response = await POST(
       jsonRequest({
         platform: 'facebook',
-        contentType: 'regular_post',
+        contentType: 'post_educativo',
         draftText: 'Borrador.',
         images: [image],
       })

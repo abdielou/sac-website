@@ -36,7 +36,7 @@ describe('generateAiWorkflow schema', () => {
     intent: 'Promover observación',
     topic: 'Lluvia de meteoros',
     platforms: ['instagram', 'facebook'],
-    contentType: 'event_promotion',
+    contentType: 'observation_night',
     cta: 'Confirma tu asistencia',
     eventDetails: {
       name: 'Noche de Observación',
@@ -143,7 +143,7 @@ describe('generateAiWorkflow schema', () => {
   })
 
   test('keeps the shared image prompt across the scoped package', () => {
-    const definition = resolveContentTypeDefinition(guidelineDocument, 'regular_post')
+    const definition = resolveContentTypeDefinition(guidelineDocument, 'post_educativo')
     const textResult = {
       drafts: [
         {
@@ -429,13 +429,13 @@ describe('generateAiWorkflow schema', () => {
     expect(parsed.success).toBe(false)
   })
 
-  test('GenerateInputSchema requires event CTA and rejects unknown event fields', () => {
+  test('GenerateInputSchema rejects unknown event fields', () => {
     expect(
       GenerateInputSchema.safeParse({
         ...baseInput,
         cta: undefined,
       }).success
-    ).toBe(false)
+    ).toBe(true)
     expect(
       GenerateInputSchema.safeParse({
         ...baseInput,
@@ -455,7 +455,7 @@ describe('generateAiWorkflow schema', () => {
       GenerateInputSchema.safeParse({
         ...baseInput,
         contentType: 'holiday',
-        ...runtimeMetadata({ ...baseInput, contentType: 'holiday' }),
+        ...runtimeMetadata({ ...baseInput, contentType: 'felicitaciones_de_dia_festivo' }),
         backgroundMode: 'stock',
         backgroundId: 'telescope-nebula',
       }).success
@@ -513,14 +513,14 @@ describe('generateAiWorkflow schema', () => {
     ).toBe(true)
   })
 
-  test('GenerateInputSchema rejects event_promotion without logistics', () => {
+  test('GenerateInputSchema rejects observation_night without logistics', () => {
     const input = {
       userId: 'user-1',
       userEmail: 'test@example.com',
       intent: 'Promover',
       topic: 'Evento',
       platforms: ['instagram'],
-      contentType: 'event_promotion',
+      contentType: 'observation_night',
       eventDetails: { name: 'Solo nombre' },
     }
     const parsed = GenerateInputSchema.safeParse({ ...input, ...runtimeMetadata(input) })

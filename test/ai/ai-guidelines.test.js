@@ -41,7 +41,7 @@ describe('ai-guidelines', () => {
     expect(guidelines.platforms.x).toBeTruthy()
     expect(guidelines.platforms.instagram).toBeTruthy()
     expect(guidelines.platforms.facebook).toBeTruthy()
-    expect(guidelines.platformLabels.x).toBe('X')
+    expect(guidelines.platformLabels.x).toBe('X (Twitter)')
     expect(guidelines.platformLabels.instagram).toBe('Instagram')
     expect(guidelines.platformLabels.facebook).toBe('Facebook')
     expect(guidelines.prohibited).toBeTruthy()
@@ -72,12 +72,12 @@ describe('ai-guidelines', () => {
   test('resolveGuidelinesFromDocument merges platform and content type', async () => {
     const resolved = resolveGuidelinesFromDocument(await getActiveGuidelines(), {
       platform: 'instagram',
-      contentType: 'event_promotion',
+      contentType: 'observation_night',
     })
     expect(resolved.version).toBe('default-v1')
     expect(resolved.global).toMatch(/español/i)
     expect(resolved.platform).toBe(getDefaultGuidelines().platforms.instagram)
-    expect(resolved.contentType).toContain('evento')
+    expect(resolved.contentType).toContain('Observación')
     expect(resolved.prohibited).toBeTruthy()
     expect(resolved.imageValidation).toBeTruthy()
   })
@@ -85,13 +85,13 @@ describe('ai-guidelines', () => {
   test('resolveGuidelinesFromDocument handles unknown platform', async () => {
     const resolved = resolveGuidelinesFromDocument(await getActiveGuidelines(), {
       platform: 'unknown',
-      contentType: 'regular_post',
+      contentType: 'post_educativo',
     })
     expect(resolved.platform).toContain('generales')
   })
 
   test('generation and validation use the exact same platform expectation', async () => {
-    const request = { platform: 'facebook', contentType: 'event_promotion' }
+    const request = { platform: 'facebook', contentType: 'observation_night' }
     const active = await getActiveGuidelines()
     const validation = resolveGuidelinesFromDocument(active, request)
     const generation = resolveGenerationGuidelinesFromDocument(active, request)
@@ -106,11 +106,11 @@ describe('ai-guidelines', () => {
 
     const resolved = resolveGenerationGuidelinesFromDocument(await getActiveGuidelines(), {
       platform: 'facebook',
-      contentType: 'regular_post',
+      contentType: 'post_educativo',
     })
     const legacyResolved = resolveGenerationGuidelinesFromDocument(document, {
       platform: 'facebook',
-      contentType: 'regular_post',
+      contentType: 'post_educativo',
     })
 
     expect(resolved.global).toBe(getDefaultGuidelines().global)

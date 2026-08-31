@@ -31,7 +31,7 @@ describe('resolveGenerationGuidelinesFromDocument', () => {
     const active = await getActiveGuidelines()
     const resolved = resolveGenerationGuidelinesFromDocument(active, {
       platform: 'x',
-      contentType: 'event_promotion',
+      contentType: 'observation_night',
     })
     expect(resolved.version).toBe(active.version)
     expect(resolved.global).toMatch(/español/i)
@@ -39,19 +39,19 @@ describe('resolveGenerationGuidelinesFromDocument', () => {
     expect(resolved.global).not.toContain('Usa los datos provistos')
     expect(resolved.captionMaxCharacters).toBe(280)
     expect(resolved.platform).not.toContain('280')
-    expect(resolved.contentType).toContain('evento')
+    expect(resolved.contentType).toContain('Observación')
     expect(resolved.prohibited).toBeTruthy()
   })
 
   test('uses generation-specific rules, not validation rules', async () => {
     const resolved = resolveGenerationGuidelinesFromDocument(await getActiveGuidelines(), {
       platform: 'instagram',
-      contentType: 'educational_astronomy',
+      contentType: 'post_educativo',
     })
 
     // Editable rules use plain language instead of internal validation categories.
     expect(resolved.contentType).not.toContain('uncertainty_factual_risk')
-    expect(resolved.contentType).toContain('afirmaciones respaldadas')
+    expect(resolved.contentType).toContain('educativo')
   })
 
   test('keeps hashtag limits out of the global voice field', async () => {
@@ -65,7 +65,7 @@ describe('resolveGenerationGuidelinesFromDocument', () => {
     }
     const resolved = resolveGenerationGuidelinesFromDocument(document, {
       platform: 'instagram',
-      contentType: 'regular_post',
+      contentType: 'post_educativo',
     })
 
     expect(resolved.global).not.toMatch(/hashtags/i)

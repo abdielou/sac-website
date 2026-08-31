@@ -57,7 +57,7 @@ describe('ai-guidelines-draft', () => {
       contentTypes: {},
     }
     const normalized = normalizeGuidelineDocument(partial)
-    expect(normalized.platformLabels.x).toBe('X')
+    expect(normalized.platformLabels.x).toBe('X (Twitter)')
     expect(normalized.platformLabels.instagram).toBe('Instagram')
     expect(normalized.platforms.x).toBe('rules-x')
   })
@@ -76,7 +76,7 @@ describe('ai-guidelines-draft', () => {
     expect(entries).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: 'instagram', label: 'Instagram' }),
-        expect.objectContaining({ id: 'x', label: 'X' }),
+        expect.objectContaining({ id: 'x', label: 'X (Twitter)' }),
         expect.objectContaining({ id: 'facebook', label: 'Facebook' }),
       ])
     )
@@ -129,8 +129,8 @@ describe('ai-guidelines-draft', () => {
     expect(entries.find((e) => e.id === 'observation_night')?.rules).toMatch(
       /Noche de Observación/i
     )
-    expect(entries.some((e) => e.id === 'event_promotion')).toBe(true)
-    expect(entries.find((e) => e.id === 'event_promotion')?.rules).toMatch(/evento|fecha/i)
+    expect(entries.some((e) => e.id === 'post_educativo')).toBe(true)
+    expect(entries.find((e) => e.id === 'post_educativo')?.rules).toMatch(/educativo|imagen/i)
   })
 
   test('resolvePlatformOptions falls back to seed defaults', () => {
@@ -160,8 +160,8 @@ describe('ai-guidelines-draft', () => {
       id: 'observation_night',
       label: 'Noche de Observación',
     })
-    expect(options).toContainEqual({ id: 'event_promotion', label: 'Promoción de evento' })
-    expect(options.some((o) => o.id === 'regular_post')).toBe(true)
+    expect(options).toContainEqual({ id: 'post_educativo', label: 'Post educativo' })
+    expect(options.some((o) => o.id === 'felicitaciones_de_dia_festivo')).toBe(true)
   })
 
   test('resolveContentTypeOptions is driven by the catalog, not legacy flat maps', () => {
@@ -178,7 +178,7 @@ describe('ai-guidelines-draft', () => {
   test('previewGuidelinesAgainstDocument returns validation and generation views', () => {
     const validation = previewGuidelinesAgainstDocument(seed, {
       platform: 'instagram',
-      contentType: 'event_promotion',
+      contentType: 'observation_night',
       mode: 'validation',
     })
     expect(validation.mode).toBe('validation')
@@ -186,7 +186,7 @@ describe('ai-guidelines-draft', () => {
 
     const generation = previewGuidelinesAgainstDocument(seed, {
       platform: 'instagram',
-      contentType: 'event_promotion',
+      contentType: 'observation_night',
       mode: 'generation',
     })
     expect(generation.mode).toBe('generation')

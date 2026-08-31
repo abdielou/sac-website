@@ -222,7 +222,7 @@ describe('GenerationResult publication text', () => {
     expect(container.querySelectorAll('[data-testid="generation-shared-caption"]')).toHaveLength(1)
     expect(container.textContent).toContain('Texto compartido')
     expect(container.querySelector('textarea').value).toBe(shared)
-    expect(container.textContent).toContain('X · Instagram · Facebook')
+    expect(container.textContent).toContain('X (Twitter) · Instagram · Facebook')
     expect(container.querySelector('textarea').hasAttribute('maxlength')).toBe(false)
     expect(container.textContent).toContain(`${shared.length} caracteres`)
   })

@@ -155,17 +155,17 @@ describe('Guidelines workspace UI', () => {
         <GuidelinesContentTypeCatalog
           document={document}
           editable
-          selectedId="regular_post"
+          selectedId="observation_night"
           onChange={onChange}
         />
       )
     )
 
-    const nameInput = container.querySelector('#content-type-regular_post-label')
+    const nameInput = container.querySelector('#content-type-observation_night-label')
     expect(nameInput.labels[0].textContent.trim()).toBe('Nombre')
     expect(container.textContent).not.toContain('Nombre para el equipo')
     expect(container.textContent).not.toContain('Identificador interno')
-    expect(container.querySelector('#content-type-regular_post-id')).toBeNull()
+    expect(container.querySelector('#content-type-observation_night-id')).toBeNull()
 
     const createButton = Array.from(container.querySelectorAll('button')).find(
       (button) => button.type === 'button' && button.textContent.includes('Crear tipo')
@@ -197,7 +197,7 @@ describe('Guidelines workspace UI', () => {
         <GuidelinesContentTypeCatalog
           document={document}
           editable
-          selectedId="regular_post"
+          selectedId="observation_night"
           onChange={onChange}
         />
       )
@@ -211,7 +211,7 @@ describe('Guidelines workspace UI', () => {
     expect(container.textContent).toContain('¿Esta generación sigue un diseño del SAC?')
     expect(container.textContent).toContain('Se generará un cartel con la marca del SAC.')
     expect(container.textContent).toContain('De dónde puede salir el fondo')
-    expect(container.querySelector('[data-template-preview="simple"]')).not.toBeNull()
+    expect(container.querySelector('[data-template-preview="event"]')).not.toBeNull()
     expect(container.textContent).toContain('Así se verá el cartel')
     expect(container.textContent).toContain('Datos opcionales para crear la imagen')
     expect(container.textContent).toContain('¿En qué redes se publica este tipo?')
@@ -223,7 +223,7 @@ describe('Guidelines workspace UI', () => {
     expect(container.textContent).not.toContain('Modo interno')
     expect(container.textContent).not.toContain('Plantilla interna')
 
-    const requirement = container.querySelector('#content-type-regular_post-image-requirement')
+    const requirement = container.querySelector('#content-type-observation_night-image-requirement')
     expect(requirement.value).toBe('required')
     act(() => {
       const setter = Object.getOwnPropertyDescriptor(
@@ -235,14 +235,14 @@ describe('Guidelines workspace UI', () => {
     })
     const requiredType = onChange.mock.calls
       .at(-1)[0]
-      .contentTypeCatalog.find(({ id }) => id === 'regular_post')
+      .contentTypeCatalog.find(({ id }) => id === 'observation_night')
     expect(Object.values(requiredType.visual.imagePolicyByPlatform)).toEqual([
       'required',
       'required',
       'required',
     ])
 
-    const sacDesign = container.querySelector('#content-type-regular_post-visual-mode')
+    const sacDesign = container.querySelector('#content-type-observation_night-visual-mode')
     expect(sacDesign.value).toBe('yes')
     act(() => {
       const setter = Object.getOwnPropertyDescriptor(
@@ -254,7 +254,7 @@ describe('Guidelines workspace UI', () => {
     })
 
     const nextDocument = onChange.mock.calls.at(-1)[0]
-    const nextType = nextDocument.contentTypeCatalog.find(({ id }) => id === 'regular_post')
+    const nextType = nextDocument.contentTypeCatalog.find(({ id }) => id === 'observation_night')
     expect(nextType.visual).toMatchObject({ mode: 'ai_image', template: null })
 
     const fieldsTab = Array.from(container.querySelectorAll('[role="tab"]')).find(
@@ -267,14 +267,14 @@ describe('Guidelines workspace UI', () => {
 
   test('edits validation and generation as two modes of one assistant', () => {
     const document = getDefaultGuidelines()
-    const original = document.contentTypeCatalog.find(({ id }) => id === 'regular_post')
+    const original = document.contentTypeCatalog.find(({ id }) => id === 'observation_night')
     const onChange = jest.fn()
     act(() =>
       root.render(
         <GuidelinesContentTypeCatalog
           document={document}
           editable
-          selectedId="regular_post"
+          selectedId="observation_night"
           initialPanel="validation"
           onChange={onChange}
         />
@@ -283,14 +283,14 @@ describe('Guidelines workspace UI', () => {
 
     expect(container.textContent).toContain('Cómo debe trabajar el asistente')
     expect(container.textContent).toContain('¿Qué debe revisar?')
-    expect(container.querySelector('#content-type-regular_post-validation-rules')).not.toBeNull()
-    expect(container.querySelector('#content-type-regular_post-generation-rules')).toBeNull()
+    expect(container.querySelector('#content-type-observation_night-validation-rules')).not.toBeNull()
+    expect(container.querySelector('#content-type-observation_night-generation-rules')).toBeNull()
 
     const generateMode = container.querySelector('#content-type-assistant-mode-generation')
     act(() => generateMode.click())
     expect(container.textContent).toContain('¿Qué debe crear y cómo?')
 
-    const generationRules = container.querySelector('#content-type-regular_post-generation-rules')
+    const generationRules = container.querySelector('#content-type-observation_night-generation-rules')
     act(() => {
       const setter = Object.getOwnPropertyDescriptor(
         window.HTMLTextAreaElement.prototype,
@@ -302,7 +302,7 @@ describe('Guidelines workspace UI', () => {
 
     const updated = onChange.mock.calls
       .at(-1)[0]
-      .contentTypeCatalog.find(({ id }) => id === 'regular_post')
+      .contentTypeCatalog.find(({ id }) => id === 'observation_night')
     expect(updated.generation.rules).toBe('Crea una publicación clara para la comunidad.')
     expect(updated.validation.rules).toBe(original.validation.rules)
   })
@@ -379,14 +379,14 @@ describe('Guidelines workspace UI', () => {
         <GuidelinesContentTypeCatalog
           document={document}
           editable
-          selectedId="regular_post"
+          selectedId="observation_night"
           onChange={onChange}
         />
       )
     )
 
     const instagramPolicy = container.querySelector(
-      '#content-type-regular_post-image-policy-instagram'
+      '#content-type-observation_night-image-policy-instagram'
     )
     expect(instagramPolicy).not.toBeNull()
     expect([...instagramPolicy.options].find(({ value }) => value === 'optional').disabled).toBe(
@@ -404,7 +404,7 @@ describe('Guidelines workspace UI', () => {
 
     const updated = onChange.mock.calls
       .at(-1)[0]
-      .contentTypeCatalog.find(({ id }) => id === 'regular_post')
+      .contentTypeCatalog.find(({ id }) => id === 'observation_night')
     expect(updated.visual.imagePolicyByPlatform).toMatchObject({
       x: 'required',
       instagram: 'optional',

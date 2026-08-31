@@ -1,39 +1,31 @@
 {
   "version": "default-v1",
-  "global": "Idioma: Español solo. Enfocado en Puerto Rico.\nSeguridad: No inventar fechas/horarios/lugares. No aceptes contenido violento. No inventes costos, enlaces (links)\nTono: cientifico, educativo, pero cercano.",
+  "global": "- Idioma: Español solo. Enfocado en Puerto Rico.\n- Seguridad: No inventar fechas/horarios/lugares. No aceptes contenido violento. No inventes costos, enlaces (links)\n- Tono: cientifico, educativo, pero cercano.\n- Revisar nombre oficial de la Sociedad de Astronomía del Caribe (SAC). Debe ser siempre Sociedad de Astronomía del Caribe.\n- Revisar errores ortográficos evidentes antes de declarar que el texto cumple.",
   "platforms": {
     "x": "Redacción concisa; considerar los límites de caracteres. CTA breve si aplica.",
     "instagram": "Caption con gancho en la primera línea, tono visual y cercano. CTA clara si aplica. Priorizar la claridad del caption. Validar alineación texto-imagen cuando sea necesario.",
-    "facebook": "Velar por una redacción completa; CTA explícito si aplica."
+    "facebook": "- Velar por una redacción completa. \n- Velar por un CTA explícito, si el usuario lo pide."
   },
   "platformLabels": {
-    "x": "X",
+    "x": "X (Twitter)",
     "instagram": "Instagram",
     "facebook": "Facebook"
   },
-  "prohibited": "No publicidad comercial no autorizada. No lo inventes. Los auspiciadores se darán.\nNo comentario político partidista.\nNo afirmaciones pseudocientíficas presentadas como hechos verificados.\nNo imágenes generadas por IA que parezcan fotos documentales reales sin etiqueta clara.\nNo astrología.\nEvita el plagio. \nEvita rostros identificables en la generación de fotos.",
+  "prohibited": "No publicidad comercial no autorizada. No lo inventes. Los auspiciadores se darán.\nNo comentario político partidista.\nNo afirmaciones pseudocientíficas presentadas como hechos verificados.\nNo imágenes generadas por IA que parezcan fotos documentales reales sin etiqueta clara.\nNo astrología.\nEvita el plagio. \nEvita rostros identificables en la generación de fotos.\nNo tratar la ausencia de imagen como error salvo que el tipo de contenido la requiera.",
   "imageValidation": "Verificar accesibilidad, texto alternativo cuando aplique.\nResolución mínima recomendada: 1080p para publicaciones con imagen.\nPrecisión astronómica razonable: mapas estelares coherentes, iluminación realista.\nValidar alineación entre texto e imagen, cuando aplique.",
   "contentTypes": {
     "observation_night": "Validar Noche de Observación contra la información provista y las restricciones de SAC.",
-    "holiday": "Revisa que el texto y la imagen sean adecuadas para las redes sociales.",
-    "post_educativo": "Comprueba los datos y sugiere refinamientos del texto educativo. Sugiere mejoras en la imagen si aplica. Sugiere alguna imagen si lo ves pertinente.",
-    "regular_post": "Validar Publicación regular contra la información provista y las restricciones de SAC.",
-    "carousel": "Cada imagen debe ser apropiada y estar relacionada con el texto que la acompaña.",
-    "event_promotion": "Promoción de evento: debe incluir el nombre, la fecha, la hora, el lugar y una invitación clara a participar. Si falta alguno de esos datos, indícalo claramente.",
-    "educational_astronomy": "No presentes como confirmado un dato astronómico que no esté respaldado por la información provista."
+    "post_educativo": "- Comprueba los datos en el texto y sugiere refinamientos de ser necesario.\n- Si hay una imagen analizala a ver si coincide con el texto o si puedes ofrecer una sugerencia sobre la misma. \n- Si no contiene sugiere alguna imagen si lo ves pertinente. Sugiere una descripción de esa imagen.",
+    "felicitaciones_de_dia_festivo": "Validación: \n- Que el nombre del evento y la felicitaciones coincidan\n- Coincidan el texto de la publicación con la imagen\n- Que la imagen cumpla con estándares de calidad, pero que sea una buena felicitación dependiendo del evento"
   },
   "generation": {
-    "global": "Idioma: Español solo. Enfocado en Puerto Rico.\nSeguridad: No inventar fechas/horarios/lugares. No aceptes contenido violento. No inventes costos, enlaces (links)\nTono: cientifico, educativo, pero cercano.",
+    "global": "- Idioma: Español solo. Enfocado en Puerto Rico.\n- Seguridad: No inventar fechas/horarios/lugares. No aceptes contenido violento. No inventes costos, enlaces (links)\n- Tono: cientifico, educativo, pero cercano.\n- Revisar nombre oficial de la Sociedad de Astronomía del Caribe (SAC). Debe ser siempre Sociedad de Astronomía del Caribe.\n- Revisar errores ortográficos evidentes antes de declarar que el texto cumple.",
     "contentTypes": {
       "observation_night": "Generar Noche de Observación para las redes sociales de SAC sin inventar información.",
-      "holiday": "Debe generar una felicitación de acuerdo al día festivo. La imagen generada debe incluir la felicitación.",
-      "post_educativo": "Genera un texto educativo o expande los datos pasados. Para hacer un buen post de Facebook.",
-      "regular_post": "Publicación regular: mensaje claro y autocontenido, fiel a los datos provistos.",
-      "carousel": "Carrusel: el caption debe presentar el tema general; no inventes el contenido de cada lámina.",
-      "event_promotion": "Promoción de evento: usa únicamente el nombre, la fecha, la hora, el lugar y la información de registro que fueron provistos. Señala claramente cualquier dato necesario que falte.",
-      "educational_astronomy": "Educación astronómica: presenta solo afirmaciones respaldadas por la información provista y deja claro cualquier supuesto."
+      "post_educativo": "- Cuando se te pida genera un texto educativo y/o expande los datos pasados.",
+      "felicitaciones_de_dia_festivo": "Generación:\n- Genera una imagen relacionada al tema de las felicitaciones"
     },
-    "imagePrompt": "La imagen debe representar el tema de la publicación sin añadir datos nuevos.\nNo incluyas personas identificables, datos privados, logos oficiales que no sean del SAC ni imitaciones de estilos protegidos. Si aparecen menores porque el tema lo requiere, deben ser figuras no identificables, completamente vestidas y en un contexto familiar cotidiano y seguro.\nSi el tipo de publicación exige un saludo o una felicitación dentro de la imagen, usa exactamente ese mensaje con tipografía legible."
+    "imagePrompt": "- La imagen debe representar el tema de la publicación sin añadir datos nuevos. Representar no debe limitar la creatividad.\n- No incluyas personas identificables, datos privados, logos oficiales que no sean del SAC ni imitaciones de estilos protegidos. \n- Si aparecen menores porque el tema lo requiere, deben ser figuras no identificables, completamente vestidas y en un contexto familiar cotidiano y seguro.\n- Si el tipo de publicación exige un saludo o una felicitación dentro de la imagen, usa exactamente ese mensaje con tipografía legible."
   },
   "schemaVersion": 3,
   "platformConstraints": {
@@ -111,59 +103,18 @@
       "platforms": ["x", "instagram", "facebook"]
     },
     {
-      "id": "holiday",
-      "label": "Publicación para día festivo",
-      "status": "active",
-      "description": "Este tipo de publicación se realiza cuando el SAC felicita a su público por algún día especial. Por ejemplo: el día de los padres, el día de las madres, Navidad o Año Nuevo.",
-      "fields": [
-        {
-          "key": "event_name",
-          "label": "Nombre del evento",
-          "help": "",
-          "placeholder": "",
-          "required": true
-        },
-        {
-          "key": "image_style",
-          "label": "Estilo de imagen",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        },
-        {
-          "key": "image_constraints",
-          "label": "Restricciones visuales",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        }
-      ],
-      "titleSource": "event_name",
-      "validation": {
-        "rules": "Revisa que el texto y la imagen sean adecuadas para las redes sociales."
-      },
-      "generation": {
-        "rules": "Debe generar una felicitación de acuerdo al día festivo. La imagen generada debe incluir la felicitación."
-      },
-      "visual": {
-        "mode": "ai_image",
-        "template": null,
-        "backgroundSources": [],
-        "sponsorAllowed": false,
-        "imagePolicyByPlatform": {
-          "x": "required",
-          "instagram": "required",
-          "facebook": "required"
-        }
-      },
-      "platforms": ["x", "instagram", "facebook"]
-    },
-    {
       "id": "post_educativo",
       "label": "Post educativo",
       "status": "active",
       "description": "Este tipo de publicación es una nota informativa para educar a nuestra audiencia sobre temas diversos relacionados con la astronomía.",
       "fields": [
+        {
+          "key": "topic",
+          "label": "Tema",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
         {
           "key": "known_facts",
           "label": "Datos confirmados",
@@ -172,13 +123,6 @@
           "required": false
         },
         {
-          "key": "tone",
-          "label": "Tono",
-          "help": "",
-          "placeholder": "",
-          "required": true
-        },
-        {
           "key": "image_style",
           "label": "Estilo de imagen",
           "help": "",
@@ -193,19 +137,19 @@
           "required": false
         },
         {
-          "key": "topic",
-          "label": "Tema",
+          "key": "tone",
+          "label": "Tono",
           "help": "",
           "placeholder": "",
-          "required": true
+          "required": false
         }
       ],
       "titleSource": "topic",
       "validation": {
-        "rules": "Comprueba los datos y sugiere refinamientos del texto educativo. Sugiere mejoras en la imagen si aplica. Sugiere alguna imagen si lo ves pertinente."
+        "rules": "- Comprueba los datos en el texto y sugiere refinamientos de ser necesario.\n- Si hay una imagen analizala a ver si coincide con el texto o si puedes ofrecer una sugerencia sobre la misma. \n- Si no contiene sugiere alguna imagen si lo ves pertinente. Sugiere una descripción de esa imagen."
       },
       "generation": {
-        "rules": "Genera un texto educativo o expande los datos pasados. Para hacer un buen post de Facebook."
+        "rules": "- Cuando se te pida genera un texto educativo y/o expande los datos pasados."
       },
       "visual": {
         "mode": "ai_image",
@@ -221,67 +165,12 @@
       "platforms": ["facebook"]
     },
     {
-      "id": "regular_post",
-      "label": "Publicación regular",
+      "id": "felicitaciones_de_dia_festivo",
+      "label": "Felicitaciones de día festivo",
       "status": "active",
-      "description": "Publicación general para informar o conversar con la comunidad de SAC.",
+      "platforms": ["x", "instagram", "facebook"],
+      "description": "Este tipo de publicación se realiza cuando la Sociedad de Astronomía del Caribe (SAC) felicita a su público por algún día especial. Por ejemplo: el día de los padres, el día de las madres, Navidad o Año Nuevo, entre otros",
       "fields": [
-        {
-          "key": "intent",
-          "label": "Intención",
-          "help": "",
-          "placeholder": "",
-          "required": true
-        },
-        {
-          "key": "topic",
-          "label": "Tema",
-          "help": "",
-          "placeholder": "",
-          "required": true
-        },
-        {
-          "key": "cta",
-          "label": "Llamado a la acción",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        },
-        {
-          "key": "tone",
-          "label": "Tono",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        },
-        {
-          "key": "audience",
-          "label": "Audiencia",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        },
-        {
-          "key": "known_facts",
-          "label": "Datos confirmados",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        },
-        {
-          "key": "hashtags",
-          "label": "Hashtags",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        },
-        {
-          "key": "links",
-          "label": "Enlaces",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        },
         {
           "key": "image_style",
           "label": "Estilo de imagen",
@@ -295,290 +184,33 @@
           "help": "",
           "placeholder": "",
           "required": false
-        }
-      ],
-      "titleSource": "topic",
-      "validation": {
-        "rules": "Validar Publicación regular contra la información provista y las restricciones de SAC."
-      },
-      "generation": {
-        "rules": "Publicación regular: mensaje claro y autocontenido, fiel a los datos provistos."
-      },
-      "visual": {
-        "mode": "template",
-        "template": "simple",
-        "backgroundSources": ["stock", "ai_generated"],
-        "sponsorAllowed": false,
-        "imagePolicyByPlatform": {
-          "x": "required",
-          "instagram": "required",
-          "facebook": "required"
-        }
-      },
-      "platforms": ["x", "instagram", "facebook"]
-    },
-    {
-      "id": "carousel",
-      "label": "Carrusel",
-      "status": "active",
-      "description": "Publicación que presenta un tema mediante varias láminas.",
-      "fields": [
-        {
-          "key": "intent",
-          "label": "Intención",
-          "help": "",
-          "placeholder": "",
-          "required": true
         },
-        {
-          "key": "topic",
-          "label": "Tema",
-          "help": "",
-          "placeholder": "",
-          "required": true
-        },
-        {
-          "key": "cta",
-          "label": "Llamado a la acción",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        },
-        {
-          "key": "tone",
-          "label": "Tono",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        },
-        {
-          "key": "audience",
-          "label": "Audiencia",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        },
-        {
-          "key": "known_facts",
-          "label": "Datos confirmados",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        },
-        {
-          "key": "hashtags",
-          "label": "Hashtags",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        },
-        {
-          "key": "links",
-          "label": "Enlaces",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        },
-        {
-          "key": "image_style",
-          "label": "Estilo de imagen",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        },
-        {
-          "key": "image_constraints",
-          "label": "Restricciones visuales",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        }
-      ],
-      "titleSource": "topic",
-      "validation": {
-        "rules": "Cada imagen debe ser apropiada y estar relacionada con el texto que la acompaña."
-      },
-      "generation": {
-        "rules": "Carrusel: el caption debe presentar el tema general; no inventes el contenido de cada lámina."
-      },
-      "visual": {
-        "mode": "template",
-        "template": "simple",
-        "backgroundSources": ["stock", "ai_generated"],
-        "sponsorAllowed": false,
-        "imagePolicyByPlatform": {
-          "x": "required",
-          "instagram": "required",
-          "facebook": "required"
-        }
-      },
-      "platforms": ["x", "instagram", "facebook"]
-    },
-    {
-      "id": "event_promotion",
-      "label": "Promoción de evento",
-      "status": "active",
-      "description": "Promoción de un evento de SAC distinto a Noche de Observación.",
-      "fields": [
         {
           "key": "event_name",
           "label": "Nombre del evento",
           "help": "",
           "placeholder": "",
           "required": true
-        },
-        {
-          "key": "date",
-          "label": "Fecha",
-          "help": "",
-          "placeholder": "",
-          "required": true
-        },
-        {
-          "key": "time",
-          "label": "Hora",
-          "help": "",
-          "placeholder": "",
-          "required": true
-        },
-        {
-          "key": "location",
-          "label": "Lugar",
-          "help": "",
-          "placeholder": "",
-          "required": true
-        },
-        {
-          "key": "cta",
-          "label": "Llamado a la acción",
-          "help": "",
-          "placeholder": "",
-          "required": true
-        },
-        {
-          "key": "sponsor",
-          "label": "Auspiciador",
-          "help": "",
-          "placeholder": "",
-          "required": false
         }
       ],
       "titleSource": "event_name",
       "validation": {
-        "rules": "Promoción de evento: debe incluir el nombre, la fecha, la hora, el lugar y una invitación clara a participar. Si falta alguno de esos datos, indícalo claramente."
+        "rules": "Validación: \n- Que el nombre del evento y la felicitaciones coincidan\n- Coincidan el texto de la publicación con la imagen\n- Que la imagen cumpla con estándares de calidad, pero que sea una buena felicitación dependiendo del evento"
       },
       "generation": {
-        "rules": "Promoción de evento: usa únicamente el nombre, la fecha, la hora, el lugar y la información de registro que fueron provistos. Señala claramente cualquier dato necesario que falte."
+        "rules": "Generación:\n- Genera una imagen relacionada al tema de las felicitaciones"
       },
       "visual": {
-        "mode": "template",
-        "template": "event",
-        "backgroundSources": ["stock", "ai_generated"],
-        "sponsorAllowed": true,
-        "imagePolicyByPlatform": {
-          "x": "required",
-          "instagram": "required",
-          "facebook": "required"
-        }
-      },
-      "platforms": ["x", "instagram", "facebook"]
-    },
-    {
-      "id": "educational_astronomy",
-      "label": "Educación astronómica",
-      "status": "active",
-      "description": "Contenido educativo de astronomía para la comunidad de SAC.",
-      "fields": [
-        {
-          "key": "intent",
-          "label": "Intención",
-          "help": "",
-          "placeholder": "",
-          "required": true
-        },
-        {
-          "key": "topic",
-          "label": "Tema",
-          "help": "",
-          "placeholder": "",
-          "required": true
-        },
-        {
-          "key": "cta",
-          "label": "Llamado a la acción",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        },
-        {
-          "key": "tone",
-          "label": "Tono",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        },
-        {
-          "key": "audience",
-          "label": "Audiencia",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        },
-        {
-          "key": "known_facts",
-          "label": "Datos confirmados",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        },
-        {
-          "key": "hashtags",
-          "label": "Hashtags",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        },
-        {
-          "key": "links",
-          "label": "Enlaces",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        },
-        {
-          "key": "image_style",
-          "label": "Estilo de imagen",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        },
-        {
-          "key": "image_constraints",
-          "label": "Restricciones visuales",
-          "help": "",
-          "placeholder": "",
-          "required": false
-        }
-      ],
-      "titleSource": "topic",
-      "validation": {
-        "rules": "No presentes como confirmado un dato astronómico que no esté respaldado por la información provista."
-      },
-      "generation": {
-        "rules": "Educación astronómica: presenta solo afirmaciones respaldadas por la información provista y deja claro cualquier supuesto."
-      },
-      "visual": {
-        "mode": "template",
-        "template": "simple",
-        "backgroundSources": ["stock", "ai_generated"],
+        "mode": "ai_image",
+        "template": null,
+        "backgroundSources": [],
         "sponsorAllowed": false,
         "imagePolicyByPlatform": {
           "x": "required",
           "instagram": "required",
           "facebook": "required"
         }
-      },
-      "platforms": ["x", "instagram", "facebook"]
+      }
     }
   ]
 }

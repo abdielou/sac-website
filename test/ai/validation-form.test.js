@@ -25,11 +25,11 @@ describe('ValidationForm multired package', () => {
 
   test('validates one package across the platforms and image policies from Guidelines', () => {
     const document = getDefaultGuidelines()
-    const definition = resolveContentTypeDefinition(document, 'regular_post')
+    const definition = resolveContentTypeDefinition(document, 'post_educativo')
     definition.platforms = ['instagram', 'facebook']
     const formState = {
       ...DEFAULT_FORM,
-      contentType: 'regular_post',
+      contentType: 'post_educativo',
       draftText: 'Texto compartido.',
       intent: 'Informar',
       topic: 'Actividad del SAC',
@@ -49,7 +49,7 @@ describe('ValidationForm multired package', () => {
             { id: 'instagram', label: 'Instagram' },
             { id: 'facebook', label: 'Facebook' },
           ]}
-          contentTypes={[{ id: 'regular_post', label: 'Publicación regular', definition }]}
+          contentTypes={[{ id: 'post_educativo', label: 'Post educativo', definition }]}
         />
       )
     )
@@ -72,7 +72,7 @@ describe('ValidationForm multired package', () => {
 
   test('explains local retention and provides a confirmed start-blank action', () => {
     const document = getDefaultGuidelines()
-    const definition = resolveContentTypeDefinition(document, 'regular_post')
+    const definition = resolveContentTypeDefinition(document, 'post_educativo')
     const onClearDraft = jest.fn()
     const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true)
 
@@ -80,7 +80,7 @@ describe('ValidationForm multired package', () => {
       root.render(
         <ValidationForm
           canValidate
-          formState={{ ...DEFAULT_FORM, contentType: 'regular_post', draftText: 'Conservarme' }}
+          formState={{ ...DEFAULT_FORM, contentType: 'post_educativo', draftText: 'Conservarme' }}
           onFormChange={() => {}}
           images={[]}
           onImagesChange={() => {}}
@@ -89,7 +89,7 @@ describe('ValidationForm multired package', () => {
           draftSaveStatus="saved"
           draftUpdatedAt="2026-08-29T12:00:00.000Z"
           platforms={[{ id: 'x', label: 'X' }]}
-          contentTypes={[{ id: 'regular_post', label: 'Publicación regular', definition }]}
+          contentTypes={[{ id: 'post_educativo', label: 'Post educativo', definition }]}
         />
       )
     )

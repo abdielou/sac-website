@@ -758,7 +758,7 @@ describe('guidelines-store S3 lifecycle', () => {
   test('removed content types remain only in historical versions', async () => {
     await getActiveGuidelines()
     const created = await createGuidelineDraft({ createdBy: 'Elena' })
-    const withHistoricalType = duplicateContentType(created.draft.document, 'carousel', {
+    const withHistoricalType = duplicateContentType(created.draft.document, 'post_educativo', {
       id: 'historical_campaign',
       label: 'Campaña histórica',
     })
@@ -807,7 +807,7 @@ describe('guidelines-store S3 lifecycle', () => {
   test('audits content type creation and archival during activation', async () => {
     await getActiveGuidelines()
     const created = await createGuidelineDraft({ createdBy: 'Elena' })
-    const edited = duplicateContentType(created.draft.document, 'carousel', {
+    const edited = duplicateContentType(created.draft.document, 'post_educativo', {
       id: 'community_carousel',
       label: 'Carrusel comunitario',
       archiveOriginal: true,
@@ -825,7 +825,7 @@ describe('guidelines-store S3 lifecycle', () => {
       expect.arrayContaining([expect.objectContaining({ id: 'community_carousel' })])
     )
     expect(activated.diff.archived).toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: 'carousel' })])
+      expect.arrayContaining([expect.objectContaining({ id: 'post_educativo' })])
     )
     expect(activated.auditLog).toEqual(
       expect.arrayContaining([

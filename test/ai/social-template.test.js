@@ -50,12 +50,24 @@ const completeEventDetails = {
 
 const defaultGuidelines = getDefaultGuidelines()
 const observationDefinition = resolveContentTypeDefinition(defaultGuidelines, 'observation_night')
-const eventPromotionDefinition = resolveContentTypeDefinition(defaultGuidelines, 'event_promotion')
-const educationalDefinition = resolveContentTypeDefinition(
-  defaultGuidelines,
-  'educational_astronomy'
-)
-const regularDefinition = resolveContentTypeDefinition(defaultGuidelines, 'regular_post')
+const eventPromotionDefinition = {
+  ...observationDefinition,
+  id: 'event_promotion',
+  label: 'Promoción de evento',
+  titleSource: 'event_name',
+  fields: [
+    ...(observationDefinition.fields || []),
+    { key: 'event_name', label: 'Nombre del evento', help: '', placeholder: '', required: true },
+  ],
+}
+const educationalDefinition = {
+  id: 'educational_astronomy',
+  label: 'Educación astronómica',
+  fields: [{ key: 'topic', label: 'Tema', required: true }],
+  titleSource: 'topic',
+  visual: { mode: 'template', template: 'simple' },
+}
+const regularDefinition = resolveContentTypeDefinition(defaultGuidelines, 'post_educativo')
 
 function inputWithDefinition(input, definition) {
   return {
@@ -1220,7 +1232,7 @@ describe('GenerateInputSchema background fields', () => {
     intent: 'Promover',
     topic: 'Evento',
     platforms: ['instagram'],
-    contentType: 'event_promotion',
+    contentType: 'observation_night',
     cta: 'Regístrate',
     eventDetails: completeEventDetails,
   })
@@ -1254,7 +1266,7 @@ describe('GenerateInputSchema background fields', () => {
     expect(parsed.success).toBe(false)
   })
 
-  test('rejects event_promotion missing location', () => {
+  test('rejects observation_night missing location', () => {
     const parsed = GenerateInputSchema.safeParse(
       withRuntimeMetadata({
         ...base,

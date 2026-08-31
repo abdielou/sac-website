@@ -51,7 +51,7 @@ describe('Guidelines schema v3 seed', () => {
       titleSource: 'type_label',
     })
     expect(observationNight.id).not.toBe('event_promotion')
-    expect(migrated.contentTypeCatalog.some(({ id }) => id === 'event_promotion')).toBe(true)
+    expect(migrated.contentTypeCatalog.some(({ id }) => id === 'post_educativo')).toBe(true)
   })
 
   test('preserves customized guideline copy when normalizing', () => {
@@ -62,7 +62,7 @@ describe('Guidelines schema v3 seed', () => {
     customized.global = customVoice
     customized.generation.imagePrompt = customImageRule
     customized.contentTypeCatalog.find(
-      ({ id }) => id === 'educational_astronomy'
+      ({ id }) => id === 'post_educativo'
     ).generation.rules = customTypeRule
 
     const normalized = normalizeGuidelineDocumentV3(customized)
@@ -71,7 +71,7 @@ describe('Guidelines schema v3 seed', () => {
     expect(normalized.generation.global).toBe(customVoice)
     expect(normalized.generation.imagePrompt).toBe(customImageRule)
     expect(
-      normalized.contentTypeCatalog.find(({ id }) => id === 'educational_astronomy').generation
+      normalized.contentTypeCatalog.find(({ id }) => id === 'post_educativo').generation
         .rules
     ).toBe(customTypeRule)
   })
@@ -212,7 +212,7 @@ describe('Guidelines schema v3 activation validation', () => {
 
   test('allows Instagram to be optional when Guidelines define it as optional', () => {
     const document = validGuidelines()
-    const type = document.contentTypeCatalog.find(({ id }) => id === 'regular_post')
+    const type = document.contentTypeCatalog.find(({ id }) => id === 'post_educativo')
     type.visual.imagePolicyByPlatform.instagram = 'optional'
 
     const validation = validateGuidelineForActivation(document)
@@ -225,7 +225,7 @@ describe('Guidelines schema v3 activation validation', () => {
 
   test('allows a text-only type to target Instagram when Guidelines prohibit its images', () => {
     const document = validGuidelines()
-    const type = document.contentTypeCatalog.find(({ id }) => id === 'regular_post')
+    const type = document.contentTypeCatalog.find(({ id }) => id === 'post_educativo')
     type.platforms = ['instagram']
     type.visual = {
       mode: 'none',
@@ -310,7 +310,7 @@ describe('Guidelines schema v3 activation validation', () => {
     {
       name: 'optional title source',
       mutate(document) {
-        const type = document.contentTypeCatalog.find(({ id }) => id === 'regular_post')
+        const type = document.contentTypeCatalog.find(({ id }) => id === 'post_educativo')
         type.fields.find(({ key }) => key === 'topic').required = false
       },
       error: /titleSource.*campo requerido/i,
@@ -318,7 +318,7 @@ describe('Guidelines schema v3 activation validation', () => {
     {
       name: 'sponsor on an unsupported template',
       mutate(document) {
-        const type = document.contentTypeCatalog.find(({ id }) => id === 'regular_post')
+        const type = document.contentTypeCatalog.find(({ id }) => id === 'post_educativo')
         type.fields.push({
           key: 'sponsor',
           label: 'Auspiciador',
@@ -340,7 +340,7 @@ describe('Guidelines schema v3 activation validation', () => {
     {
       name: 'visual mode prohibited on every platform',
       mutate(document) {
-        const type = document.contentTypeCatalog.find(({ id }) => id === 'regular_post')
+        const type = document.contentTypeCatalog.find(({ id }) => id === 'post_educativo')
         type.platforms = ['x']
         type.visual.imagePolicyByPlatform.x = 'prohibited'
         type.visual.imagePolicyByPlatform = {
@@ -354,7 +354,7 @@ describe('Guidelines schema v3 activation validation', () => {
     {
       name: 'visual type without a required purpose field',
       mutate(document) {
-        const type = document.contentTypeCatalog.find(({ id }) => id === 'regular_post')
+        const type = document.contentTypeCatalog.find(({ id }) => id === 'post_educativo')
         type.titleSource = 'type_label'
         type.fields = [
           {
@@ -400,7 +400,7 @@ describe('Guidelines schema v3 activation validation', () => {
     {
       name: 'required sponsor on a text-only supported platform',
       mutate(document) {
-        const type = document.contentTypeCatalog.find(({ id }) => id === 'regular_post')
+        const type = document.contentTypeCatalog.find(({ id }) => id === 'post_educativo')
         type.platforms = ['x']
         type.visual.imagePolicyByPlatform.x = 'prohibited'
         type.fields.push({
@@ -428,13 +428,19 @@ describe('Guidelines schema v3 activation validation', () => {
   test('allows a published type to be removed from the new version', () => {
     const published = validGuidelines()
     const removed = clone(published)
-    removed.contentTypeCatalog = removed.contentTypeCatalog.filter(({ id }) => id !== 'holiday')
+    removed.contentTypeCatalog = removed.contentTypeCatalog.filter(
+      ({ id }) => id !== 'felicitaciones_de_dia_festivo'
+    )
 
     const validation = validateGuidelineForActivation(removed)
 
     expect(validation.ok).toBe(true)
-    expect(validation.document.contentTypeCatalog.some(({ id }) => id === 'holiday')).toBe(false)
-    expect(published.contentTypeCatalog.some(({ id }) => id === 'holiday')).toBe(true)
+    expect(
+      validation.document.contentTypeCatalog.some(({ id }) => id === 'felicitaciones_de_dia_festivo')
+    ).toBe(false)
+    expect(published.contentTypeCatalog.some(({ id }) => id === 'felicitaciones_de_dia_festivo')).toBe(
+      true
+    )
   })
 
   test('allows the team to adapt observation night while preserving its internal ID', () => {
@@ -555,11 +561,12 @@ describe('Guidelines schema v3 catalog operations', () => {
       label: 'Historia de la comunidad',
     })
     draft = setContentTypeStatus(draft, 'post_educativo', 'archived')
-    draft = moveContentType(draft, 'holiday', 'up')
+    draft = moveContentType(draft, 'felicitaciones_de_dia_festivo', 'up')
+    draft = moveContentType(draft, 'felicitaciones_de_dia_festivo', 'up')
 
     const diff = diffGuidelineDocuments(active, draft)
 
-    expect(draft.contentTypeCatalog[0].id).toBe('holiday')
+    expect(draft.contentTypeCatalog[0].id).toBe('felicitaciones_de_dia_festivo')
     expect(resolveContentTypeDefinition(draft, 'post_educativo')).toBeNull()
     expect(
       resolveContentTypeDefinition(draft, 'post_educativo', { includeArchived: true })?.status
@@ -587,14 +594,14 @@ describe('Guidelines schema v3 catalog operations', () => {
   test('summarizes every review area with human labels and linkable paths', () => {
     const active = validGuidelines()
     const draft = clone(active)
-    const regularPostIndex = draft.contentTypeCatalog.findIndex(({ id }) => id === 'regular_post')
-    const regularPost = draft.contentTypeCatalog[regularPostIndex]
+    const educationalIndex = draft.contentTypeCatalog.findIndex(({ id }) => id === 'post_educativo')
+    const educational = draft.contentTypeCatalog[educationalIndex]
 
     draft.global = 'Nueva voz al validar.'
     draft.platforms.x = 'Nuevas reglas para X.'
     draft.imageValidation = 'Nuevas reglas al validar imágenes.'
-    regularPost.description = 'Nueva descripción de la publicación regular.'
-    regularPost.visual.imagePolicyByPlatform.x = 'optional'
+    educational.description = 'Nueva descripción del post educativo.'
+    educational.visual.imagePolicyByPlatform.facebook = 'required'
 
     const summary = summarizeGuidelineDocumentChanges(active, draft)
 
@@ -623,9 +630,9 @@ describe('Guidelines schema v3 catalog operations', () => {
     expect(summary.contentTypes.items).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: 'regular_post',
-          label: 'Publicación regular',
-          path: `contentTypeCatalog.${regularPostIndex}`,
+          id: 'post_educativo',
+          label: 'Post educativo',
+          path: `contentTypeCatalog.${educationalIndex}`,
           fields: expect.arrayContaining([
             expect.objectContaining({ key: 'description', label: 'Descripción' }),
           ]),
@@ -641,7 +648,7 @@ describe('Guidelines schema v3 catalog operations', () => {
       expect.arrayContaining([
         expect.objectContaining({
           id: 'x',
-          label: 'X',
+          label: 'X (Twitter)',
           path: 'platforms.x',
           fields: expect.arrayContaining([
             expect.objectContaining({
@@ -660,15 +667,15 @@ describe('Guidelines schema v3 catalog operations', () => {
           path: 'imageValidation',
         }),
         expect.objectContaining({
-          id: 'regular_post',
-          label: 'Imagen de Publicación regular',
+          id: 'post_educativo',
+          label: 'Imagen de Post educativo',
           section: 'types',
-          path: `contentTypeCatalog.${regularPostIndex}.visual`,
+          path: `contentTypeCatalog.${educationalIndex}.visual`,
         }),
       ])
     )
     expect(summary.contentTypeDiff.changed).toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: 'regular_post' })])
+      expect.arrayContaining([expect.objectContaining({ id: 'post_educativo' })])
     )
     expect(summary.totalChanges).toBe(
       summary.contentTypes.count +
@@ -704,18 +711,20 @@ describe('Guidelines schema v3 catalog operations', () => {
   })
 
   test('lists and resolves active types separately from archived types', () => {
-    const document = setContentTypeStatus(validGuidelines(), 'holiday', 'archived')
+    const document = setContentTypeStatus(validGuidelines(), 'felicitaciones_de_dia_festivo', 'archived')
     const activeIds = listContentTypeDefinitions(document).map(({ id }) => id)
     const allIds = listContentTypeDefinitions(document, { includeArchived: true }).map(
       ({ id }) => id
     )
 
-    expect(activeIds).not.toContain('holiday')
-    expect(allIds).toContain('holiday')
-    expect(resolveContentTypeDefinition(document, 'regular_post')?.status).toBe('active')
-    expect(resolveContentTypeDefinition(document, 'holiday')).toBeNull()
+    expect(activeIds).not.toContain('felicitaciones_de_dia_festivo')
+    expect(allIds).toContain('felicitaciones_de_dia_festivo')
+    expect(resolveContentTypeDefinition(document, 'post_educativo')?.status).toBe('active')
+    expect(resolveContentTypeDefinition(document, 'felicitaciones_de_dia_festivo')).toBeNull()
     expect(
-      resolveContentTypeDefinition(document, 'holiday', { includeArchived: true })?.status
+      resolveContentTypeDefinition(document, 'felicitaciones_de_dia_festivo', {
+        includeArchived: true,
+      })?.status
     ).toBe('archived')
   })
 })

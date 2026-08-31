@@ -39,7 +39,7 @@ jest.mock('@/components/admin/ai/GenerationForm', () => {
             type: 'button',
             disabled: loading,
             'data-testid': 'content-type',
-            onClick: () => onFormChange({ ...formState, contentType: 'carousel' }),
+            onClick: () => onFormChange({ ...formState, contentType: 'felicitaciones_de_dia_festivo' }),
           },
           formState.contentType
         ),
@@ -157,30 +157,30 @@ describe('AiGenerationClient Guidelines defaults', () => {
     expect(container.querySelector('[data-testid="content-type"]').textContent).toBe('')
     expect(container.querySelector('[data-testid="content-type"]').disabled).toBe(true)
 
-    mockActiveGuidelines = guidelinesWithFirstContentType('regular_post')
+    mockActiveGuidelines = guidelinesWithFirstContentType('post_educativo')
     mockGuidelinesHydrated = true
     renderPanel()
 
-    expect(container.querySelector('[data-testid="content-type"]').textContent).toBe('regular_post')
+    expect(container.querySelector('[data-testid="content-type"]').textContent).toBe('post_educativo')
     expect(container.querySelector('[data-testid="content-type"]').disabled).toBe(false)
   })
 
   test('preserves a manual selection when Guidelines options refresh', () => {
     renderPanel()
 
-    mockActiveGuidelines = guidelinesWithFirstContentType('regular_post')
+    mockActiveGuidelines = guidelinesWithFirstContentType('post_educativo')
     mockGuidelinesHydrated = true
     renderPanel()
     act(() => container.querySelector('[data-testid="content-type"]').click())
 
-    mockActiveGuidelines = guidelinesWithFirstContentType('event_promotion')
+    mockActiveGuidelines = guidelinesWithFirstContentType('observation_night')
     renderPanel()
 
-    expect(container.querySelector('[data-testid="content-type"]').textContent).toBe('carousel')
+    expect(container.querySelector('[data-testid="content-type"]').textContent).toBe('felicitaciones_de_dia_festivo')
   })
 
   test('keeps the entire generator draft when the generator panel is unmounted', () => {
-    mockActiveGuidelines = guidelinesWithFirstContentType('regular_post')
+    mockActiveGuidelines = guidelinesWithFirstContentType('post_educativo')
     mockGuidelinesHydrated = true
     renderPanel()
 
@@ -191,7 +191,7 @@ describe('AiGenerationClient Guidelines defaults', () => {
     expect(container.querySelector('[data-testid="validator"]')).not.toBeNull()
 
     renderPanel()
-    expect(container.querySelector('[data-testid="content-type"]').textContent).toBe('carousel')
+    expect(container.querySelector('[data-testid="content-type"]').textContent).toBe('felicitaciones_de_dia_festivo')
     expect(container.querySelector('[data-testid="sponsor-value"]').textContent).toBe('sponsor.png')
     expect(container.querySelector('[data-testid="generation-mode-value"]').textContent).toBe(
       'image_only'
@@ -202,25 +202,25 @@ describe('AiGenerationClient Guidelines defaults', () => {
   })
 
   test('falls back to the first active type when the saved type is archived while away', () => {
-    mockActiveGuidelines = guidelinesWithFirstContentType('regular_post')
+    mockActiveGuidelines = guidelinesWithFirstContentType('post_educativo')
     mockGuidelinesHydrated = true
     renderPanel()
     act(() => container.querySelector('[data-testid="content-type"]').click())
     renderPanel('validate')
 
-    mockActiveGuidelines = guidelinesWithFirstContentType('event_promotion')
+    mockActiveGuidelines = guidelinesWithFirstContentType('observation_night')
     mockActiveGuidelines.contentTypeCatalog = mockActiveGuidelines.contentTypeCatalog.map(
-      (entry) => (entry.id === 'carousel' ? { ...entry, status: 'archived' } : entry)
+      (entry) => (entry.id === 'felicitaciones_de_dia_festivo' ? { ...entry, status: 'archived' } : entry)
     )
     renderPanel()
 
     expect(container.querySelector('[data-testid="content-type"]').textContent).toBe(
-      'event_promotion'
+      'observation_night'
     )
   })
 
   test('shows only a friendly failure and delegates retry without rebuilding an unvalidated body', () => {
-    mockActiveGuidelines = guidelinesWithFirstContentType('regular_post')
+    mockActiveGuidelines = guidelinesWithFirstContentType('post_educativo')
     mockGuidelinesHydrated = true
     mockGenerationRun = {
       ...mockGenerationRun,
@@ -313,7 +313,7 @@ describe('AiGenerationClient Guidelines defaults', () => {
   ])(
     'explains a $name, the automatic recovery, and the preserved form',
     ({ code, stage, retryable, message, title, summary, recovery, offersRetry }) => {
-      mockActiveGuidelines = guidelinesWithFirstContentType('regular_post')
+      mockActiveGuidelines = guidelinesWithFirstContentType('post_educativo')
       mockGuidelinesHydrated = true
       mockGenerationRun = {
         ...mockGenerationRun,
@@ -363,7 +363,7 @@ describe('AiGenerationClient Guidelines defaults', () => {
   )
 
   test('keeps the assisted recovery presentation for a legacy required-image failure', () => {
-    mockActiveGuidelines = guidelinesWithFirstContentType('regular_post')
+    mockActiveGuidelines = guidelinesWithFirstContentType('post_educativo')
     mockGuidelinesHydrated = true
     mockGenerationRun = {
       ...mockGenerationRun,
@@ -394,7 +394,7 @@ describe('AiGenerationClient Guidelines defaults', () => {
   })
 
   test('does not claim that form data survived when a failed run was adopted after leaving', () => {
-    mockActiveGuidelines = guidelinesWithFirstContentType('regular_post')
+    mockActiveGuidelines = guidelinesWithFirstContentType('post_educativo')
     mockGuidelinesHydrated = true
     mockGenerationRun = {
       ...mockGenerationRun,
@@ -420,7 +420,7 @@ describe('AiGenerationClient Guidelines defaults', () => {
   })
 
   test('offers only the reset action when a failed run has no same-session retry', () => {
-    mockActiveGuidelines = guidelinesWithFirstContentType('regular_post')
+    mockActiveGuidelines = guidelinesWithFirstContentType('post_educativo')
     mockGuidelinesHydrated = true
     mockGenerationRun = {
       ...mockGenerationRun,

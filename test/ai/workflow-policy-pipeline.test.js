@@ -128,6 +128,35 @@ function runtimeFields(document, contentType, legacy) {
   }
 }
 
+function withSimpleTopicTemplate(document) {
+  const fixture = createContentType(JSON.parse(JSON.stringify(document)), {
+    id: 'simple_topic_post',
+    label: 'Post simple',
+  })
+  fixture.contentTypeCatalog = fixture.contentTypeCatalog.map((entry) =>
+    entry.id === 'simple_topic_post'
+      ? {
+          ...entry,
+          titleSource: 'topic',
+          fields: [{ key: 'topic', label: 'Tema', help: '', placeholder: '', required: true }],
+          platforms: ['x', 'instagram', 'facebook'],
+          visual: {
+            mode: 'template',
+            template: 'simple',
+            backgroundSources: ['stock', 'ai_generated'],
+            sponsorAllowed: false,
+            imagePolicyByPlatform: {
+              x: 'required',
+              instagram: 'required',
+              facebook: 'required',
+            },
+          },
+        }
+      : entry
+  )
+  return fixture
+}
+
 function withLegacyCaptionTypes(document) {
   let fixture = createContentType(document, { id: 'caption', label: 'Caption' })
   fixture = createContentType(fixture, {
@@ -290,12 +319,12 @@ describe('workflow policy pipeline', () => {
       userId: 'user-1',
       userEmail: 'test@example.com',
       platform: 'facebook',
-      contentType: 'regular_post',
+      contentType: 'post_educativo',
       draftText: 'Acompáñanos a observar Saturno.',
       goal: legacy.intent,
       topic: legacy.topic,
       runCoordination: { claimId: 'claim-validation-1', coordination: 's3' },
-      ...runtimeFields(document, 'regular_post', legacy),
+      ...runtimeFields(document, 'post_educativo', legacy),
     })
 
     expect(events).toEqual(['claim', 'pre-policy', 'model', 'post-policy'])
@@ -346,7 +375,7 @@ describe('workflow policy pipeline', () => {
     proofreadingDocument.version = 'proofreading-v1'
     proofreadingDocument.contentTypeCatalog = proofreadingDocument.contentTypeCatalog.map(
       (entry) =>
-        entry.id === 'regular_post'
+        entry.id === 'post_educativo'
           ? {
               ...entry,
               validation: {
@@ -382,9 +411,9 @@ describe('workflow policy pipeline', () => {
       userId: 'user-1',
       userEmail: 'test@example.com',
       platform: 'facebook',
-      contentType: 'regular_post',
+      contentType: 'post_educativo',
       draftText: 'Acompananos a observar Saturno.',
-      ...runtimeFields(proofreadingDocument, 'regular_post', legacy),
+      ...runtimeFields(proofreadingDocument, 'post_educativo', legacy),
     })
 
     expect(result.result).toMatchObject({
@@ -471,9 +500,9 @@ describe('workflow policy pipeline', () => {
       userId: 'user-1',
       userEmail: 'test@example.com',
       platform: 'facebook',
-      contentType: 'regular_post',
+      contentType: 'post_educativo',
       draftText,
-      ...runtimeFields(document, 'regular_post', legacy),
+      ...runtimeFields(document, 'post_educativo', legacy),
     })
 
     expect(workflowFetch).toHaveBeenCalledTimes(2)
@@ -521,9 +550,9 @@ describe('workflow policy pipeline', () => {
       userId: 'user-1',
       userEmail: 'test@example.com',
       platform: 'facebook',
-      contentType: 'regular_post',
+      contentType: 'post_educativo',
       draftText: 'Primera línea.\r\n\r\nSegunda línea.',
-      ...runtimeFields(document, 'regular_post', legacy),
+      ...runtimeFields(document, 'post_educativo', legacy),
     })
 
     expect(output.result).toMatchObject({
@@ -558,9 +587,9 @@ describe('workflow policy pipeline', () => {
         userId: 'user-1',
         userEmail: 'test@example.com',
         platform: 'facebook',
-        contentType: 'regular_post',
+        contentType: 'post_educativo',
         draftText: 'Texto original.',
-        ...runtimeFields(document, 'regular_post', legacy),
+        ...runtimeFields(document, 'post_educativo', legacy),
       })
     ).rejects.toThrow(/respuesta inválida/i)
 
@@ -598,9 +627,9 @@ describe('workflow policy pipeline', () => {
         userId: 'user-1',
         userEmail: 'test@example.com',
         platform: 'facebook',
-        contentType: 'regular_post',
+        contentType: 'post_educativo',
         draftText: 'Texto original.',
-        ...runtimeFields(document, 'regular_post', legacy),
+        ...runtimeFields(document, 'post_educativo', legacy),
       })
     ).rejects.toThrow(/problema de configuración/i)
 
@@ -631,9 +660,9 @@ describe('workflow policy pipeline', () => {
         userId: 'user-1',
         userEmail: 'test@example.com',
         platform: 'facebook',
-        contentType: 'regular_post',
+        contentType: 'post_educativo',
         draftText: 'Texto original.',
-        ...runtimeFields(document, 'regular_post', legacy),
+        ...runtimeFields(document, 'post_educativo', legacy),
       })
     ).rejects.toThrow(/intenta nuevamente/i)
 
@@ -663,9 +692,9 @@ describe('workflow policy pipeline', () => {
         userId: 'user-1',
         userEmail: 'test@example.com',
         platform: 'facebook',
-        contentType: 'regular_post',
+        contentType: 'post_educativo',
         draftText: 'Texto original.',
-        ...runtimeFields(document, 'regular_post', legacy),
+        ...runtimeFields(document, 'post_educativo', legacy),
       })
     ).rejects.toThrow(/problema de configuración/i)
 
@@ -726,9 +755,9 @@ describe('workflow policy pipeline', () => {
       userId: 'user-1',
       userEmail: 'test@example.com',
       platform: 'facebook',
-      contentType: 'regular_post',
+      contentType: 'post_educativo',
       draftText: 'Sociedad Astronomica del Caribe.',
-      ...runtimeFields(document, 'regular_post', legacy),
+      ...runtimeFields(document, 'post_educativo', legacy),
     })
 
     expect(output.result).toMatchObject({
@@ -773,9 +802,9 @@ describe('workflow policy pipeline', () => {
       userId: 'user-1',
       userEmail: 'test@example.com',
       platform: 'facebook',
-      contentType: 'regular_post',
+      contentType: 'post_educativo',
       draftText: 'Texto con error.',
-      ...runtimeFields(document, 'regular_post', legacy),
+      ...runtimeFields(document, 'post_educativo', legacy),
     })
 
     expect(workflowFetch).toHaveBeenCalledTimes(1)
@@ -798,10 +827,10 @@ describe('workflow policy pipeline', () => {
         userId: 'user-1',
         userEmail: 'invalid-email',
         platform: 'facebook',
-        contentType: 'regular_post',
+        contentType: 'post_educativo',
         draftText: 'Acompáñanos a observar Saturno.',
         runCoordination: { claimId: 'claim-validation-lost', coordination: 's3' },
-        ...runtimeFields(document, 'regular_post', legacy),
+        ...runtimeFields(document, 'post_educativo', legacy),
       })
     ).rejects.toThrow('AI_RUN_CLAIM_LOST')
 
@@ -820,10 +849,10 @@ describe('workflow policy pipeline', () => {
         userId: 'user-1',
         userEmail: 'invalid-email',
         platforms: ['x'],
-        contentType: 'regular_post',
+        contentType: 'post_educativo',
         runCoordination: { claimId: 'claim-generation-lost', coordination: 's3' },
         ...legacy,
-        ...runtimeFields(document, 'regular_post', legacy),
+        ...runtimeFields(document, 'post_educativo', legacy),
       })
     ).rejects.toThrow('AI_RUN_CLAIM_LOST')
 
@@ -1238,6 +1267,8 @@ describe('workflow policy pipeline', () => {
   })
 
   test('keeps the generic no-text exception for an AI-generated template backdrop', async () => {
+    const fixture = withSimpleTopicTemplate(document)
+    getGuidelineVersion.mockResolvedValue(fixture)
     const dataUrl = await makePngDataUrl({ r: 4, g: 12, b: 38 })
     let backdropMessages = ''
     workflowFetch.mockImplementation(async (_url, options) => {
@@ -1263,12 +1294,12 @@ describe('workflow policy pipeline', () => {
       userId: 'user-1',
       userEmail: 'test@example.com',
       platforms: ['instagram'],
-      contentType: 'regular_post',
+      contentType: 'simple_topic_post',
       backgroundMode: 'ai_generated',
       generationMode: 'image_only',
       publicationText: 'Saturno esta semana.',
       ...legacy,
-      ...runtimeFields(document, 'regular_post', legacy),
+      ...runtimeFields(fixture, 'simple_topic_post', legacy),
     })
 
     expect(backdropMessages).toMatch(/fondo limpio|clean background/i)
@@ -1278,6 +1309,8 @@ describe('workflow policy pipeline', () => {
   })
 
   test('regenerates an AI template backdrop when the first file cannot be rendered', async () => {
+    const fixture = withSimpleTopicTemplate(document)
+    getGuidelineVersion.mockResolvedValue(fixture)
     const validDataUrl = await makePngDataUrl({ r: 7, g: 18, b: 48 })
     let backdropAttempts = 0
     workflowFetch.mockImplementation(async (_url, options) => {
@@ -1304,12 +1337,12 @@ describe('workflow policy pipeline', () => {
       userId: 'user-1',
       userEmail: 'test@example.com',
       platforms: ['instagram'],
-      contentType: 'regular_post',
+      contentType: 'simple_topic_post',
       backgroundMode: 'ai_generated',
       generationMode: 'image_only',
       publicationText: 'Texto existente.',
       ...legacy,
-      ...runtimeFields(document, 'regular_post', legacy),
+      ...runtimeFields(fixture, 'simple_topic_post', legacy),
     })
 
     expect(backdropAttempts).toBe(2)
@@ -1875,6 +1908,8 @@ describe('workflow policy pipeline', () => {
   })
 
   test('image_only simple stock template composes from data without any text provider call', async () => {
+    const fixture = withSimpleTopicTemplate(document)
+    getGuidelineVersion.mockResolvedValue(fixture)
     const publicationText = '  Caption ya aprobado.\r\nSegunda línea.  '
     reviewAiPolicyResult.mockImplementationOnce(async (payload) => {
       expect(payload.reviewMode).toBe('image_only_generation')
@@ -1887,13 +1922,13 @@ describe('workflow policy pipeline', () => {
       userId: 'user-1',
       userEmail: 'test@example.com',
       platforms: ['x', 'instagram', 'facebook'],
-      contentType: 'regular_post',
+      contentType: 'simple_topic_post',
       backgroundMode: 'stock',
       backgroundId: 'telescope-nebula',
       generationMode: 'image_only',
       publicationText,
       ...legacy,
-      ...runtimeFields(document, 'regular_post', legacy),
+      ...runtimeFields(fixture, 'simple_topic_post', legacy),
     })
 
     expect(workflowFetch).not.toHaveBeenCalled()
@@ -2186,18 +2221,27 @@ describe('workflow policy pipeline', () => {
     delete documentWithoutX.platforms.x
     delete documentWithoutX.platformLabels.x
     getGuidelineVersion.mockResolvedValueOnce(documentWithoutX)
-    const legacy = { intent: 'Conversar con la comunidad', topic: 'Saturno' }
+    const legacy = {
+      intent: 'Invitar a la comunidad',
+      topic: 'Noche de Observación',
+      eventDetails: {
+        name: 'Noche de Observación',
+        date: '2026-08-15',
+        time: '19:30',
+        location: 'Cabo Rojo',
+      },
+    }
 
     await expect(
       generateAiWorkflow({
         userId: 'user-1',
         userEmail: 'test@example.com',
         platforms: ['x', 'instagram', 'facebook'],
-        contentType: 'regular_post',
+        contentType: 'observation_night',
         backgroundMode: 'stock',
         backgroundId: 'telescope-nebula',
         ...legacy,
-        ...runtimeFields(document, 'regular_post', legacy),
+        ...runtimeFields(documentWithoutX, 'observation_night', legacy),
       })
     ).rejects.toThrow(/guías seleccionadas.*no están disponibles/i)
 

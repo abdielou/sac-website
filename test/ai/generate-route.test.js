@@ -73,7 +73,7 @@ const validEventBody = {
   intent: 'Invitar al público',
   topic: 'Noche de Observación',
   platforms: ['instagram'],
-  contentType: 'event_promotion',
+  contentType: 'observation_night',
   cta: 'Confirma tu asistencia',
   eventDetails: {
     name: 'Noche de Observación',
@@ -152,12 +152,11 @@ describe('POST /api/admin/ai/generate contract', () => {
       coordination: 's3',
     })
     expect(startedInput.contentTypeIdentity).toEqual({
-      id: 'event_promotion',
-      label: 'Promoción de evento',
+      id: 'observation_night',
+      label: 'Noche de Observación',
       guidelineVersion: 'default-v1',
     })
     expect(startedInput.contentData).toMatchObject({
-      event_name: 'Noche de Observación',
       date: '2026-08-15',
       time: '19:30',
       location: 'Cabo Rojo',
@@ -381,13 +380,12 @@ describe('POST /api/admin/ai/generate contract', () => {
     expect(start).not.toHaveBeenCalled()
   })
 
-  test('requires event name, date, time, location and CTA before start', async () => {
+  test('requires date, time and location before start', async () => {
     const response = await POST(
       requestWithBody({
         ...validEventBody,
-        cta: '',
         eventDetails: {
-          date: '2026-08-15',
+          name: 'Noche de Observación',
           time: '19:30',
           location: 'Cabo Rojo',
         },
@@ -395,8 +393,7 @@ describe('POST /api/admin/ai/generate contract', () => {
     )
 
     expect(response.status).toBe(400)
-    expect(response.body.details).toContain('event_name')
-    expect(response.body.details).toContain('cta')
+    expect(response.body.details).toContain('date')
     expect(start).not.toHaveBeenCalled()
   })
 
@@ -408,7 +405,7 @@ describe('POST /api/admin/ai/generate contract', () => {
 
     const archived = getDefaultGuidelines()
     archived.contentTypeCatalog = archived.contentTypeCatalog.map((entry) =>
-      entry.id === 'event_promotion' ? { ...entry, status: 'archived' } : entry
+      entry.id === 'observation_night' ? { ...entry, status: 'archived' } : entry
     )
     getActiveGuidelinesStrict.mockResolvedValue(archived)
     const archivedResponse = await POST(requestWithBody(validEventBody))
@@ -497,11 +494,11 @@ describe('POST /api/admin/ai/generate contract', () => {
     })
   })
 
-  test('starts a regular_post with active Guidelines platforms without inventing a prohibited-only image path', async () => {
+  test('starts a post_educativo on its Guidelines platforms without inventing a prohibited-only image path', async () => {
     const response = await POST(
       requestWithBody({
-        platforms: ['x'],
-        contentType: 'regular_post',
+        platforms: ['facebook'],
+        contentType: 'post_educativo',
         intent: 'Educar a la comunidad',
         topic: 'El cielo de agosto',
       })
@@ -509,8 +506,8 @@ describe('POST /api/admin/ai/generate contract', () => {
 
     expect(response.status).toBe(202)
     expect(start.mock.calls[0][1][0]).toMatchObject({
-      platforms: ['x', 'instagram', 'facebook'],
-      contentType: 'regular_post',
+      platforms: ['facebook'],
+      contentType: 'post_educativo',
     })
   })
 
