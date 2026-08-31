@@ -3,15 +3,14 @@ import PageTitle from '@/components/PageTitle'
 import Image from 'next/image'
 import siteMetadata from '@/data/siteMetadata'
 import LayoutWrapper from '@/components/LayoutWrapper'
+import { pageMetadata } from '@/lib/seo'
 
-export const metadata = {
-  title: `Guias de Marca`,
-  description: `Guias completas de marca de la ${siteMetadata.headerTitle}. Descarga logos, colores y recursos para mantener la consistencia de la identidad visual.`,
-  openGraph: {
-    title: `Guias de Marca | ${siteMetadata.headerTitle}`,
-    description: `Guias completas de marca de la ${siteMetadata.headerTitle}. Descarga logos, colores y recursos para mantener la consistencia de la identidad visual.`,
-  },
-}
+export const metadata = pageMetadata({
+  title: 'Guías de Marca',
+  description:
+    'Descarga los logos oficiales en PNG, JPG y SVG, incluidos los del 25 aniversario, y consulta la paleta de colores y las reglas de uso de la identidad visual.',
+  path: '/brand',
+})
 
 const logoVariants = [
   {

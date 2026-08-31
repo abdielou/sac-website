@@ -1,10 +1,18 @@
 import Image from 'next/image'
 import { getMembers } from '../../../lib/google-sheets'
 import { generateVerifyToken } from '../../../lib/id-card/verifyToken'
+import { noindexMetadata } from '../../../lib/seo'
 
-export const metadata = {
-  title: 'Verificacion de Membresia - SAC',
-  description: 'Verificacion de membresia de la Sociedad de Astronomia del Caribe',
+// This page renders a member's name and membership status for whoever holds the
+// token, so it must never enter the index. generateMetadata (not a static export)
+// keeps the canonical pointed at the token actually being viewed.
+export async function generateMetadata({ params }) {
+  const { token } = await params
+  return noindexMetadata({
+    title: 'Verificación de Membresía',
+    description: 'Verificación de membresía de la Sociedad de Astronomía del Caribe.',
+    path: `/verify/${token}`,
+  })
 }
 
 // Force dynamic rendering (member status must be fresh)

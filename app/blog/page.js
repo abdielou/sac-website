@@ -1,14 +1,22 @@
 import { listArticles } from '@/lib/articles'
 import LayoutWrapper from '@/components/LayoutWrapper'
 import ListLayout from '@/layouts/ListLayout'
-import siteMetadata from '@/data/siteMetadata'
+import { pageMetadata } from '@/lib/seo'
+import { POSTS_PER_PAGE, listingTitle, toSearchIndex } from '@/lib/blog-pagination'
 
-export const metadata = {
-  title: `Artículos | ${siteMetadata.author}`,
-  description: siteMetadata.description,
-}
+// Re-exported for existing importers. The value lives in lib/blog-pagination.js.
+export { POSTS_PER_PAGE }
 
-export const POSTS_PER_PAGE = 5
+export const BLOG_DESCRIPTION =
+  'Artículos, noticias y guías de astronomía de la Sociedad de Astronomía del Caribe, Puerto Rico.'
+
+// The root layout appends ' | SAC' through its title template, so the title
+// here must not repeat the site name.
+export const metadata = pageMetadata({
+  title: 'Artículos',
+  description: BLOG_DESCRIPTION,
+  path: '/blog',
+})
 
 // Revalidate every hour as safety net (on-demand revalidation is primary)
 export const revalidate = 3600
@@ -32,10 +40,11 @@ export default async function BlogPage() {
   return (
     <LayoutWrapper>
       <ListLayout
-        posts={allResult.articles}
+        posts={toSearchIndex(allResult.articles)}
         initialDisplayPosts={paginatedResult.articles}
         pagination={pagination}
-        title="Artículos"
+        paginated
+        title={listingTitle(1)}
       />
     </LayoutWrapper>
   )

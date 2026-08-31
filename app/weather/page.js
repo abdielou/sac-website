@@ -1,15 +1,14 @@
 import weatherData from '@/data/weatherData'
 import Card from '@/components/Card'
 import LayoutWrapper from '@/components/LayoutWrapper'
+import { pageMetadata } from '@/lib/seo'
 
-export const metadata = {
-  title: 'Clima - SAC',
-  description: 'Condiciones del tiempo, imágenes de satélite, radar Doppler y más',
-  openGraph: {
-    title: 'Clima - SAC',
-    description: 'Condiciones del tiempo, imágenes de satélite, radar Doppler y más',
-  },
-}
+export const metadata = pageMetadata({
+  title: 'Clima',
+  description:
+    'Condiciones del tiempo para observar el cielo en Puerto Rico y el Caribe: imágenes de satélite GOES East, radar Doppler, nubosidad, polvo del Sahara y actividad sísmica.',
+  path: '/weather',
+})
 
 function _getAdjustedSize(width, height) {
   return {

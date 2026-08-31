@@ -8,20 +8,49 @@ import SectionContainer from './SectionContainer'
 import Footer from './Footer'
 import MobileNav from './MobileNav'
 import ThemeSwitch from './ThemeSwitch'
-import { useTheme } from 'next-themes'
-import { useEffect, useState } from 'react'
+
+/**
+ * Header logo sizes. The boxes are reserved in the prerendered HTML so the
+ * header cannot grow on hydration.
+ */
+const LOGO_WIDTH = 200
+const LOGO_FULL_HEIGHT = 70
+const LOGO_SHORT_HEIGHT = 47
+
+/**
+ * The logo used to sit behind a `mounted` flag (useState + useEffect), so it was
+ * absent from every prerendered page and injected on hydration. The header then
+ * grew about 32px and pushed the whole article down, which measured CLS 0.1233
+ * on every article page. The control page /links, which uses forceLightHeader
+ * and therefore skipped the gate, measured CLS 0.
+ *
+ * Both theme variants are now rendered on the server and switched with CSS
+ * (`dark:` utilities, darkMode: 'class'), so there is no hydration gap and no
+ * layout shift. Only one variant is ever displayed at a time, so screen readers
+ * announce a single logo.
+ */
+const HeaderLogo = ({ lightSrc, darkSrc, height }) => (
+  <>
+    <Image
+      src={lightSrc}
+      alt="SAC Logo"
+      width={LOGO_WIDTH}
+      height={height}
+      className="block dark:hidden"
+    />
+    <Image
+      src={darkSrc}
+      alt="SAC Logo"
+      width={LOGO_WIDTH}
+      height={height}
+      className="hidden dark:block"
+      priority
+    />
+  </>
+)
 
 const LayoutWrapper = ({ children, forceLightHeader = false, fullWidth = false }) => {
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
-
-  const { theme, resolvedTheme } = useTheme()
-  const show = forceLightHeader || mounted
-  const isLight = forceLightHeader || theme === 'light' || resolvedTheme === 'light'
-  const logoShort =
-    show && (isLight ? siteMetadata.siteLogoShortLight : siteMetadata.siteLogoShortDark)
-  const logo = show && (isLight ? siteMetadata.siteLogoLight : siteMetadata.siteLogoDark)
-  const titleColor = show && (isLight ? 'text-sac-primary-blue' : '')
+  const titleColor = 'text-sac-primary-blue dark:text-inherit'
   return (
     <div className="flex flex-col min-h-screen">
       <SectionContainer>
@@ -34,31 +63,44 @@ const LayoutWrapper = ({ children, forceLightHeader = false, fullWidth = false }
             >
               <div>
                 <Link href="/" aria-label={siteMetadata.title}>
-                  {show &&
-                    (forceLightHeader ? (
-                      <div className="flex items-center justify-center">
-                        <div>
-                          <Image src={logo} alt="SAC Logo" width={200} height={70} />
-                        </div>
+                  {forceLightHeader ? (
+                    <div className="flex items-center justify-center">
+                      <div>
+                        <Image
+                          src={siteMetadata.siteLogoLight}
+                          alt="SAC Logo"
+                          width={LOGO_WIDTH}
+                          height={LOGO_FULL_HEIGHT}
+                          priority
+                        />
                       </div>
-                    ) : (
-                      <div className="flex items-center justify-between">
-                        <div className="mr-3 hidden sm:block">
-                          <Image src={logoShort} alt="SAC Logo" width={200} height={47} />
-                        </div>
-                        <div className="mr-3 block sm:hidden">
-                          <Image src={logo} alt="SAC Logo" width={200} height={70} />
-                        </div>
-                        <div
-                          className={
-                            titleColor +
-                            ' hidden sm:block xl:pl-10 md:pl-4 h-10 xl:text-3xl md:text-2xl sm:text-xl font-semibold italic tracking-tight xl:tracking-normal'
-                          }
-                        >
-                          {siteMetadata.headerTitle}
-                        </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div className="mr-3 hidden sm:block">
+                        <HeaderLogo
+                          lightSrc={siteMetadata.siteLogoShortLight}
+                          darkSrc={siteMetadata.siteLogoShortDark}
+                          height={LOGO_SHORT_HEIGHT}
+                        />
                       </div>
-                    ))}
+                      <div className="mr-3 block sm:hidden">
+                        <HeaderLogo
+                          lightSrc={siteMetadata.siteLogoLight}
+                          darkSrc={siteMetadata.siteLogoDark}
+                          height={LOGO_FULL_HEIGHT}
+                        />
+                      </div>
+                      <div
+                        className={
+                          titleColor +
+                          ' hidden sm:block xl:pl-10 md:pl-4 h-10 xl:text-3xl md:text-2xl sm:text-xl font-semibold italic tracking-tight xl:tracking-normal'
+                        }
+                      >
+                        {siteMetadata.headerTitle}
+                      </div>
+                    </div>
+                  )}
                 </Link>
               </div>
               {!forceLightHeader && <ThemeSwitch />}

@@ -2,6 +2,8 @@ import { auth } from '../../../../../../auth'
 import { NextResponse } from 'next/server'
 import { getMemberByEmail } from '../../../../../../lib/google-sheets'
 import { generateVerifyToken } from '../../../../../../lib/id-card/verifyToken'
+import { ACTIVE_MEMBER_STATUSES } from '../../../../../../lib/member-access'
+import { checkMemberAccess } from '../../../../../../lib/api-permissions'
 
 /**
  * GET /api/member/family/[familyName]/id-card-preview
@@ -23,6 +25,9 @@ export const GET = auth(async function GET(req, { params }) {
     )
   }
 
+  const accessError = await checkMemberAccess(req)
+  if (accessError) return accessError
+
   try {
     const { familyName: familyNameParam } = await params
     const decodedName = decodeURIComponent(familyNameParam)
@@ -32,7 +37,9 @@ export const GET = auth(async function GET(req, { params }) {
       return NextResponse.json({ error: 'Miembro no encontrado' }, { status: 404 })
     }
 
-    if (member.status !== 'active' && member.status !== 'expiring-soon') {
+    // Kept alongside the gate above: admins bypass the gate, but nobody gets an
+    // ID card that misrepresents an inactive membership.
+    if (!ACTIVE_MEMBER_STATUSES.includes(member.status)) {
       return NextResponse.json(
         {
           error: 'Tu membresia no esta vigente para ver la tarjeta de identificacion',

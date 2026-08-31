@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useArticleEditor } from '@/lib/hooks/useArticleEditor'
-import ArticleMetadataForm from '@/components/admin/ArticleMetadataForm'
+import ArticleMetadataForm, { validateForPublish } from '@/components/admin/ArticleMetadataForm'
 import ArticleEditor from '@/components/admin/ArticleEditor'
 import ArticlePreview from '@/components/admin/ArticlePreview'
 import ImageUploadButton from '@/components/admin/ImageUploadButton'
@@ -41,6 +41,7 @@ export default function NewArticlePage() {
   const [authors, setAuthors] = useState([])
   const [allTags, setAllTags] = useState([])
   const [activeTab, setActiveTab] = useState('editor') // For mobile: 'editor' | 'preview'
+  const [publishError, setPublishError] = useState(null)
   const editorRef = useRef(null)
 
   // Redirect if user doesn't have permission
@@ -109,12 +110,20 @@ export default function NewArticlePage() {
   }, [saveDraft])
 
   const handlePublish = useCallback(async () => {
+    // Drafts may stay untagged, published articles may not.
+    const validationError = validateForPublish(metadata)
+    if (validationError) {
+      setPublishError(validationError)
+      return
+    }
+
+    setPublishError(null)
     try {
       await publish()
     } catch {
       // Error is already in saveError state
     }
-  }, [publish])
+  }, [metadata, publish])
 
   // Show nothing while checking permissions
   if (!session || !canCreateArticle) {
@@ -167,6 +176,16 @@ export default function NewArticlePage() {
           </button>
         </div>
       </div>
+
+      {/* Publish validation banner */}
+      {publishError && (
+        <div
+          role="alert"
+          className="mb-4 rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-300"
+        >
+          {publishError}
+        </div>
+      )}
 
       {/* Metadata form */}
       <ArticleMetadataForm

@@ -1,10 +1,13 @@
 import Image from 'next/image'
 import LayoutWrapper from '@/components/LayoutWrapper'
+import { pageMetadata } from '@/lib/seo'
 
-export const metadata = {
-  title: 'Enlaces - Sociedad Astronomica del Caribe',
-  description: 'Enlaces a nuestras redes sociales',
-}
+export const metadata = pageMetadata({
+  title: 'Enlaces',
+  description:
+    'Todos los enlaces de la Sociedad de Astronomía del Caribe en un solo lugar: redes sociales, donativos, membresía, guía de telescopios y reporte del tiempo.',
+  path: '/links',
+})
 
 const socialLinks = [
   {

@@ -287,7 +287,17 @@ export default function Gallery() {
           </div>
         </div>
       )}
-      <PageSEO title="Galería" description="Galería de imágenes" />
+      {/*
+        Kept out of the index by decision: the page is unlinked from the nav and
+        has no internal links, so submitting it was promoting an orphan.
+        Deliberately NOT disallowed in robots.txt — Google must be able to crawl
+        the page to see this directive.
+      */}
+      <PageSEO
+        noindex
+        title="Galería de Fotos Astronómicas"
+        description="Fotografías astronómicas de la Sociedad de Astronomía del Caribe: eclipses, planetas, cometas y objetos de cielo profundo captados desde Puerto Rico."
+      />
       <div className="divide-y divide-gray-200 dark:divide-gray-700">
         <div className="pt-6 pb-8 space-y-2 md:space-y-5 text-center">
           <h1 className="text-3xl font-extrabold leading-9 tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl sm:leading-10 md:text-6xl md:leading-14">

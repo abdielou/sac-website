@@ -1,4 +1,11 @@
 import Link from 'next/link'
+import { noindexMetadata } from '@/lib/seo'
+
+export const metadata = noindexMetadata({
+  title: 'Error de autenticación',
+  description: 'Ocurrió un error al iniciar sesión en la Sociedad de Astronomía del Caribe.',
+  path: '/auth/error',
+})
 
 /**
  * Get Spanish error message based on error type

@@ -1,16 +1,46 @@
+import { notFound } from 'next/navigation'
 import { getMediaEntry } from '@/lib/media-s3'
 import MediaPlayer from '@/components/MediaPlayer'
 import LayoutWrapper from '@/components/LayoutWrapper'
+import { absoluteImages, noindexMetadata, pageMetadata } from '@/lib/seo'
 
 export async function generateMetadata({ params }) {
   const { slug } = await params
   const entry = await getMediaEntry(slug)
+
+  // The page calls notFound() for an unknown slug; keep the 404 head out of the index.
   if (!entry) {
-    return { title: 'Video no encontrado' }
+    return noindexMetadata({
+      title: 'Video no encontrado',
+      description: 'Este video no existe o fue eliminado.',
+      path: `/media/${slug}`,
+    })
   }
-  return {
+
+  // Kept out of the index by decision. There is no /media index page and nothing
+  // public links to a video, so every one of these is an orphan URL. The
+  // OpenGraph block is retained so a shared link still previews correctly.
+  //
+  // Deliberately NOT disallowed in robots.txt: Google has to crawl the page to
+  // see the directive. Blocking it there would strand any already-indexed URL.
+  const images = absoluteImages(entry.thumbnail)
+  const description =
+    entry.description || `Video de la Sociedad de Astronomía del Caribe: ${entry.title}.`
+
+  // Built from pageMetadata so the share card keeps its thumbnail, site name and
+  // locale, then overridden with the noindex robots block. A shared link should
+  // still preview properly even though the URL stays out of the index.
+  const base = pageMetadata({
     title: entry.title,
-    description: entry.description || null,
+    description,
+    path: `/media/${entry.slug}`,
+    openGraph: { type: 'video.other', images },
+    twitter: { images },
+  })
+
+  return {
+    ...base,
+    robots: noindexMetadata({ path: `/media/${entry.slug}` }).robots,
   }
 }
 
@@ -19,14 +49,7 @@ export default async function MediaPage({ params }) {
   const entry = await getMediaEntry(slug)
 
   if (!entry) {
-    return (
-      <LayoutWrapper>
-        <div className="max-w-4xl mx-auto py-16 text-center">
-          <h1 className="text-2xl font-bold mb-4">Video no encontrado</h1>
-          <p className="text-gray-500">Este video no existe o fue eliminado.</p>
-        </div>
-      </LayoutWrapper>
-    )
+    notFound()
   }
 
   return (

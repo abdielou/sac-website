@@ -62,9 +62,10 @@ token.json
 # Ignore local gallery photos test data
 gallery-photos/
 
-# GSD planning docs (keep codebase/ committed)
+# GSD planning docs (keep codebase/ and seo/ committed)
 .planning/*
 !.planning/codebase/
+!.planning/seo/
 .claude/*
 !.claude/skills/
 
@@ -79,3 +80,10 @@ openrouter-usage.json
 .playwright-mcp/
 docs/*
 /.swc
+
+# Group sync audit reports downloaded from the admin dashboard
+sync-grupos-*.csv
+
+# SEO data-fix backups (local safety copies, not source)
+.planning/seo/backups/
+.sawyer/*
