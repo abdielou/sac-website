@@ -7,7 +7,13 @@ jest.mock('google-auth-library', () => ({
   JWT: jest.fn().mockImplementation((opts) => ({ opts, request: mockRequest })),
 }))
 
+jest.mock('../lib/gmail-senders', () => ({
+  fetchSenders: jest.fn(),
+  createGmailAuth: jest.fn(() => ({ kind: 'gmail-auth' })),
+}))
+
 import { JWT } from 'google-auth-library'
+import { fetchSenders, createGmailAuth } from '../lib/gmail-senders'
 import { invalidateCache, CACHE_KEYS } from '../lib/cache'
 import { fetchGmailLogRecords, getEmailAccountability, GmailLogConfigError } from '../lib/gmail-log'
 
@@ -47,6 +53,9 @@ beforeEach(() => {
   process.env.GOOGLE_PRIVATE_KEY = 'line1\\nline2'
   process.env.GOOGLE_REPORTS_ADMIN_EMAIL = 'admin@example.org'
   process.env.EMAIL_GROUP_ADDRESS = 'info@example.org'
+  delete process.env.GMAIL_SENDER_LABEL
+  delete process.env.GMAIL_SENDER_MAILBOX
+  fetchSenders.mockResolvedValue(new Map())
 })
 
 afterAll(() => {
@@ -162,5 +171,55 @@ describe('getEmailAccountability', () => {
   test('propagates API errors', async () => {
     mockRequest.mockRejectedValue(new Error('Admin SDK API has not been used'))
     await expect(getEmailAccountability(true)).rejects.toThrow('Admin SDK API has not been used')
+  })
+})
+
+describe('getEmailAccountability senders', () => {
+  test('skips the sender lookup when GMAIL_SENDER_LABEL is empty', async () => {
+    mockRequest.mockResolvedValue({ data: { items: [] } })
+    const { data } = await getEmailAccountability(true)
+    expect(fetchSenders).not.toHaveBeenCalled()
+    expect(data.senderStatus).toEqual({ ok: false, reason: 'not_configured' })
+  })
+
+  test('reads senders from the admin mailbox by default and reports the count', async () => {
+    process.env.GMAIL_SENDER_LABEL = 'SAC/info'
+    mockRequest.mockResolvedValue({ data: { items: [] } })
+    mockRequest.mockResolvedValueOnce({ data: { items: [activity()] } })
+    fetchSenders.mockResolvedValue(
+      new Map([['<m1@ext.com>', { name: 'Ana', email: 'ana@ext.com', date: 'x' }]])
+    )
+    const { data } = await getEmailAccountability(true)
+    expect(createGmailAuth).toHaveBeenCalledWith('admin@example.org')
+    expect(fetchSenders).toHaveBeenCalledWith(
+      expect.objectContaining({
+        auth: { kind: 'gmail-auth' },
+        mailbox: 'admin@example.org',
+        labelName: 'SAC/info',
+      })
+    )
+    expect(data.senderStatus).toEqual({ ok: true, count: 1 })
+    expect(data.threads[0].sender).toEqual({ name: 'Ana', email: 'ana@ext.com' })
+  })
+
+  test('uses GMAIL_SENDER_MAILBOX when set', async () => {
+    process.env.GMAIL_SENDER_LABEL = 'SAC/info'
+    process.env.GMAIL_SENDER_MAILBOX = 'bot@example.org'
+    mockRequest.mockResolvedValue({ data: { items: [] } })
+    await getEmailAccountability(true)
+    expect(createGmailAuth).toHaveBeenCalledWith('bot@example.org')
+  })
+
+  test('keeps the threads when the sender lookup fails', async () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    process.env.GMAIL_SENDER_LABEL = 'SAC/info'
+    mockRequest.mockResolvedValue({ data: { items: [] } })
+    mockRequest.mockResolvedValueOnce({ data: { items: [activity()] } })
+    fetchSenders.mockRejectedValue(new Error('unauthorized_client'))
+    const { data } = await getEmailAccountability(true)
+    expect(data.threads).toHaveLength(1)
+    expect(data.threads[0].sender).toBeNull()
+    expect(data.senderStatus).toEqual({ ok: false, reason: 'unauthorized_client' })
+    spy.mockRestore()
   })
 })

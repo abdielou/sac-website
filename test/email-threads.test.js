@@ -287,3 +287,51 @@ describe('buildEmailThreads', () => {
     expect(out).toMatchObject({ generatedAt: NOW, windowDays: 30, thresholdDays: 7, threads: [] })
   })
 })
+
+describe('buildEmailThreads senders', () => {
+  const senders = new Map([
+    ['<m1@ext.com>', { name: 'Ana', email: 'ana@ext.com', date: '2026-09-01T10:00:00.000Z' }],
+    ['<m2@ext.com>', { name: '', email: 'bob@ext.com', date: '2026-09-04T10:00:00.000Z' }],
+  ])
+
+  test('attaches the sender of the first inbound message', () => {
+    const out = build({
+      inbound: [
+        rec(),
+        rec({
+          time: '2026-09-04T10:00:00.000Z',
+          messageId: '<m2@ext.com>',
+          subject: 'Re: Solicitud de actividad',
+        }),
+      ],
+      senders,
+    })
+    expect(out.threads[0].sender).toEqual({ name: 'Ana', email: 'ana@ext.com' })
+  })
+
+  test('falls back to a later inbound message when the first has no match', () => {
+    const out = build({
+      inbound: [
+        rec({ messageId: '<unknown@ext.com>' }),
+        rec({
+          time: '2026-09-04T10:00:00.000Z',
+          messageId: '<m2@ext.com>',
+          subject: 'Re: Solicitud de actividad',
+        }),
+      ],
+      senders,
+    })
+    expect(out.threads[0].sender).toEqual({ name: '', email: 'bob@ext.com' })
+  })
+
+  test('is null without a match and without a senders map', () => {
+    expect(build({ inbound: [rec({ messageId: '<x>' })], senders }).threads[0].sender).toBeNull()
+    expect(build({ inbound: [rec()] }).threads[0].sender).toBeNull()
+  })
+
+  test('passes senderStatus through', () => {
+    const status = { ok: false, reason: 'not_configured' }
+    expect(build({ senderStatus: status }).senderStatus).toEqual(status)
+    expect(build({}).senderStatus).toBeNull()
+  })
+})
