@@ -45,28 +45,37 @@ export function EmailsCard() {
         )}
 
         {summary && (
-          <dl className="grid grid-cols-3 gap-3">
-            <div>
-              <dt className="text-xs text-gray-500 dark:text-gray-400">
-                {`Sin responder +${thresholdDays} días`}
-              </dt>
-              <dd className="text-2xl font-bold text-red-600 dark:text-red-400">
-                {summary.overdue}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-xs text-gray-500 dark:text-gray-400">Pendientes</dt>
-              <dd className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                {summary.pending}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-xs text-gray-500 dark:text-gray-400">Respondidos</dt>
-              <dd className="text-2xl font-bold text-green-600 dark:text-green-400">
-                {summary.answered}
-              </dd>
-            </div>
-          </dl>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              {
+                status: 'overdue',
+                label: `Sin responder +${thresholdDays} días`,
+                value: summary.overdue,
+                color: 'text-red-600 dark:text-red-400',
+              },
+              {
+                status: 'pending',
+                label: 'Pendientes',
+                value: summary.pending,
+                color: 'text-yellow-600 dark:text-yellow-400',
+              },
+              {
+                status: 'answered',
+                label: 'Respondidos',
+                value: summary.answered,
+                color: 'text-green-600 dark:text-green-400',
+              },
+            ].map((tile) => (
+              <Link
+                key={tile.status}
+                href={`/admin/emails?status=${tile.status}`}
+                className="block rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/50"
+              >
+                <span className="block text-xs text-gray-500 dark:text-gray-400">{tile.label}</span>
+                <span className={`block text-2xl font-bold ${tile.color}`}>{tile.value}</span>
+              </Link>
+            ))}
+          </div>
         )}
       </div>
     </div>
