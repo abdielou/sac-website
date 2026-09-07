@@ -11,6 +11,7 @@ const navItems = [
   { href: '/admin/articles', label: 'Articulos', feature: 'articles', roles: ['admin'] },
   { href: '/admin/guides', label: 'Guias', feature: 'guides', roles: ['admin'] },
   { href: '/admin/media', label: 'Media', feature: 'media', roles: ['admin'] },
+  { href: '/admin/emails', label: 'Correos', feature: 'emails', roles: ['admin'] },
   // AI section is dev-only for now — hidden in production.
   ...(process.env.NODE_ENV !== 'production'
     ? [{ href: '/admin/ai', label: 'AI', feature: 'ai', roles: ['admin'] }]
