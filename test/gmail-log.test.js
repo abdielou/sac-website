@@ -15,7 +15,12 @@ jest.mock('../lib/gmail-senders', () => ({
 import { JWT } from 'google-auth-library'
 import { fetchSenders, createGmailAuth } from '../lib/gmail-senders'
 import { invalidateCache, CACHE_KEYS } from '../lib/cache'
-import { fetchGmailLogRecords, getEmailAccountability, GmailLogConfigError } from '../lib/gmail-log'
+import {
+  fetchGmailLogRecords,
+  getEmailAccountability,
+  splitWindows,
+  GmailLogConfigError,
+} from '../lib/gmail-log'
 
 const ENV = { ...process.env }
 
@@ -60,6 +65,30 @@ beforeEach(() => {
 
 afterAll(() => {
   process.env = ENV
+})
+
+describe('splitWindows', () => {
+  test('returns one window for a range inside the limit', () => {
+    expect(splitWindows('2026-08-08T00:00:00.000Z', '2026-09-07T00:00:00.000Z')).toEqual([
+      { startTime: '2026-08-08T00:00:00.000Z', endTime: '2026-09-07T00:00:00.000Z' },
+    ])
+  })
+
+  test('splits a long range into contiguous 30-day windows ending at endTime', () => {
+    const windows = splitWindows('2026-03-11T00:00:00.000Z', '2026-09-07T12:00:00.000Z')
+    expect(windows).toHaveLength(7)
+    expect(windows[0].startTime).toBe('2026-03-11T00:00:00.000Z')
+    expect(windows[6].endTime).toBe('2026-09-07T12:00:00.000Z')
+    for (let i = 1; i < windows.length; i++) {
+      expect(windows[i].startTime).toBe(windows[i - 1].endTime)
+      const days = (new Date(windows[i].endTime) - new Date(windows[i].startTime)) / 86400000
+      expect(days).toBeLessThanOrEqual(30)
+    }
+  })
+
+  test('returns no windows for an empty range', () => {
+    expect(splitWindows('2026-09-07T00:00:00.000Z', '2026-09-07T00:00:00.000Z')).toEqual([])
+  })
 })
 
 describe('fetchGmailLogRecords', () => {
@@ -147,18 +176,27 @@ describe('getEmailAccountability', () => {
     mockRequest.mockResolvedValue({ data: { items: [activity()] } })
     const { data, fromCache } = await getEmailAccountability(true)
     expect(fromCache).toBe(false)
-    expect(mockRequest).toHaveBeenCalledTimes(3)
+    // 180 days = 6 windows of 30 days, per query
+    expect(mockRequest).toHaveBeenCalledTimes(18)
     const filters = mockRequest.mock.calls.map((c) => new URL(c[0].url).searchParams.get('filters'))
     expect(filters).toEqual([
-      'event_info.mail_event_type==2',
-      'event_info.mail_event_type==9',
-      'event_info.mail_event_type==1',
+      ...Array(6).fill('event_info.mail_event_type==2'),
+      ...Array(6).fill('event_info.mail_event_type==9'),
+      ...Array(6).fill('event_info.mail_event_type==1'),
     ])
+    const spans = mockRequest.mock.calls.slice(0, 6).map((c) => {
+      const u = new URL(c[0].url)
+      return (
+        (new Date(u.searchParams.get('endTime')) - new Date(u.searchParams.get('startTime'))) /
+        86400000
+      )
+    })
+    expect(spans).toEqual([30, 30, 30, 30, 30, 30])
     const inboundUrl = new URL(mockRequest.mock.calls[0][0].url)
     expect(inboundUrl.pathname).toContain('/users/info%40example.org/')
     expect(data.threads).toHaveLength(1)
     expect(data.threads[0].subject).toBe('Hola')
-    expect(data.windowDays).toBe(30)
+    expect(data.windowDays).toBe(180)
   })
 
   test('serves the second call from cache', async () => {
@@ -166,7 +204,7 @@ describe('getEmailAccountability', () => {
     await getEmailAccountability(true)
     const second = await getEmailAccountability()
     expect(second.fromCache).toBe(true)
-    expect(mockRequest).toHaveBeenCalledTimes(3)
+    expect(mockRequest).toHaveBeenCalledTimes(18)
   })
 
   test('propagates API errors', async () => {
