@@ -252,3 +252,22 @@ describe('EmailsPage held count', () => {
     expect(renderToString(React.createElement(EmailsPage))).not.toContain('retenidos')
   })
 })
+
+describe('EmailsPage days color coding', () => {
+  test('colors the days cell by how long the thread has waited', () => {
+    useEmailAccountability.mockReturnValue(
+      loaded([
+        thread({ id: 'd2', subject: 'Dos', daysWaiting: 2, status: 'pending' }),
+        thread({ id: 'd5', subject: 'Cinco', daysWaiting: 5, status: 'pending' }),
+        thread({ id: 'd9', subject: 'Nueve', daysWaiting: 9 }),
+        thread({ id: 'd20', subject: 'Veinte', daysWaiting: 20 }),
+      ])
+    )
+    const html = renderToString(React.createElement(EmailsPage))
+    const cell = (days) => html.match(new RegExp(`<td[^>]*data-days="${days}"[^>]*>`))?.[0] ?? ''
+    expect(cell(2)).toContain('bg-green-100')
+    expect(cell(5)).toContain('bg-yellow-100')
+    expect(cell(9)).toContain('bg-orange-100')
+    expect(cell(20)).toContain('bg-red-100')
+  })
+})

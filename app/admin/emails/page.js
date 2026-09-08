@@ -48,6 +48,21 @@ function StatusBadge({ status }) {
   )
 }
 
+/**
+ * Background for the days cell, relative to the overdue threshold:
+ * under half the threshold green, up to the threshold yellow, up to twice
+ * the threshold orange, beyond that red.
+ */
+function daysClass(days, thresholdDays) {
+  if (days < thresholdDays / 2)
+    return 'bg-green-100 text-green-900 dark:bg-green-900/40 dark:text-green-200'
+  if (days < thresholdDays)
+    return 'bg-yellow-100 text-yellow-900 dark:bg-yellow-900/40 dark:text-yellow-200'
+  if (days < thresholdDays * 2)
+    return 'bg-orange-100 text-orange-900 dark:bg-orange-900/40 dark:text-orange-200'
+  return 'bg-red-100 text-red-900 dark:bg-red-900/40 dark:text-red-200'
+}
+
 function lastReply(thread) {
   return thread.replies.length ? thread.replies[thread.replies.length - 1] : null
 }
@@ -186,7 +201,12 @@ function EmailsContent() {
                     <SenderCell sender={t.sender} />
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Recibido {formatDate(t.lastInboundAt)} · {t.daysWaiting} días
+                    Recibido {formatDate(t.lastInboundAt)} ·{' '}
+                    <span
+                      className={`inline-block px-2 rounded ${daysClass(t.daysWaiting, result?.thresholdDays ?? 7)}`}
+                    >
+                      {t.daysWaiting} días
+                    </span>
                   </p>
                   {reply && (
                     <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -244,7 +264,10 @@ function EmailsContent() {
                         <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                           {formatDate(t.lastInboundAt)}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                        <td
+                          data-days={t.daysWaiting}
+                          className={`px-6 py-4 text-sm font-medium text-center ${daysClass(t.daysWaiting, result?.thresholdDays ?? 7)}`}
+                        >
                           {t.daysWaiting}
                         </td>
                         <td className="px-6 py-4">
