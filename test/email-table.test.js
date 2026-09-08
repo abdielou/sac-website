@@ -1,7 +1,7 @@
 // test/email-table.test.js
 // Client-side sort and filter helpers for the emails page
 
-import { filterThreads, sortThreads, STATUS_ORDER } from '../lib/email-table'
+import { filterThreads, sortThreads, gmailMessageUrl, STATUS_ORDER } from '../lib/email-table'
 
 const t = (over) => ({
   id: over.subject.toLowerCase(),
@@ -114,5 +114,21 @@ describe('sortThreads', () => {
 
   test('returns the input order for an unknown key', () => {
     expect(sortThreads(threads, 'nope', 'asc').map((x) => x.subject)).toEqual(['B', 'a', 'C'])
+  })
+})
+
+describe('gmailMessageUrl', () => {
+  test('builds a Gmail search by Message-ID for the viewer account', () => {
+    expect(gmailMessageUrl('<abc+1@x.com>', 'viewer@example.org')).toBe(
+      'https://mail.google.com/mail/?authuser=viewer%40example.org#search/rfc822msgid:abc%2B1%40x.com'
+    )
+  })
+
+  test('omits authuser without a viewer and returns null without an id', () => {
+    expect(gmailMessageUrl('<abc@x.com>')).toBe(
+      'https://mail.google.com/mail/#search/rfc822msgid:abc%40x.com'
+    )
+    expect(gmailMessageUrl(null, 'v@x.com')).toBeNull()
+    expect(gmailMessageUrl('', 'v@x.com')).toBeNull()
   })
 })

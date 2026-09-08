@@ -74,7 +74,7 @@ const three = [
 beforeEach(() => {
   useSession.mockReturnValue({
     status: 'authenticated',
-    data: { user: { accessibleActions: ['read_emails'] } },
+    data: { user: { accessibleActions: ['read_emails'], email: 'viewer@example.org' } },
   })
 })
 
@@ -106,6 +106,22 @@ describe('EmailsPage', () => {
     const order = ['Veinte', 'Nueve', 'Dos'].map((s) => table.indexOf(s))
     expect(order).toEqual([...order].sort((a, b) => a - b))
     expect(table).toContain('▼')
+  })
+
+  test('links each subject to the message in the viewer Gmail', () => {
+    useEmailAccountability.mockReturnValue(loaded([thread({ messageId: '<m1@ext.com>' })]))
+    const html = renderToString(React.createElement(EmailsPage))
+    expect(html).toContain(
+      'href="https://mail.google.com/mail/?authuser=viewer%40example.org#search/rfc822msgid:m1%40ext.com"'
+    )
+    expect(html).toContain('target="_blank"')
+  })
+
+  test('renders a plain subject when the thread has no message id', () => {
+    useEmailAccountability.mockReturnValue(loaded([thread({ messageId: null })]))
+    const html = renderToString(React.createElement(EmailsPage))
+    expect(html).toContain('Solicitud de actividad')
+    expect(html).not.toContain('mail.google.com')
   })
 
   test('has no status column and no status filter', () => {

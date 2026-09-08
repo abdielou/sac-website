@@ -387,3 +387,25 @@ describe('buildEmailThreads held messages', () => {
     expect(build({ inbound: [rec()] }).heldCount).toBe(0)
   })
 })
+
+describe('buildEmailThreads messageId', () => {
+  test('exposes the newest inbound message id for deep links', () => {
+    const out = build({
+      inbound: [
+        rec(),
+        rec({
+          time: '2026-09-04T10:00:00.000Z',
+          messageId: '<m2@ext.com>',
+          subject: 'Re: Solicitud de actividad',
+        }),
+      ],
+    })
+    expect(out.threads[0].messageId).toBe('<m2@ext.com>')
+  })
+
+  test('is null when no inbound record had an id', () => {
+    expect(
+      build({ inbound: [rec({ messageId: '' })], noFanOut: true }).threads[0].messageId
+    ).toBeNull()
+  })
+})

@@ -2,12 +2,13 @@
 'use client'
 
 import { Suspense, useState } from 'react'
+import { useSession } from 'next-auth/react'
 import PermissionGate from '@/components/admin/PermissionGate'
 import { useEmailAccountability } from '@/lib/hooks/useAdminData'
 import { SkeletonTable } from '@/components/admin/SkeletonTable'
 import { ErrorState } from '@/components/admin/ErrorState'
 import { formatDate } from '@/lib/formatters'
-import { sortThreads } from '@/lib/email-table'
+import { sortThreads, gmailMessageUrl } from '@/lib/email-table'
 
 const COLUMNS = [
   { key: 'subject', label: 'Asunto' },
@@ -35,6 +36,30 @@ function daysClass(days, thresholdDays) {
   return 'bg-red-100 text-red-900 dark:bg-red-900/40 dark:text-red-200'
 }
 
+function SubjectCell({ thread, viewerEmail }) {
+  const url = gmailMessageUrl(thread.messageId, viewerEmail)
+  const label = (
+    <>
+      {thread.subject}
+      {thread.inboundCount > 1 && (
+        <span className="ml-2 text-xs text-gray-400">×{thread.inboundCount}</span>
+      )}
+    </>
+  )
+  if (!url) return label
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      title="Abrir en Gmail"
+      className="hover:underline text-blue-700 dark:text-blue-300"
+    >
+      {label}
+    </a>
+  )
+}
+
 function SenderCell({ sender }) {
   if (!sender || !sender.email) return <span>—</span>
   return <span title={sender.email}>{sender.name || sender.email}</span>
@@ -46,6 +71,8 @@ function SenderCell({ sender }) {
  */
 function EmailsContent() {
   const { data, isPending, isError, error, refresh, isFetching } = useEmailAccountability()
+  const { data: session } = useSession()
+  const viewerEmail = session?.user?.email
   // Oldest unanswered email first by default
   const [sort, setSort] = useState({ key: 'daysWaiting', direction: 'desc' })
 
@@ -111,7 +138,9 @@ function EmailsContent() {
           <div className="md:hidden space-y-4">
             {threads.map((t) => (
               <div key={t.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-2">
-                <p className="font-medium text-gray-900 dark:text-white">{t.subject}</p>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  <SubjectCell thread={t} viewerEmail={viewerEmail} />
+                </p>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
                   <SenderCell sender={t.sender} />
                 </p>
@@ -156,10 +185,7 @@ function EmailsContent() {
                   {threads.map((t) => (
                     <tr key={t.id}>
                       <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                        {t.subject}
-                        {t.inboundCount > 1 && (
-                          <span className="ml-2 text-xs text-gray-400">×{t.inboundCount}</span>
-                        )}
+                        <SubjectCell thread={t} viewerEmail={viewerEmail} />
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
                         <SenderCell sender={t.sender} />
