@@ -8,7 +8,7 @@ jest.mock('google-auth-library', () => ({
 }))
 
 import { JWT } from 'google-auth-library'
-import { parseFromHeader, fetchSenders, createGmailAuth } from '../lib/gmail-senders'
+import { parseFromHeader, resolveSender, fetchSenders, createGmailAuth } from '../lib/gmail-senders'
 
 const MAILBOX = 'admin@example.org'
 const START = '2026-08-08T00:00:00.000Z'
@@ -63,6 +63,29 @@ describe('parseFromHeader', () => {
   })
 })
 
+describe('resolveSender', () => {
+  test('uses X-Original-Sender and strips the "via group" suffix from a rewritten From', () => {
+    expect(
+      resolveSender({
+        From: `"'Juana Pérez' via Informacion" <info@example.org>`,
+        'X-Original-Sender': 'Juana@Escuela.pr',
+      })
+    ).toEqual({ name: 'Juana Pérez', email: 'juana@escuela.pr' })
+  })
+
+  test('keeps a plain From when X-Original-Sender matches it', () => {
+    expect(resolveSender({ From: 'Ana <ana@x.com>', 'X-Original-Sender': 'ana@x.com' })).toEqual({
+      name: 'Ana',
+      email: 'ana@x.com',
+    })
+  })
+
+  test('falls back to the From address without X-Original-Sender', () => {
+    expect(resolveSender({ From: 'ana@x.com' })).toEqual({ name: '', email: 'ana@x.com' })
+    expect(resolveSender({})).toEqual({ name: '', email: '' })
+  })
+})
+
 describe('createGmailAuth', () => {
   test('builds a JWT with the metadata scope that impersonates the mailbox', () => {
     createGmailAuth(MAILBOX)
@@ -77,19 +100,19 @@ describe('createGmailAuth', () => {
 
 describe('fetchSenders', () => {
   test('resolves the label by name, lists it, and maps Message-ID to sender', async () => {
+    const rewritten = message('m1', {
+      from: '"Ana via Informacion" <info@example.org>',
+      messageId: ' <abc@x.com> ',
+      date: '2026-09-01T10:00:00Z',
+    })
+    rewritten.payload.headers.push({ name: 'X-Original-Sender', value: 'ana@x.com' })
     mockGmail({
       labels: [
         { id: 'INBOX', name: 'INBOX', type: 'system' },
         { id: 'Label_7', name: 'SAC/info', type: 'user' },
       ],
       pages: { p1: { messages: [{ id: 'm1' }] } },
-      messages: {
-        m1: message('m1', {
-          from: '"Ana" <ana@x.com>',
-          messageId: ' <abc@x.com> ',
-          date: '2026-09-01T10:00:00Z',
-        }),
-      },
+      messages: { m1: rewritten },
     })
     const senders = await fetchSenders({
       auth: { request: mockRequest },
@@ -111,7 +134,12 @@ describe('fetchSenders', () => {
     expect(urls[1].searchParams.has('q')).toBe(false)
     expect(urls[2].pathname).toBe('/gmail/v1/users/admin%40example.org/messages/m1')
     expect(urls[2].searchParams.get('format')).toBe('metadata')
-    expect(urls[2].searchParams.getAll('metadataHeaders')).toEqual(['From', 'Message-ID', 'Date'])
+    expect(urls[2].searchParams.getAll('metadataHeaders')).toEqual([
+      'From',
+      'Message-ID',
+      'Date',
+      'X-Original-Sender',
+    ])
   })
 
   test('throws when the label does not exist', async () => {

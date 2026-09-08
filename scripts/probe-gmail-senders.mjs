@@ -39,7 +39,12 @@ async function main() {
   const label = labels.find((l) => l.name.toLowerCase() === labelName.toLowerCase())
   console.log(`labels visible: ${labels.length}`)
   if (!label) {
-    console.log(`RESULT: label not found. User labels: ${labels.filter((l) => l.type === 'user').map((l) => l.name).join(', ')}`)
+    console.log(
+      `RESULT: label not found. User labels: ${labels
+        .filter((l) => l.type === 'user')
+        .map((l) => l.name)
+        .join(', ')}`
+    )
     return
   }
   console.log(`label id: ${label.id}`)
@@ -48,17 +53,21 @@ async function main() {
     url: `${API}/${user}/messages?labelIds=${encodeURIComponent(label.id)}&maxResults=20`,
   })
   const ids = (list.data.messages ?? []).map((m) => m.id)
-  console.log(`messages in label (first page): ${ids.length}, estimate ${list.data.resultSizeEstimate}`)
+  console.log(
+    `messages in label (first page): ${ids.length}, estimate ${list.data.resultSizeEstimate}`
+  )
 
-  for (const id of ids.slice(0, 5)) {
+  for (const id of ids.slice(0, 8)) {
     const msg = await auth.request({
-      url: `${API}/${user}/messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=Message-ID&metadataHeaders=Date`,
+      url: `${API}/${user}/messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=Message-ID&metadataHeaders=Date&metadataHeaders=X-Original-Sender&metadataHeaders=Reply-To`,
     })
     const h = Object.fromEntries((msg.data.payload?.headers ?? []).map((x) => [x.name, x.value]))
     console.log(
       JSON.stringify({
         date: new Date(Number(msg.data.internalDate)).toISOString(),
         from: (h.From ?? '').slice(0, 50),
+        originalSender: (h['X-Original-Sender'] ?? '').slice(0, 50),
+        replyTo: (h['Reply-To'] ?? '').slice(0, 50),
         messageId: (h['Message-ID'] ?? '').slice(0, 40),
         hasBody: Boolean(msg.data.payload?.body?.data || msg.data.payload?.parts),
       })
