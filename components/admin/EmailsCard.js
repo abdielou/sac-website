@@ -8,8 +8,8 @@ import { useEmailAccountability } from '@/lib/hooks/useAdminData'
 /**
  * EmailsCard - Dashboard summary of group emails and their reply status.
  *
- * Shows three counts from /api/admin/emails: overdue (no reply after the
- * threshold), pending (no reply yet, inside the threshold), answered.
+ * Shows two counts from /api/admin/emails: overdue (no reply after the
+ * threshold) and pending (no reply yet, inside the threshold).
  * Hidden for users without read_emails.
  */
 export function EmailsCard() {
@@ -45,7 +45,7 @@ export function EmailsCard() {
         )}
 
         {summary && (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             {[
               {
                 status: 'overdue',
@@ -59,16 +59,10 @@ export function EmailsCard() {
                 value: summary.pending,
                 color: 'text-yellow-600 dark:text-yellow-400',
               },
-              {
-                status: 'answered',
-                label: 'Respondidos',
-                value: summary.answered,
-                color: 'text-green-600 dark:text-green-400',
-              },
             ].map((tile) => (
               <Link
                 key={tile.status}
-                href={`/admin/emails?status=${tile.status}`}
+                href="/admin/emails"
                 className="block rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/50"
               >
                 <span className="block text-xs text-gray-500 dark:text-gray-400">{tile.label}</span>

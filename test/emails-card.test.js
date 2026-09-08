@@ -37,7 +37,7 @@ describe('EmailsCard', () => {
     expect(useEmailAccountability).toHaveBeenCalledWith({ enabled: false })
   })
 
-  test('renders the three counts and a link to the page', () => {
+  test('renders the two unanswered counts and links to the page', () => {
     withPerms(['read_emails'])
     useEmailAccountability.mockReturnValue({
       data: { data: { summary: { overdue: 3, pending: 2, answered: 5 } } },
@@ -49,11 +49,8 @@ describe('EmailsCard', () => {
     // Tie each count to its label so a swapped slot fails the test
     expect(html).toMatch(/Sin responder \+7 días<\/span><span[^>]*>3</)
     expect(html).toMatch(/Pendientes<\/span><span[^>]*>2</)
-    expect(html).toMatch(/Respondidos<\/span><span[^>]*>5</)
+    expect(html).not.toContain('Respondidos')
     expect(html).toContain('href="/admin/emails"')
-    expect(html).toContain('href="/admin/emails?status=overdue"')
-    expect(html).toContain('href="/admin/emails?status=pending"')
-    expect(html).toContain('href="/admin/emails?status=answered"')
   })
 
   test('renders a loading hint while pending', () => {
