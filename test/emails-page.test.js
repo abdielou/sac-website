@@ -238,3 +238,17 @@ describe('EmailsPage sender, filter, and sort', () => {
     )
   })
 })
+
+describe('EmailsPage held count', () => {
+  test('mentions messages held by the group in the subtitle', () => {
+    useEmailAccountability.mockReturnValue(loaded(three, { heldCount: 23 }))
+    expect(renderToString(React.createElement(EmailsPage))).toContain(
+      '23 retenidos por el grupo, no mostrados'
+    )
+  })
+
+  test('says nothing about held messages when there are none', () => {
+    useEmailAccountability.mockReturnValue(loaded(three, { heldCount: 0 }))
+    expect(renderToString(React.createElement(EmailsPage))).not.toContain('retenidos')
+  })
+})

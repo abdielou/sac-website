@@ -142,8 +142,9 @@ describe('getEmailAccountability', () => {
   })
 
   test('runs the three queries and returns threads', async () => {
-    mockRequest.mockResolvedValue({ data: { items: [] } })
-    mockRequest.mockResolvedValueOnce({ data: { items: [activity()] } })
+    // The same record answers all three queries: it is the inbound message,
+    // a reply event by the group (ignored), and the group's fan-out event.
+    mockRequest.mockResolvedValue({ data: { items: [activity()] } })
     const { data, fromCache } = await getEmailAccountability(true)
     expect(fromCache).toBe(false)
     expect(mockRequest).toHaveBeenCalledTimes(3)
@@ -184,8 +185,9 @@ describe('getEmailAccountability senders', () => {
 
   test('reads senders from the admin mailbox by default and reports the count', async () => {
     process.env.GMAIL_SENDER_LABEL = 'SAC/info'
-    mockRequest.mockResolvedValue({ data: { items: [] } })
-    mockRequest.mockResolvedValueOnce({ data: { items: [activity()] } })
+    // The same record answers all three queries: it is the inbound message,
+    // a reply event by the group (ignored), and the group's fan-out event.
+    mockRequest.mockResolvedValue({ data: { items: [activity()] } })
     fetchSenders.mockResolvedValue(
       new Map([['<m1@ext.com>', { name: 'Ana', email: 'ana@ext.com', date: 'x' }]])
     )
@@ -213,8 +215,9 @@ describe('getEmailAccountability senders', () => {
   test('keeps the threads when the sender lookup fails', async () => {
     const spy = jest.spyOn(console, 'error').mockImplementation(() => {})
     process.env.GMAIL_SENDER_LABEL = 'SAC/info'
-    mockRequest.mockResolvedValue({ data: { items: [] } })
-    mockRequest.mockResolvedValueOnce({ data: { items: [activity()] } })
+    // The same record answers all three queries: it is the inbound message,
+    // a reply event by the group (ignored), and the group's fan-out event.
+    mockRequest.mockResolvedValue({ data: { items: [activity()] } })
     fetchSenders.mockRejectedValue(new Error('unauthorized_client'))
     const { data } = await getEmailAccountability(true)
     expect(data.threads).toHaveLength(1)

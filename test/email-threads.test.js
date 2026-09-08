@@ -15,8 +15,28 @@ const rec = (over) => ({
   ...over,
 })
 
-const build = (parts) =>
-  buildEmailThreads({ inbound: [], replied: [], sent: [], groupAddress: GROUP, now: NOW, ...parts })
+// The group logs a "sent" event for every message it fans out. The helper
+// adds one per inbound record so the default fixtures count as distributed.
+const fanOut = (inbound) =>
+  inbound
+    .filter((r) => r.messageId)
+    .map((r) => ({
+      time: r.time,
+      actor: GROUP,
+      messageId: r.messageId,
+      subject: r.subject,
+      destinations: 'smtp-outbound:x:board@example.org',
+    }))
+
+const build = ({ inbound = [], sent = [], noFanOut = false, ...parts } = {}) =>
+  buildEmailThreads({
+    inbound,
+    replied: [],
+    sent: noFanOut ? sent : [...sent, ...fanOut(inbound)],
+    groupAddress: GROUP,
+    now: NOW,
+    ...parts,
+  })
 
 describe('normalizeSubject', () => {
   test('strips repeated reply and forward prefixes and lower-cases', () => {
@@ -333,5 +353,37 @@ describe('buildEmailThreads senders', () => {
     const status = { ok: false, reason: 'not_configured' }
     expect(build({ senderStatus: status }).senderStatus).toEqual(status)
     expect(build({}).senderStatus).toBeNull()
+  })
+})
+
+describe('buildEmailThreads held messages', () => {
+  test('drops inbound messages the group never fanned out and counts them', () => {
+    const out = build({
+      inbound: [rec(), rec({ messageId: '<spam@blast.com>', subject: 'Casino leads' })],
+      sent: fanOut([rec()]),
+      noFanOut: true,
+    })
+    expect(out.threads.map((t) => t.subject)).toEqual(['Solicitud de actividad'])
+    expect(out.heldCount).toBe(1)
+  })
+
+  test('keeps a record without a message id', () => {
+    const out = build({ inbound: [rec({ messageId: '' })], noFanOut: true })
+    expect(out.threads).toHaveLength(1)
+    expect(out.heldCount).toBe(0)
+  })
+
+  test('keeps everything when dropHeld is false', () => {
+    const out = build({
+      inbound: [rec({ messageId: '<spam@blast.com>' })],
+      noFanOut: true,
+      dropHeld: false,
+    })
+    expect(out.threads).toHaveLength(1)
+    expect(out.heldCount).toBe(0)
+  })
+
+  test('reports zero held when every message was distributed', () => {
+    expect(build({ inbound: [rec()] }).heldCount).toBe(0)
   })
 })

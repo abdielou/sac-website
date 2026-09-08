@@ -113,7 +113,7 @@ function EmailsContent() {
           {result && (
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {/* One string so SSR keeps the sentence in a single text node */}
-              {`Últimos ${result.windowDays} días. Sin responder después de ${result.thresholdDays} días. Actualizado ${formatDate(result.generatedAt)}${data?.meta?.fromCache ? ' (caché)' : ''}`}
+              {`Últimos ${result.windowDays} días. Sin responder después de ${result.thresholdDays} días. Actualizado ${formatDate(result.generatedAt)}${data?.meta?.fromCache ? ' (caché)' : ''}${result.heldCount ? `. ${result.heldCount} retenidos por el grupo, no mostrados` : ''}`}
             </p>
           )}
           {senderNotice && (
