@@ -3,12 +3,14 @@ import { auth } from '../../../../auth'
 import { NextResponse } from 'next/server'
 import { invalidateCache } from '../../../../lib/cache'
 import { canAccessDashboard } from '../../../../lib/permissions'
+import { REFRESH_SCOPES, normalizeRefreshScope } from '../../../../lib/admin/refresh-scope'
 
 /**
  * POST /api/admin/refresh
  *
- * Clears server-side cache for members and payments.
- * Client should call this before invalidating TanStack Query cache.
+ * Body: { scope?: 'members' | 'payments' | 'emails' | 'all' }
+ * Clears the server-side cache for that section only. No body or an unknown
+ * scope flushes everything. The client invalidates its own query cache next.
  * Requires admin dashboard access.
  */
 export const POST = auth(async function POST(req) {
@@ -28,12 +30,25 @@ export const POST = auth(async function POST(req) {
     )
   }
 
+  let body = null
   try {
-    // Flush all cached data
-    invalidateCache()
+    body = await req.json()
+  } catch {
+    body = null
+  }
+  const scope = normalizeRefreshScope(body?.scope)
+
+  try {
+    const { cacheKeys } = REFRESH_SCOPES[scope]
+    if (cacheKeys) {
+      for (const key of cacheKeys) invalidateCache(key)
+    } else {
+      invalidateCache()
+    }
 
     return NextResponse.json({
       success: true,
+      scope,
       message: 'Cache invalidado',
       timestamp: new Date().toISOString(),
     })

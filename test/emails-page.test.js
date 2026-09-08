@@ -124,6 +124,12 @@ describe('EmailsPage', () => {
     expect(html).not.toContain('mail.google.com')
   })
 
+  test('has no refresh button of its own; the header button covers it', () => {
+    useEmailAccountability.mockReturnValue(loaded(three))
+    const html = renderToString(React.createElement(EmailsPage))
+    expect(html).not.toContain('Actualizar')
+  })
+
   test('has no status column and no status filter', () => {
     useEmailAccountability.mockReturnValue(loaded(three))
     const html = renderToString(React.createElement(EmailsPage))

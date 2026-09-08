@@ -70,7 +70,7 @@ function SenderCell({ sender }) {
  * Answered threads never appear here. Sort lives in local state.
  */
 function EmailsContent() {
-  const { data, isPending, isError, error, refresh, isFetching } = useEmailAccountability()
+  const { data, isPending, isError, error, refresh } = useEmailAccountability()
   const { data: session } = useSession()
   const viewerEmail = session?.user?.email
   // Oldest unanswered email first by default
@@ -97,7 +97,7 @@ function EmailsContent() {
 
   return (
     <div>
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+      <div className="mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
             Correos sin responder
@@ -112,14 +112,6 @@ function EmailsContent() {
             <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-400">{senderNotice}</p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={refresh}
-          disabled={isFetching}
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 transition-colors"
-        >
-          {isFetching ? 'Actualizando...' : 'Actualizar'}
-        </button>
       </div>
 
       {isPending && <SkeletonTable rows={6} columns={4} />}
