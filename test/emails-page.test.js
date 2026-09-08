@@ -93,6 +93,21 @@ describe('EmailsPage', () => {
     expect(html).toContain('ana@ext.com')
   })
 
+  test('lists the oldest unanswered email first by default', () => {
+    useEmailAccountability.mockReturnValue(
+      loaded([
+        thread({ id: 'd2', subject: 'Dos', daysWaiting: 2, status: 'pending' }),
+        thread({ id: 'd20', subject: 'Veinte', daysWaiting: 20 }),
+        thread({ id: 'd9', subject: 'Nueve', daysWaiting: 9 }),
+      ])
+    )
+    const html = renderToString(React.createElement(EmailsPage))
+    const table = html.slice(html.indexOf('<table'))
+    const order = ['Veinte', 'Nueve', 'Dos'].map((s) => table.indexOf(s))
+    expect(order).toEqual([...order].sort((a, b) => a - b))
+    expect(table).toContain('▼')
+  })
+
   test('has no status column and no status filter', () => {
     useEmailAccountability.mockReturnValue(loaded(three))
     const html = renderToString(React.createElement(EmailsPage))

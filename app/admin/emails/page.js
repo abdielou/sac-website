@@ -46,12 +46,13 @@ function SenderCell({ sender }) {
  */
 function EmailsContent() {
   const { data, isPending, isError, error, refresh, isFetching } = useEmailAccountability()
-  const [sort, setSort] = useState({ key: null, direction: 'asc' })
+  // Oldest unanswered email first by default
+  const [sort, setSort] = useState({ key: 'daysWaiting', direction: 'desc' })
 
   const result = data?.data
   const thresholdDays = result?.thresholdDays ?? 7
   const unanswered = (result?.threads ?? []).filter((t) => t.status !== 'answered')
-  const threads = sort.key ? sortThreads(unanswered, sort.key, sort.direction) : unanswered
+  const threads = sortThreads(unanswered, sort.key, sort.direction)
 
   const toggleSort = (key) => {
     setSort((prev) =>
