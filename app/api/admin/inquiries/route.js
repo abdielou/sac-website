@@ -1,14 +1,14 @@
-// app/api/admin/contacts/route.js
+// app/api/admin/inquiries/route.js
 import { auth } from '../../../../auth'
 import { NextResponse } from 'next/server'
 import { checkReadAccess } from '../../../../lib/api-permissions'
 import { getEmailAccountability, GmailLogConfigError } from '@/lib/gmail-log'
 
 /**
- * GET /api/admin/contacts
+ * GET /api/admin/inquiries
  *
  * Returns { data, meta: { fromCache } } where data is the accountability
- * result built from Gmail log events. Requires read_contacts.
+ * result built from Gmail log events. Requires read_inquiries.
  * Query: refresh=true bypasses the cache.
  */
 export const GET = auth(async function GET(req) {
@@ -19,7 +19,7 @@ export const GET = auth(async function GET(req) {
     )
   }
 
-  const readError = checkReadAccess(req, 'contacts')
+  const readError = checkReadAccess(req, 'inquiries')
   if (readError) return readError
 
   const { searchParams } = new URL(req.url)

@@ -8,7 +8,7 @@ import { REFRESH_SCOPES, normalizeRefreshScope } from '../../../../lib/admin/ref
 /**
  * POST /api/admin/refresh
  *
- * Body: { scope?: 'members' | 'payments' | 'contacts' | 'all' }
+ * Body: { scope?: 'members' | 'payments' | 'inquiries' | 'all' }
  * Clears the server-side cache for that section only. No body or an unknown
  * scope flushes everything. The client invalidates its own query cache next.
  * Requires admin dashboard access.

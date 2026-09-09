@@ -1,4 +1,4 @@
-// GET /api/admin/contacts: auth, permission, cache flag, config and upstream errors
+// GET /api/admin/inquiries: auth, permission, cache flag, config and upstream errors
 
 jest.mock('../auth', () => ({ auth: (handler) => handler }))
 
@@ -24,12 +24,12 @@ jest.mock('../lib/gmail-log', () => {
 
 import { hasPermission } from '../lib/permissions'
 import { getEmailAccountability, GmailLogConfigError } from '../lib/gmail-log'
-import { GET } from '../app/api/admin/contacts/route'
+import { GET } from '../app/api/admin/inquiries/route'
 
 const ADMIN = { email: 'admin@example.com' }
 const reqWith = (user, search = '') => ({
   auth: user ? { user } : null,
-  url: `http://localhost/api/admin/contacts${search}`,
+  url: `http://localhost/api/admin/inquiries${search}`,
 })
 
 const payload = {
@@ -45,18 +45,18 @@ beforeEach(() => {
   hasPermission.mockReturnValue(true)
 })
 
-describe('GET /api/admin/contacts', () => {
+describe('GET /api/admin/inquiries', () => {
   test('returns 401 without a session', async () => {
     const res = await GET(reqWith(null))
     expect(res.status).toBe(401)
     expect(getEmailAccountability).not.toHaveBeenCalled()
   })
 
-  test('returns 403 without read_contacts', async () => {
+  test('returns 403 without read_inquiries', async () => {
     hasPermission.mockReturnValue(false)
     const res = await GET(reqWith(ADMIN))
     expect(res.status).toBe(403)
-    expect(hasPermission).toHaveBeenCalledWith(ADMIN.email, 'read_contacts')
+    expect(hasPermission).toHaveBeenCalledWith(ADMIN.email, 'read_inquiries')
   })
 
   test('returns the data and the cache flag', async () => {

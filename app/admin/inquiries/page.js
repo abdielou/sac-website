@@ -1,10 +1,10 @@
-// app/admin/contacts/page.js
+// app/admin/inquiries/page.js
 'use client'
 
 import { Suspense, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import PermissionGate from '@/components/admin/PermissionGate'
-import { useContacts } from '@/lib/hooks/useAdminData'
+import { useInquiries } from '@/lib/hooks/useAdminData'
 import { SkeletonTable } from '@/components/admin/SkeletonTable'
 import { ErrorState } from '@/components/admin/ErrorState'
 import { formatDate } from '@/lib/formatters'
@@ -70,7 +70,7 @@ function SenderCell({ sender }) {
  * Answered threads never appear here. Sort lives in local state.
  */
 function EmailsContent() {
-  const { data, isPending, isError, error, refresh } = useContacts()
+  const { data, isPending, isError, error, refresh } = useInquiries()
   const { data: session } = useSession()
   const viewerEmail = session?.user?.email
   // Most recent unanswered email first by default
@@ -100,7 +100,7 @@ function EmailsContent() {
       <div className="mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Contactos sin responder
+            Consultas sin responder
           </h2>
           {result && (
             <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -203,9 +203,9 @@ function EmailsContent() {
   )
 }
 
-export default function ContactsPage() {
+export default function InquiriesPage() {
   return (
-    <PermissionGate permission="read_contacts">
+    <PermissionGate permission="read_inquiries">
       <Suspense fallback={<SkeletonTable rows={6} columns={4} />}>
         <EmailsContent />
       </Suspense>

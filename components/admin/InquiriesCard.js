@@ -1,22 +1,22 @@
-// components/admin/ContactsCard.js
+// components/admin/InquiriesCard.js
 'use client'
 
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
-import { useContacts } from '@/lib/hooks/useAdminData'
+import { useInquiries } from '@/lib/hooks/useAdminData'
 
 /**
- * ContactsCard - Dashboard summary of group emails and their reply status.
+ * InquiriesCard - Dashboard summary of group emails and their reply status.
  *
- * Shows two counts from /api/admin/contacts: overdue (no reply after the
+ * Shows two counts from /api/admin/inquiries: overdue (no reply after the
  * threshold) and pending (no reply yet, inside the threshold).
- * Hidden for users without read_contacts.
+ * Hidden for users without read_inquiries.
  */
-export function ContactsCard() {
+export function InquiriesCard() {
   const { data: session } = useSession()
   const accessibleActions = session?.user?.accessibleActions || []
-  const canRead = accessibleActions.includes('read_contacts')
-  const { data, isPending, isError, error } = useContacts({ enabled: canRead })
+  const canRead = accessibleActions.includes('read_inquiries')
+  const { data, isPending, isError, error } = useInquiries({ enabled: canRead })
 
   if (!canRead) return null
 
@@ -26,9 +26,9 @@ export function ContactsCard() {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <div className="flex items-start justify-between">
-        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Contactos</p>
+        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Consultas</p>
         <Link
-          href="/admin/contacts"
+          href="/admin/inquiries"
           className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
         >
           Ver detalle
@@ -62,7 +62,7 @@ export function ContactsCard() {
             ].map((tile) => (
               <Link
                 key={tile.status}
-                href="/admin/contacts"
+                href="/admin/inquiries"
                 className="block rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/50"
               >
                 <span className="block text-xs text-gray-500 dark:text-gray-400">{tile.label}</span>
@@ -76,4 +76,4 @@ export function ContactsCard() {
   )
 }
 
-export default ContactsCard
+export default InquiriesCard

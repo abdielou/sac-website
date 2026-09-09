@@ -5,7 +5,7 @@
 import React, { act, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useContacts } from '../lib/hooks/useAdminData'
+import { useInquiries } from '../lib/hooks/useAdminData'
 
 global.React = React
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
@@ -18,7 +18,7 @@ const seen = {}
 const handles = {}
 
 function Page() {
-  const q = useContacts()
+  const q = useInquiries()
   useEffect(() => {
     seen.page = q.data
     handles.refresh = q.refresh
@@ -27,7 +27,7 @@ function Page() {
 }
 
 function Card() {
-  const q = useContacts()
+  const q = useInquiries()
   useEffect(() => {
     seen.card = q.data
   })
@@ -40,7 +40,7 @@ const flush = async () => {
   })
 }
 
-describe('useContacts', () => {
+describe('useInquiries', () => {
   let container
   let root
 
@@ -100,6 +100,6 @@ describe('useContacts', () => {
         .getQueryCache()
         .getAll()
         .map((q) => q.queryKey)
-    ).toEqual([['contacts']])
+    ).toEqual([['inquiries']])
   })
 })
