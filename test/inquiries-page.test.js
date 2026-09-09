@@ -175,11 +175,9 @@ describe('InquiriesPage', () => {
     expect(html).toContain('Todo respondido')
   })
 
-  test('mentions messages held by the group in the subtitle', () => {
+  test('does not mention messages held by the group', () => {
     useInquiries.mockReturnValue(loaded(three, { heldCount: 23 }))
-    expect(renderToString(React.createElement(InquiriesPage))).toContain(
-      '23 retenidos por el grupo, no mostrados'
-    )
+    expect(renderToString(React.createElement(InquiriesPage))).not.toContain('retenidos')
   })
 
   test('shows a notice when senders are unavailable', () => {

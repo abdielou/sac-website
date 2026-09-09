@@ -105,7 +105,7 @@ function EmailsContent() {
           {result && (
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {/* One string so SSR keeps the sentence in a single text node */}
-              {`${unanswered.length} sin responder en los últimos ${result.windowDays} días. Actualizado ${formatDate(result.generatedAt)}${data?.meta?.fromCache ? ' (caché)' : ''}${result.heldCount ? `. ${result.heldCount} retenidos por el grupo, no mostrados` : ''}`}
+              {`${unanswered.length} sin responder en los últimos ${result.windowDays} días. Actualizado ${formatDate(result.generatedAt)}${data?.meta?.fromCache ? ' (caché)' : ''}`}
             </p>
           )}
           {senderNotice && (
