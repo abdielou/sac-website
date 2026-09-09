@@ -253,6 +253,15 @@ describe('getEmailAccountability senders', () => {
     expect(createGmailAuth).toHaveBeenCalledWith('bot@example.org')
   })
 
+  test('lists only messages the mailbox holds when the label was read', async () => {
+    process.env.GMAIL_SENDER_LABEL = 'SAC/info'
+    mockRequest.mockResolvedValue({ data: { items: [activity()] } })
+    fetchSenders.mockResolvedValue(new Map())
+    const { data } = await getEmailAccountability(true)
+    expect(data.threads).toHaveLength(0)
+    expect(data.noCopyCount).toBe(1)
+  })
+
   test('keeps the threads when the sender lookup fails', async () => {
     const spy = jest.spyOn(console, 'error').mockImplementation(() => {})
     process.env.GMAIL_SENDER_LABEL = 'SAC/info'

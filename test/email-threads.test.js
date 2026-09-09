@@ -447,3 +447,23 @@ describe('buildEmailThreads spam verdicts', () => {
     expect(out.threads).toHaveLength(1)
   })
 })
+
+describe('buildEmailThreads requireCopy', () => {
+  const senders = new Map([['<m1@ext.com>', { name: 'Ana', email: 'ana@ext.com', date: 'x' }]])
+
+  test('drops a thread with no copy in the reading mailbox', () => {
+    const out = build({
+      inbound: [rec(), rec({ messageId: '<gone@ext.com>', subject: 'Borrado' })],
+      senders,
+      requireCopy: true,
+    })
+    expect(out.threads.map((t) => t.subject)).toEqual(['Solicitud de actividad'])
+    expect(out.noCopyCount).toBe(1)
+  })
+
+  test('keeps every thread when requireCopy is off', () => {
+    const out = build({ inbound: [rec({ messageId: '<gone@ext.com>' })], senders })
+    expect(out.threads).toHaveLength(1)
+    expect(out.noCopyCount).toBe(0)
+  })
+})
