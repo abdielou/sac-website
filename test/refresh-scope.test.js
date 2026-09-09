@@ -5,8 +5,8 @@ import { refreshScopeFor, normalizeRefreshScope, REFRESH_SCOPES } from '../lib/a
 
 describe('refreshScopeFor', () => {
   test.each([
-    ['/admin/emails', 'emails'],
-    ['/admin/emails/', 'emails'],
+    ['/admin/contacts', 'contacts'],
+    ['/admin/contacts/', 'contacts'],
     ['/admin/payments', 'payments'],
     ['/admin/members', 'members'],
     ['/admin/members/123', 'members'],
@@ -24,7 +24,7 @@ describe('refreshScopeFor', () => {
 
 describe('normalizeRefreshScope', () => {
   test('keeps known scopes and maps anything else to all', () => {
-    expect(normalizeRefreshScope('emails')).toBe('emails')
+    expect(normalizeRefreshScope('contacts')).toBe('contacts')
     expect(normalizeRefreshScope('payments')).toBe('payments')
     expect(normalizeRefreshScope('bogus')).toBe('all')
     expect(normalizeRefreshScope(undefined)).toBe('all')
@@ -34,11 +34,11 @@ describe('normalizeRefreshScope', () => {
 
 describe('REFRESH_SCOPES', () => {
   test('every scoped section names one cache key and one query key', () => {
-    for (const name of ['members', 'payments', 'emails']) {
+    for (const name of ['members', 'payments', 'contacts']) {
       expect(REFRESH_SCOPES[name].cacheKeys).toEqual([name])
       expect(REFRESH_SCOPES[name].queryKeys).toEqual([[name]])
     }
     expect(REFRESH_SCOPES.all.cacheKeys).toBeNull()
-    expect(REFRESH_SCOPES.all.queryKeys).toEqual([['members'], ['payments'], ['emails']])
+    expect(REFRESH_SCOPES.all.queryKeys).toEqual([['members'], ['payments'], ['contacts']])
   })
 })

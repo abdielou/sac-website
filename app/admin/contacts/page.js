@@ -1,10 +1,10 @@
-// app/admin/emails/page.js
+// app/admin/contacts/page.js
 'use client'
 
 import { Suspense, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import PermissionGate from '@/components/admin/PermissionGate'
-import { useEmailAccountability } from '@/lib/hooks/useAdminData'
+import { useContacts } from '@/lib/hooks/useAdminData'
 import { SkeletonTable } from '@/components/admin/SkeletonTable'
 import { ErrorState } from '@/components/admin/ErrorState'
 import { formatDate } from '@/lib/formatters'
@@ -70,11 +70,11 @@ function SenderCell({ sender }) {
  * Answered threads never appear here. Sort lives in local state.
  */
 function EmailsContent() {
-  const { data, isPending, isError, error, refresh } = useEmailAccountability()
+  const { data, isPending, isError, error, refresh } = useContacts()
   const { data: session } = useSession()
   const viewerEmail = session?.user?.email
-  // Oldest unanswered email first by default
-  const [sort, setSort] = useState({ key: 'daysWaiting', direction: 'desc' })
+  // Most recent unanswered email first by default
+  const [sort, setSort] = useState({ key: 'lastInboundAt', direction: 'desc' })
 
   const result = data?.data
   const thresholdDays = result?.thresholdDays ?? 7
@@ -100,7 +100,7 @@ function EmailsContent() {
       <div className="mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Correos sin responder
+            Contactos sin responder
           </h2>
           {result && (
             <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -203,9 +203,9 @@ function EmailsContent() {
   )
 }
 
-export default function EmailsPage() {
+export default function ContactsPage() {
   return (
-    <PermissionGate permission="read_emails">
+    <PermissionGate permission="read_contacts">
       <Suspense fallback={<SkeletonTable rows={6} columns={4} />}>
         <EmailsContent />
       </Suspense>

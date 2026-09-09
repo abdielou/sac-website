@@ -1,5 +1,5 @@
 // test/emails-card.test.js
-// EmailsCard renders counts for read_emails users and nothing otherwise
+// ContactsCard renders counts for read_contacts users and nothing otherwise
 
 import React from 'react'
 
@@ -19,54 +19,54 @@ jest.mock('next/link', () => {
       ),
   }
 })
-jest.mock('../lib/hooks/useAdminData', () => ({ useEmailAccountability: jest.fn() }))
+jest.mock('../lib/hooks/useAdminData', () => ({ useContacts: jest.fn() }))
 
 import { renderToString } from 'react-dom/server'
 import { useSession } from 'next-auth/react'
-import { useEmailAccountability } from '../lib/hooks/useAdminData'
-import { EmailsCard } from '../components/admin/EmailsCard'
+import { useContacts } from '../lib/hooks/useAdminData'
+import { ContactsCard } from '../components/admin/ContactsCard'
 
 const withPerms = (perms) =>
   useSession.mockReturnValue({ data: { user: { accessibleActions: perms } } })
 
-describe('EmailsCard', () => {
-  test('renders nothing without read_emails', () => {
+describe('ContactsCard', () => {
+  test('renders nothing without read_contacts', () => {
     withPerms(['read_members'])
-    useEmailAccountability.mockReturnValue({ data: undefined, isPending: false, isError: false })
-    expect(renderToString(React.createElement(EmailsCard))).toBe('')
-    expect(useEmailAccountability).toHaveBeenCalledWith({ enabled: false })
+    useContacts.mockReturnValue({ data: undefined, isPending: false, isError: false })
+    expect(renderToString(React.createElement(ContactsCard))).toBe('')
+    expect(useContacts).toHaveBeenCalledWith({ enabled: false })
   })
 
   test('renders the two unanswered counts and links to the page', () => {
-    withPerms(['read_emails'])
-    useEmailAccountability.mockReturnValue({
+    withPerms(['read_contacts'])
+    useContacts.mockReturnValue({
       data: { data: { summary: { overdue: 3, pending: 2, answered: 5 } } },
       isPending: false,
       isError: false,
     })
-    const html = renderToString(React.createElement(EmailsCard))
-    expect(html).toContain('Correos del grupo')
+    const html = renderToString(React.createElement(ContactsCard))
+    expect(html).toContain('Contactos')
     // Tie each count to its label so a swapped slot fails the test
     expect(html).toMatch(/Sin responder \+7 días<\/span><span[^>]*>3</)
     expect(html).toMatch(/Pendientes<\/span><span[^>]*>2</)
     expect(html).not.toContain('Respondidos')
-    expect(html).toContain('href="/admin/emails"')
+    expect(html).toContain('href="/admin/contacts"')
   })
 
   test('renders a loading hint while pending', () => {
-    withPerms(['read_emails'])
-    useEmailAccountability.mockReturnValue({ data: undefined, isPending: true, isError: false })
-    expect(renderToString(React.createElement(EmailsCard))).toContain('Cargando')
+    withPerms(['read_contacts'])
+    useContacts.mockReturnValue({ data: undefined, isPending: true, isError: false })
+    expect(renderToString(React.createElement(ContactsCard))).toContain('Cargando')
   })
 
   test('renders the error message on failure', () => {
-    withPerms(['read_emails'])
-    useEmailAccountability.mockReturnValue({
+    withPerms(['read_contacts'])
+    useContacts.mockReturnValue({
       data: undefined,
       isPending: false,
       isError: true,
       error: new Error('unauthorized_client'),
     })
-    expect(renderToString(React.createElement(EmailsCard))).toContain('unauthorized_client')
+    expect(renderToString(React.createElement(ContactsCard))).toContain('unauthorized_client')
   })
 })

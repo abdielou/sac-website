@@ -5,7 +5,7 @@
 import React, { act, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useEmailAccountability } from '../lib/hooks/useAdminData'
+import { useContacts } from '../lib/hooks/useAdminData'
 
 global.React = React
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
@@ -18,7 +18,7 @@ const seen = {}
 const handles = {}
 
 function Page() {
-  const q = useEmailAccountability()
+  const q = useContacts()
   useEffect(() => {
     seen.page = q.data
     handles.refresh = q.refresh
@@ -27,7 +27,7 @@ function Page() {
 }
 
 function Card() {
-  const q = useEmailAccountability()
+  const q = useContacts()
   useEffect(() => {
     seen.card = q.data
   })
@@ -40,7 +40,7 @@ const flush = async () => {
   })
 }
 
-describe('useEmailAccountability', () => {
+describe('useContacts', () => {
   let container
   let root
 
@@ -100,6 +100,6 @@ describe('useEmailAccountability', () => {
         .getQueryCache()
         .getAll()
         .map((q) => q.queryKey)
-    ).toEqual([['emails']])
+    ).toEqual([['contacts']])
   })
 })

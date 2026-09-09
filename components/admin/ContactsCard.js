@@ -1,22 +1,22 @@
-// components/admin/EmailsCard.js
+// components/admin/ContactsCard.js
 'use client'
 
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
-import { useEmailAccountability } from '@/lib/hooks/useAdminData'
+import { useContacts } from '@/lib/hooks/useAdminData'
 
 /**
- * EmailsCard - Dashboard summary of group emails and their reply status.
+ * ContactsCard - Dashboard summary of group emails and their reply status.
  *
- * Shows two counts from /api/admin/emails: overdue (no reply after the
+ * Shows two counts from /api/admin/contacts: overdue (no reply after the
  * threshold) and pending (no reply yet, inside the threshold).
- * Hidden for users without read_emails.
+ * Hidden for users without read_contacts.
  */
-export function EmailsCard() {
+export function ContactsCard() {
   const { data: session } = useSession()
   const accessibleActions = session?.user?.accessibleActions || []
-  const canRead = accessibleActions.includes('read_emails')
-  const { data, isPending, isError, error } = useEmailAccountability({ enabled: canRead })
+  const canRead = accessibleActions.includes('read_contacts')
+  const { data, isPending, isError, error } = useContacts({ enabled: canRead })
 
   if (!canRead) return null
 
@@ -26,9 +26,9 @@ export function EmailsCard() {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <div className="flex items-start justify-between">
-        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Correos del grupo</p>
+        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Contactos</p>
         <Link
-          href="/admin/emails"
+          href="/admin/contacts"
           className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
         >
           Ver detalle
@@ -62,7 +62,7 @@ export function EmailsCard() {
             ].map((tile) => (
               <Link
                 key={tile.status}
-                href="/admin/emails"
+                href="/admin/contacts"
                 className="block rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/50"
               >
                 <span className="block text-xs text-gray-500 dark:text-gray-400">{tile.label}</span>
@@ -76,4 +76,4 @@ export function EmailsCard() {
   )
 }
 
-export default EmailsCard
+export default ContactsCard

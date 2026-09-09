@@ -53,7 +53,7 @@ const activity = (over) => ({
 
 beforeEach(() => {
   jest.clearAllMocks()
-  invalidateCache(CACHE_KEYS.EMAILS)
+  invalidateCache(CACHE_KEYS.CONTACTS)
   process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL = 'sa@example.iam'
   process.env.GOOGLE_PRIVATE_KEY = 'line1\\nline2'
   process.env.GOOGLE_REPORTS_ADMIN_EMAIL = 'admin@example.org'

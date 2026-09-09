@@ -121,9 +121,9 @@ const navItems = [
     ),
   },
   {
-    href: '/admin/emails',
-    label: 'Correos',
-    feature: 'emails',
+    href: '/admin/contacts',
+    label: 'Contactos',
+    feature: 'contacts',
     roles: ['admin'],
     icon: (
       <svg

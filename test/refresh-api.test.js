@@ -11,7 +11,7 @@ jest.mock('next/server', () => ({
 
 jest.mock('../lib/cache', () => ({
   invalidateCache: jest.fn(),
-  CACHE_KEYS: { MEMBERS: 'members', PAYMENTS: 'payments', EMAILS: 'emails' },
+  CACHE_KEYS: { MEMBERS: 'members', PAYMENTS: 'payments', CONTACTS: 'contacts' },
 }))
 
 jest.mock('../lib/permissions', () => ({ canAccessDashboard: jest.fn() }))
@@ -48,12 +48,12 @@ describe('POST /api/admin/refresh', () => {
     expect(invalidateCache).not.toHaveBeenCalled()
   })
 
-  test('flushes only the emails cache for scope emails', async () => {
-    const res = await POST(reqWith(ADMIN, { scope: 'emails' }))
+  test('flushes only the contacts cache for scope contacts', async () => {
+    const res = await POST(reqWith(ADMIN, { scope: 'contacts' }))
     expect(res.status).toBe(200)
-    expect(await res.json()).toMatchObject({ success: true, scope: 'emails' })
+    expect(await res.json()).toMatchObject({ success: true, scope: 'contacts' })
     expect(invalidateCache).toHaveBeenCalledTimes(1)
-    expect(invalidateCache).toHaveBeenCalledWith('emails')
+    expect(invalidateCache).toHaveBeenCalledWith('contacts')
   })
 
   test('flushes only the payments cache for scope payments', async () => {
