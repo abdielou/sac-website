@@ -8,6 +8,7 @@ import { StatsCard } from '@/components/admin/StatsCard'
 import { ScanCard } from '@/components/admin/ScanCard'
 import { WhatsAppAuditCard } from '@/components/admin/WhatsAppAuditCard'
 import { GroupSyncCard } from '@/components/admin/GroupSyncCard'
+import { InquiriesCard } from '@/components/admin/InquiriesCard'
 import { SkeletonCard } from '@/components/admin/SkeletonCard'
 import { ErrorState } from '@/components/admin/ErrorState'
 import { formatNumber } from '@/lib/formatters'
@@ -17,6 +18,7 @@ const FEATURE_ROUTES = {
   payments: '/admin/payments',
   articles: '/admin/articles',
   guides: '/admin/guides',
+  inquiries: '/admin/inquiries',
 }
 
 export default function AdminPage() {
@@ -116,6 +118,7 @@ export default function AdminPage() {
         <ScanCard />
         <WhatsAppAuditCard />
         <GroupSyncCard />
+        <InquiriesCard />
       </div>
     </div>
   )
