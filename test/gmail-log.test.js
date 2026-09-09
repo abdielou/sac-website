@@ -19,6 +19,7 @@ import {
   fetchGmailLogRecords,
   getEmailAccountability,
   splitWindows,
+  isRateLimitError,
   GmailLogConfigError,
 } from '../lib/gmail-log'
 
@@ -179,12 +180,15 @@ describe('getEmailAccountability', () => {
     expect(fromCache).toBe(false)
     // 180 days = 6 windows of 30 days, per query
     expect(mockRequest).toHaveBeenCalledTimes(18)
+    // The three queries run concurrently, so only the counts are stable
     const filters = mockRequest.mock.calls.map((c) => new URL(c[0].url).searchParams.get('filters'))
-    expect(filters).toEqual([
-      ...Array(6).fill('event_info.mail_event_type==2'),
-      ...Array(6).fill('event_info.mail_event_type==9'),
-      ...Array(6).fill('event_info.mail_event_type==1'),
-    ])
+    const perType = {}
+    for (const f of filters) perType[f] = (perType[f] ?? 0) + 1
+    expect(perType).toEqual({
+      'event_info.mail_event_type==2': 6,
+      'event_info.mail_event_type==9': 6,
+      'event_info.mail_event_type==1': 6,
+    })
     const spans = mockRequest.mock.calls.slice(0, 6).map((c) => {
       const u = new URL(c[0].url)
       return (
@@ -274,5 +278,84 @@ describe('getEmailAccountability senders', () => {
     expect(data.threads[0].sender).toBeNull()
     expect(data.senderStatus).toEqual({ ok: false, reason: 'unauthorized_client' })
     spy.mockRestore()
+  })
+})
+
+describe('isRateLimitError', () => {
+  const err = (status, reason) => ({
+    response: { status, data: { error: { errors: reason ? [{ reason }] : [] } } },
+  })
+
+  test('treats 429 and a 403 quota reason as retryable', () => {
+    expect(isRateLimitError(err(429))).toBe(true)
+    expect(isRateLimitError(err(403, 'rateLimitExceeded'))).toBe(true)
+    expect(isRateLimitError(err(403, 'quotaExceeded'))).toBe(true)
+  })
+
+  test('leaves other failures alone', () => {
+    expect(isRateLimitError(err(403, 'forbidden'))).toBe(false)
+    expect(isRateLimitError(err(500))).toBe(false)
+    expect(isRateLimitError(undefined)).toBe(false)
+  })
+})
+
+describe('report query throttling', () => {
+  const window = {
+    userKey: 'all',
+    mailEventType: 2,
+    startTime: '2026-08-08T00:00:00.000Z',
+    endTime: '2026-09-07T00:00:00.000Z',
+  }
+
+  test('retries a rate-limited query and returns its records', async () => {
+    let firstCall = true
+    mockRequest.mockImplementation(async () => {
+      if (firstCall) {
+        firstCall = false
+        throw {
+          response: { status: 429, data: { error: { errors: [{ reason: 'rateLimitExceeded' }] } } },
+        }
+      }
+      return { data: { items: [] } }
+    })
+    const records = await fetchGmailLogRecords({ auth: { request: mockRequest }, ...window })
+    expect(records).toEqual([])
+    // one window, so the retry is the only extra call
+    expect(mockRequest).toHaveBeenCalledTimes(2)
+  })
+
+  test('does not retry a failure that is not a quota error', async () => {
+    mockRequest.mockRejectedValue({
+      response: { status: 403, data: { error: { errors: [{ reason: 'forbidden' }] } } },
+    })
+    await expect(
+      fetchGmailLogRecords({ auth: { request: mockRequest }, ...window })
+    ).rejects.toBeDefined()
+    expect(mockRequest).toHaveBeenCalledTimes(1)
+  })
+
+  test('never runs more than six queries at once across concurrent callers', async () => {
+    let active = 0
+    let peak = 0
+    mockRequest.mockImplementation(async () => {
+      active += 1
+      peak = Math.max(peak, active)
+      await new Promise((r) => setTimeout(r, 5))
+      active -= 1
+      return { data: { items: [] } }
+    })
+    // Two six-month ranges = 12 windows wanting to run at the same time
+    const range = {
+      userKey: 'all',
+      startTime: '2026-03-11T00:00:00.000Z',
+      endTime: '2026-09-07T00:00:00.000Z',
+    }
+    await Promise.all([
+      fetchGmailLogRecords({ auth: { request: mockRequest }, mailEventType: 2, ...range }),
+      fetchGmailLogRecords({ auth: { request: mockRequest }, mailEventType: 1, ...range }),
+    ])
+    expect(mockRequest).toHaveBeenCalledTimes(12)
+    expect(peak).toBeLessThanOrEqual(6)
+    expect(peak).toBeGreaterThan(1)
   })
 })

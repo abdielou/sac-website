@@ -4,6 +4,10 @@ import { NextResponse } from 'next/server'
 import { checkReadAccess } from '../../../../lib/api-permissions'
 import { getEmailAccountability, GmailLogConfigError } from '@/lib/gmail-log'
 
+// A cold request reads six months of Gmail log events and the label in the
+// reading mailbox. That runs longer than the platform default of 10 seconds.
+export const maxDuration = 60
+
 /**
  * GET /api/admin/inquiries
  *
