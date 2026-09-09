@@ -409,3 +409,41 @@ describe('buildEmailThreads messageId', () => {
     ).toBeNull()
   })
 })
+
+describe('buildEmailThreads spam verdicts', () => {
+  const copy = (actor, spam, over = {}) =>
+    rec({ actor, spam, destinations: `gmail-ui::${actor}`, ...over })
+
+  test('drops a message that every member mailbox flagged as spam', () => {
+    const out = build({
+      inbound: [rec()],
+      memberCopies: [copy('a@example.org', true), copy('b@example.org', true)],
+    })
+    expect(out.threads).toHaveLength(0)
+    expect(out.spamCount).toBe(1)
+  })
+
+  test('keeps a message with a mixed verdict', () => {
+    const out = build({
+      inbound: [rec()],
+      memberCopies: [copy('a@example.org', true), copy('b@example.org', false)],
+    })
+    expect(out.threads).toHaveLength(1)
+    expect(out.spamCount).toBe(0)
+  })
+
+  test('keeps a message without member copies', () => {
+    const out = build({ inbound: [rec()] })
+    expect(out.threads).toHaveLength(1)
+    expect(out.spamCount).toBe(0)
+  })
+
+  test('ignores verdicts when dropHeld is false', () => {
+    const out = build({
+      inbound: [rec()],
+      memberCopies: [copy('a@example.org', true)],
+      dropHeld: false,
+    })
+    expect(out.threads).toHaveLength(1)
+  })
+})

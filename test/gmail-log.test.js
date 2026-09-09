@@ -117,6 +117,7 @@ describe('fetchGmailLogRecords', () => {
         messageId: '<m1@ext.com>',
         subject: 'Hola',
         destinations: 'mailing-list-server::info@example.org',
+        spam: false,
       },
     ])
   })
@@ -192,8 +193,10 @@ describe('getEmailAccountability', () => {
       )
     })
     expect(spans).toEqual([30, 30, 30, 30, 30, 30])
+    // Received events are read for all users: the group's own records give
+    // the inbound list and the member copies give the spam verdicts.
     const inboundUrl = new URL(mockRequest.mock.calls[0][0].url)
-    expect(inboundUrl.pathname).toContain('/users/info%40example.org/')
+    expect(inboundUrl.pathname).toContain('/users/all/')
     expect(data.threads).toHaveLength(1)
     expect(data.threads[0].subject).toBe('Hola')
     expect(data.windowDays).toBe(180)

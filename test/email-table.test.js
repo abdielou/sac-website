@@ -120,13 +120,13 @@ describe('sortThreads', () => {
 describe('gmailMessageUrl', () => {
   test('builds a Gmail search by Message-ID for the viewer account', () => {
     expect(gmailMessageUrl('<abc+1@x.com>', 'viewer@example.org')).toBe(
-      'https://mail.google.com/mail/?authuser=viewer%40example.org#search/rfc822msgid:abc%2B1%40x.com'
+      'https://mail.google.com/mail/?authuser=viewer%40example.org#search/in%3Aanywhere+rfc822msgid:abc%2B1%40x.com'
     )
   })
 
   test('omits authuser without a viewer and returns null without an id', () => {
     expect(gmailMessageUrl('<abc@x.com>')).toBe(
-      'https://mail.google.com/mail/#search/rfc822msgid:abc%40x.com'
+      'https://mail.google.com/mail/#search/in%3Aanywhere+rfc822msgid:abc%40x.com'
     )
     expect(gmailMessageUrl(null, 'v@x.com')).toBeNull()
     expect(gmailMessageUrl('', 'v@x.com')).toBeNull()

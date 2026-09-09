@@ -117,7 +117,7 @@ describe('InquiriesPage', () => {
     useInquiries.mockReturnValue(loaded([thread({ messageId: '<m1@ext.com>' })]))
     const html = renderToString(React.createElement(InquiriesPage))
     expect(html).toContain(
-      'href="https://mail.google.com/mail/?authuser=viewer%40example.org#search/rfc822msgid:m1%40ext.com"'
+      'href="https://mail.google.com/mail/?authuser=viewer%40example.org#search/in%3Aanywhere+rfc822msgid:m1%40ext.com"'
     )
     expect(html).toContain('target="_blank"')
   })
