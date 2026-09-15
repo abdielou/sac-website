@@ -51,6 +51,21 @@ const baseConfig = withBundleAnalyzer({
   },
   reactStrictMode: true,
   pageExtensions: ['js', 'jsx', 'md', 'mdx'],
+  // lib/social-template reads these files with fs at request time, using names
+  // that come from a catalog lookup. Output file tracing cannot follow a dynamic
+  // file name, so a traced or standalone deployment must be told to bundle them.
+  // The workflow runtime renders from its own route, so every route gets them.
+  outputFileTracingIncludes: {
+    '/**': [
+      './public/static/social-templates/backgrounds/**/*',
+      './Gilroy-Regular.ttf',
+      './Gilroy-Medium.ttf',
+      './Gilroy-Bold.ttf',
+      './Gilroy-ExtraBold.ttf',
+      './public/static/images/sac-white-logo.png',
+      './public/static/images/sac-white-short-logo.png',
+    ],
+  },
   webpack: (config, { dev, isServer }) => {
     config.module.rules.push({
       test: /\.(png|jpe?g|gif|mp4)$/i,

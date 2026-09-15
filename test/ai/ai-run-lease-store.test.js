@@ -484,7 +484,7 @@ describe('ai-run-lease-store', () => {
     ).resolves.toEqual({ ok: true, coordination: 'local' })
   })
 
-  test('an S3 claim degrades safely when the workflow worker cannot reach S3', async () => {
+  test('an S3 claim fails closed when the workflow worker cannot reach S3', async () => {
     mockGetObject.mockImplementation(() => ({
       promise: () =>
         Promise.reject(Object.assign(new Error('AccessDenied'), { code: 'AccessDenied' })),
@@ -499,6 +499,7 @@ describe('ai-run-lease-store', () => {
         runId: 'wrun_during_outage',
         coordination: 's3',
       })
-    ).resolves.toEqual({ ok: true, coordination: 'local' })
+    ).rejects.toMatchObject({ code: 'AI_RUN_COORDINATION_UNAVAILABLE' })
+    expect(mockPutObject).not.toHaveBeenCalled()
   })
 })

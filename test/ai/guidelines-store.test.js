@@ -289,6 +289,8 @@ describe('guidelines-store S3 lifecycle', () => {
     })
     expect(saved.draft.document.global).toContain('actualizada')
     expect(saved.draft.revision).toBe(2)
+    expect(objects.has(`guidelines/drafts/${created.draft.id}/revisions/1.json`)).toBe(false)
+    expect(objects.has(`guidelines/drafts/${created.draft.id}/revisions/2.json`)).toBe(true)
 
     const activated = await activateGuidelineVersion(created.draft.id, {
       activatedBy: 'Elena',

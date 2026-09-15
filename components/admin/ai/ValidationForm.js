@@ -77,6 +77,9 @@ export default function ValidationForm({
   draftSaveStatus = 'unavailable',
   draftUpdatedAt = null,
   draftRestoreNotice = null,
+  // The parent draft hook drops onFormChange calls until it has hydrated, so the
+  // default content type must be re-applied once hydration completes.
+  hydrated = true,
   fieldError,
   platforms = [],
   contentTypes = [],
@@ -139,12 +142,12 @@ export default function ValidationForm({
   const hasDynamicFieldErrors = Object.values(dynamicFieldErrors).some(Boolean)
 
   useEffect(() => {
-    if (!contentTypes.length) return
+    if (!hydrated || !contentTypes.length) return
     const ids = contentTypes.map((ct) => ct.id)
     if (ids.includes(formState.contentType)) return
     onFormChange({ ...formState, contentType: ids[0] })
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional narrow deps
-  }, [contentTypes, formState.contentType])
+  }, [contentTypes, formState.contentType, hydrated])
 
   useEffect(() => {
     const urls = images.map((file) => URL.createObjectURL(file))

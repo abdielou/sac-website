@@ -115,7 +115,8 @@ async function validateSponsorImageBytes(sponsorLogo) {
 
   const buffer = Buffer.from(match[2], 'base64')
   try {
-    const options = { failOn: 'error', limitInputPixels: 40_000_000 }
+    // sharp 0.30 only knows `failOnError`; `failOn` is ignored by this version.
+    const options = { failOnError: true, limitInputPixels: 40_000_000 }
     const metadata = await sharp(buffer, options).metadata()
     await sharp(buffer, options).resize({ width: 1, height: 1, fit: 'inside' }).toBuffer()
 

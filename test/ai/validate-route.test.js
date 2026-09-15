@@ -104,6 +104,19 @@ describe('POST /api/admin/ai/validate contract', () => {
     releaseAiRunReservation.mockResolvedValue(true)
   })
 
+  test('answers 400 for a malformed or null JSON body', async () => {
+    const malformed = jsonRequest(null)
+    malformed.json.mockRejectedValueOnce(new SyntaxError('Unexpected token'))
+    const malformedResponse = await POST(malformed)
+    expect(malformedResponse.status).toBe(400)
+    expect(malformedResponse.body.error).toBe('JSON inválido')
+
+    const nullResponse = await POST(jsonRequest(null))
+    expect(nullResponse.status).toBe(400)
+    expect(nullResponse.body.error).toBe('JSON inválido')
+    expect(start).not.toHaveBeenCalled()
+  })
+
   test('converts a legacy request and pins its content type identity', async () => {
     const response = await POST(
       jsonRequest({

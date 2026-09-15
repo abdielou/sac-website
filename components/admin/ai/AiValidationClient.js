@@ -92,6 +92,7 @@ export default function AiValidationClient() {
         draftSaveStatus={draftSaveStatus}
         draftUpdatedAt={draftUpdatedAt}
         draftRestoreNotice={draftRestoreNotice}
+        hydrated={draftHydrated}
         platforms={platforms}
         contentTypes={contentTypes}
       />

@@ -260,7 +260,7 @@ ${formatUntrustedRequest(userText)}`,
           { allowHashtags, captionMaxCharacters }
         ),
         usage: accumulatedUsage,
-        retryable: shouldRetryOpenRouterOperation(err1),
+        retryable: false,
       }
     }
     try {

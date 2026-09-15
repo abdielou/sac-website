@@ -5,6 +5,7 @@
 import {
   DEFAULT_OPENROUTER_IMAGE_MODEL,
   attachOpenRouterAttemptMetadata,
+  getConfiguredOpenRouterModels,
   modelSupportsJsonObjectResponseFormat,
   resolveOpenRouterModels,
   shouldRetryOpenRouterOperation,
@@ -343,6 +344,51 @@ describe('OpenRouter Vercel AI SDK adapter', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(1)
   })
 
+  test.each([
+    'AI_InvalidArgumentError',
+    'AI_InvalidPromptError',
+    'AI_UnsupportedFunctionalityError',
+  ])('classifies a local %s as a non-retryable configuration error', async (name) => {
+    const sdkError = Object.assign(new Error('bad argument'), { name })
+    const fetchImpl = jest.fn(async () => {
+      throw sdkError
+    })
+
+    await expect(
+      generateOpenRouterText({
+        apiKey: 'test-key',
+        fetchImpl,
+        model: 'test/multimodal',
+        messages: [{ role: 'user', content: 'Hello' }],
+      })
+    ).rejects.toMatchObject({
+      name: 'OpenRouterSdkError',
+      retryable: false,
+      openRouterErrorCode: 'configuration_error',
+    })
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
+  })
+
+  test('keeps a malformed provider response classified as a retryable response error', async () => {
+    const sdkError = Object.assign(new Error('bad json'), { name: 'AI_JSONParseError' })
+    const fetchImpl = jest.fn(async () => {
+      throw sdkError
+    })
+
+    await expect(
+      generateOpenRouterText({
+        apiKey: 'test-key',
+        fetchImpl,
+        model: 'test/multimodal',
+        messages: [{ role: 'user', content: 'Hello' }],
+      })
+    ).rejects.toMatchObject({
+      name: 'OpenRouterSdkError',
+      retryable: true,
+      openRouterErrorCode: 'response_error',
+    })
+  })
+
   test('does not classify an unexpected local TypeError as a retryable network failure', async () => {
     const fetchImpl = jest.fn()
 
@@ -359,5 +405,46 @@ describe('OpenRouter Vercel AI SDK adapter', () => {
       openRouterErrorCode: 'sdk_processing_error',
     })
     expect(fetchImpl).not.toHaveBeenCalled()
+  })
+})
+
+describe('getConfiguredOpenRouterModels', () => {
+  const originalModel = process.env.OPENROUTER_MODEL
+  const originalTextModel = process.env.OPENROUTER_TEXT_MODEL
+
+  afterEach(() => {
+    if (originalModel === undefined) delete process.env.OPENROUTER_MODEL
+    else process.env.OPENROUTER_MODEL = originalModel
+    if (originalTextModel === undefined) delete process.env.OPENROUTER_TEXT_MODEL
+    else process.env.OPENROUTER_TEXT_MODEL = originalTextModel
+  })
+
+  test('derives the text companion for the default image model', () => {
+    delete process.env.OPENROUTER_MODEL
+    delete process.env.OPENROUTER_TEXT_MODEL
+
+    expect(getConfiguredOpenRouterModels()).toEqual({
+      imageModel: DEFAULT_OPENROUTER_IMAGE_MODEL,
+      textModel: 'google/gemini-3.1-flash-lite',
+    })
+  })
+
+  test('refuses an image model without a known companion instead of reusing it for text', () => {
+    process.env.OPENROUTER_MODEL = 'vendor/new-image-model'
+    delete process.env.OPENROUTER_TEXT_MODEL
+
+    expect(() => getConfiguredOpenRouterModels()).toThrow(
+      expect.objectContaining({ code: 'OPENROUTER_TEXT_MODEL_REQUIRED', retryable: false })
+    )
+  })
+
+  test('honours an explicit OPENROUTER_TEXT_MODEL', () => {
+    process.env.OPENROUTER_MODEL = 'vendor/new-image-model'
+    process.env.OPENROUTER_TEXT_MODEL = 'vendor/new-text-model # inline comment'
+
+    expect(getConfiguredOpenRouterModels()).toEqual({
+      imageModel: 'vendor/new-image-model',
+      textModel: 'vendor/new-text-model',
+    })
   })
 })

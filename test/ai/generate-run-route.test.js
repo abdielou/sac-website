@@ -44,10 +44,10 @@ const { hydrateResourceIO } = require('workflow/observability')
 const { syncAiRunLeaseFromStatus } = require('../../lib/ai-run-lease-store')
 const { readAiRunFailure } = require('../../lib/run-history-store')
 const { renderSocialTemplateImage } = require('../../lib/social-template/renderSocialTemplateImage')
+const { GET } = require('../../app/api/admin/ai/runs/[runId]/route')
 const {
-  GET,
   applyTemplateRendersToWorkflowResult,
-} = require('../../app/api/admin/ai/runs/[runId]/route')
+} = require('../../lib/social-template/applyTemplateRendersToWorkflowResult')
 
 async function tinyPngDataUrl() {
   const buffer = await sharp({

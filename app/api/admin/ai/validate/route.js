@@ -83,6 +83,15 @@ async function fileToDataUrl(file) {
   return `data:${mimeType};base64,${base64}`
 }
 
+/** Parse a JSON body; resolve null when the body is missing or malformed. */
+async function readJsonBody(req) {
+  try {
+    return await req.json()
+  } catch {
+    return null
+  }
+}
+
 export const POST = auth(async function POST(req) {
   if (!req.auth) {
     return NextResponse.json(
@@ -207,7 +216,13 @@ export const POST = auth(async function POST(req) {
       }
     } else {
       // JSON body (fallback convenience for API clients)
-      const body = await req.json()
+      const body = await readJsonBody(req)
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        return NextResponse.json(
+          { error: 'JSON inválido', details: 'El cuerpo de la solicitud no contiene JSON válido' },
+          { status: 400 }
+        )
+      }
 
       platform = body.platform
       platforms = parseStringArray(body.platforms)

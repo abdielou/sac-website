@@ -1,5 +1,11 @@
 import { MAX_IMAGE_SIZE_BYTES, MAX_VALIDATION_IMAGES } from '../../lib/ai-constants'
-import { mergeValidationImages, validateImageFiles } from '../../lib/ai-validation-images'
+import {
+  MAX_VALIDATION_IMAGE_DATA_URL_LENGTH,
+  mergeValidationImages,
+  normalizeSerializedValidationImages,
+  validateImageFiles,
+  validateSerializedValidationImage,
+} from '../../lib/ai-validation-images'
 
 function makeFile({ name = 'photo.png', type = 'image/png', size = 1024 } = {}) {
   const buffer = new Uint8Array(size)
@@ -62,5 +68,104 @@ describe('ai-validation-images', () => {
     const result = mergeValidationImages(current, incoming)
     expect(result.error).toBe('Solo se permiten archivos de imagen.')
     expect(result.images).toBe(current)
+  })
+})
+
+describe('serialized (JSON) validation images', () => {
+  const pngBytes = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
+  const validImage = {
+    dataUrl: `data:image/png;base64,${pngBytes.toString('base64')}`,
+    mimeType: 'image/png',
+    fileName: 'post.png',
+    size: pngBytes.length,
+  }
+
+  test('normalizes a valid image and fills the decoded size', () => {
+    const result = normalizeSerializedValidationImages([validImage])
+
+    expect(result).toEqual({
+      ok: true,
+      images: [
+        {
+          dataUrl: validImage.dataUrl,
+          mimeType: 'image/png',
+          fileName: 'post.png',
+          size: pngBytes.length,
+        },
+      ],
+    })
+  })
+
+  test('rejects a non-array images value', () => {
+    expect(normalizeSerializedValidationImages({ dataUrl: validImage.dataUrl })).toEqual({
+      ok: false,
+      error: 'images debe ser una lista.',
+    })
+    expect(normalizeSerializedValidationImages('data:image/png;base64,AA==').ok).toBe(false)
+  })
+
+  test('rejects more than MAX_VALIDATION_IMAGES', () => {
+    const images = Array.from({ length: MAX_VALIDATION_IMAGES + 1 }, () => validImage)
+
+    expect(normalizeSerializedValidationImages(images)).toEqual({
+      ok: false,
+      error: `Máximo ${MAX_VALIDATION_IMAGES} imágenes.`,
+    })
+  })
+
+  test('rejects a declared MIME that differs from the data URL header', () => {
+    expect(validateSerializedValidationImage({ ...validImage, mimeType: 'image/jpeg' })).toEqual({
+      ok: false,
+      error: 'El tipo declarado no coincide con la imagen.',
+    })
+  })
+
+  test('rejects a data URL MIME outside the allowlist', () => {
+    const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>').toString('base64')
+
+    expect(
+      validateSerializedValidationImage({
+        dataUrl: `data:image/svg+xml;base64,${svg}`,
+        mimeType: 'image/svg+xml',
+      })
+    ).toEqual({ ok: false, error: 'La imagen debe usar un data URL base64 válido.' })
+  })
+
+  test('rejects an oversized data URL before decoding it', () => {
+    const oversized = {
+      dataUrl: `data:image/png;base64,${'A'.repeat(MAX_VALIDATION_IMAGE_DATA_URL_LENGTH)}`,
+      mimeType: 'image/png',
+    }
+
+    expect(validateSerializedValidationImage(oversized)).toEqual({
+      ok: false,
+      error: 'La imagen excede el tamaño máximo permitido.',
+    })
+  })
+
+  test('rejects a decoded payload above MAX_IMAGE_SIZE_BYTES', () => {
+    const base64Length = Math.ceil((MAX_IMAGE_SIZE_BYTES + 3) / 3) * 4
+    const tooLarge = {
+      dataUrl: `data:image/png;base64,${'A'.repeat(base64Length)}`,
+      mimeType: 'image/png',
+    }
+
+    expect(validateSerializedValidationImage(tooLarge)).toEqual({
+      ok: false,
+      error: 'Cada imagen debe ser menor a 5 MB.',
+    })
+  })
+
+  test('rejects a declared size that does not match the decoded bytes', () => {
+    expect(validateSerializedValidationImage({ ...validImage, size: 999 })).toEqual({
+      ok: false,
+      error: 'El tamaño declarado no coincide con la imagen.',
+    })
+  })
+
+  test('stops at the first invalid image in the list', () => {
+    const result = normalizeSerializedValidationImages([validImage, { dataUrl: 'nope' }])
+
+    expect(result.ok).toBe(false)
   })
 })

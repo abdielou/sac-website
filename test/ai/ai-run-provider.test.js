@@ -356,8 +356,12 @@ describe('AiRunProvider', () => {
     root = createRoot(container)
   })
 
-  test('recovers a starting marker and never expires it after repeated 404s', async () => {
-    window.localStorage.setItem(storageKey, serializeAiRunPointer(pointer()))
+  test('keeps retrying a starting marker on 404 within the poll timeout', async () => {
+    const createdAt = new Date(Date.now() - 5000).toISOString()
+    window.localStorage.setItem(
+      storageKey,
+      serializeAiRunPointer(pointer({ createdAt, updatedAt: createdAt }))
+    )
     fetch.mockResolvedValue(response(404, { error: 'No encontrado' }))
 
     await act(async () => render())
@@ -377,6 +381,25 @@ describe('AiRunProvider', () => {
     })
     expect(current.slot.status).toBe('starting')
     expect(window.localStorage.getItem(storageKey)).not.toBeNull()
+  })
+
+  test('fails a starting marker that still answers 404 after the poll timeout', async () => {
+    const createdAt = new Date(Date.now() - AI_RUN_POLL_TIMEOUT_MS - 1000).toISOString()
+    window.localStorage.setItem(
+      storageKey,
+      serializeAiRunPointer(pointer({ createdAt, updatedAt: createdAt }))
+    )
+    fetch.mockResolvedValue(response(404, { error: 'No encontrado' }))
+
+    await act(async () => render())
+    await act(async () => {
+      jest.advanceTimersByTime(750)
+      await Promise.resolve()
+    })
+
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(current.slot.status).toBe('failed')
+    expect(current.slot.failure).toMatchObject({ code: 'run_start_unconfirmed', retryable: true })
   })
 
   test('requires two confirmed URL 404s and preserves the existing pointer', async () => {
