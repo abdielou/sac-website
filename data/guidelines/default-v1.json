@@ -1,0 +1,216 @@
+{
+  "version": "default-v1",
+  "global": "- Idioma: Español solo. Enfocado en Puerto Rico.\n- Seguridad: No inventar fechas/horarios/lugares. No aceptes contenido violento. No inventes costos, enlaces (links)\n- Tono: cientifico, educativo, pero cercano.\n- Revisar nombre oficial de la Sociedad de Astronomía del Caribe (SAC). Debe ser siempre Sociedad de Astronomía del Caribe.\n- Revisar errores ortográficos evidentes antes de declarar que el texto cumple.",
+  "platforms": {
+    "x": "Redacción concisa; considerar los límites de caracteres. CTA breve si aplica.",
+    "instagram": "Caption con gancho en la primera línea, tono visual y cercano. CTA clara si aplica. Priorizar la claridad del caption. Validar alineación texto-imagen cuando sea necesario.",
+    "facebook": "- Velar por una redacción completa. \n- Velar por un CTA explícito, si el usuario lo pide."
+  },
+  "platformLabels": {
+    "x": "X (Twitter)",
+    "instagram": "Instagram",
+    "facebook": "Facebook"
+  },
+  "prohibited": "No publicidad comercial no autorizada. No lo inventes. Los auspiciadores se darán.\nNo comentario político partidista.\nNo afirmaciones pseudocientíficas presentadas como hechos verificados.\nNo imágenes generadas por IA que parezcan fotos documentales reales sin etiqueta clara.\nNo astrología.\nEvita el plagio. \nEvita rostros identificables en la generación de fotos.\nNo tratar la ausencia de imagen como error salvo que el tipo de contenido la requiera.",
+  "imageValidation": "Verificar accesibilidad, texto alternativo cuando aplique.\nResolución mínima recomendada: 1080p para publicaciones con imagen.\nPrecisión astronómica razonable: mapas estelares coherentes, iluminación realista.\nValidar alineación entre texto e imagen, cuando aplique.",
+  "contentTypes": {
+    "observation_night": "Validar Noche de Observación contra la información provista y las restricciones de SAC.",
+    "post_educativo": "- Comprueba los datos en el texto y sugiere refinamientos de ser necesario.\n- Si hay una imagen analizala a ver si coincide con el texto o si puedes ofrecer una sugerencia sobre la misma. \n- Si no contiene sugiere alguna imagen si lo ves pertinente. Sugiere una descripción de esa imagen.",
+    "felicitaciones_de_dia_festivo": "Validación: \n- Que el nombre del evento y la felicitaciones coincidan\n- Coincidan el texto de la publicación con la imagen\n- Que la imagen cumpla con estándares de calidad, pero que sea una buena felicitación dependiendo del evento"
+  },
+  "generation": {
+    "global": "- Idioma: Español solo. Enfocado en Puerto Rico.\n- Seguridad: No inventar fechas/horarios/lugares. No aceptes contenido violento. No inventes costos, enlaces (links)\n- Tono: cientifico, educativo, pero cercano.\n- Revisar nombre oficial de la Sociedad de Astronomía del Caribe (SAC). Debe ser siempre Sociedad de Astronomía del Caribe.\n- Revisar errores ortográficos evidentes antes de declarar que el texto cumple.",
+    "contentTypes": {
+      "observation_night": "Generar Noche de Observación para las redes sociales de SAC sin inventar información.",
+      "post_educativo": "- Cuando se te pida genera un texto educativo y/o expande los datos pasados.",
+      "felicitaciones_de_dia_festivo": "Generación:\n- Genera una imagen relacionada al tema de las felicitaciones"
+    },
+    "imagePrompt": "- La imagen debe representar el tema de la publicación sin añadir datos nuevos. Representar no debe limitar la creatividad.\n- No incluyas personas identificables, datos privados, logos oficiales que no sean del SAC ni imitaciones de estilos protegidos. \n- Si aparecen menores porque el tema lo requiere, deben ser figuras no identificables, completamente vestidas y en un contexto familiar cotidiano y seguro.\n- Si el tipo de publicación exige un saludo o una felicitación dentro de la imagen, usa exactamente ese mensaje con tipografía legible."
+  },
+  "schemaVersion": 3,
+  "platformConstraints": {
+    "x": {
+      "captionMaxCharacters": 280
+    },
+    "instagram": {
+      "captionMaxCharacters": null
+    },
+    "facebook": {
+      "captionMaxCharacters": null
+    }
+  },
+  "contentTypeCatalog": [
+    {
+      "id": "observation_night",
+      "label": "Noche de Observación",
+      "status": "active",
+      "description": "Invitación recurrente a una Noche de Observación junto al SAC.",
+      "fields": [
+        {
+          "key": "date",
+          "label": "Fecha",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "time",
+          "label": "Hora",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "location",
+          "label": "Lugar",
+          "help": "",
+          "placeholder": "Pitahaya, Cabo Rojo",
+          "required": true
+        },
+        {
+          "key": "cta",
+          "label": "Llamado a la acción",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "sponsor",
+          "label": "Auspiciador",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        }
+      ],
+      "titleSource": "type_label",
+      "validation": {
+        "rules": "Validar Noche de Observación contra la información provista y las restricciones de SAC."
+      },
+      "generation": {
+        "rules": "Generar Noche de Observación para las redes sociales de SAC sin inventar información."
+      },
+      "visual": {
+        "mode": "template",
+        "template": "event",
+        "backgroundSources": ["stock", "ai_generated"],
+        "sponsorAllowed": true,
+        "imagePolicyByPlatform": {
+          "x": "required",
+          "instagram": "required",
+          "facebook": "required"
+        }
+      },
+      "platforms": ["x", "instagram", "facebook"]
+    },
+    {
+      "id": "post_educativo",
+      "label": "Post educativo",
+      "status": "active",
+      "description": "Este tipo de publicación es una nota informativa para educar a nuestra audiencia sobre temas diversos relacionados con la astronomía.",
+      "fields": [
+        {
+          "key": "topic",
+          "label": "Tema",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        },
+        {
+          "key": "known_facts",
+          "label": "Datos confirmados",
+          "help": "",
+          "placeholder": "La luz roja ayuda a ver mejor las estrellas.",
+          "required": false
+        },
+        {
+          "key": "image_style",
+          "label": "Estilo de imagen",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "image_constraints",
+          "label": "Restricciones visuales",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "tone",
+          "label": "Tono",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        }
+      ],
+      "titleSource": "topic",
+      "validation": {
+        "rules": "- Comprueba los datos en el texto y sugiere refinamientos de ser necesario.\n- Si hay una imagen analizala a ver si coincide con el texto o si puedes ofrecer una sugerencia sobre la misma. \n- Si no contiene sugiere alguna imagen si lo ves pertinente. Sugiere una descripción de esa imagen."
+      },
+      "generation": {
+        "rules": "- Cuando se te pida genera un texto educativo y/o expande los datos pasados."
+      },
+      "visual": {
+        "mode": "ai_image",
+        "template": null,
+        "backgroundSources": [],
+        "sponsorAllowed": false,
+        "imagePolicyByPlatform": {
+          "x": "optional",
+          "instagram": "required",
+          "facebook": "optional"
+        }
+      },
+      "platforms": ["facebook"]
+    },
+    {
+      "id": "felicitaciones_de_dia_festivo",
+      "label": "Felicitaciones de día festivo",
+      "status": "active",
+      "platforms": ["x", "instagram", "facebook"],
+      "description": "Este tipo de publicación se realiza cuando la Sociedad de Astronomía del Caribe (SAC) felicita a su público por algún día especial. Por ejemplo: el día de los padres, el día de las madres, Navidad o Año Nuevo, entre otros",
+      "fields": [
+        {
+          "key": "image_style",
+          "label": "Estilo de imagen",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "image_constraints",
+          "label": "Restricciones visuales",
+          "help": "",
+          "placeholder": "",
+          "required": false
+        },
+        {
+          "key": "event_name",
+          "label": "Nombre del evento",
+          "help": "",
+          "placeholder": "",
+          "required": true
+        }
+      ],
+      "titleSource": "event_name",
+      "validation": {
+        "rules": "Validación: \n- Que el nombre del evento y la felicitaciones coincidan\n- Coincidan el texto de la publicación con la imagen\n- Que la imagen cumpla con estándares de calidad, pero que sea una buena felicitación dependiendo del evento"
+      },
+      "generation": {
+        "rules": "Generación:\n- Genera una imagen relacionada al tema de las felicitaciones"
+      },
+      "visual": {
+        "mode": "ai_image",
+        "template": null,
+        "backgroundSources": [],
+        "sponsorAllowed": false,
+        "imagePolicyByPlatform": {
+          "x": "required",
+          "instagram": "required",
+          "facebook": "required"
+        }
+      }
+    }
+  ]
+}

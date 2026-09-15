@@ -1,6 +1,7 @@
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 })
+const { withWorkflow } = require('workflow/next')
 const siteMetadata = require('./data/siteMetadata')
 
 // This file is CommonJS and lib/seo.js is ESM, so the origin is normalized here
@@ -30,11 +31,41 @@ const securityHeaders = [
   },
 ]
 
-module.exports = withBundleAnalyzer({
-  serverExternalPackages: ['@react-pdf/renderer'],
-  turbopack: {},
+const baseConfig = withBundleAnalyzer({
+  serverExternalPackages: [
+    '@react-pdf/renderer',
+    // Workflow's Vercel world pulls in these Node-only packages. Bundling them
+    // with webpack breaks xdg-app-paths (require.main/process.argv are undefined
+    // in the bundle), so keep them external and let Node require them natively.
+    '@vercel/oidc',
+    '@vercel/cli-config',
+    'xdg-app-paths',
+  ],
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
+      },
+    },
+  },
   reactStrictMode: true,
   pageExtensions: ['js', 'jsx', 'md', 'mdx'],
+  // lib/social-template reads these files with fs at request time, using names
+  // that come from a catalog lookup. Output file tracing cannot follow a dynamic
+  // file name, so a traced or standalone deployment must be told to bundle them.
+  // The workflow runtime renders from its own route, so every route gets them.
+  outputFileTracingIncludes: {
+    '/**': [
+      './public/static/social-templates/backgrounds/**/*',
+      './Gilroy-Regular.ttf',
+      './Gilroy-Medium.ttf',
+      './Gilroy-Bold.ttf',
+      './Gilroy-ExtraBold.ttf',
+      './public/static/images/sac-white-logo.png',
+      './public/static/images/sac-white-short-logo.png',
+    ],
+  },
   webpack: (config, { dev, isServer }) => {
     config.module.rules.push({
       test: /\.(png|jpe?g|gif|mp4)$/i,
@@ -97,3 +128,5 @@ module.exports = withBundleAnalyzer({
     ],
   },
 })
+
+module.exports = withWorkflow(baseConfig)
