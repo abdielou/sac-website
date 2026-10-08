@@ -203,27 +203,31 @@ describe('app/sitemap.js', () => {
 describe('app/robots.js', () => {
   const result = robots()
   const rule = result.rules[0]
+  // robots.txt matching: a rule is a path prefix, and a trailing $ anchors it.
+  const blocks = (path) =>
+    rule.disallow.some((d) => (d.endsWith('$') ? path === d.slice(0, -1) : path.startsWith(d)))
 
   it('allows the whole site to every crawler', () => {
     expect(rule.userAgent).toBe('*')
     expect(rule.allow).toBe('/')
   })
 
-  // robots.txt matches by prefix with no word boundary, so a bare '/member'
-  // would also block '/membership', a public conversion page. Each private area
-  // is anchored with $ and paired with a trailing-slash subtree rule.
-  it('disallows every private and fixture route', () => {
-    for (const path of PRIVATE_PATHS) {
-      const bare = path.replace(/\/$/, '')
-      const covered = rule.disallow.some((d) => d === bare || d === `${bare}$` || d === `${bare}/`)
-      expect(covered).toBe(true)
+  it('disallows the API, which serves no pages', () => {
+    expect(rule.disallow).toEqual(['/api/'])
+  })
+
+  // A disallowed URL is never crawled, so Google cannot see its noindex tag or
+  // its redirect, and a URL indexed before the block stays indexed. That kept
+  // /admin and /auth/signin in the index. These pages must stay crawlable:
+  // login protects /admin and /member, and noindex hides /auth and /verify.
+  it('lets Google crawl private pages so it can drop them from the index', () => {
+    for (const path of ['/admin', '/member', '/member/profile', '/auth/signin', '/verify/x']) {
+      expect(blocks(path)).toBe(false)
     }
   })
 
-  it('does not block /membership with the /member rule', () => {
-    expect(rule.disallow).not.toContain('/member')
-    expect(rule.disallow).toContain('/member$')
-    expect(rule.disallow).toContain('/member/')
+  it('does not block /membership', () => {
+    expect(blocks('/membership')).toBe(false)
   })
 
   it('does not block /_next/, which Google needs to render the page', () => {

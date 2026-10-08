@@ -13,21 +13,19 @@ export const revalidate = 3600
  * 2016 and the canonical host is asserted by the 308 redirect in next.config.js.
  */
 /**
- * robots.txt paths match by prefix with no implicit word boundary, so a bare
- * `/member` would also block `/membership` — a public conversion page that is
- * in the nav and in the sitemap. Each private area is therefore listed twice:
- * `$` to anchor the bare path, and a trailing slash for its subtree.
+ * Only the API is disallowed. Private pages stay crawlable on purpose.
+ *
+ * Google does not crawl a disallowed URL, so it cannot see the URL's noindex
+ * tag or its redirect. A URL indexed before the block then stays in the index.
+ * That kept /admin and /auth/signin in search results.
+ *
+ * - /admin and /member redirect anonymous visitors to sign-in (proxy.js).
+ * - /auth/* and /verify/* serve noindex (noindexMetadata in lib/seo.js).
+ *
+ * robots.txt matches by prefix, so a bare `/member` rule would also block
+ * the public `/membership` page. Anchor any future page rule with `$`.
  */
-const DISALLOW = [
-  '/admin$',
-  '/admin/',
-  '/member$',
-  '/member/',
-  '/api/',
-  '/auth/',
-  '/verify/',
-  '/card-test-longname',
-]
+const DISALLOW = ['/api/']
 
 export default function robots() {
   return {
