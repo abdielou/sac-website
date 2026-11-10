@@ -87,3 +87,7 @@ sync-grupos-*.csv
 # SEO data-fix backups (local safety copies, not source)
 .planning/seo/backups/
 .sawyer/*
+
+# Local S3 stub data (S3_STUB_DIR)
+.local-s3/
+public/local-s3/

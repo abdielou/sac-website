@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server'
 import { getGuide, updateGuide, deleteGuide } from '@/lib/guides'
 import { checkPermission, checkReadAccess } from '../../../../../lib/api-permissions'
 import { Actions } from '../../../../../lib/permissions'
+import { validateGuideEntries } from '../../../../../lib/guide-manual-object'
+import { isS3Stubbed } from '../../../../../lib/s3-client'
 
 /**
  * GET /api/admin/guides/[slug]
@@ -77,6 +79,13 @@ export const PUT = auth(async function PUT(req, { params }) {
         return publishError
       }
     }
+
+    // Validate and clean manual objects
+    const checked = validateGuideEntries(body.entries, { allowLocalImages: isS3Stubbed() })
+    if (!checked.ok) {
+      return NextResponse.json({ error: checked.error, details: checked.details }, { status: 400 })
+    }
+    if (checked.entries !== undefined) body.entries = checked.entries
 
     const resolvedParams = await params
     const slug = resolvedParams.slug
