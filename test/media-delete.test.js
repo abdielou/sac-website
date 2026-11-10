@@ -1,14 +1,11 @@
-const mockDeleteObjects = jest.fn()
+jest.mock('@aws-sdk/client-s3', () => require('./helpers/s3-mock').clientS3Mock())
 
-jest.mock('aws-sdk', () => ({
-  S3: jest.fn(() => ({
-    deleteObjects: mockDeleteObjects,
-  })),
-}))
+const { routeSend, lastInput, sentCount } = require('./helpers/s3-mock')
 
 describe('media delete cleanup', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    routeSend({})
     process.env.S3_IMAGES_BUCKET_NAME = 'sac-images'
     process.env.AWS_REGION = 'us-east-1'
   })
@@ -21,7 +18,6 @@ describe('media delete cleanup', () => {
 
   test('deletes the uploaded video and owned poster thumbnail from S3', async () => {
     const { deleteMediaAssetObjects } = require('@/lib/media-s3')
-    mockDeleteObjects.mockReturnValue({ promise: () => Promise.resolve({}) })
 
     await deleteMediaAssetObjects({
       slug: 'observacion-lunar',
@@ -29,7 +25,8 @@ describe('media delete cleanup', () => {
       thumbnail: 'https://sac-images.s3.amazonaws.com/media/posters/2026/05/07/poster.jpg',
     })
 
-    expect(mockDeleteObjects).toHaveBeenCalledWith({
+    expect(sentCount('DeleteObjectsCommand')).toBe(1)
+    expect(lastInput('DeleteObjectsCommand')).toEqual({
       Bucket: 'sac-images',
       Delete: {
         Objects: [
@@ -43,7 +40,6 @@ describe('media delete cleanup', () => {
 
   test('deletes the old owned poster when thumbnail is replaced', async () => {
     const { deleteReplacedMediaThumbnail } = require('@/lib/media-s3')
-    mockDeleteObjects.mockReturnValue({ promise: () => Promise.resolve({}) })
 
     await deleteReplacedMediaThumbnail(
       {
@@ -56,7 +52,7 @@ describe('media delete cleanup', () => {
       }
     )
 
-    expect(mockDeleteObjects).toHaveBeenCalledWith({
+    expect(lastInput('DeleteObjectsCommand')).toEqual({
       Bucket: 'sac-images',
       Delete: {
         Objects: [{ Key: 'media/posters/2026/05/07/old.jpg' }],

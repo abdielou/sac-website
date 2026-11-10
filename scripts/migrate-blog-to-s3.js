@@ -16,6 +16,7 @@ require('dotenv').config()
 const fs = require('fs')
 const path = require('path')
 const matter = require('gray-matter')
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3')
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -218,14 +219,14 @@ async function uploadImages(imagePaths, s3, bucketName, isLive, logger) {
     const body = fs.readFileSync(entry.localPath)
 
     try {
-      await s3
-        .putObject({
+      await s3.send(
+        new PutObjectCommand({
           Bucket: bucketName,
           Key: entry.s3Key,
           Body: body,
           ContentType: contentType,
         })
-        .promise()
+      )
 
       count++
       console.log(`[${count}/${total}] Uploaded ${entry.s3Key}`)
@@ -487,14 +488,14 @@ async function uploadArticles(articles, s3, bucketName, isLive, logger) {
     const key = `articles/${article.slug}.json`
 
     try {
-      await s3
-        .putObject({
+      await s3.send(
+        new PutObjectCommand({
           Bucket: bucketName,
           Key: key,
           Body: JSON.stringify(article, null, 2),
           ContentType: 'application/json',
         })
-        .promise()
+      )
 
       console.log(`[${i + 1}/${total}] Migrated ${article.slug}`)
       logger.log({
@@ -572,14 +573,14 @@ async function buildIndex(articles, s3, bucketName, isLive, logger) {
   console.log(`\n--- Phase 3: Building index ---`)
 
   try {
-    await s3
-      .putObject({
+    await s3.send(
+      new PutObjectCommand({
         Bucket: bucketName,
         Key: 'articles/index.json',
         Body: JSON.stringify(indexData, null, 2),
         ContentType: 'application/json',
       })
-      .promise()
+    )
 
     console.log(`Index uploaded with ${indexArticles.length} entries`)
     logger.log({
@@ -654,18 +655,17 @@ async function main() {
   let imagesS3 = null
   let articlesS3 = null
   if (isLive) {
-    const AWS = require('aws-sdk')
     // Images S3 client — no custom endpoint, goes to real S3
-    imagesS3 = new AWS.S3({
+    imagesS3 = new S3Client({
       region: process.env.AWS_REGION,
-      httpOptions: { timeout: 600000 },
+      requestHandler: { requestTimeout: 600000 },
     })
     // Articles S3 client — respects AWS_S3_ENDPOINT for localstack
-    articlesS3 = new AWS.S3({
+    articlesS3 = new S3Client({
       endpoint: process.env.AWS_S3_ENDPOINT,
-      s3ForcePathStyle: !!process.env.AWS_S3_ENDPOINT,
+      forcePathStyle: !!process.env.AWS_S3_ENDPOINT,
       region: process.env.AWS_REGION,
-      httpOptions: { timeout: 600000 },
+      requestHandler: { requestTimeout: 600000 },
     })
   }
 

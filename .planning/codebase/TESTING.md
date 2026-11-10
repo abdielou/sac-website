@@ -101,13 +101,11 @@ const mockOnSelect = jest.fn()
 // Later: expect(mockOnSelect).toHaveBeenCalledWith(expectedImage)
 
 // Mock AWS SDK (from photos.test.js)
-jest.mock('aws-sdk', () => ({
-  S3: jest.fn(() => ({
-    listObjectsV2: jest.fn(() => ({
-      promise: jest.fn(() => Promise.resolve({ Contents: [] })),
-    })),
-  })),
-}))
+// The v3 SDK has one send(command) entry point, so tests share test/helpers/s3-mock.js
+jest.mock('@aws-sdk/client-s3', () => require('../helpers/s3-mock').clientS3Mock())
+
+const { routeSend, lastInput } = require('../helpers/s3-mock')
+routeSend({ ListObjectsV2Command: { Contents: [] } })
 ```
 
 **What to Mock:**

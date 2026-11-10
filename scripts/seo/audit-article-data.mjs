@@ -10,12 +10,13 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
+import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { createS3 } from './s3-client.mjs'
 
 const { s3, bucket: BUCKET } = createS3()
 const getJSON = async (Key) => {
-  const r = await s3.getObject({ Bucket: BUCKET, Key }).promise()
-  return JSON.parse(r.Body.toString())
+  const r = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key }))
+  return JSON.parse(await r.Body.transformToString())
 }
 
 const WORD = /\S+/g

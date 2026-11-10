@@ -69,7 +69,7 @@
   - Provider: Amazon S3 (sac-gallery bucket)
   - What it's used for: Photo gallery image storage and retrieval
   - Integration: `pages/api/photos.js`, `pages/api/get-years.js`
-  - Client: `aws-sdk` (v2.1692.0)
+  - Client: `@aws-sdk/client-s3` (v3)
   - Bucket: `S3_BUCKET_NAME=sac-gallery`
   - Region: `AWS_REGION=us-east-1`
   - Auth: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`

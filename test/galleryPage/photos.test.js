@@ -1,24 +1,12 @@
 // Photos API Endpoint Tests
 
 // Mock AWS SDK
-jest.mock('aws-sdk', () => ({
-  S3: jest.fn(() => ({
-    getObject: jest.fn(() => ({
-      promise: jest.fn(() =>
-        Promise.resolve({
-          Body: Buffer.from('[]'),
-        })
-      ),
-    })),
-    listObjectsV2: jest.fn(() => ({
-      promise: jest.fn(() =>
-        Promise.resolve({
-          Contents: [],
-        })
-      ),
-    })),
-  })),
+jest.mock('@aws-sdk/client-s3', () => require('../helpers/s3-mock').clientS3Mock())
+jest.mock('@aws-sdk/s3-request-presigner', () => ({
+  getSignedUrl: jest.fn(async () => 'https://signed.example/object'),
 }))
+
+const { routeSend } = require('../helpers/s3-mock')
 
 // Import the API handler
 import handler from '../../pages/api/photos'
@@ -34,6 +22,7 @@ describe('Photos API Endpoint', () => {
       json: jest.fn(() => mockRes),
     }
     jest.clearAllMocks()
+    routeSend({ ListObjectsV2Command: { Contents: [] } })
   })
 
   // Test: Function type

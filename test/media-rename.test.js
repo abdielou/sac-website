@@ -1,16 +1,6 @@
-const mockGetObject = jest.fn()
-const mockPutObject = jest.fn()
-const mockCopyObject = jest.fn()
-const mockDeleteObject = jest.fn()
+jest.mock('@aws-sdk/client-s3', () => require('./helpers/s3-mock').clientS3Mock())
 
-jest.mock('aws-sdk', () => ({
-  S3: jest.fn(() => ({
-    getObject: mockGetObject,
-    putObject: mockPutObject,
-    copyObject: mockCopyObject,
-    deleteObject: mockDeleteObject,
-  })),
-}))
+const { routeSend, lastInput, sentInputs, sentCount, jsonBody } = require('./helpers/s3-mock')
 
 const baseEntry = {
   slug: 'observacion-lunar',
@@ -22,13 +12,10 @@ const baseEntry = {
   publishedAt: '2026-05-07T12:00:00.000Z',
 }
 
-function indexBody(media) {
-  return {
-    promise: () =>
-      Promise.resolve({
-        Body: Buffer.from(JSON.stringify({ media, updatedAt: '2026-05-07T12:00:00.000Z' })),
-      }),
-  }
+function serveIndex(media) {
+  routeSend({
+    GetObjectCommand: jsonBody({ media, updatedAt: '2026-05-07T12:00:00.000Z' }),
+  })
 }
 
 describe('media rename', () => {
@@ -47,19 +34,16 @@ describe('media rename', () => {
   test('moves the S3 video object to a new key in the same directory and extension', async () => {
     const { renameMediaEntry } = require('@/lib/media-s3')
 
-    mockGetObject.mockReturnValue(indexBody([baseEntry]))
-    mockCopyObject.mockReturnValue({ promise: () => Promise.resolve({}) })
-    mockDeleteObject.mockReturnValue({ promise: () => Promise.resolve({}) })
-    mockPutObject.mockReturnValue({ promise: () => Promise.resolve({}) })
+    serveIndex([baseEntry])
 
     const updated = await renameMediaEntry('observacion-lunar', 'eclipse-lunar')
 
-    expect(mockCopyObject).toHaveBeenCalledWith({
+    expect(lastInput('CopyObjectCommand')).toEqual({
       Bucket: 'sac-images',
       CopySource: 'sac-images/media/videos/2026/05/07/observacion-lunar.mp4',
       Key: 'media/videos/2026/05/07/eclipse-lunar.mp4',
     })
-    expect(mockDeleteObject).toHaveBeenCalledWith({
+    expect(lastInput('DeleteObjectCommand')).toEqual({
       Bucket: 'sac-images',
       Key: 'media/videos/2026/05/07/observacion-lunar.mp4',
     })
@@ -70,16 +54,13 @@ describe('media rename', () => {
   test('replaces the old slug with the new slug in the persisted index', async () => {
     const { renameMediaEntry } = require('@/lib/media-s3')
 
-    mockGetObject.mockReturnValue(indexBody([baseEntry]))
-    mockCopyObject.mockReturnValue({ promise: () => Promise.resolve({}) })
-    mockDeleteObject.mockReturnValue({ promise: () => Promise.resolve({}) })
-    mockPutObject.mockReturnValue({ promise: () => Promise.resolve({}) })
+    serveIndex([baseEntry])
 
     await renameMediaEntry('observacion-lunar', 'eclipse-lunar')
 
-    const indexPut = mockPutObject.mock.calls.find((call) => call[0].Key === 'media/index.json')
+    const indexPut = sentInputs('PutObjectCommand').find((i) => i.Key === 'media/index.json')
     expect(indexPut).toBeDefined()
-    const persistedIndex = JSON.parse(indexPut[0].Body)
+    const persistedIndex = JSON.parse(indexPut.Body)
     expect(persistedIndex.media.find((m) => m.slug === 'observacion-lunar')).toBeUndefined()
     expect(persistedIndex.media.find((m) => m.slug === 'eclipse-lunar')).toMatchObject({
       slug: 'eclipse-lunar',
@@ -90,24 +71,22 @@ describe('media rename', () => {
   test('rejects rename when the requested slug already belongs to another entry', async () => {
     const { renameMediaEntry } = require('@/lib/media-s3')
 
-    mockGetObject.mockReturnValue(
-      indexBody([
-        baseEntry,
-        {
-          slug: 'eclipse-lunar',
-          title: 'Eclipse lunar',
-          s3Key: 'media/videos/2026/05/06/eclipse-lunar.mp4',
-          publishedAt: '2026-05-06T00:00:00.000Z',
-        },
-      ])
-    )
+    serveIndex([
+      baseEntry,
+      {
+        slug: 'eclipse-lunar',
+        title: 'Eclipse lunar',
+        s3Key: 'media/videos/2026/05/06/eclipse-lunar.mp4',
+        publishedAt: '2026-05-06T00:00:00.000Z',
+      },
+    ])
 
     await expect(renameMediaEntry('observacion-lunar', 'eclipse-lunar')).rejects.toThrow(
       /ya existe/i
     )
 
-    expect(mockCopyObject).not.toHaveBeenCalled()
-    expect(mockDeleteObject).not.toHaveBeenCalled()
-    expect(mockPutObject).not.toHaveBeenCalled()
+    expect(sentCount('CopyObjectCommand')).toBe(0)
+    expect(sentCount('DeleteObjectCommand')).toBe(0)
+    expect(sentCount('PutObjectCommand')).toBe(0)
   })
 })

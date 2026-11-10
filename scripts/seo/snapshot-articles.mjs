@@ -15,6 +15,7 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
+import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import { createS3, whoAmI, assertWritable } from './s3-client.mjs'
 
 const { s3, bucket: BUCKET, region, source, credentials } = createS3()
@@ -35,17 +36,19 @@ const KEY = (slug) => `articles/${slug}.json`
 const fileFor = (slug) => `${String(slug).replace(/\//g, '__')}.json`
 
 const getJSON = async (Key) =>
-  JSON.parse((await s3.getObject({ Bucket: BUCKET, Key }).promise()).Body.toString())
+  JSON.parse(
+    await (await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key }))).Body.transformToString()
+  )
 
 const putJSON = (Key, data) =>
-  s3
-    .putObject({
+  s3.send(
+    new PutObjectCommand({
       Bucket: BUCKET,
       Key,
       Body: JSON.stringify(data, null, 2),
       ContentType: 'application/json',
     })
-    .promise()
+  )
 
 /** Every article key the index knows about, plus the index itself. */
 async function readCorpus() {
