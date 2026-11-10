@@ -20,9 +20,10 @@ function to24h(timeStr) {
   return `${String(hours).padStart(2, '0')}:${mins}`
 }
 
-function getObjectImageUrl(objectId, catalog) {
+function getObjectImageUrl(objectId, catalog, imageUrl) {
   const hubbleId = hubbleImages[objectId]
   if (hubbleId) return `https://cdn.esahubble.org/archives/images/thumb300y/${hubbleId}.jpg`
+  if (imageUrl) return imageUrl
   if (catalog?.ra != null && catalog?.dec != null) {
     return `https://skyview.gsfc.nasa.gov/current/cgi/runquery.pl?Position=${catalog.ra},${catalog.dec}&Survey=DSS&Return=JPEG&Pixels=80`
   }
@@ -65,6 +66,7 @@ const LOCATION_OPTIONS = [
  * @param {Function} onRemove - Called with (index) when object is removed
  * @param {Function} onMoveUp - Called with (index) to move up
  * @param {Function} onMoveDown - Called with (index) to move down
+ * @param {Function} [onEditManual] - Called with (index) to edit a manual object's data
  */
 export default function GuideObjectRow({
   entry,
@@ -74,12 +76,14 @@ export default function GuideObjectRow({
   onRemove,
   onMoveUp,
   onMoveDown,
+  onEditManual,
   readOnly = false,
 }) {
   const [expanded, setExpanded] = useState(true)
   const [showPreview, setShowPreview] = useState(false)
 
   const cat = entry._catalogData || {}
+  const isManual = !!entry.manual
   const name = cat.commonNameEs || cat.commonName || cat.name || entry.objectId
 
   const catalogIds = []
@@ -90,7 +94,8 @@ export default function GuideObjectRow({
     if (cat.catalogIds.ic) catalogIds.push(cat.catalogIds.ic)
     if (cat.catalogIds.sharpless) catalogIds.push(cat.catalogIds.sharpless)
   }
-  const idsStr = catalogIds.join(' / ') || entry.objectId
+  // A manual object shows its designation, never its generated id.
+  const idsStr = catalogIds.join(' / ') || (isManual ? cat.name : entry.objectId)
 
   const handleChange = (field, value) => {
     onUpdate(index, { ...entry, [field]: value })
@@ -113,7 +118,7 @@ export default function GuideObjectRow({
         {/* Thumbnail with hover preview */}
         {(() => {
           const hubbleId = hubbleImages[entry.objectId]
-          const thumbUrl = getObjectImageUrl(entry.objectId, cat)
+          const thumbUrl = getObjectImageUrl(entry.objectId, cat, entry.manual?.imageUrl)
           const previewUrl = hubbleId
             ? `https://cdn.esahubble.org/archives/images/thumb700x/${hubbleId}.jpg`
             : thumbUrl
@@ -154,7 +159,14 @@ export default function GuideObjectRow({
           onClick={() => setExpanded((e) => !e)}
           className="flex-1 min-w-0 text-left"
         >
-          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{name}</p>
+          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+            {name}
+            {isManual && (
+              <span className="ml-2 inline-flex px-1.5 py-0.5 text-[10px] font-medium rounded bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 align-middle">
+                Manual
+              </span>
+            )}
+          </p>
           <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
             {idsStr}
             {cat.objectType && <span className="ml-2">{cat.objectType}</span>}
@@ -179,6 +191,17 @@ export default function GuideObjectRow({
 
         {!readOnly && (
           <>
+            {/* Edit manual object data */}
+            {isManual && onEditManual && (
+              <button
+                type="button"
+                onClick={() => onEditManual(index)}
+                className="flex-shrink-0 px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                Editar datos
+              </button>
+            )}
+
             {/* Reorder buttons */}
             <div className="flex flex-col gap-0.5 flex-shrink-0">
               <button

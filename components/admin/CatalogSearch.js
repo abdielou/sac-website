@@ -58,8 +58,9 @@ function getObjectImageUrl(objectId, catalog) {
  *
  * @param {Function} onAddObject - callback receiving a catalog object when user clicks "Agregar"
  * @param {Set} addedObjectIds - set of objectIds already in the guide (to disable duplicate adds)
+ * @param {Function} [onAddManual] - callback receiving a name to fill in, to add an object by hand
  */
-export default function CatalogSearch({ onAddObject, addedObjectIds = new Set() }) {
+export default function CatalogSearch({ onAddObject, addedObjectIds = new Set(), onAddManual }) {
   const [query, setQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [results, setResults] = useState([])
@@ -183,9 +184,18 @@ export default function CatalogSearch({ onAddObject, addedObjectIds = new Set() 
         )}
 
         {!isLoading && hasSearched && results.length === 0 && (
-          <p className="text-xs text-gray-500 dark:text-gray-400 py-4 text-center">
-            Sin resultados
-          </p>
+          <div className="py-4 text-center">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Sin resultados</p>
+            {onAddManual && query.trim() && (
+              <button
+                type="button"
+                onClick={() => onAddManual(query.trim())}
+                className="mt-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                Agregar «{query.trim()}» manualmente
+              </button>
+            )}
+          </div>
         )}
 
         {!isLoading &&
@@ -227,6 +237,21 @@ export default function CatalogSearch({ onAddObject, addedObjectIds = new Set() 
             )
           })}
       </div>
+
+      {onAddManual && (
+        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+          <button
+            type="button"
+            onClick={() => onAddManual('')}
+            className="w-full px-3 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 border border-dashed border-blue-300 dark:border-blue-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+          >
+            + Agregar objeto manual
+          </button>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 text-center">
+            Para objetos que no están en el catálogo
+          </p>
+        </div>
+      )}
     </div>
   )
 }
