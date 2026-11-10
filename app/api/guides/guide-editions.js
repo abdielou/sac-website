@@ -1,5 +1,6 @@
 import { listGuides, getGuide } from '@/lib/guides'
 import { getObjectById } from '@/lib/catalog'
+import { manualToCatalog } from '@/lib/guide-manual-object'
 import hubbleImages from '@/data/catalog/hubble-images.json'
 import { absUrl, pageMetadata, noindexMetadata, safeModified, toIso } from '@/lib/seo'
 
@@ -204,8 +205,29 @@ export function entryDisplayName(entry) {
 /**
  * Resolve one stored entry against the object catalog and the ESA/Hubble image
  * map. Grayscale SkyView art is filled in at render time from the coordinates.
+ *
+ * A manual entry carries its own object data in `entry.manual`. It maps to the
+ * same `catalog` shape, so the cards, sorting, and schema need no special case.
  */
 export function resolveGuideEntry(entry) {
+  const annotations = {
+    objectId: entry.objectId,
+    difficulty: entry.difficulty || null,
+    equipment: entry.equipment || null,
+    location: entry.location || null,
+    optimalTime: entry.optimalTime || null,
+    notes: entry.notes || null,
+  }
+
+  if (entry.manual) {
+    return {
+      ...annotations,
+      catalog: manualToCatalog(entry.manual),
+      imageUrl: entry.manual.imageUrl || null,
+      imageCredit: entry.manual.imageCredit || null,
+    }
+  }
+
   const catalogObj = getObjectById(entry.objectId)
   const hubbleId = hubbleImages[entry.objectId]
   const imageUrl = hubbleId
@@ -213,14 +235,10 @@ export function resolveGuideEntry(entry) {
     : null
 
   return {
-    objectId: entry.objectId,
-    difficulty: entry.difficulty || null,
-    equipment: entry.equipment || null,
-    location: entry.location || null,
-    optimalTime: entry.optimalTime || null,
-    notes: entry.notes || null,
+    ...annotations,
     catalog: catalogObj || null,
     imageUrl,
+    imageCredit: null,
   }
 }
 

@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import CatalogSearch from './CatalogSearch'
 import GuideObjectRow from './GuideObjectRow'
+import ManualObjectForm from './ManualObjectForm'
+import { manualToCatalog, newManualObjectId } from '@/lib/guide-manual-object'
 
 /**
  * GuideEditor - Full guide editor with catalog search, object list, annotations, and save/publish.
@@ -20,6 +22,8 @@ export default function GuideEditor({ initialGuide = null, readOnly = false }) {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState(null)
   const [isResolvingCatalog, setIsResolvingCatalog] = useState(false)
+  // Open manual object form: { objectId, index?, initialValue?, initialName? } or null
+  const [manualForm, setManualForm] = useState(null)
 
   /**
    * On mount in edit mode, resolve catalog display data for each entry.
@@ -32,7 +36,8 @@ export default function GuideEditor({ initialGuide = null, readOnly = false }) {
     const resolveEntries = async () => {
       setIsResolvingCatalog(true)
       const resolved = new Map()
-      const toResolve = initialGuide.entries.filter((e) => e.objectId)
+      // Manual objects carry their own data, so only catalog objects need a lookup.
+      const toResolve = initialGuide.entries.filter((e) => e.objectId && !e.manual)
 
       // Batch resolve: fetch each unique objectId
       const uniqueIds = [...new Set(toResolve.map((e) => e.objectId))]
@@ -59,7 +64,9 @@ export default function GuideEditor({ initialGuide = null, readOnly = false }) {
 
       const hydrated = initialGuide.entries.map((entry) => ({
         ...entry,
-        _catalogData: resolved.get(entry.objectId) || null,
+        _catalogData: entry.manual
+          ? manualToCatalog(entry.manual)
+          : resolved.get(entry.objectId) || null,
       }))
       setEntries(hydrated)
       setIsResolvingCatalog(false)
@@ -99,6 +106,58 @@ export default function GuideEditor({ initialGuide = null, readOnly = false }) {
       ]
     })
   }, [])
+
+  /**
+   * Open the manual object form to add a new object, with an optional name filled in.
+   */
+  const handleOpenAddManual = useCallback((initialName) => {
+    setManualForm({ objectId: newManualObjectId(), initialName })
+  }, [])
+
+  /**
+   * Open the manual object form to edit the entry at index.
+   */
+  const handleOpenEditManual = useCallback(
+    (index) => {
+      const entry = entries[index]
+      if (!entry?.manual) return
+      setManualForm({ objectId: entry.objectId, index, initialValue: entry.manual })
+    },
+    [entries]
+  )
+
+  /**
+   * Add or update a manual object from the cleaned form value.
+   */
+  const handleSubmitManual = useCallback(
+    (manual) => {
+      const form = manualForm
+      setManualForm(null)
+      if (!form) return
+
+      setEntries((prev) => {
+        if (form.index !== undefined) {
+          const next = [...prev]
+          next[form.index] = { ...next[form.index], manual, _catalogData: manualToCatalog(manual) }
+          return next
+        }
+        return [
+          ...prev,
+          {
+            objectId: form.objectId,
+            manual,
+            difficulty: '',
+            equipment: '',
+            location: '',
+            optimalTime: '',
+            notes: '',
+            _catalogData: manualToCatalog(manual),
+          },
+        ]
+      })
+    },
+    [manualForm]
+  )
 
   /**
    * Update an entry's annotations.
@@ -273,7 +332,11 @@ export default function GuideEditor({ initialGuide = null, readOnly = false }) {
         {/* Left: catalog search (hidden in read-only mode) */}
         {!readOnly && (
           <div className="order-2 lg:order-1">
-            <CatalogSearch onAddObject={handleAddObject} addedObjectIds={addedObjectIds} />
+            <CatalogSearch
+              onAddObject={handleAddObject}
+              addedObjectIds={addedObjectIds}
+              onAddManual={handleOpenAddManual}
+            />
           </div>
         )}
 
@@ -305,7 +368,7 @@ export default function GuideEditor({ initialGuide = null, readOnly = false }) {
                 />
               </svg>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Busca objetos en el catalogo y agregalos a la guia.
+                Busca objetos en el catalogo y agregalos a la guia, o agrega un objeto manual.
               </p>
             </div>
           ) : (
@@ -320,6 +383,7 @@ export default function GuideEditor({ initialGuide = null, readOnly = false }) {
                   onRemove={handleRemoveEntry}
                   onMoveUp={handleMoveUp}
                   onMoveDown={handleMoveDown}
+                  onEditManual={handleOpenEditManual}
                   readOnly={readOnly}
                 />
               ))}
@@ -327,6 +391,16 @@ export default function GuideEditor({ initialGuide = null, readOnly = false }) {
           )}
         </div>
       </div>
+
+      {manualForm && (
+        <ManualObjectForm
+          objectId={manualForm.objectId}
+          initialValue={manualForm.initialValue || null}
+          initialName={manualForm.initialName || ''}
+          onSubmit={handleSubmitManual}
+          onCancel={() => setManualForm(null)}
+        />
+      )}
 
       {/* Action bar */}
       <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">

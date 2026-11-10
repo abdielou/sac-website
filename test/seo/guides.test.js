@@ -364,6 +364,50 @@ describe('resolveGuideEntries', () => {
     expect(resolveGuideEntries({})).toEqual([])
     expect(resolveGuideEntries(null)).toEqual([])
   })
+
+  it('resolves a manual object from its own data, not the catalog', () => {
+    const [comet] = resolveGuideEntries({
+      entries: [
+        {
+          objectId: 'manual-a1',
+          manual: {
+            name: 'Cometa C/2025 A1',
+            designation: 'C/2025 A1',
+            objectType: 'Cometa',
+            magnitude: 6.5,
+            imageUrl: 'https://example.com/comet.jpg',
+            imageCredit: 'NASA/JPL',
+          },
+          difficulty: 'facil',
+          optimalTime: '8:00 PM',
+        },
+      ],
+    })
+    expect(comet).toMatchObject({
+      objectId: 'manual-a1',
+      difficulty: 'facil',
+      optimalTime: '8:00 PM',
+      imageUrl: 'https://example.com/comet.jpg',
+      imageCredit: 'NASA/JPL',
+      catalog: {
+        name: 'C/2025 A1',
+        commonNameEs: 'Cometa C/2025 A1',
+        objectType: 'Cometa',
+        magnitude: 6.5,
+        ra: null,
+        dec: null,
+      },
+    })
+  })
+
+  it('gives a manual object without an image no image URL', () => {
+    const [moon] = resolveGuideEntries({
+      entries: [{ objectId: 'manual-a2', manual: { name: 'Luna' } }],
+    })
+    expect(moon.imageUrl).toBeNull()
+    expect(moon.imageCredit).toBeNull()
+    expect(moon.catalog.commonNameEs).toBe('Luna')
+  })
 })
 
 describe('entryDisplayName', () => {
@@ -398,6 +442,17 @@ describe('editionItemListSchema', () => {
       name: 'Galaxia de Andrómeda',
     })
     expect(schema.itemListElement[0].description).toContain('Magnitud 3.4')
+  })
+
+  it('names a manual object and states its facts', () => {
+    const [item] = editionItemListSchema(
+      febIndexEntry,
+      resolveGuideEntries({
+        entries: [{ objectId: 'manual-a1', manual: { name: 'Saturno', magnitude: 0.6 } }],
+      })
+    ).itemListElement
+    expect(item.name).toBe('Saturno')
+    expect(item.description).toContain('Magnitud 0.6')
   })
 
   it('omits the description when there are no facts to state', () => {

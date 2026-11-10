@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import hubbleImages from '@/data/catalog/hubble-images.json'
 
 const EQUIPMENT_LABELS = {
@@ -80,18 +80,72 @@ function getSkyViewUrl(ra, dec, pixels = 150) {
   return `https://skyview.gsfc.nasa.gov/current/cgi/runquery.pl?Position=${ra},${dec}&Survey=DSS&Return=JPEG&Pixels=${pixels}`
 }
 
-function getLargeImageUrl(objectId, catalog) {
-  const hubbleId = hubbleImages[objectId]
+function hasCoordinates(catalog) {
+  return catalog?.ra != null && catalog?.dec != null
+}
+
+/**
+ * Large image for the modal: ESA/Hubble, then the entry's own image (manual
+ * objects), then SkyView from the coordinates. Null when there is none.
+ */
+export function getLargeImageUrl(entry, catalog) {
+  const hubbleId = hubbleImages[entry.objectId]
   if (hubbleId) return `https://cdn.esahubble.org/archives/images/screen/${hubbleId}.jpg`
-  if (catalog?.ra != null && catalog?.dec != null)
-    return getSkyViewUrl(catalog.ra, catalog.dec, 600)
+  if (entry.imageUrl) return entry.imageUrl
+  if (hasCoordinates(catalog)) return getSkyViewUrl(catalog.ra, catalog.dec, 600)
   return null
+}
+
+function ImagePlaceholder({ name, className }) {
+  return (
+    <div
+      role="img"
+      aria-label={`Sin imagen de ${name}`}
+      className={`flex items-center justify-center text-gray-300 dark:text-gray-600 ${className}`}
+    >
+      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"
+        />
+      </svg>
+    </div>
+  )
+}
+
+/**
+ * Object image with a placeholder when there is no URL or the URL fails to
+ * load. A pasted external link can break after the guide is published.
+ */
+function ObjectImage({ src, name, className, loading }) {
+  const [failed, setFailed] = useState(false)
+  const imgRef = useRef(null)
+
+  // An error before hydration never reaches onError, so check once on mount.
+  useEffect(() => {
+    const img = imgRef.current
+    if (img && img.complete && img.naturalWidth === 0) setFailed(true)
+  }, [src])
+
+  if (!src || failed) return <ImagePlaceholder name={name} className={className} />
+  return (
+    <img
+      ref={imgRef}
+      src={src}
+      alt={`Vista de ${name}`}
+      loading={loading}
+      onError={() => setFailed(true)}
+      className={className}
+    />
+  )
 }
 
 function ObjectModal({ entry, catalog, onClose }) {
   const displayName = getDisplayName(catalog)
   const catalogIds = getCatalogIds(catalog)
-  const largeImg = getLargeImageUrl(entry.objectId, catalog)
+  const largeImg = getLargeImageUrl(entry, catalog)
   const hubbleId = hubbleImages[entry.objectId]
 
   const handleKeyDown = useCallback(
@@ -137,9 +191,9 @@ function ObjectModal({ entry, catalog, onClose }) {
         {/* Large image */}
         {largeImg && (
           <div className="w-full aspect-[4/3] bg-black rounded-t-2xl overflow-hidden">
-            <img
+            <ObjectImage
               src={largeImg}
-              alt={`Vista de ${displayName}`}
+              name={displayName}
               className="w-full h-full object-contain"
             />
           </div>
@@ -228,6 +282,9 @@ function ObjectModal({ entry, catalog, onClose }) {
           )}
 
           {/* Image credit */}
+          {!hubbleId && entry.imageCredit && (
+            <p className="text-xs text-gray-400 dark:text-gray-500">Imagen: {entry.imageCredit}</p>
+          )}
           {hubbleId && (
             <p className="text-xs text-gray-400 dark:text-gray-500">
               Imagen: ESA/Hubble (
@@ -288,9 +345,12 @@ export default function ObjectCard({ entry }) {
       >
         {/* Object thumbnail — ESA/Hubble color if available, SkyView grayscale fallback */}
         <div className="flex-shrink-0 sm:w-[150px] sm:h-[150px] bg-gray-100 dark:bg-gray-900">
-          <img
-            src={entry.imageUrl || getSkyViewUrl(catalog.ra, catalog.dec)}
-            alt={`Vista de ${displayName}`}
+          <ObjectImage
+            src={
+              entry.imageUrl ||
+              (hasCoordinates(catalog) ? getSkyViewUrl(catalog.ra, catalog.dec) : null)
+            }
+            name={displayName}
             loading="lazy"
             className="w-full h-40 sm:w-[150px] sm:h-[150px] object-cover"
           />
