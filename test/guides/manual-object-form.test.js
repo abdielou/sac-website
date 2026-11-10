@@ -51,6 +51,26 @@ test('lists the type suggestions', () => {
   expect(html).toContain('<option value="Evento">')
 })
 
+test('offers an upload button first and hides the link field', () => {
+  const html = render({})
+  expect(html).toContain('>Subir imagen</button>')
+  expect(html).toContain('o pega un enlace')
+  expect(html).not.toContain('id="manual-image-url"')
+})
+
+test('shows an uploaded image by file name, not by its storage URL', () => {
+  const html = render({
+    initialValue: {
+      name: 'Júpiter',
+      imageUrl: '/local-s3/images/guides/2026/11/10/1794323397181-jupiter.jpg',
+    },
+  })
+  expect(html).toContain('>jupiter.jpg</p>')
+  expect(html).toContain('>Cambiar imagen</button>')
+  expect(html).toContain('>Quitar imagen</button>')
+  expect(html).not.toContain('id="manual-image-url"')
+})
+
 test('shows no errors before the editor types or submits', () => {
   const html = render({})
   expect(html).not.toContain('obligatorio')

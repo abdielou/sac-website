@@ -30,6 +30,26 @@ function toFormValues(manual, initialName) {
 }
 
 /**
+ * Readable file name from an image URL. Drops the upload timestamp prefix,
+ * so `.../1794323397181-jupiter.jpg` shows as `jupiter.jpg`.
+ */
+function fileNameFromUrl(url) {
+  const last = String(url || '')
+    .split(/[?#]/)[0]
+    .split('/')
+    .filter(Boolean)
+    .pop()
+  if (!last) return ''
+  let name = last
+  try {
+    name = decodeURIComponent(last)
+  } catch {
+    // Keep the raw segment when it is not valid URI encoding.
+  }
+  return name.replace(/^\d{10,}-/, '')
+}
+
+/**
  * Upload an image file for a manual guide object.
  * @param {File} file
  * @returns {Promise<string>} URL of the uploaded image
@@ -84,6 +104,10 @@ export default function ManualObjectForm({
   const [submitted, setSubmitted] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadError, setUploadError] = useState(null)
+  // Original name of the file the editor picked, shown instead of the storage URL
+  const [uploadedName, setUploadedName] = useState('')
+  // True while the editor types or pastes an image link instead of uploading a file
+  const [pasteMode, setPasteMode] = useState(false)
   const fileInputRef = useRef(null)
 
   // The browser cannot see S3_STUB_DIR, so local stub paths pass here and the API decides.
@@ -115,6 +139,8 @@ export default function ManualObjectForm({
     try {
       const url = await uploadGuideImage(file)
       setValues((prev) => ({ ...prev, imageUrl: url }))
+      setUploadedName(file.name)
+      setPasteMode(false)
     } catch (err) {
       setUploadError(err.message || 'Error al subir imagen')
     } finally {
@@ -138,6 +164,25 @@ export default function ManualObjectForm({
   const inputClass =
     'w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
   const imageUrl = values.imageUrl.trim()
+  const urlInvalid = !!imageUrl && !!errors.imageUrl
+  const showUrlInput = pasteMode || urlInvalid
+  const hasImage = !!imageUrl && !urlInvalid && !pasteMode
+  const imageName = uploadedName || fileNameFromUrl(imageUrl)
+
+  const openFilePicker = () => fileInputRef.current?.click()
+
+  const removeImage = () => {
+    setValues((prev) => ({ ...prev, imageUrl: '' }))
+    setUploadedName('')
+    setUploadError(null)
+  }
+
+  // Leave paste mode once the link is valid, so the preview replaces the text field.
+  const handleUrlBlur = () => {
+    touch('imageUrl')()
+    if (!errors.imageUrl) setPasteMode(false)
+    setUploadedName('')
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -263,51 +308,81 @@ export default function ManualObjectForm({
         </p>
 
         <Field id="manual-image-url" label="Imagen" error={uploadError || errorFor('imageUrl')}>
-          <div className="flex gap-2">
-            <input
-              id="manual-image-url"
-              type="url"
-              value={values.imageUrl}
-              onChange={setField('imageUrl')}
-              onBlur={touch('imageUrl')}
-              placeholder="https://... o sube un archivo"
-              className={inputClass}
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              className="flex-shrink-0 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
-            >
-              {isUploading ? 'Subiendo...' : 'Subir'}
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-          </div>
-        </Field>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="hidden"
+          />
 
-        {imageUrl && !errors.imageUrl && (
-          <div className="flex items-start gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={imageUrl}
-              alt={`Vista previa de ${values.name || 'objeto'}`}
-              className="w-24 h-24 rounded object-cover bg-gray-100 dark:bg-gray-900"
-            />
-            <button
-              type="button"
-              onClick={() => setValues((prev) => ({ ...prev, imageUrl: '' }))}
-              className="text-xs text-red-600 dark:text-red-400 hover:underline"
-            >
-              Quitar imagen
-            </button>
-          </div>
-        )}
+          {hasImage ? (
+            <div className="flex items-start gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imageUrl}
+                alt={`Vista previa de ${values.name || 'objeto'}`}
+                className="w-24 h-24 rounded object-cover bg-gray-100 dark:bg-gray-900"
+              />
+              <div className="min-w-0 space-y-1">
+                <p className="text-sm text-gray-900 dark:text-white truncate" title={imageName}>
+                  {imageName}
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={openFilePicker}
+                    disabled={isUploading}
+                    className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50"
+                  >
+                    {isUploading ? 'Subiendo...' : 'Cambiar imagen'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="text-xs text-red-600 dark:text-red-400 hover:underline"
+                  >
+                    Quitar imagen
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={openFilePicker}
+                  disabled={isUploading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                >
+                  {isUploading ? 'Subiendo...' : 'Subir imagen'}
+                </button>
+                {!showUrlInput && (
+                  <button
+                    type="button"
+                    onClick={() => setPasteMode(true)}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    o pega un enlace
+                  </button>
+                )}
+              </div>
+              {showUrlInput && (
+                <input
+                  id="manual-image-url"
+                  type="url"
+                  value={values.imageUrl}
+                  onChange={setField('imageUrl')}
+                  onBlur={handleUrlBlur}
+                  placeholder="https://..."
+                  className={inputClass}
+                  autoFocus
+                />
+              )}
+            </div>
+          )}
+        </Field>
 
         <Field id="manual-image-credit" label="Crédito de imagen" error={errorFor('imageCredit')}>
           <input
