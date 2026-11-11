@@ -4,15 +4,7 @@
 // and summaries were written with no feedback on the length a SERP can show.
 // These tests lock the pure helpers that stop both problems recurring.
 
-jest.mock('aws-sdk', () => ({
-  S3: jest.fn(() => ({
-    putObject: jest.fn(() => ({ promise: jest.fn(() => Promise.resolve({})) })),
-    getObject: jest.fn(() => ({
-      promise: jest.fn(() => Promise.resolve({ Body: Buffer.from('{}') })),
-    })),
-    deleteObject: jest.fn(() => ({ promise: jest.fn(() => Promise.resolve({})) })),
-  })),
-}))
+jest.mock('@aws-sdk/client-s3', () => require('../helpers/s3-mock').clientS3Mock())
 
 import { normaliseTags } from '@/lib/articles'
 import {

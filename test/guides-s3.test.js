@@ -1,20 +1,19 @@
-import { putGuideJSON, getGuideJSON, deleteGuideJSON, getGuideIndex, putGuideIndex } from '../lib/guides-s3'
+import {
+  putGuideJSON,
+  getGuideJSON,
+  deleteGuideJSON,
+  getGuideIndex,
+  putGuideIndex,
+} from '../lib/guides-s3'
 
 // Mock AWS SDK
-const mockPutObject = jest.fn()
-const mockGetObject = jest.fn()
-const mockDeleteObject = jest.fn()
+jest.mock('@aws-sdk/client-s3', () => require('./helpers/s3-mock').clientS3Mock())
 
-jest.mock('aws-sdk', () => ({
-  S3: jest.fn(() => ({
-    putObject: mockPutObject,
-    getObject: mockGetObject,
-    deleteObject: mockDeleteObject,
-  })),
-}))
+const { routeSend, lastInput, jsonBody, noSuchKey } = require('./helpers/s3-mock')
 
 beforeEach(() => {
   jest.clearAllMocks()
+  routeSend({})
   process.env.S3_ARTICLES_BUCKET_NAME = 'test-bucket'
   process.env.AWS_REGION = 'us-east-1'
 })
@@ -48,11 +47,11 @@ const sampleGuide = {
 
 describe('putGuideJSON', () => {
   it('writes guide JSON to S3 at guides/{slug}.json', async () => {
-    mockPutObject.mockReturnValue({ promise: () => Promise.resolve({ ETag: '"abc"' }) })
+    routeSend({ PutObjectCommand: { ETag: '"abc"' } })
 
     await putGuideJSON('galaxias-primavera-2026', sampleGuide)
 
-    expect(mockPutObject).toHaveBeenCalledWith({
+    expect(lastInput('PutObjectCommand')).toEqual({
       Bucket: 'test-bucket',
       Key: 'guides/galaxias-primavera-2026.json',
       Body: JSON.stringify(sampleGuide, null, 2),
@@ -63,13 +62,11 @@ describe('putGuideJSON', () => {
 
 describe('getGuideJSON', () => {
   it('reads and parses guide JSON from S3', async () => {
-    mockGetObject.mockReturnValue({
-      promise: () => Promise.resolve({ Body: Buffer.from(JSON.stringify(sampleGuide)) }),
-    })
+    routeSend({ GetObjectCommand: jsonBody(sampleGuide) })
 
     const result = await getGuideJSON('galaxias-primavera-2026')
 
-    expect(mockGetObject).toHaveBeenCalledWith({
+    expect(lastInput('GetObjectCommand')).toEqual({
       Bucket: 'test-bucket',
       Key: 'guides/galaxias-primavera-2026.json',
     })
@@ -77,9 +74,11 @@ describe('getGuideJSON', () => {
   })
 
   it('throws helpful error for non-existent guide (NoSuchKey)', async () => {
-    const noKeyErr = new Error('NoSuchKey')
-    noKeyErr.code = 'NoSuchKey'
-    mockGetObject.mockReturnValue({ promise: () => Promise.reject(noKeyErr) })
+    routeSend({
+      GetObjectCommand: () => {
+        throw noSuchKey()
+      },
+    })
 
     await expect(getGuideJSON('nonexistent')).rejects.toThrow('Guide not found: nonexistent')
   })
@@ -93,11 +92,9 @@ describe('getGuideJSON', () => {
 
 describe('deleteGuideJSON', () => {
   it('removes guide from S3', async () => {
-    mockDeleteObject.mockReturnValue({ promise: () => Promise.resolve({}) })
-
     await deleteGuideJSON('galaxias-primavera-2026')
 
-    expect(mockDeleteObject).toHaveBeenCalledWith({
+    expect(lastInput('DeleteObjectCommand')).toEqual({
       Bucket: 'test-bucket',
       Key: 'guides/galaxias-primavera-2026.json',
     })
@@ -106,9 +103,11 @@ describe('deleteGuideJSON', () => {
 
 describe('getGuideIndex', () => {
   it('returns empty index when no index exists (NoSuchKey)', async () => {
-    const noKeyErr = new Error('NoSuchKey')
-    noKeyErr.code = 'NoSuchKey'
-    mockGetObject.mockReturnValue({ promise: () => Promise.reject(noKeyErr) })
+    routeSend({
+      GetObjectCommand: () => {
+        throw noSuchKey()
+      },
+    })
 
     const result = await getGuideIndex()
 
@@ -128,13 +127,11 @@ describe('getGuideIndex', () => {
       guides: [{ slug: 'test', title: 'Test', type: 'galaxies', status: 'published' }],
       updatedAt: '2026-03-26T00:00:00Z',
     }
-    mockGetObject.mockReturnValue({
-      promise: () => Promise.resolve({ Body: Buffer.from(JSON.stringify(indexData)) }),
-    })
+    routeSend({ GetObjectCommand: jsonBody(indexData) })
 
     const result = await getGuideIndex()
 
-    expect(mockGetObject).toHaveBeenCalledWith({
+    expect(lastInput('GetObjectCommand')).toEqual({
       Bucket: 'test-bucket',
       Key: 'guides/index.json',
     })
@@ -144,7 +141,7 @@ describe('getGuideIndex', () => {
 
 describe('putGuideIndex', () => {
   it('writes index to guides/index.json', async () => {
-    mockPutObject.mockReturnValue({ promise: () => Promise.resolve({ ETag: '"abc"' }) })
+    routeSend({ PutObjectCommand: { ETag: '"abc"' } })
     const indexData = {
       guides: [{ slug: 'test', title: 'Test' }],
       updatedAt: '2026-03-26T00:00:00Z',
@@ -152,7 +149,7 @@ describe('putGuideIndex', () => {
 
     await putGuideIndex(indexData)
 
-    expect(mockPutObject).toHaveBeenCalledWith({
+    expect(lastInput('PutObjectCommand')).toEqual({
       Bucket: 'test-bucket',
       Key: 'guides/index.json',
       Body: JSON.stringify(indexData, null, 2),

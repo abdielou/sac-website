@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
-import AWS from 'aws-sdk'
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
 import { getMediaEntry } from '@/lib/media-s3'
 
 function getS3Client() {
-  return new AWS.S3({
+  return new S3Client({
     endpoint: process.env.AWS_S3_ENDPOINT,
-    s3ForcePathStyle: true,
+    forcePathStyle: true,
     region: process.env.AWS_REGION,
   })
 }
@@ -31,30 +31,30 @@ export async function GET(request, { params }) {
       // Forward the Range header to S3 and trust its response headers.
       // This correctly handles partial content, open ranges (bytes=0-), and
       // returns the proper Content-Range / Content-Length for the slice.
-      const result = await s3
-        .getObject({ Bucket: bucket, Key: entry.s3Key, Range: range })
-        .promise()
+      const result = await s3.send(
+        new GetObjectCommand({ Bucket: bucket, Key: entry.s3Key, Range: range })
+      )
 
-      return new NextResponse(result.Body, {
+      return new NextResponse(result.Body.transformToWebStream(), {
         status: 206,
         headers: {
           'Content-Type': result.ContentType || 'video/mp4',
           'Accept-Ranges': 'bytes',
           'Content-Range': result.ContentRange,
-          'Content-Length': result.ContentLength,
+          'Content-Length': String(result.ContentLength),
         },
       })
     }
 
     // Full file
-    const result = await s3.getObject({ Bucket: bucket, Key: entry.s3Key }).promise()
+    const result = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: entry.s3Key }))
 
-    return new NextResponse(result.Body, {
+    return new NextResponse(result.Body.transformToWebStream(), {
       status: 200,
       headers: {
         'Content-Type': result.ContentType || 'video/mp4',
         'Accept-Ranges': 'bytes',
-        'Content-Length': result.ContentLength,
+        'Content-Length': String(result.ContentLength),
       },
     })
   } catch (error) {

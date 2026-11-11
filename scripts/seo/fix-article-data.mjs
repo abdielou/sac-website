@@ -36,6 +36,7 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
+import { GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { createS3, whoAmI, assertWritable } from './s3-client.mjs'
 
 const { s3, bucket: BUCKET, region, source, credentials } = createS3()
@@ -58,16 +59,18 @@ const KEY = (slug) => `articles/${slug}.json`
 const INDEX_KEY = 'articles/index.json'
 
 const getJSON = async (Key) =>
-  JSON.parse((await s3.getObject({ Bucket: BUCKET, Key }).promise()).Body.toString())
+  JSON.parse(
+    await (await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key }))).Body.transformToString()
+  )
 const putJSON = (Key, data) =>
-  s3
-    .putObject({
+  s3.send(
+    new PutObjectCommand({
       Bucket: BUCKET,
       Key,
       Body: JSON.stringify(data, null, 2),
       ContentType: 'application/json',
     })
-    .promise()
+  )
 
 /**
  * Tag backfill for published articles that currently have none.
@@ -329,7 +332,7 @@ const main = async () => {
     written++
   }
   for (const slug of toDelete) {
-    await s3.deleteObject({ Bucket: BUCKET, Key: KEY(slug) }).promise()
+    await s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: KEY(slug) }))
   }
 
   // --- rebuild the index ----------------------------------------------------

@@ -1,15 +1,15 @@
 import { auth } from '../../../../../auth'
 import { NextResponse } from 'next/server'
-import AWS from 'aws-sdk'
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 import { checkPermission } from '../../../../../lib/api-permissions'
 import { Actions } from '../../../../../lib/permissions'
 
 let mediaS3Client = null
 function getMediaS3Client() {
   if (!mediaS3Client) {
-    mediaS3Client = new AWS.S3({
+    mediaS3Client = new S3Client({
       endpoint: process.env.AWS_S3_ENDPOINT,
-      s3ForcePathStyle: true,
+      forcePathStyle: true,
       region: process.env.AWS_REGION,
     })
   }
@@ -99,14 +99,14 @@ export const POST = auth(async function POST(req) {
     const buffer = Buffer.from(await file.arrayBuffer())
     const s3 = getMediaS3Client()
 
-    await s3
-      .putObject({
+    await s3.send(
+      new PutObjectCommand({
         Bucket: bucketName,
         Key: key,
         Body: buffer,
         ContentType: file.type,
       })
-      .promise()
+    )
 
     return NextResponse.json({ s3Key: key, size: file.size, type: file.type })
   } catch (error) {

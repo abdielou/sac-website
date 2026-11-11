@@ -1,11 +1,7 @@
 /**
  * @jest-environment node
  */
-const mockPutObject = jest.fn()
-
-jest.mock('aws-sdk', () => ({
-  S3: jest.fn(() => ({ putObject: mockPutObject })),
-}))
+jest.mock('@aws-sdk/client-s3', () => require('./helpers/s3-mock').clientS3Mock())
 
 jest.mock('../lib/s3-client', () => {
   const actual = jest.requireActual('../lib/s3-client')
@@ -14,6 +10,8 @@ jest.mock('../lib/s3-client', () => {
 
 import { saveStubPublicFile } from '../lib/s3-client'
 import { sanitizeFilename, uploadPublicImage } from '../lib/image-upload'
+
+const { routeSend, lastInput, sentCount } = require('./helpers/s3-mock')
 
 const env = { ...process.env }
 
@@ -28,7 +26,7 @@ const imageFile = (overrides = {}) => ({
 beforeEach(() => {
   jest.clearAllMocks()
   jest.useFakeTimers().setSystemTime(new Date('2026-11-10T12:00:00Z'))
-  mockPutObject.mockReturnValue({ promise: () => Promise.resolve({}) })
+  routeSend({})
   delete process.env.S3_STUB_DIR
   process.env.S3_IMAGES_BUCKET_NAME = 'sac-images'
 })
@@ -51,7 +49,7 @@ test('keeps the article key and URL format', async () => {
     key: 'images/blog/2026/11/10/mi-foto-1.jpg',
     url: 'https://sac-images.s3.amazonaws.com/images/blog/2026/11/10/mi-foto-1.jpg',
   })
-  expect(mockPutObject).toHaveBeenCalledWith({
+  expect(lastInput('PutObjectCommand')).toEqual({
     Bucket: 'sac-images',
     Key: 'images/blog/2026/11/10/mi-foto-1.jpg',
     Body: Buffer.from([1, 2, 3]),
@@ -80,7 +78,7 @@ test('rejects a missing file, a non-image, and a large file', async () => {
   expect(
     await uploadPublicImage(imageFile({ size: 10 * 1024 * 1024 + 1 }), { keyPrefix: 'x' })
   ).toEqual({ ok: false, status: 400, error: 'El archivo excede el tamano maximo (10MB)' })
-  expect(mockPutObject).not.toHaveBeenCalled()
+  expect(sentCount('PutObjectCommand')).toBe(0)
 })
 
 test('fails with 500 when the images bucket is not set', async () => {
@@ -107,5 +105,5 @@ test('writes to the local public folder in stub mode, with no bucket needed', as
     'images/guides/2026/11/10/mi-foto-1.jpg',
     Buffer.from([1, 2, 3])
   )
-  expect(mockPutObject).not.toHaveBeenCalled()
+  expect(sentCount('PutObjectCommand')).toBe(0)
 })

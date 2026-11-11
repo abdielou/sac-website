@@ -4,12 +4,6 @@
 
 ## Tech Debt
 
-**Deprecated AWS SDK in use:**
-- Issue: Using `aws-sdk` (v2) which is in maintenance mode. AWS recommends migration to `@aws-sdk/client-s3` (v3) with modular architecture
-- Files: `pages/api/photos.js`, `pages/api/get-years.js`
-- Impact: Missing security patches, performance optimizations, and modern error handling. Bundle size increases due to legacy SDK including all services
-- Fix approach: Migrate to AWS SDK v3 by replacing `import AWS from 'aws-sdk'` with `import { S3Client, ListObjectsV2Command, HeadObjectCommand } from "@aws-sdk/client-s3"`. Update API handlers to use promise-based command pattern
-
 **Next.js 12 nearing end-of-life:**
 - Issue: Project uses Next.js ^12.1.0. Next.js 12 reached EOL in October 2023
 - Files: `package.json`, `next.config.js`
@@ -209,11 +203,6 @@
   3. Pre-generate JSON index of posts instead of scanning files every build
 
 ## Dependencies at Risk
-
-**aws-sdk v2 in maintenance mode:**
-- Risk: No new features, security patches eventually discontinued
-- Impact: All S3-dependent features degrade over time
-- Migration plan: Replace with `@aws-sdk/client-s3` v3. Cost: 2-4 hours refactoring
 
 **react ^17.0.2 and preact aliasing mismatch:**
 - Risk: React 17 is stable but Preact 10 compatibility not guaranteed

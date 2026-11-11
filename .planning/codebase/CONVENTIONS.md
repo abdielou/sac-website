@@ -51,7 +51,7 @@ npm run lint  # ESLint with auto-fix on pages, components, lib, layouts, scripts
 ## Import Organization
 
 **Order:**
-1. External library imports (React, next, third-party packages): `import React from 'react'`, `import Link from 'next/link'`, `import AWS from 'aws-sdk'`
+1. External library imports (React, next, third-party packages): `import React from 'react'`, `import Link from 'next/link'`, `import { S3Client } from '@aws-sdk/client-s3'`
 2. Absolute path aliases (using @ prefix): `import { getAllFilesFrontMatter } from '@/lib/mdx'`, `import GalleryGrid from '@/components/GalleryGrid'`
 3. Relative imports: `import formatDate from '../../lib/utils/formatDate'`
 

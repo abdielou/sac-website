@@ -11,7 +11,9 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
-import AWS from 'aws-sdk'
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { STSClient, GetCallerIdentityCommand } from '@aws-sdk/client-sts'
+import { fromIni } from '@aws-sdk/credential-providers'
 
 /** Parse .env into a plain object. Does not touch process.env. */
 export function readEnvFile(cwd = process.cwd()) {
@@ -32,6 +34,21 @@ export function profileFromArgv(argv = process.argv.slice(2)) {
 }
 
 /**
+ * True when ~/.aws/credentials or ~/.aws/config declares the profile.
+ * fromIni() only fails on the first request, which hides the real cause.
+ */
+function profileExists(profile) {
+  const home = process.env.HOME || process.env.USERPROFILE || ''
+  const files = [path.join(home, '.aws', 'credentials'), path.join(home, '.aws', 'config')]
+  const headers = [`[${profile}]`, `[profile ${profile}]`]
+  return files.some((file) => {
+    if (!fs.existsSync(file)) return false
+    const text = fs.readFileSync(file, 'utf8')
+    return headers.some((header) => text.includes(header))
+  })
+}
+
+/**
  * Build an S3 client plus the bucket name and a label describing which
  * credentials were used, so every script can print what it is about to act as.
  */
@@ -49,34 +66,34 @@ export function createS3({ argv = process.argv.slice(2), cwd = process.cwd() } =
   let credentials
   let source
   if (profile) {
-    credentials = new AWS.SharedIniFileCredentials({ profile })
-    if (!credentials.accessKeyId) {
+    if (!profileExists(profile)) {
       throw new Error(`Profile "${profile}" not found or has no credentials in ~/.aws/credentials`)
     }
+    credentials = fromIni({ profile })
     source = `profile ${profile}`
   } else {
     if (!env.AWS_ACCESS_KEY_ID || !env.AWS_SECRET_ACCESS_KEY) {
       throw new Error('No --profile given and .env has no AWS credentials.')
     }
-    credentials = new AWS.Credentials({
+    credentials = {
       accessKeyId: env.AWS_ACCESS_KEY_ID,
       secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
-    })
+    }
     source = '.env'
   }
 
-  const s3 = new AWS.S3({ endpoint, s3ForcePathStyle: true, region, credentials })
+  const s3 = new S3Client({ endpoint, forcePathStyle: true, region, credentials })
   return { s3, bucket, region, source, credentials }
 }
 
 /** Resolve the IAM identity behind a set of credentials, for the run banner. */
 export async function whoAmI({ credentials, region }) {
   try {
-    const sts = new AWS.STS({ credentials, region })
-    const id = await sts.getCallerIdentity().promise()
+    const sts = new STSClient({ credentials, region })
+    const id = await sts.send(new GetCallerIdentityCommand({}))
     return id.Arn
   } catch (error) {
-    return `unknown (${error.code})`
+    return `unknown (${error.name})`
   }
 }
 
@@ -89,16 +106,16 @@ export async function assertWritable(s3, bucket) {
   const key = 'articles/.write-probe.json'
   const body = JSON.stringify({ probe: true })
   try {
-    await s3.putObject({ Bucket: bucket, Key: key, Body: body }).promise()
+    await s3.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: body }))
   } catch (error) {
-    return { writable: false, reason: `${error.code}: ${error.message}` }
+    return { writable: false, reason: `${error.name}: ${error.message}` }
   }
   try {
-    await s3.deleteObject({ Bucket: bucket, Key: key }).promise()
+    await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }))
   } catch (error) {
     return {
       writable: true,
-      reason: `wrote but could not delete the probe at ${key} (${error.code}). Remove it manually.`,
+      reason: `wrote but could not delete the probe at ${key} (${error.name}). Remove it manually.`,
     }
   }
   return { writable: true, reason: null }

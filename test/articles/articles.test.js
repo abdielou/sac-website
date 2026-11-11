@@ -1,23 +1,13 @@
 // Article Data Layer Tests
 
-// Track S3 calls for assertions
-const mockPutObject = jest.fn(() => ({ promise: jest.fn(() => Promise.resolve({})) }))
-const mockGetObject = jest.fn(() => ({
-  promise: jest.fn(() =>
-    Promise.resolve({
-      Body: Buffer.from('{}'),
-    })
-  ),
-}))
-const mockDeleteObject = jest.fn(() => ({ promise: jest.fn(() => Promise.resolve({})) }))
+jest.mock('@aws-sdk/client-s3', () => require('../helpers/s3-mock').clientS3Mock())
 
-jest.mock('aws-sdk', () => ({
-  S3: jest.fn(() => ({
-    putObject: mockPutObject,
-    getObject: mockGetObject,
-    deleteObject: mockDeleteObject,
-  })),
-}))
+const { routeSend, jsonBody, noSuchKey } = require('../helpers/s3-mock')
+
+// Track S3 calls for assertions. Each receives the command input.
+const mockPutObject = jest.fn(async () => ({}))
+const mockGetObject = jest.fn(async () => jsonBody({}))
+const mockDeleteObject = jest.fn(async () => ({}))
 
 import {
   createArticle,
@@ -33,24 +23,27 @@ import { getArticleIndex } from '../../lib/articles-s3.js'
 
 // Helper to set up mockGetObject for specific keys
 function mockGetObjectForKey(keyBodyMap) {
-  mockGetObject.mockImplementation((params) => ({
-    promise: jest.fn(() => {
-      const body = keyBodyMap[params.Key]
-      if (body === undefined) {
-        const err = new Error('NoSuchKey')
-        err.code = 'NoSuchKey'
-        return Promise.reject(err)
-      }
-      return Promise.resolve({
-        Body: Buffer.from(typeof body === 'string' ? body : JSON.stringify(body)),
-      })
-    }),
-  }))
+  mockGetObject.mockImplementation(async (params) => {
+    const body = keyBodyMap[params.Key]
+    if (body === undefined) {
+      throw noSuchKey()
+    }
+    return {
+      Body: {
+        transformToString: async () => (typeof body === 'string' ? body : JSON.stringify(body)),
+      },
+    }
+  })
 }
 
 describe('Article Data Layer', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    routeSend({
+      PutObjectCommand: (input) => mockPutObject(input),
+      GetObjectCommand: (input) => mockGetObject(input),
+      DeleteObjectCommand: (input) => mockDeleteObject(input),
+    })
     // Default: no index exists (cold start)
     mockGetObjectForKey({})
   })
@@ -262,7 +255,10 @@ describe('Article Data Layer', () => {
 
       mockGetObjectForKey({
         'articles/2024/06/01/indexed.json': existing,
-        'articles/index.json': { articles: [{ title: 'Indexed', slug: '2024/06/01/indexed' }], updatedAt: null },
+        'articles/index.json': {
+          articles: [{ title: 'Indexed', slug: '2024/06/01/indexed' }],
+          updatedAt: null,
+        },
       })
 
       await updateArticle('2024/06/01/indexed', { title: 'Renamed' })

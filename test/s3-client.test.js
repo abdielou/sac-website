@@ -5,13 +5,15 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 
-jest.mock('aws-sdk', () => ({
-  S3: jest.fn(function S3(options) {
-    this.options = options
-  }),
-}))
+jest.mock('@aws-sdk/client-s3', () => require('./helpers/s3-mock').clientS3Mock())
 
-import AWS from 'aws-sdk'
+import {
+  S3Client,
+  GetObjectCommand,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  ListObjectsV2Command,
+} from '@aws-sdk/client-s3'
 import { createS3Client, isS3Stubbed, saveStubPublicFile } from '../lib/s3-client'
 
 let dir
@@ -36,12 +38,12 @@ describe('createS3Client', () => {
     const client = createS3Client()
 
     expect(isS3Stubbed()).toBe(false)
-    expect(AWS.S3).toHaveBeenCalledWith({
+    expect(S3Client).toHaveBeenCalledWith({
       endpoint: 'https://s3.example.com',
-      s3ForcePathStyle: true,
+      forcePathStyle: true,
       region: 'us-east-1',
     })
-    expect(client.options.region).toBe('us-east-1')
+    expect(typeof client.send).toBe('function')
   })
 
   test('refuses to run the stub in production', () => {
@@ -61,47 +63,58 @@ describe('file-system stub', () => {
   test('is active when S3_STUB_DIR is set outside production', () => {
     expect(isS3Stubbed()).toBe(true)
     createS3Client()
-    expect(AWS.S3).not.toHaveBeenCalled()
+    expect(S3Client).not.toHaveBeenCalled()
   })
 
   test('writes, reads, and deletes an object', async () => {
     const s3 = createS3Client()
-    await s3.putObject({ Bucket: 'b', Key: 'guides/a.json', Body: '{"x":1}' }).promise()
+    await s3.send(new PutObjectCommand({ Bucket: 'b', Key: 'guides/a.json', Body: '{"x":1}' }))
 
     expect(fs.readFileSync(path.join(dir, 'b', 'guides', 'a.json'), 'utf8')).toBe('{"x":1}')
 
-    const result = await s3.getObject({ Bucket: 'b', Key: 'guides/a.json' }).promise()
-    expect(Buffer.isBuffer(result.Body)).toBe(true)
-    expect(result.Body.toString()).toBe('{"x":1}')
+    const result = await s3.send(new GetObjectCommand({ Bucket: 'b', Key: 'guides/a.json' }))
+    expect(await result.Body.transformToString()).toBe('{"x":1}')
 
-    await s3.deleteObject({ Bucket: 'b', Key: 'guides/a.json' }).promise()
+    await s3.send(new DeleteObjectCommand({ Bucket: 'b', Key: 'guides/a.json' }))
     expect(fs.existsSync(path.join(dir, 'b', 'guides', 'a.json'))).toBe(false)
   })
 
   test('gives NoSuchKey for a missing object', async () => {
     const s3 = createS3Client()
-    await expect(s3.getObject({ Bucket: 'b', Key: 'nope.json' }).promise()).rejects.toMatchObject({
-      code: 'NoSuchKey',
-    })
+    await expect(
+      s3.send(new GetObjectCommand({ Bucket: 'b', Key: 'nope.json' }))
+    ).rejects.toMatchObject({ name: 'NoSuchKey' })
   })
 
   test('deleting a missing object is not an error', async () => {
     const s3 = createS3Client()
-    await expect(s3.deleteObject({ Bucket: 'b', Key: 'nope.json' }).promise()).resolves.toEqual({})
+    await expect(
+      s3.send(new DeleteObjectCommand({ Bucket: 'b', Key: 'nope.json' }))
+    ).resolves.toEqual({})
   })
 
   test('stores Buffer bodies as they are', async () => {
     const s3 = createS3Client()
     const bytes = Buffer.from([0, 1, 2, 255])
-    await s3.putObject({ Bucket: 'b', Key: 'x.bin', Body: bytes }).promise()
+    await s3.send(new PutObjectCommand({ Bucket: 'b', Key: 'x.bin', Body: bytes }))
     expect(fs.readFileSync(path.join(dir, 'b', 'x.bin'))).toEqual(bytes)
+
+    const result = await s3.send(new GetObjectCommand({ Bucket: 'b', Key: 'x.bin' }))
+    expect(Buffer.from(await result.Body.transformToByteArray())).toEqual(bytes)
   })
 
   test('rejects a key that leaves the stub directory', async () => {
     const s3 = createS3Client()
     await expect(
-      s3.putObject({ Bucket: 'b', Key: '../../escape.txt', Body: 'x' }).promise()
+      s3.send(new PutObjectCommand({ Bucket: 'b', Key: '../../escape.txt', Body: 'x' }))
     ).rejects.toThrow(/outside/)
+  })
+
+  test('rejects a command it does not support', async () => {
+    const s3 = createS3Client()
+    await expect(s3.send(new ListObjectsV2Command({ Bucket: 'b' }))).rejects.toThrow(
+      /does not support/
+    )
   })
 })
 
